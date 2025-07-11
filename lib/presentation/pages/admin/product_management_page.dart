@@ -9,6 +9,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
+import '../../../data/models/discount.dart';
 import '../../../core/services/data_service.dart';
 
 class ProductManagementPage extends StatefulWidget {
@@ -24,6 +25,7 @@ class ProductManagementPage extends StatefulWidget {
 class _ProductManagementPageState extends State<ProductManagementPage> {
   List<Product> _products = [];
   List<Category> _categories = [];
+  List<Discount> _discounts = [];
   bool _isLoading = true;
   String _searchQuery = '';
   String _selectedCategoryId = '';
@@ -52,10 +54,14 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
       final products = await _dataService.getProducts(
         businessId: widget.businessId,
       );
+      final discounts = await _dataService.getDiscountsByBusinessId(
+        widget.businessId,
+      );
 
       setState(() {
         _categories = categories;
         _products = products;
+        _discounts = discounts;
         _isLoading = false;
       });
     } catch (e) {
@@ -491,13 +497,49 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Text(
-                  '${product.price.toStringAsFixed(2)} ₺',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.priceColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                // Price with discount info
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Current price
+                    Text(
+                      '${product.currentPrice.toStringAsFixed(2)} ₺',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.priceColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    // Original price if discounted
+                    if (product.hasDiscount)
+                      Text(
+                        '${product.price.toStringAsFixed(2)} ₺',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                  ],
                 ),
+                const SizedBox(width: 8),
+                // Discount badge
+                if (product.hasDiscount)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      product.formattedDiscountPercentage,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 const SizedBox(width: 8),
                 _buildStatusBadge(product),
               ],
@@ -520,6 +562,14 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
               child: ListTile(
                 leading: Icon(Icons.price_change),
                 title: Text('Fiyat Güncelle'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'discount',
+              child: ListTile(
+                leading: Icon(Icons.local_offer),
+                title: Text('İndirim Ekle'),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
@@ -678,6 +728,9 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         break;
       case 'price':
         _showPriceUpdateDialog(product);
+        break;
+      case 'discount':
+        _showDiscountDialog(product);
         break;
       case 'toggle':
         _toggleProductStatus(product);
@@ -864,6 +917,205 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         ],
       ),
     );
+  }
+
+  void _showDiscountDialog(Product product) {
+    final nameController = TextEditingController();
+    final valueController = TextEditingController();
+    DiscountType selectedType = DiscountType.percentage;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('${product.name} için İndirim Ekle'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'İndirim Adı',
+                  hintText: 'Örn: Özel İndirim',
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<DiscountType>(
+                      value: selectedType,
+                      decoration: const InputDecoration(labelText: 'Tür'),
+                      items: DiscountType.values.map((type) {
+                        return DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            type == DiscountType.percentage
+                                ? 'Yüzde (%)'
+                                : 'Sabit (₺)',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedType = value!;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextField(
+                      controller: valueController,
+                      decoration: InputDecoration(
+                        labelText: 'Değer',
+                        suffixText: selectedType == DiscountType.percentage
+                            ? '%'
+                            : '₺',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mevcut Fiyat: ${product.price.toStringAsFixed(2)} ₺',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (valueController.text.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Yeni Fiyat: ${_calculateDiscountedPrice(product.price, selectedType, valueController.text).toStringAsFixed(2)} ₺',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () => _createProductDiscount(
+                product,
+                nameController.text.trim(),
+                selectedType,
+                valueController.text.trim(),
+              ),
+              child: const Text('Ekle'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _calculateDiscountedPrice(
+    double originalPrice,
+    DiscountType type,
+    String value,
+  ) {
+    final numValue = double.tryParse(value) ?? 0;
+    if (type == DiscountType.percentage) {
+      return originalPrice * (1 - numValue / 100);
+    } else {
+      return originalPrice - numValue;
+    }
+  }
+
+  Future<void> _createProductDiscount(
+    Product product,
+    String name,
+    DiscountType type,
+    String value,
+  ) async {
+    if (name.isEmpty || value.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen tüm alanları doldurun'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final numValue = double.tryParse(value);
+    if (numValue == null || numValue <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Geçerli bir indirim değeri girin'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final discount = Discount(
+        discountId: 'discount-${DateTime.now().millisecondsSinceEpoch}',
+        businessId: widget.businessId,
+        name: name,
+        description: '${product.name} için özel indirim',
+        type: type,
+        value: numValue,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 30)),
+        targetProductIds: [product.productId],
+        targetCategoryIds: [],
+        timeRules: [],
+        minOrderAmount: 0,
+        maxDiscountAmount: type == DiscountType.percentage
+            ? (product.price * numValue / 100)
+            : numValue,
+        usageLimit: 0,
+        usageCount: 0,
+        isActive: true,
+        combineWithOtherDiscounts: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await _dataService.saveDiscount(discount);
+      await _loadData(); // Reload data to refresh UI
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product.name} için indirim eklendi'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('İndirim eklenirken hata oluştu: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveProduct(

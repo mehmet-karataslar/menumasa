@@ -1,5 +1,6 @@
 // Firebase imports removed for Windows compatibility
 import 'category.dart';
+import 'discount.dart';
 
 class Product {
   final String productId;
@@ -566,5 +567,94 @@ extension ProductExtensions on Product {
     if (isSpicy == true && !this.isSpicy) return false;
 
     return true;
+  }
+
+  /// İndirim hesaplama methodları
+  /// Ürüne uygulanan tüm indirimleri hesaplar
+  double calculateFinalPrice(
+    List<Discount> discounts, {
+    PriceRoundingRule? roundingRule,
+  }) {
+    double finalPrice = currentPrice;
+
+    for (final discount in discounts) {
+      if (discount.isCurrentlyActive &&
+          discount.appliesToProduct(productId, categoryId)) {
+        finalPrice = discount.calculateDiscountedPrice(finalPrice);
+      }
+    }
+
+    if (roundingRule != null) {
+      finalPrice = _roundPrice(finalPrice, roundingRule);
+    }
+
+    return finalPrice;
+  }
+
+  /// En büyük indirimi bulur
+  Discount? getBestDiscount(List<Discount> discounts) {
+    Discount? bestDiscount;
+    double maxDiscountAmount = 0.0;
+
+    for (final discount in discounts) {
+      if (discount.isCurrentlyActive &&
+          discount.appliesToProduct(productId, categoryId)) {
+        final discountAmount =
+            currentPrice - discount.calculateDiscountedPrice(currentPrice);
+        if (discountAmount > maxDiscountAmount) {
+          maxDiscountAmount = discountAmount;
+          bestDiscount = discount;
+        }
+      }
+    }
+
+    return bestDiscount;
+  }
+
+  /// Ürüne uygulanan tüm aktif indirimleri döndürür
+  List<Discount> getApplicableDiscounts(List<Discount> discounts) {
+    return discounts
+        .where(
+          (discount) =>
+              discount.isCurrentlyActive &&
+              discount.appliesToProduct(productId, categoryId),
+        )
+        .toList();
+  }
+
+  /// İndirimli fiyatı formatted string olarak döndürür
+  String getDiscountedPriceDisplay(
+    List<Discount> discounts, {
+    PriceRoundingRule? roundingRule,
+  }) {
+    final finalPrice = calculateFinalPrice(
+      discounts,
+      roundingRule: roundingRule,
+    );
+    final bestDiscount = getBestDiscount(discounts);
+
+    if (bestDiscount != null && finalPrice < currentPrice) {
+      return '${finalPrice.toStringAsFixed(2)} $currency (${bestDiscount.formattedDescription})';
+    }
+
+    return formattedPrice;
+  }
+
+  /// Fiyat yuvarlama fonksiyonu
+  double _roundPrice(double price, PriceRoundingRule rule) {
+    switch (rule) {
+      case PriceRoundingRule.noRounding:
+        return price;
+      case PriceRoundingRule.roundToNearest:
+        return price.round().toDouble();
+      case PriceRoundingRule.roundUp:
+        return price.ceil().toDouble();
+      case PriceRoundingRule.roundDown:
+        return price.floor().toDouble();
+      case PriceRoundingRule.roundToNearest5:
+        return (price / 5).round() * 5.0;
+      case PriceRoundingRule.roundToNearest10:
+        return (price / 10).round() * 10.0;
+    }
   }
 }

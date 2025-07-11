@@ -405,7 +405,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           crossAxisSpacing: 12,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.1,
+          childAspectRatio: 1.4,
           children: [
             _buildManagementCard(
               title: 'Ürün Yönetimi',
@@ -462,6 +462,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 arguments: {'businessId': widget.businessId},
               ),
             ),
+            _buildManagementCard(
+              title: 'İndirim Yönetimi',
+              subtitle: 'Kampanya & İndirimler',
+              icon: Icons.local_offer,
+              color: AppColors.error,
+              onTap: () => Navigator.pushNamed(
+                context,
+                '/admin/discounts',
+                arguments: {'businessId': widget.businessId},
+              ),
+            ),
           ],
         ),
       ],
@@ -482,31 +493,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 title,
                 style: AppTypography.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: AppTypography.bodySmall.copyWith(
                   color: AppColors.textSecondary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

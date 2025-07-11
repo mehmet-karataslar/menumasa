@@ -10,6 +10,9 @@ import 'presentation/pages/admin/product_management_page.dart';
 import 'presentation/pages/admin/qr_code_management_page.dart';
 import 'presentation/pages/admin/business_info_page.dart';
 import 'presentation/pages/admin/menu_settings_page.dart';
+import 'presentation/pages/admin/discount_management_page.dart';
+import 'presentation/pages/admin/responsive_admin_dashboard.dart';
+import 'core/services/data_service.dart';
 import 'data/models/product.dart';
 import 'data/models/business.dart';
 
@@ -159,6 +162,7 @@ class MasaMenuApp extends StatelessWidget {
       '/admin/business-info': (context) => const BusinessInfoRouterPage(),
       '/admin/menu-settings': (context) => const MenuSettingsRouterPage(),
       '/admin/qr-codes': (context) => const QRCodeManagementRouterPage(),
+      '/admin/discounts': (context) => const DiscountManagementRouterPage(),
     };
   }
 }
@@ -201,17 +205,28 @@ class _QRMenuPageState extends State<QRMenuPage> {
   }
 
   Future<void> _verifyBusiness() async {
-    // Simulate business verification
-    await Future.delayed(const Duration(seconds: 1));
+    // Real business verification using DataService
+    try {
+      final dataService = DataService();
+      await dataService.initialize();
+      await dataService.initializeSampleData();
 
-    setState(() {
-      _businessExists = widget.businessId.isNotEmpty;
-      _isLoading = false;
-    });
+      final business = await dataService.getBusiness(widget.businessId);
 
-    if (_businessExists) {
-      // Show welcome message for QR scanned users
-      _showQRWelcomeMessage();
+      setState(() {
+        _businessExists = business != null && business.isActive;
+        _isLoading = false;
+      });
+
+      if (_businessExists) {
+        // Show welcome message for QR scanned users
+        _showQRWelcomeMessage();
+      }
+    } catch (e) {
+      setState(() {
+        _businessExists = false;
+        _isLoading = false;
+      });
     }
   }
 
@@ -354,7 +369,15 @@ class AdminDashboardRouterPage extends StatelessWidget {
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
 
-    return AdminDashboardPage(businessId: businessId);
+    // Responsive layout: Use sidebar layout for web/desktop, card layout for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(businessId: businessId);
+    } else {
+      return AdminDashboardPage(businessId: businessId);
+    }
   }
 }
 
@@ -606,7 +629,7 @@ class WelcomePage extends StatelessWidget {
                     Navigator.pushNamed(
                       context,
                       '/menu',
-                      arguments: {'businessId': 'demo-business'},
+                      arguments: {'businessId': 'demo-business-001'},
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -1001,5 +1024,19 @@ class QRCodeManagementRouterPage extends StatelessWidget {
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
 
     return QRCodeManagementPage(businessId: businessId);
+  }
+}
+
+// Discount Management router sayfası
+class DiscountManagementRouterPage extends StatelessWidget {
+  const DiscountManagementRouterPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+
+    return DiscountManagementPage(businessId: businessId);
   }
 }

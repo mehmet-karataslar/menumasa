@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import '../../../data/models/business.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/product.dart';
+import '../../../data/models/discount.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/utils/time_rule_utils.dart';
+import '../../../core/services/data_service.dart';
 import '../../widgets/customer/business_header.dart';
 import '../../widgets/customer/category_list.dart';
 import '../../widgets/customer/product_grid.dart';
@@ -39,6 +42,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   List<Category> _categories = [];
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
+  List<Discount> _discounts = [];
+
+  // Services
+  final _dataService = DataService();
 
   // UI State
   String _searchQuery = '';
@@ -67,23 +74,33 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         _hasError = false;
       });
 
-      // Simüle edilmiş veri - gerçek uygulamada Firebase'den çekilecek
-      await Future.delayed(const Duration(seconds: 2));
+      // Gerçek veri yükleme
+      _business = await _dataService.getBusiness(widget.businessId);
+      if (_business == null) {
+        throw Exception('İşletme bulunamadı');
+      }
 
-      // Sample data creation
-      _business = _createSampleBusiness();
-      _categories = _createSampleCategories();
-      _products = _createSampleProducts();
-      _filteredProducts = _products;
+      _categories = await _dataService.getCategories(
+        businessId: widget.businessId,
+      );
+      _products = await _dataService.getProducts(businessId: widget.businessId);
+      _discounts = await _dataService.getDiscountsByBusinessId(
+        widget.businessId,
+      );
+
+      // Zaman kurallarına göre filtrele
+      _filterProducts();
 
       // TabController'ı kategorilere göre ayarla
-      _tabController = TabController(length: _categories.length, vsync: this);
+      if (_categories.isNotEmpty) {
+        _tabController = TabController(length: _categories.length, vsync: this);
 
-      _tabController.addListener(() {
-        if (_tabController.indexIsChanging) {
-          _onCategorySelected(_categories[_tabController.index].categoryId);
-        }
-      });
+        _tabController.addListener(() {
+          if (_tabController.indexIsChanging) {
+            _onCategorySelected(_categories[_tabController.index].categoryId);
+          }
+        });
+      }
 
       setState(() {
         _isLoading = false;
@@ -132,8 +149,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         return false;
       }
 
-      // Zaman kuralları kontrolü
-      if (!product.isActiveNow) {
+      // Zaman kuralları kontrolü - TimeRuleUtils kullanarak
+      if (!TimeRuleUtils.isProductVisible(product)) {
         return false;
       }
 
@@ -148,6 +165,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         isHalal: _filters['isHalal'],
         isSpicy: _filters['isSpicy'],
       );
+    }).toList();
+
+    // İndirimli fiyatları hesapla
+    _filteredProducts = _filteredProducts.map((product) {
+      final finalPrice = product.calculateFinalPrice(_discounts);
+      return product.copyWith(currentPrice: finalPrice);
+    }).toList();
+
+    // Kategorileri de zaman kurallarına göre filtrele
+    _categories = _categories.where((category) {
+      return TimeRuleUtils.isCategoryVisible(category);
     }).toList();
   }
 

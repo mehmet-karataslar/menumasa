@@ -4,6 +4,7 @@ import '../../data/models/business.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../data/models/user.dart';
+import '../../data/models/discount.dart';
 
 class DataService {
   static final DataService _instance = DataService._internal();
@@ -430,6 +431,132 @@ class DataService {
 
     for (final product in products) {
       await saveProduct(product);
+    }
+
+    // Create sample discounts
+    final discounts = [
+      DiscountDefaults.happyHourDiscount.copyWith(
+        businessId: sampleBusiness.businessId,
+        targetCategoryIds: ['cat-003'], // İçecekler kategorisi
+      ),
+      DiscountDefaults.weekendSpecial.copyWith(
+        businessId: sampleBusiness.businessId,
+      ),
+      Discount(
+        discountId: 'breakfast-discount',
+        businessId: sampleBusiness.businessId,
+        name: 'Kahvaltı Saatleri İndirimi',
+        description: 'Sabah 8-11 arası başlangıçlarda %10 indirim',
+        type: DiscountType.percentage,
+        value: 10.0,
+        startDate: DateTime.now().subtract(const Duration(days: 1)),
+        endDate: DateTime.now().add(const Duration(days: 30)),
+        timeRules: [
+          CategoryDefaults.breakfastTimeRule.copyWith(
+            ruleId: 'breakfast-discount-time',
+            startTime: '08:00',
+            endTime: '11:00',
+          ),
+        ],
+        targetProductIds: [],
+        targetCategoryIds: ['cat-002'], // Başlangıçlar kategorisi
+        usageCount: 0,
+        isActive: true,
+        combineWithOtherDiscounts: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    ];
+
+    for (final discount in discounts) {
+      await saveDiscount(discount);
+    }
+  }
+
+  // Discount CRUD Operations
+  Future<List<Discount>> getDiscounts() async {
+    await initialize();
+    final discountStrings = _prefs.getStringList('discounts') ?? [];
+    return discountStrings
+        .map((str) => Discount.fromJson(jsonDecode(str)))
+        .toList();
+  }
+
+  Future<List<Discount>> getDiscountsByBusinessId(String businessId) async {
+    final discounts = await getDiscounts();
+    return discounts.where((d) => d.businessId == businessId).toList();
+  }
+
+  Future<Discount?> getDiscount(String discountId) async {
+    final discounts = await getDiscounts();
+    try {
+      return discounts.firstWhere((d) => d.discountId == discountId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> saveDiscount(Discount discount) async {
+    await initialize();
+    final discounts = await getDiscounts();
+    final index = discounts.indexWhere(
+      (d) => d.discountId == discount.discountId,
+    );
+
+    if (index >= 0) {
+      discounts[index] = discount;
+    } else {
+      discounts.add(discount);
+    }
+
+    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
+    await _prefs.setStringList('discounts', discountsJson);
+  }
+
+  Future<void> deleteDiscount(String discountId) async {
+    await initialize();
+    final discounts = await getDiscounts();
+    discounts.removeWhere((d) => d.discountId == discountId);
+
+    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
+    await _prefs.setStringList('discounts', discountsJson);
+  }
+
+  Future<void> deleteDiscountsByBusinessId(String businessId) async {
+    await initialize();
+    final discounts = await getDiscounts();
+    discounts.removeWhere((d) => d.businessId == businessId);
+
+    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
+    await _prefs.setStringList('discounts', discountsJson);
+  }
+
+  // Advanced discount operations
+  Future<List<Discount>> getActiveDiscounts(String businessId) async {
+    final discounts = await getDiscountsByBusinessId(businessId);
+    return discounts.where((d) => d.isCurrentlyActive).toList();
+  }
+
+  Future<List<Discount>> getDiscountsForProduct(
+    String businessId,
+    String productId,
+    String categoryId,
+  ) async {
+    final discounts = await getActiveDiscounts(businessId);
+    return discounts
+        .where((d) => d.appliesToProduct(productId, categoryId))
+        .toList();
+  }
+
+  Future<void> incrementDiscountUsage(String discountId) async {
+    final discount = await getDiscount(discountId);
+    if (discount != null) {
+      await saveDiscount(
+        discount.copyWith(
+          usageCount: discount.usageCount + 1,
+          updatedAt: DateTime.now(),
+        ),
+      );
     }
   }
 }
