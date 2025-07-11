@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_typography.dart';
 import 'presentation/pages/customer/menu_page.dart';
@@ -35,17 +36,26 @@ void main() {
 class MasaMenuApp extends StatelessWidget {
   const MasaMenuApp({Key? key}) : super(key: key);
 
+  String _getInitialRoute() {
+    // Web platformunda direkt welcome sayfasını aç
+    // Mobile'da splash screen göster
+    if (kIsWeb) {
+      return '/welcome';
+    }
+    return '/';
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Masa Menü',
+      title: 'Masa Menü - Dijital Menü Çözümü',
       debugShowCheckedModeBanner: false,
 
       // Tema ayarları
       theme: _buildTheme(),
 
-      // Başlangıç rotası
-      initialRoute: '/',
+      // Web için direkt welcome sayfası, mobile için splash
+      initialRoute: _getInitialRoute(),
 
       // Rota yapılandırması
       routes: _buildRoutes(),
