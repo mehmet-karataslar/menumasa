@@ -474,3 +474,4 @@ class CompactBusinessHeader extends StatelessWidget {
     );
   }
 }
+ 

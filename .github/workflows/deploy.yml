@@ -24,7 +24,8 @@ jobs:
       run: flutter pub get
       
     - name: Build for web
-      run: flutter build web --release --base-href "/menumasa/"
+      # Build the web app specifying the correct base path that matches the repository name
+      run: flutter build web --release --base-href "/masamenu/"
       
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4

@@ -233,7 +233,7 @@ class _QRMenuPageState extends State<QRMenuPage> {
         _showQRWelcomeMessage();
       }
     } catch (e) {
-      setState(() {
+    setState(() {
         _businessExists = false;
         _isLoading = false;
       });
