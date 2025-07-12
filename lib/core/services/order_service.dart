@@ -50,6 +50,16 @@ class OrderService {
     return orders.where((order) => order.businessId == businessId).toList();
   }
 
+  Future<List<Order>> getOrdersByCustomerPhone(
+    String customerPhone,
+    String businessId,
+  ) async {
+    final orders = await getOrdersByBusinessId(businessId);
+    return orders
+        .where((order) => order.customerPhone == customerPhone)
+        .toList();
+  }
+
   Future<Order?> getOrder(String orderId) async {
     final orders = await getAllOrders();
     try {

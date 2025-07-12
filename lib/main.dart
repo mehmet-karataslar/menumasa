@@ -13,6 +13,7 @@ import 'presentation/pages/admin/business_info_page.dart';
 import 'presentation/pages/admin/menu_settings_page.dart';
 import 'presentation/pages/admin/discount_management_page.dart';
 import 'presentation/pages/admin/orders_page.dart';
+import 'presentation/pages/customer/customer_orders_page.dart';
 import 'presentation/pages/admin/responsive_admin_dashboard.dart';
 import 'core/services/data_service.dart';
 import 'data/models/product.dart';
@@ -175,6 +176,7 @@ class MasaMenuApp extends StatelessWidget {
       '/admin/qr-codes': (context) => const QRCodeManagementRouterPage(),
       '/admin/discounts': (context) => const DiscountManagementRouterPage(),
       '/admin/orders': (context) => const OrdersRouterPage(),
+      '/customer/orders': (context) => const CustomerOrdersRouterPage(),
     };
   }
 }
@@ -1154,5 +1156,23 @@ class OrdersRouterPage extends StatelessWidget {
     } else {
       return OrdersPage(businessId: businessId);
     }
+  }
+}
+
+// Customer Orders router sayfası
+class CustomerOrdersRouterPage extends StatelessWidget {
+  const CustomerOrdersRouterPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final customerPhone = args?['customerPhone'] as String?;
+
+    return CustomerOrdersPage(
+      businessId: businessId,
+      customerPhone: customerPhone,
+    );
   }
 }

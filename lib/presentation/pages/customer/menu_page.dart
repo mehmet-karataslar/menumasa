@@ -235,6 +235,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
+  void _onOrdersPressed() {
+    Navigator.pushNamed(
+      context,
+      '/customer/orders',
+      arguments: {
+        'businessId': widget.businessId,
+        'customerPhone': null, // Could be set from user preferences
+      },
+    );
+  }
+
   Future<void> _addToCart(Product product, {int quantity = 1}) async {
     try {
       await _cartService.addToCart(
@@ -408,6 +419,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                 IconButton(
                   icon: const Icon(Icons.filter_list, color: AppColors.white),
                   onPressed: _showFilterBottomSheet,
+                ),
+                // Orders button
+                IconButton(
+                  icon: const Icon(Icons.receipt_long, color: AppColors.white),
+                  onPressed: _onOrdersPressed,
+                  tooltip: 'Siparişlerim',
                 ),
                 // Cart button
                 IconButton(

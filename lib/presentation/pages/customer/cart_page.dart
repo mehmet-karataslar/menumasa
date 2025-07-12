@@ -205,6 +205,19 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
+  void _onOrdersPressed() {
+    Navigator.pushNamed(
+      context,
+      '/customer/orders',
+      arguments: {
+        'businessId': widget.businessId,
+        'customerPhone': _customerPhoneController.text.trim().isNotEmpty
+            ? _customerPhoneController.text.trim()
+            : null,
+      },
+    );
+  }
+
   Future<void> _placeOrder() async {
     if (_cart == null || _cart!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -297,10 +310,27 @@ class _CartPageState extends State<CartPage> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); // Close cart page
                 },
-                child: const Text('Tamam'),
+                child: const Text('Menüye Dön'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pushReplacementNamed(
+                    context,
+                    '/customer/orders',
+                    arguments: {
+                      'businessId': widget.businessId,
+                      'customerPhone':
+                          _customerPhoneController.text.trim().isNotEmpty
+                          ? _customerPhoneController.text.trim()
+                          : null,
+                    },
+                  );
+                },
+                child: const Text('Siparişlerimi Gör'),
               ),
             ],
           ),
@@ -329,6 +359,11 @@ class _CartPageState extends State<CartPage> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            onPressed: _onOrdersPressed,
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'Siparişlerim',
+          ),
           if (_cart != null && _cart!.isNotEmpty)
             IconButton(
               onPressed: _clearCart,
