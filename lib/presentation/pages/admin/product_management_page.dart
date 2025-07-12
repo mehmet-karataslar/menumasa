@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'dart:io' if (dart.library.html) 'dart:html';
 // CachedNetworkImage removed for Windows compatibility
 import '../../widgets/shared/loading_indicator.dart';
@@ -1435,7 +1434,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         updatedAt: DateTime.now(),
       );
 
-      await _dataService.saveDiscount(discount);
+      await _dataService.saveDiscount(widget.businessId, discount);
       await _loadData(); // Reload data to refresh UI
 
       if (mounted) {
@@ -1709,32 +1708,22 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
 
   Future<void> _pickImageFromFile(Function(String) onImageSelected) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-        withData: true,
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
       );
 
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-
-        if (file.bytes != null) {
-          // Web için base64 formatında veya blob URL oluştur
-          final bytes = file.bytes!;
-          // Burada dosyayı upload etmek veya base64 olarak kullanmak gerekiyor
-          // Şimdilik mock URL olarak kullanıyoruz
-          final mockUrl =
-              'data:image/${file.extension};base64,${bytes.toString()}';
-          onImageSelected(mockUrl);
-        } else if (file.path != null) {
-          // Mobil için file path'i kullan
-          onImageSelected(file.path!);
-        }
+      if (image != null) {
+        // Dosya yolunu kullan
+        onImageSelected(image.path);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Dosya başarıyla seçildi'),
+              content: Text('Resim başarıyla seçildi'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -1744,7 +1733,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Dosya seçme hatası: $e'),
+            content: Text('Resim seçme hatası: $e'),
             backgroundColor: AppColors.error,
           ),
         );

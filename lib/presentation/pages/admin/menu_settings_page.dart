@@ -33,7 +33,7 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
   MenuSettings? _originalSettings;
 
   // Form controllers
-  late MenuSettings _currentSettings;
+  MenuSettings _currentSettings = BusinessDefaults.defaultMenuSettings;
 
   // Preview state
   bool _showPreview = false;

@@ -31,8 +31,15 @@ class OrderService {
   }
 
   void _notifyOrderListeners(String businessId) async {
+    print(
+      'OrderService: Notifying ${_orderListeners.length} listeners for business $businessId',
+    );
     final orders = await getOrdersByBusinessId(businessId);
+    print(
+      'OrderService: Found ${orders.length} orders for business $businessId',
+    );
     for (final listener in _orderListeners) {
+      print('OrderService: Calling listener with ${orders.length} orders');
       listener(orders);
     }
   }

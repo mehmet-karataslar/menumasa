@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Businesses collection
+    match /businesses/{businessId} {
+      allow read: if true; // Public read for menu display
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+    
+    // Products collection
+    match /products/{productId} {
+      allow read: if true; // Public read for menu display
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+    
+    // Categories collection
+    match /categories/{categoryId} {
+      allow read: if true; // Public read for menu display
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+    
+    // Orders collection
+    match /orders/{orderId} {
+      allow read: if request.auth != null; // Only authenticated users can read
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Customers collection
+    match /customers/{customerId} {
+      allow read, write: if request.auth != null && request.auth.uid == customerId;
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null; // Only authenticated users can read
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+    
+    // Menu updates collection
+    match /menu_updates/{updateId} {
+      allow read: if request.auth != null; // Only authenticated users can read
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+  }
+} 

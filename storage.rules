@@ -1,0 +1,82 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Images folder - Public read, authenticated write
+    match /images/{allPaths=**} {
+      allow read: if true; // Public read for images
+      allow write: if request.auth != null && 
+                     isValidImageType() && 
+                     isValidFileSize();
+    }
+    
+    // Business logos
+    match /logos/{businessId}/{allPaths=**} {
+      allow read: if true; // Public read for logos
+      allow write: if request.auth != null && 
+                     isValidImageType() && 
+                     isValidFileSize();
+    }
+    
+    // Product images
+    match /products/{productId}/{allPaths=**} {
+      allow read: if true; // Public read for product images
+      allow write: if request.auth != null && 
+                     isValidImageType() && 
+                     isValidFileSize();
+    }
+    
+    // Category images
+    match /categories/{categoryId}/{allPaths=**} {
+      allow read: if true; // Public read for category images
+      allow write: if request.auth != null && 
+                     isValidImageType() && 
+                     isValidFileSize();
+    }
+    
+    // QR codes
+    match /qr-codes/{businessId}/{allPaths=**} {
+      allow read: if true; // Public read for QR codes
+      allow write: if request.auth != null && 
+                     isValidImageType() && 
+                     isValidFileSize();
+    }
+    
+    // Private user files
+    match /private/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && 
+                           request.auth.uid == userId &&
+                           isValidFileSize();
+    }
+    
+    // Temporary uploads
+    match /temp/{allPaths=**} {
+      allow read, write: if request.auth != null && 
+                           isValidFileSize();
+    }
+    
+    // Function to validate file size (max 10MB)
+    function isValidFileSize() {
+      return resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Function to validate image type
+    function isValidImageType() {
+      return resource.contentType.matches('image/.*') &&
+             (resource.contentType == 'image/jpeg' ||
+              resource.contentType == 'image/png' ||
+              resource.contentType == 'image/gif' ||
+              resource.contentType == 'image/webp');
+    }
+    
+    // Function to validate PDF type
+    function isValidPDFType() {
+      return resource.contentType == 'application/pdf';
+    }
+    
+    // Function to validate document type
+    function isValidDocumentType() {
+      return resource.contentType.matches('application/.*') ||
+             resource.contentType.matches('text/.*');
+    }
+  }
+} 

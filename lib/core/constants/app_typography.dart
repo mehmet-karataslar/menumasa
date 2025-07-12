@@ -239,6 +239,31 @@ class AppTypography {
     height: 1.4,
   );
 
+  // Label Stilleri
+  static const TextStyle labelLarge = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeRegular,
+    fontWeight: fontWeightSemiBold,
+    color: AppColors.textPrimary,
+    height: 1.3,
+  );
+
+  static const TextStyle labelMedium = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeMedium,
+    fontWeight: fontWeightMedium,
+    color: AppColors.textPrimary,
+    height: 1.3,
+  );
+
+  static const TextStyle labelSmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeSmall,
+    fontWeight: fontWeightMedium,
+    color: AppColors.textSecondary,
+    height: 1.3,
+  );
+
   // Chip ve Badge Stilleri
   static const TextStyle chipText = TextStyle(
     fontFamily: fontFamily,
@@ -341,9 +366,8 @@ class AppTypography {
     bodyLarge: bodyLarge,
     bodyMedium: bodyMedium,
     bodySmall: bodySmall,
-    labelLarge: buttonLarge,
-    labelMedium: buttonMedium,
-    labelSmall: buttonSmall,
+    labelLarge: labelLarge,
+    labelMedium: labelMedium,
+    labelSmall: labelSmall,
   );
 }
- 

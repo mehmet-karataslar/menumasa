@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -887,30 +886,22 @@ Dijital menümüz: https://menumasa.com/menu/${widget.businessId}
 
   Future<void> _pickLogoFromFile(Function(String) onLogoSelected) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-        withData: true,
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
       );
 
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-
-        if (file.bytes != null) {
-          // Web için bytes kullan
-          final bytes = file.bytes!;
-          final mockUrl =
-              'data:image/${file.extension};base64,${bytes.toString()}';
-          onLogoSelected(mockUrl);
-        } else if (file.path != null) {
-          // Mobil için file path kullan
-          onLogoSelected(file.path!);
-        }
+      if (image != null) {
+        // Dosya yolunu kullan
+        onLogoSelected(image.path);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Logo dosyası başarıyla seçildi'),
+              content: Text('Logo resmi başarıyla seçildi'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -920,7 +911,7 @@ Dijital menümüz: https://menumasa.com/menu/${widget.businessId}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Dosya seçme hatası: $e'),
+            content: Text('Resim seçme hatası: $e'),
             backgroundColor: AppColors.error,
           ),
         );

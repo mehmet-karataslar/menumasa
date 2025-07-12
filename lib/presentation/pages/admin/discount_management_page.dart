@@ -389,7 +389,7 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
 
   Future<void> _saveDiscount(Discount discount) async {
     try {
-      await _dataService.saveDiscount(discount);
+      await _dataService.saveDiscount(widget.businessId, discount);
       await _loadData();
 
       if (mounted) {
@@ -436,7 +436,10 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
 
     if (confirm == true) {
       try {
-        await _dataService.deleteDiscount(discount.discountId);
+        await _dataService.deleteDiscount(
+          widget.businessId,
+          discount.discountId,
+        );
         await _loadData();
 
         if (mounted) {

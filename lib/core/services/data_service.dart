@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:flutter/foundation.dart' hide Category;
 import '../../data/models/business.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
@@ -10,6 +13,17 @@ class DataService {
   static final DataService _instance = DataService._internal();
   factory DataService() => _instance;
   DataService._internal();
+
+  // Firebase instances
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+
+  // Collections
+  static const String _businessesCollection = 'businesses';
+  static const String _productsCollection = 'products';
+  static const String _categoriesCollection = 'categories';
+  static const String _usersCollection = 'users';
+  static const String _discountsCollection = 'discounts';
 
   late SharedPreferences _prefs;
   bool _initialized = false;
@@ -23,6 +37,451 @@ class DataService {
 
   // Business Operations
   Future<List<Business>> getBusinesses() async {
+    try {
+      final snapshot = await _firestore.collection(_businessesCollection).get();
+      return snapshot.docs
+          .map((doc) => Business.fromJson({...doc.data(), 'id': doc.id}))
+          .toList();
+    } catch (e) {
+      debugPrint('Get businesses error: $e');
+      // Fallback to local storage
+      return await _getBusinessesFromLocal();
+    }
+  }
+
+  Future<Business?> getBusiness(String businessId) async {
+    try {
+      final doc = await _firestore
+          .collection(_businessesCollection)
+          .doc(businessId)
+          .get();
+      if (doc.exists) {
+        return Business.fromJson({...doc.data()!, 'id': doc.id});
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Get business error: $e');
+      // Fallback to local storage
+      return await _getBusinessFromLocal(businessId);
+    }
+  }
+
+  Future<void> saveBusiness(Business business) async {
+    try {
+      await _firestore
+          .collection(_businessesCollection)
+          .doc(business.businessId)
+          .set(business.toJson(), SetOptions(merge: true));
+
+      // Also save to local storage as backup
+      await _saveBusinessToLocal(business);
+    } catch (e) {
+      debugPrint('Save business error: $e');
+      // Fallback to local storage only
+      await _saveBusinessToLocal(business);
+    }
+  }
+
+  Future<void> deleteBusiness(String businessId) async {
+    try {
+      await _firestore
+          .collection(_businessesCollection)
+          .doc(businessId)
+          .delete();
+
+      // Also delete from local storage
+      await _deleteBusinessFromLocal(businessId);
+
+      // Delete related data
+      await deleteProductsByBusiness(businessId);
+      await deleteCategoriesByBusiness(businessId);
+    } catch (e) {
+      debugPrint('Delete business error: $e');
+      // Fallback to local storage
+      await _deleteBusinessFromLocal(businessId);
+    }
+  }
+
+  // Product Operations
+  Future<List<Product>> getProducts({String? businessId}) async {
+    try {
+      Query query = _firestore.collection(_productsCollection);
+
+      if (businessId != null) {
+        query = query.where('businessId', isEqualTo: businessId);
+      }
+
+      final snapshot = await query.orderBy('sortOrder').get();
+      return snapshot.docs
+          .map(
+            (doc) => Product.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('Get products error: $e');
+      // Fallback to local storage
+      return await _getProductsFromLocal(businessId: businessId);
+    }
+  }
+
+  Future<Product?> getProduct(String productId) async {
+    try {
+      final doc = await _firestore
+          .collection(_productsCollection)
+          .doc(productId)
+          .get();
+      if (doc.exists) {
+        return Product.fromJson({...doc.data()!, 'id': doc.id});
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Get product error: $e');
+      // Fallback to local storage
+      return await _getProductFromLocal(productId);
+    }
+  }
+
+  Future<void> saveProduct(Product product) async {
+    try {
+      await _firestore
+          .collection(_productsCollection)
+          .doc(product.productId)
+          .set(product.toJson(), SetOptions(merge: true));
+
+      // Also save to local storage as backup
+      await _saveProductToLocal(product);
+    } catch (e) {
+      debugPrint('Save product error: $e');
+      // Fallback to local storage only
+      await _saveProductToLocal(product);
+    }
+  }
+
+  Future<void> deleteProduct(String productId) async {
+    try {
+      await _firestore.collection(_productsCollection).doc(productId).delete();
+
+      // Also delete from local storage
+      await _deleteProductFromLocal(productId);
+    } catch (e) {
+      debugPrint('Delete product error: $e');
+      // Fallback to local storage
+      await _deleteProductFromLocal(productId);
+    }
+  }
+
+  Future<void> deleteProductsByBusiness(String businessId) async {
+    try {
+      final batch = _firestore.batch();
+      final snapshot = await _firestore
+          .collection(_productsCollection)
+          .where('businessId', isEqualTo: businessId)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+
+      // Also delete from local storage
+      await _deleteProductsByBusinessFromLocal(businessId);
+    } catch (e) {
+      debugPrint('Delete products by business error: $e');
+      // Fallback to local storage
+      await _deleteProductsByBusinessFromLocal(businessId);
+    }
+  }
+
+  // Category Operations
+  Future<List<Category>> getCategories({String? businessId}) async {
+    try {
+      Query query = _firestore.collection(_categoriesCollection);
+
+      if (businessId != null) {
+        query = query.where('businessId', isEqualTo: businessId);
+      }
+
+      final snapshot = await query.orderBy('sortOrder').get();
+      return snapshot.docs
+          .map(
+            (doc) => Category.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('Get categories error: $e');
+      // Fallback to local storage
+      return await _getCategoriesFromLocal(businessId: businessId);
+    }
+  }
+
+  Future<Category?> getCategory(String categoryId) async {
+    try {
+      final doc = await _firestore
+          .collection(_categoriesCollection)
+          .doc(categoryId)
+          .get();
+      if (doc.exists) {
+        return Category.fromJson({...doc.data()!, 'id': doc.id});
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Get category error: $e');
+      // Fallback to local storage
+      return await _getCategoryFromLocal(categoryId);
+    }
+  }
+
+  Future<void> saveCategory(Category category) async {
+    try {
+      await _firestore
+          .collection(_categoriesCollection)
+          .doc(category.categoryId)
+          .set(category.toJson(), SetOptions(merge: true));
+
+      // Also save to local storage as backup
+      await _saveCategoryToLocal(category);
+    } catch (e) {
+      debugPrint('Save category error: $e');
+      // Fallback to local storage only
+      await _saveCategoryToLocal(category);
+    }
+  }
+
+  Future<void> deleteCategory(String categoryId) async {
+    try {
+      await _firestore
+          .collection(_categoriesCollection)
+          .doc(categoryId)
+          .delete();
+
+      // Also delete from local storage
+      await _deleteCategoryFromLocal(categoryId);
+    } catch (e) {
+      debugPrint('Delete category error: $e');
+      // Fallback to local storage
+      await _deleteCategoryFromLocal(categoryId);
+    }
+  }
+
+  Future<void> deleteCategoriesByBusiness(String businessId) async {
+    try {
+      final batch = _firestore.batch();
+      final snapshot = await _firestore
+          .collection(_categoriesCollection)
+          .where('businessId', isEqualTo: businessId)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+
+      // Also delete from local storage
+      await _deleteCategoriesByBusinessFromLocal(businessId);
+    } catch (e) {
+      debugPrint('Delete categories by business error: $e');
+      // Fallback to local storage
+      await _deleteCategoriesByBusinessFromLocal(businessId);
+    }
+  }
+
+  // User Operations
+  Future<User?> getCurrentUser() async {
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser != null) {
+        final doc = await _firestore
+            .collection(_usersCollection)
+            .doc(firebaseUser.uid)
+            .get();
+        if (doc.exists) {
+          return User.fromJson({...doc.data()!, 'id': doc.id});
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Get current user error: $e');
+      // Fallback to local storage
+      return await _getCurrentUserFromLocal();
+    }
+  }
+
+  Future<void> saveCurrentUser(User user) async {
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser != null) {
+        await _firestore
+            .collection(_usersCollection)
+            .doc(firebaseUser.uid)
+            .set(user.toJson(), SetOptions(merge: true));
+      }
+
+      // Also save to local storage as backup
+      await _saveCurrentUserToLocal(user);
+    } catch (e) {
+      debugPrint('Save current user error: $e');
+      // Fallback to local storage only
+      await _saveCurrentUserToLocal(user);
+    }
+  }
+
+  Future<void> clearCurrentUser() async {
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser != null) {
+        await _firestore
+            .collection(_usersCollection)
+            .doc(firebaseUser.uid)
+            .delete();
+      }
+
+      // Also clear from local storage
+      await _clearCurrentUserFromLocal();
+    } catch (e) {
+      debugPrint('Clear current user error: $e');
+      // Fallback to local storage
+      await _clearCurrentUserFromLocal();
+    }
+  }
+
+  // Discount Operations
+  Future<void> saveDiscount(String businessId, Discount discount) async {
+    try {
+      await _firestore
+          .collection(_businessesCollection)
+          .doc(businessId)
+          .collection(_discountsCollection)
+          .doc(discount.discountId)
+          .set(discount.toJson());
+    } catch (e) {
+      debugPrint('Error saving discount: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteDiscount(String businessId, String discountId) async {
+    try {
+      await _firestore
+          .collection(_businessesCollection)
+          .doc(businessId)
+          .collection(_discountsCollection)
+          .doc(discountId)
+          .delete();
+    } catch (e) {
+      debugPrint('Error deleting discount: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Discount>> getDiscountsByBusinessId(String businessId) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_businessesCollection)
+          .doc(businessId)
+          .collection(_discountsCollection)
+          .get();
+
+      return snapshot.docs.map((doc) => Discount.fromJson(doc.data())).toList();
+    } catch (e) {
+      debugPrint('Error fetching discounts: $e');
+      return [];
+    }
+  }
+
+  // Realtime subscriptions
+  Stream<List<Business>> getBusinessesStream() {
+    return _firestore
+        .collection(_businessesCollection)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Business.fromJson({...doc.data(), 'id': doc.id}))
+              .toList(),
+        );
+  }
+
+  Stream<List<Product>> getProductsStream({String? businessId}) {
+    Query query = _firestore.collection(_productsCollection);
+
+    if (businessId != null) {
+      query = query.where('businessId', isEqualTo: businessId);
+    }
+
+    return query
+        .orderBy('sortOrder')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) => Product.fromJson({
+                  ...doc.data() as Map<String, dynamic>,
+                  'id': doc.id,
+                }),
+              )
+              .toList(),
+        );
+  }
+
+  Stream<List<Category>> getCategoriesStream({String? businessId}) {
+    Query query = _firestore.collection(_categoriesCollection);
+
+    if (businessId != null) {
+      query = query.where('businessId', isEqualTo: businessId);
+    }
+
+    return query
+        .orderBy('sortOrder')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) => Category.fromJson({
+                  ...doc.data() as Map<String, dynamic>,
+                  'id': doc.id,
+                }),
+              )
+              .toList(),
+        );
+  }
+
+  // Utility Operations
+  Future<void> clearAllData() async {
+    try {
+      // Clear from Firestore (requires proper permissions)
+      // This is typically not done in production - users should delete their own data
+
+      // Clear from local storage
+      await initialize();
+      await _prefs.clear();
+    } catch (e) {
+      debugPrint('Clear all data error: $e');
+      // Still clear local storage
+      await initialize();
+      await _prefs.clear();
+    }
+  }
+
+  Future<void> initializeSampleData() async {
+    try {
+      final businesses = await getBusinesses();
+      if (businesses.isEmpty) {
+        await _createSampleData();
+      }
+    } catch (e) {
+      debugPrint('Initialize sample data error: $e');
+    }
+  }
+
+  // Local storage fallback methods
+  Future<List<Business>> _getBusinessesFromLocal() async {
     await initialize();
     final businessesJson = _prefs.getStringList('businesses') ?? [];
     return businessesJson
@@ -30,8 +489,8 @@ class DataService {
         .toList();
   }
 
-  Future<Business?> getBusiness(String businessId) async {
-    final businesses = await getBusinesses();
+  Future<Business?> _getBusinessFromLocal(String businessId) async {
+    final businesses = await _getBusinessesFromLocal();
     try {
       return businesses.firstWhere((b) => b.businessId == businessId);
     } catch (e) {
@@ -39,9 +498,9 @@ class DataService {
     }
   }
 
-  Future<void> saveBusiness(Business business) async {
+  Future<void> _saveBusinessToLocal(Business business) async {
     await initialize();
-    final businesses = await getBusinesses();
+    final businesses = await _getBusinessesFromLocal();
     final index = businesses.indexWhere(
       (b) => b.businessId == business.businessId,
     );
@@ -58,23 +517,18 @@ class DataService {
     await _prefs.setStringList('businesses', businessesJson);
   }
 
-  Future<void> deleteBusiness(String businessId) async {
+  Future<void> _deleteBusinessFromLocal(String businessId) async {
     await initialize();
-    final businesses = await getBusinesses();
+    final businesses = await _getBusinessesFromLocal();
     businesses.removeWhere((b) => b.businessId == businessId);
 
     final businessesJson = businesses
         .map((b) => jsonEncode(b.toJson()))
         .toList();
     await _prefs.setStringList('businesses', businessesJson);
-
-    // Also delete related products and categories
-    await deleteProductsByBusiness(businessId);
-    await deleteCategoriesByBusiness(businessId);
   }
 
-  // Product Operations
-  Future<List<Product>> getProducts({String? businessId}) async {
+  Future<List<Product>> _getProductsFromLocal({String? businessId}) async {
     await initialize();
     final productsJson = _prefs.getStringList('products') ?? [];
     var products = productsJson
@@ -88,8 +542,8 @@ class DataService {
     return products..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
-  Future<Product?> getProduct(String productId) async {
-    final products = await getProducts();
+  Future<Product?> _getProductFromLocal(String productId) async {
+    final products = await _getProductsFromLocal();
     try {
       return products.firstWhere((p) => p.productId == productId);
     } catch (e) {
@@ -97,9 +551,9 @@ class DataService {
     }
   }
 
-  Future<void> saveProduct(Product product) async {
+  Future<void> _saveProductToLocal(Product product) async {
     await initialize();
-    final products = await getProducts();
+    final products = await _getProductsFromLocal();
     final index = products.indexWhere((p) => p.productId == product.productId);
 
     if (index >= 0) {
@@ -112,26 +566,25 @@ class DataService {
     await _prefs.setStringList('products', productsJson);
   }
 
-  Future<void> deleteProduct(String productId) async {
+  Future<void> _deleteProductFromLocal(String productId) async {
     await initialize();
-    final products = await getProducts();
+    final products = await _getProductsFromLocal();
     products.removeWhere((p) => p.productId == productId);
 
     final productsJson = products.map((p) => jsonEncode(p.toJson())).toList();
     await _prefs.setStringList('products', productsJson);
   }
 
-  Future<void> deleteProductsByBusiness(String businessId) async {
+  Future<void> _deleteProductsByBusinessFromLocal(String businessId) async {
     await initialize();
-    final products = await getProducts();
+    final products = await _getProductsFromLocal();
     products.removeWhere((p) => p.businessId == businessId);
 
     final productsJson = products.map((p) => jsonEncode(p.toJson())).toList();
     await _prefs.setStringList('products', productsJson);
   }
 
-  // Category Operations
-  Future<List<Category>> getCategories({String? businessId}) async {
+  Future<List<Category>> _getCategoriesFromLocal({String? businessId}) async {
     await initialize();
     final categoriesJson = _prefs.getStringList('categories') ?? [];
     var categories = categoriesJson
@@ -145,8 +598,8 @@ class DataService {
     return categories..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
-  Future<Category?> getCategory(String categoryId) async {
-    final categories = await getCategories();
+  Future<Category?> _getCategoryFromLocal(String categoryId) async {
+    final categories = await _getCategoriesFromLocal();
     try {
       return categories.firstWhere((c) => c.categoryId == categoryId);
     } catch (e) {
@@ -154,9 +607,9 @@ class DataService {
     }
   }
 
-  Future<void> saveCategory(Category category) async {
+  Future<void> _saveCategoryToLocal(Category category) async {
     await initialize();
-    final categories = await getCategories();
+    final categories = await _getCategoriesFromLocal();
     final index = categories.indexWhere(
       (c) => c.categoryId == category.categoryId,
     );
@@ -173,9 +626,9 @@ class DataService {
     await _prefs.setStringList('categories', categoriesJson);
   }
 
-  Future<void> deleteCategory(String categoryId) async {
+  Future<void> _deleteCategoryFromLocal(String categoryId) async {
     await initialize();
-    final categories = await getCategories();
+    final categories = await _getCategoriesFromLocal();
     categories.removeWhere((c) => c.categoryId == categoryId);
 
     final categoriesJson = categories
@@ -184,9 +637,9 @@ class DataService {
     await _prefs.setStringList('categories', categoriesJson);
   }
 
-  Future<void> deleteCategoriesByBusiness(String businessId) async {
+  Future<void> _deleteCategoriesByBusinessFromLocal(String businessId) async {
     await initialize();
-    final categories = await getCategories();
+    final categories = await _getCategoriesFromLocal();
     categories.removeWhere((c) => c.businessId == businessId);
 
     final categoriesJson = categories
@@ -195,8 +648,7 @@ class DataService {
     await _prefs.setStringList('categories', categoriesJson);
   }
 
-  // User Operations
-  Future<User?> getCurrentUser() async {
+  Future<User?> _getCurrentUserFromLocal() async {
     await initialize();
     final userJson = _prefs.getString('current_user');
     if (userJson != null) {
@@ -205,31 +657,18 @@ class DataService {
     return null;
   }
 
-  Future<void> saveCurrentUser(User user) async {
+  Future<void> _saveCurrentUserToLocal(User user) async {
     await initialize();
     await _prefs.setString('current_user', jsonEncode(user.toJson()));
   }
 
-  Future<void> clearCurrentUser() async {
+  Future<void> _clearCurrentUserFromLocal() async {
     await initialize();
     await _prefs.remove('current_user');
   }
 
-  // Utility Operations
-  Future<void> clearAllData() async {
-    await initialize();
-    await _prefs.clear();
-  }
-
-  Future<void> initializeSampleData() async {
-    final businesses = await getBusinesses();
-    if (businesses.isEmpty) {
-      await _createSampleData();
-    }
-  }
-
   Future<void> _createSampleData() async {
-    // Create sample business
+    // Create sample business in Firestore
     final sampleBusiness = Business(
       businessId: 'demo-business-001',
       ownerId: 'demo-owner',
@@ -247,7 +686,7 @@ class DataService {
         email: 'info@lezzetduragi.com',
         website: 'www.lezzetduragi.com',
       ),
-      qrCodeUrl: null, // Will be generated
+      qrCodeUrl: null,
       menuSettings: MenuSettings(
         theme: 'light',
         primaryColor: '#FF6B35',
@@ -266,14 +705,13 @@ class DataService {
     await saveBusiness(sampleBusiness);
 
     // Create sample categories
-    final categories = [
+    final sampleCategories = [
       Category(
         categoryId: 'cat-001',
-        businessId: sampleBusiness.businessId,
+        businessId: 'demo-business-001',
         name: 'Ana Yemekler',
-        description: 'Doyurucu ve lezzetli ana yemeklerimiz',
-        imageUrl: 'https://picsum.photos/300/200?random=main',
-        parentCategoryId: null,
+        description: 'Geleneksel Türk ana yemekleri',
+        imageUrl: 'https://picsum.photos/300/200?random=category1',
         sortOrder: 1,
         isActive: true,
         timeRules: [],
@@ -282,11 +720,10 @@ class DataService {
       ),
       Category(
         categoryId: 'cat-002',
-        businessId: sampleBusiness.businessId,
+        businessId: 'demo-business-001',
         name: 'Başlangıçlar',
-        description: 'Yemeğe lezzetli bir başlangıç',
-        imageUrl: 'https://picsum.photos/300/200?random=starter',
-        parentCategoryId: null,
+        description: 'Lezzetli başlangıç yemekleri',
+        imageUrl: 'https://picsum.photos/300/200?random=category2',
         sortOrder: 2,
         isActive: true,
         timeRules: [],
@@ -295,11 +732,10 @@ class DataService {
       ),
       Category(
         categoryId: 'cat-003',
-        businessId: sampleBusiness.businessId,
+        businessId: 'demo-business-001',
         name: 'İçecekler',
-        description: 'Serinletici ve enerji verici içecekler',
-        imageUrl: 'https://picsum.photos/300/200?random=drinks',
-        parentCategoryId: null,
+        description: 'Sıcak ve soğuk içecekler',
+        imageUrl: 'https://picsum.photos/300/200?random=category3',
         sortOrder: 3,
         isActive: true,
         timeRules: [],
@@ -308,34 +744,32 @@ class DataService {
       ),
     ];
 
-    for (final category in categories) {
+    for (final category in sampleCategories) {
       await saveCategory(category);
     }
 
     // Create sample products
-    final products = [
+    final sampleProducts = [
       Product(
         productId: 'prod-001',
-        businessId: sampleBusiness.businessId,
+        businessId: 'demo-business-001',
         categoryId: 'cat-001',
-        name: 'Adana Kebap',
-        description:
-            'Geleneksel baharat karışımı ile hazırlanmış lezzetli Adana kebap',
+        name: 'Adana Kebabı',
+        description: 'Özel baharatlarla hazırlanmış lezzetli Adana kebabı',
         detailedDescription:
-            'Özenle seçilmiş dana eti, özel baharat karışımı ve geleneksel pişirme tekniği ile hazırlanan nefis Adana kebap. Yanında bulgur pilavı, közlenmiş domates ve biber ile servis edilir.',
-        price: 85.0,
-        currentPrice: 85.0,
+            'Özenle seçilmiş dana eti, özel baharat karışımı ve geleneksel pişirme tekniği ile hazırlanan nefis Adana kebabı.',
+        price: 45.00,
+        currentPrice: 45.00,
         currency: 'TL',
         images: [
           ProductImage(
-            url: 'https://picsum.photos/400/300?random=adana',
-            alt: 'Adana Kebap',
+            url: 'https://picsum.photos/400/300?random=product1',
+            alt: 'Adana Kebabı',
             isPrimary: true,
           ),
         ],
-        nutritionInfo: null,
         allergens: [],
-        tags: ['popular', 'spicy'],
+        tags: ['popular'],
         isActive: true,
         isAvailable: true,
         sortOrder: 1,
@@ -345,53 +779,24 @@ class DataService {
       ),
       Product(
         productId: 'prod-002',
-        businessId: sampleBusiness.businessId,
-        categoryId: 'cat-001',
-        name: 'Kuzu Şiş',
-        description: 'Yumuşacık kuzu eti ile hazırlanan özel şiş kebap',
-        detailedDescription:
-            'Taze kuzu eti, özel marine ile yumuşatılarak şişe geçirilip közde pişirilen nefis şiş kebap.',
-        price: 95.0,
-        currentPrice: 95.0,
-        currency: 'TL',
-        images: [
-          ProductImage(
-            url: 'https://picsum.photos/400/300?random=lamb',
-            alt: 'Kuzu Şiş',
-            isPrimary: true,
-          ),
-        ],
-        nutritionInfo: null,
-        allergens: [],
-        tags: ['new'],
-        isActive: true,
-        isAvailable: true,
-        sortOrder: 2,
-        timeRules: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      Product(
-        productId: 'prod-003',
-        businessId: sampleBusiness.businessId,
+        businessId: 'demo-business-001',
         categoryId: 'cat-002',
         name: 'Humus',
-        description: 'Ev yapımı humus, taze sebzeler ile',
+        description: 'Geleneksel humus, taze ekmek ile servis edilir',
         detailedDescription:
             'Taze nohut, tahini, limon suyu ve özel baharat karışımı ile hazırlanan geleneksel humus.',
-        price: 25.0,
-        currentPrice: 25.0,
+        price: 12.00,
+        currentPrice: 12.00,
         currency: 'TL',
         images: [
           ProductImage(
-            url: 'https://picsum.photos/400/300?random=humus',
+            url: 'https://picsum.photos/400/300?random=product2',
             alt: 'Humus',
             isPrimary: true,
           ),
         ],
-        nutritionInfo: null,
         allergens: ['sesame'],
-        tags: ['vegetarian', 'vegan'],
+        tags: ['vegetarian'],
         isActive: true,
         isAvailable: true,
         sortOrder: 1,
@@ -400,25 +805,24 @@ class DataService {
         updatedAt: DateTime.now(),
       ),
       Product(
-        productId: 'prod-004',
-        businessId: sampleBusiness.businessId,
+        productId: 'prod-003',
+        businessId: 'demo-business-001',
         categoryId: 'cat-003',
-        name: 'Ayran',
-        description: 'Ev yapımı taze ayran',
+        name: 'Türk Çayı',
+        description: 'Geleneksel Türk çayı, ince belli bardakta servis edilir',
         detailedDescription:
-            'Taze yoğurt ve tuz ile geleneksel yöntemlerle hazırlanan serinletici ayran.',
-        price: 8.0,
-        currentPrice: 8.0,
+            'Özenle seçilmiş çay yaprakları ile demlenmiş geleneksel Türk çayı.',
+        price: 3.00,
+        currentPrice: 3.00,
         currency: 'TL',
         images: [
           ProductImage(
-            url: 'https://picsum.photos/400/300?random=ayran',
-            alt: 'Ayran',
+            url: 'https://picsum.photos/400/300?random=product3',
+            alt: 'Türk Çayı',
             isPrimary: true,
           ),
         ],
-        nutritionInfo: null,
-        allergens: ['milk'],
+        allergens: [],
         tags: [],
         isActive: true,
         isAvailable: true,
@@ -429,134 +833,10 @@ class DataService {
       ),
     ];
 
-    for (final product in products) {
+    for (final product in sampleProducts) {
       await saveProduct(product);
     }
 
-    // Create sample discounts
-    final discounts = [
-      DiscountDefaults.happyHourDiscount.copyWith(
-        businessId: sampleBusiness.businessId,
-        targetCategoryIds: ['cat-003'], // İçecekler kategorisi
-      ),
-      DiscountDefaults.weekendSpecial.copyWith(
-        businessId: sampleBusiness.businessId,
-      ),
-      Discount(
-        discountId: 'breakfast-discount',
-        businessId: sampleBusiness.businessId,
-        name: 'Kahvaltı Saatleri İndirimi',
-        description: 'Sabah 8-11 arası başlangıçlarda %10 indirim',
-        type: DiscountType.percentage,
-        value: 10.0,
-        startDate: DateTime.now().subtract(const Duration(days: 1)),
-        endDate: DateTime.now().add(const Duration(days: 30)),
-        timeRules: [
-          CategoryDefaults.breakfastTimeRule.copyWith(
-            ruleId: 'breakfast-discount-time',
-            startTime: '08:00',
-            endTime: '11:00',
-          ),
-        ],
-        targetProductIds: [],
-        targetCategoryIds: ['cat-002'], // Başlangıçlar kategorisi
-        usageCount: 0,
-        isActive: true,
-        combineWithOtherDiscounts: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    ];
-
-    for (final discount in discounts) {
-      await saveDiscount(discount);
-    }
-  }
-
-  // Discount CRUD Operations
-  Future<List<Discount>> getDiscounts() async {
-    await initialize();
-    final discountStrings = _prefs.getStringList('discounts') ?? [];
-    return discountStrings
-        .map((str) => Discount.fromJson(jsonDecode(str)))
-        .toList();
-  }
-
-  Future<List<Discount>> getDiscountsByBusinessId(String businessId) async {
-    final discounts = await getDiscounts();
-    return discounts.where((d) => d.businessId == businessId).toList();
-  }
-
-  Future<Discount?> getDiscount(String discountId) async {
-    final discounts = await getDiscounts();
-    try {
-      return discounts.firstWhere((d) => d.discountId == discountId);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<void> saveDiscount(Discount discount) async {
-    await initialize();
-    final discounts = await getDiscounts();
-    final index = discounts.indexWhere(
-      (d) => d.discountId == discount.discountId,
-    );
-
-    if (index >= 0) {
-      discounts[index] = discount;
-    } else {
-      discounts.add(discount);
-    }
-
-    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
-    await _prefs.setStringList('discounts', discountsJson);
-  }
-
-  Future<void> deleteDiscount(String discountId) async {
-    await initialize();
-    final discounts = await getDiscounts();
-    discounts.removeWhere((d) => d.discountId == discountId);
-
-    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
-    await _prefs.setStringList('discounts', discountsJson);
-  }
-
-  Future<void> deleteDiscountsByBusinessId(String businessId) async {
-    await initialize();
-    final discounts = await getDiscounts();
-    discounts.removeWhere((d) => d.businessId == businessId);
-
-    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
-    await _prefs.setStringList('discounts', discountsJson);
-  }
-
-  // Advanced discount operations
-  Future<List<Discount>> getActiveDiscounts(String businessId) async {
-    final discounts = await getDiscountsByBusinessId(businessId);
-    return discounts.where((d) => d.isCurrentlyActive).toList();
-  }
-
-  Future<List<Discount>> getDiscountsForProduct(
-    String businessId,
-    String productId,
-    String categoryId,
-  ) async {
-    final discounts = await getActiveDiscounts(businessId);
-    return discounts
-        .where((d) => d.appliesToProduct(productId, categoryId))
-        .toList();
-  }
-
-  Future<void> incrementDiscountUsage(String discountId) async {
-    final discount = await getDiscount(discountId);
-    if (discount != null) {
-      await saveDiscount(
-        discount.copyWith(
-          usageCount: discount.usageCount + 1,
-          updatedAt: DateTime.now(),
-        ),
-      );
-    }
+    debugPrint('Sample data created successfully');
   }
 }

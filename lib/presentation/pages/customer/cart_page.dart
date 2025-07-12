@@ -678,6 +678,7 @@ class _CartPageState extends State<CartPage> {
                       'Sipariş Ver (${_cart!.formattedTotalPrice})',
                       style: AppTypography.bodyLarge.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
             ),

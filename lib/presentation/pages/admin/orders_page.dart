@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/models/order.dart';
@@ -33,6 +34,7 @@ class _OrdersPageState extends State<OrdersPage> with TickerProviderStateMixin {
   int? _selectedTableNumber;
 
   late TabController _tabController;
+  Timer? _refreshTimer;
 
   // Filter options
   final List<OrderStatus> _statusFilters = [
@@ -48,21 +50,38 @@ class _OrdersPageState extends State<OrdersPage> with TickerProviderStateMixin {
     _tabController = TabController(length: 4, vsync: this);
     _loadData();
     _orderService.addOrderListener(_onOrdersChanged);
+
+    // Auto-refresh every 10 seconds for real-time updates
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted) {
+        print('OrdersPage: Auto-refreshing orders...');
+        _loadData();
+      }
+    });
+    print('OrdersPage: Auto-refresh timer started');
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _orderService.removeOrderListener(_onOrdersChanged);
+    _refreshTimer?.cancel();
+    print('OrdersPage: Auto-refresh timer cancelled');
     super.dispose();
   }
 
   void _onOrdersChanged(List<Order> orders) {
+    print(
+      'OrdersPage: Orders changed callback called with ${orders.length} orders',
+    );
     if (mounted) {
       setState(() {
         _orders = orders;
         _filterOrders();
       });
+      print(
+        'OrdersPage: State updated with ${_filteredOrders.length} filtered orders',
+      );
     }
   }
 
@@ -86,6 +105,21 @@ class _OrdersPageState extends State<OrdersPage> with TickerProviderStateMixin {
         _isLoading = false;
         _filterOrders();
       });
+
+      // Auto-switch to pending orders tab if there are pending orders
+      final pendingOrders = orders
+          .where((o) => o.status == OrderStatus.pending)
+          .length;
+      if (pendingOrders > 0 && _selectedStatus == null) {
+        print(
+          'OrdersPage: Found $pendingOrders pending orders, switching to pending tab',
+        );
+        setState(() {
+          _selectedStatus = OrderStatus.pending;
+          _tabController.index = 1;
+          _filterOrders();
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -417,7 +451,7 @@ class _OrdersPageState extends State<OrdersPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Siparişler'),
+        title: Text(_buildAppBarTitle()),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -710,6 +744,16 @@ class _OrdersPageState extends State<OrdersPage> with TickerProviderStateMixin {
     );
   }
 
+  String _buildAppBarTitle() {
+    final pendingCount = _orders
+        .where((o) => o.status == OrderStatus.pending)
+        .length;
+    if (pendingCount > 0) {
+      return 'Siparişler ($pendingCount bekleyen)';
+    }
+    return 'Siparişler';
+  }
+
   void _showFilterDialog() {
     showDialog(
       context: context,
@@ -774,4 +818,3 @@ class _OrdersPageState extends State<OrdersPage> with TickerProviderStateMixin {
     );
   }
 }
- 
