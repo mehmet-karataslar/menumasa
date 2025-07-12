@@ -7,6 +7,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/business.dart';
+import '../../../core/services/cart_service.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
@@ -26,6 +27,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   int _currentImageIndex = 0;
   int _quantity = 1;
   bool _isLoading = false;
+  final CartService _cartService = CartService();
 
   @override
   Widget build(BuildContext context) {
@@ -694,24 +696,56 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
-  void _addToCart() {
+  Future<void> _addToCart() async {
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate API call
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await _cartService.addToCart(
+        widget.product,
+        widget.business.businessId,
+        quantity: _quantity,
+      );
+
       setState(() {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.product.name} sepete eklendi!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${widget.product.name} sepete eklendi!'),
+            backgroundColor: AppColors.success,
+            action: SnackBarAction(
+              label: 'Sepete Git',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.pop(context); // Go back to menu
+                Navigator.pushNamed(
+                  context,
+                  '/cart',
+                  arguments: {'businessId': widget.business.businessId},
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ürün sepete eklenirken hata oluştu: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _onSharePressed() {
