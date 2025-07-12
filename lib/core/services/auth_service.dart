@@ -8,9 +8,12 @@ class AuthService {
   static const String _lastUserIdKey = 'last_user_id';
   static const String _lastBusinessIdKey = 'last_business_id';
 
-  // Firebase Auth instance
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Firebase Auth instance (nullable until Firebase is available)
+  FirebaseAuth? _auth;
+  FirebaseFirestore? _firestore;
+
+  // Check if Firebase is available
+  bool get _isFirebaseAvailable => _auth != null && _firestore != null;
 
   // Demo business credentials
   static const Map<String, String> _demoBusinessCredentials = {
@@ -22,13 +25,31 @@ class AuthService {
   // Singleton pattern
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
-  AuthService._internal();
+  AuthService._internal() {
+    _initializeFirebase();
+  }
+
+  /// Initialize Firebase instances
+  void _initializeFirebase() {
+    try {
+      _auth = FirebaseAuth.instance;
+      _firestore = FirebaseFirestore.instance;
+      debugPrint('🔥 AuthService: Firebase instances initialized');
+    } catch (e) {
+      debugPrint(
+        '⚠️ AuthService: Firebase not available, using local storage: $e',
+      );
+      _auth = null;
+      _firestore = null;
+    }
+  }
 
   /// Mevcut kullanıcıyı al
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => _auth?.currentUser;
 
   /// Giriş durumunu dinle
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<User?> get authStateChanges =>
+      _auth?.authStateChanges() ?? const Stream.empty();
 
   /// Kullanıcı girişini doğrula
   Future<LoginResult> authenticateUser(
@@ -85,23 +106,28 @@ class AuthService {
       // Demo business credentials kontrolü
       if (_demoBusinessCredentials.containsKey(identifier)) {
         if (_demoBusinessCredentials[identifier] == password) {
-          // Anonymous auth veya email/password auth
-          final email = '$identifier@demo.com';
-          try {
-            // Önce giriş yapmayı dene
-            await _auth.signInWithEmailAndPassword(
-              email: email,
-              password: password,
-            );
-          } catch (e) {
-            // Kullanıcı yoksa oluştur
-            await _auth.createUserWithEmailAndPassword(
-              email: email,
-              password: password,
-            );
+          if (_isFirebaseAvailable) {
+            // Firebase available - use Firebase Auth
+            final email = '$identifier@demo.com';
+            try {
+              // Önce giriş yapmayı dene
+              await _auth!.signInWithEmailAndPassword(
+                email: email,
+                password: password,
+              );
+            } catch (e) {
+              // Kullanıcı yoksa oluştur
+              await _auth!.createUserWithEmailAndPassword(
+                email: email,
+                password: password,
+              );
 
-            // Firestore'da business profili oluştur
-            await _createBusinessProfile(identifier, email);
+              // Firestore'da business profili oluştur
+              await _createBusinessProfile(identifier, email);
+            }
+          } else {
+            // Firebase not available - use local storage
+            debugPrint('⚠️ Using local auth for business: $identifier');
           }
 
           return LoginResult(
@@ -126,11 +152,16 @@ class AuthService {
   /// Müşteri kullanıcısını doğrula
   Future<LoginResult> _authenticateCustomerUser(String identifier) async {
     try {
-      // Anonymous auth ile müşteri girişi
-      await _auth.signInAnonymously();
+      if (_isFirebaseAvailable) {
+        // Firebase available - use anonymous auth
+        await _auth!.signInAnonymously();
 
-      // Firestore'da müşteri profili oluştur/güncelle
-      await _createCustomerProfile(identifier);
+        // Firestore'da müşteri profili oluştur/güncelle
+        await _createCustomerProfile(identifier);
+      } else {
+        // Firebase not available - use local storage
+        debugPrint('⚠️ Using local auth for customer: $identifier');
+      }
 
       return LoginResult(
         success: true,
@@ -149,10 +180,12 @@ class AuthService {
 
   /// İşletme profili oluştur
   Future<void> _createBusinessProfile(String businessId, String email) async {
+    if (!_isFirebaseAvailable) return;
+
     try {
-      final user = _auth.currentUser;
+      final user = _auth!.currentUser;
       if (user != null) {
-        await _firestore.collection('businesses').doc(businessId).set({
+        await _firestore!.collection('businesses').doc(businessId).set({
           'businessId': businessId,
           'email': email,
           'userId': user.uid,
@@ -168,10 +201,12 @@ class AuthService {
 
   /// Müşteri profili oluştur
   Future<void> _createCustomerProfile(String identifier) async {
+    if (!_isFirebaseAvailable) return;
+
     try {
-      final user = _auth.currentUser;
+      final user = _auth!.currentUser;
       if (user != null) {
-        await _firestore.collection('customers').doc(user.uid).set({
+        await _firestore!.collection('customers').doc(user.uid).set({
           'identifier': identifier,
           'userId': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
@@ -203,131 +238,112 @@ class AuthService {
 
   /// Müşteri girişi kontrolü
   Future<bool> _isCustomerLogin(String identifier) async {
-    // Telefon numarası pattern kontrolü
-    if (_isPhoneNumber(identifier)) {
+    // Müşteri kodu pattern kontrolü
+    if (identifier.startsWith('m') ||
+        identifier.startsWith('customer') ||
+        identifier.startsWith('c')) {
       return true;
     }
 
-    // Masa numarası pattern kontrolü
-    if (_isTableNumber(identifier)) {
-      return true;
-    }
-
-    // Email pattern kontrolü
-    if (_isEmail(identifier)) {
+    // Masa numarası kontrolü
+    if (RegExp(r'^[0-9]+$').hasMatch(identifier)) {
       return true;
     }
 
     return false;
   }
 
-  /// Telefon numarası kontrolü
-  bool _isPhoneNumber(String value) {
-    // Türkiye telefon numarası pattern'leri
-    final phonePatterns = [
-      RegExp(r'^0[5][0-9]{9}$'), // 05xxxxxxxxx
-      RegExp(r'^[5][0-9]{9}$'), // 5xxxxxxxxx
-      RegExp(r'^\+90[5][0-9]{9}$'), // +905xxxxxxxxx
-    ];
-
-    return phonePatterns.any((pattern) => pattern.hasMatch(value));
-  }
-
-  /// Masa numarası kontrolü
-  bool _isTableNumber(String value) {
-    final tablePatterns = [
-      RegExp(r'^(masa|table|m|t)\d+$', caseSensitive: false),
-      RegExp(r'^\d+$'), // Sadece rakam
-    ];
-
-    return tablePatterns.any((pattern) => pattern.hasMatch(value));
-  }
-
-  /// Email kontrolü
-  bool _isEmail(String value) {
-    return RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    ).hasMatch(value);
-  }
-
   /// Son giriş bilgisini kaydet
-  Future<void> _saveLastLogin(LoginType type, String identifier) async {
+  Future<void> _saveLastLogin(LoginType loginType, String identifier) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_lastLoginKey, type.name);
+      await prefs.setString(_lastLoginKey, loginType.toString());
+      await prefs.setString(_lastUserIdKey, identifier);
 
-      if (type == LoginType.business) {
+      if (loginType == LoginType.business) {
         await prefs.setString(_lastBusinessIdKey, identifier);
-      } else {
-        await prefs.setString(_lastUserIdKey, identifier);
       }
     } catch (e) {
-      debugPrint('Error saving last login: $e');
+      debugPrint('Save last login error: $e');
     }
   }
 
   /// Son giriş bilgisini al
-  Future<LastLoginInfo?> getLastLoginInfo() async {
+  Future<LastLogin?> getLastLogin() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final typeString = prefs.getString(_lastLoginKey);
+      final loginTypeString = prefs.getString(_lastLoginKey);
+      final userId = prefs.getString(_lastUserIdKey);
 
-      if (typeString == null) return null;
+      if (loginTypeString == null || userId == null) {
+        return null;
+      }
 
-      final type = LoginType.values.firstWhere(
-        (e) => e.name == typeString,
+      final loginType = LoginType.values.firstWhere(
+        (type) => type.toString() == loginTypeString,
         orElse: () => LoginType.customer,
       );
 
-      final identifier = type == LoginType.business
-          ? prefs.getString(_lastBusinessIdKey)
-          : prefs.getString(_lastUserIdKey);
-
-      if (identifier == null) return null;
-
-      return LastLoginInfo(type: type, identifier: identifier);
+      return LastLogin(
+        loginType: loginType,
+        userId: userId,
+        businessId: prefs.getString(_lastBusinessIdKey),
+      );
     } catch (e) {
-      debugPrint('Error getting last login info: $e');
+      debugPrint('Get last login error: $e');
       return null;
     }
   }
 
-  /// Çıkış yap
-  Future<void> logout() async {
+  /// Kullanıcıyı oturumu kapat
+  Future<void> signOut() async {
     try {
-      await _auth.signOut();
+      if (_isFirebaseAvailable) {
+        await _auth!.signOut();
+      }
 
+      // Local storage'dan da temizle
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_lastLoginKey);
       await prefs.remove(_lastUserIdKey);
       await prefs.remove(_lastBusinessIdKey);
     } catch (e) {
-      debugPrint('Error during logout: $e');
+      debugPrint('Sign out error: $e');
     }
   }
 
-  /// Demo veri oluştur
-  Future<void> createDemoData() async {
-    try {
-      // Demo business data'sını Firestore'a ekle
-      await _firestore.collection('businesses').doc('demo-business-001').set({
-        'businessId': 'demo-business-001',
-        'businessName': 'Lezzet Durağı',
-        'businessDescription':
-            'Geleneksel Türk mutfağının en lezzetli örnekleri',
-        'logoUrl': 'https://picsum.photos/200/200?random=logo',
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+  /// Kullanıcı verilerini Firestore'dan al
+  Future<Map<String, dynamic>?> getUserData(String userId) async {
+    if (!_isFirebaseAvailable) return null;
 
-      debugPrint('Demo data created');
+    try {
+      final doc = await _firestore!.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
     } catch (e) {
-      debugPrint('Demo data creation error: $e');
+      debugPrint('Get user data error: $e');
+      return null;
+    }
+  }
+
+  /// Kullanıcı verilerini Firestore'a kaydet
+  Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
+    if (!_isFirebaseAvailable) return;
+
+    try {
+      await _firestore!.collection('users').doc(userId).set({
+        ...data,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Update user data error: $e');
     }
   }
 }
 
-/// Giriş sonucu
+/// Giriş sonucu sınıfı
 class LoginResult {
   final bool success;
   final String message;
@@ -344,13 +360,14 @@ class LoginResult {
   });
 }
 
-/// Giriş türü
+/// Giriş türü enum
 enum LoginType { business, customer }
 
-/// Son giriş bilgisi
-class LastLoginInfo {
-  final LoginType type;
-  final String identifier;
+/// Son giriş bilgisi sınıfı
+class LastLogin {
+  final LoginType loginType;
+  final String userId;
+  final String? businessId;
 
-  LastLoginInfo({required this.type, required this.identifier});
+  LastLogin({required this.loginType, required this.userId, this.businessId});
 }

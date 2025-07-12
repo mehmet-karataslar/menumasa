@@ -14,9 +14,19 @@ class DataService {
   factory DataService() => _instance;
   DataService._internal();
 
-  // Firebase instances
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+  // Firebase instances (nullable until Firebase is available)
+  FirebaseFirestore? _firestore;
+  auth.FirebaseAuth? _auth;
+
+  // Check if Firebase is available (imported from main.dart)
+  bool get _isFirebaseAvailable {
+    try {
+      // Try to check Firebase availability
+      return _firestore != null && _auth != null;
+    } catch (e) {
+      return false;
+    }
+  }
 
   // Collections
   static const String _businessesCollection = 'businesses';
@@ -31,425 +41,564 @@ class DataService {
   Future<void> initialize() async {
     if (!_initialized) {
       _prefs = await SharedPreferences.getInstance();
+
+      // Initialize Firebase instances if available
+      try {
+        _firestore = FirebaseFirestore.instance;
+        _auth = auth.FirebaseAuth.instance;
+        debugPrint('🔥 DataService: Firebase instances initialized');
+      } catch (e) {
+        debugPrint(
+          '⚠️ DataService: Firebase not available, using local storage: $e',
+        );
+        _firestore = null;
+        _auth = null;
+      }
+
       _initialized = true;
     }
   }
 
   // Business Operations
   Future<List<Business>> getBusinesses() async {
-    try {
-      final snapshot = await _firestore.collection(_businessesCollection).get();
-      return snapshot.docs
-          .map((doc) => Business.fromJson({...doc.data(), 'id': doc.id}))
-          .toList();
-    } catch (e) {
-      debugPrint('Get businesses error: $e');
-      // Fallback to local storage
+    if (_isFirebaseAvailable) {
+      try {
+        final snapshot = await _firestore!
+            .collection(_businessesCollection)
+            .get();
+        return snapshot.docs
+            .map((doc) => Business.fromJson({...doc.data(), 'id': doc.id}))
+            .toList();
+      } catch (e) {
+        debugPrint('Get businesses error: $e');
+        // Fallback to local storage
+        return await _getBusinessesFromLocal();
+      }
+    } else {
+      // Use local storage directly
       return await _getBusinessesFromLocal();
     }
   }
 
   Future<Business?> getBusiness(String businessId) async {
-    try {
-      final doc = await _firestore
-          .collection(_businessesCollection)
-          .doc(businessId)
-          .get();
-      if (doc.exists) {
-        return Business.fromJson({...doc.data()!, 'id': doc.id});
+    if (_isFirebaseAvailable) {
+      try {
+        final doc = await _firestore!
+            .collection(_businessesCollection)
+            .doc(businessId)
+            .get();
+        if (doc.exists) {
+          return Business.fromJson({...doc.data()!, 'id': doc.id});
+        }
+        return null;
+      } catch (e) {
+        debugPrint('Get business error: $e');
+        // Fallback to local storage
+        return await _getBusinessFromLocal(businessId);
       }
-      return null;
-    } catch (e) {
-      debugPrint('Get business error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       return await _getBusinessFromLocal(businessId);
     }
   }
 
   Future<void> saveBusiness(Business business) async {
-    try {
-      await _firestore
-          .collection(_businessesCollection)
-          .doc(business.businessId)
-          .set(business.toJson(), SetOptions(merge: true));
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_businessesCollection)
+            .doc(business.businessId)
+            .set(business.toJson(), SetOptions(merge: true));
 
-      // Also save to local storage as backup
-      await _saveBusinessToLocal(business);
-    } catch (e) {
-      debugPrint('Save business error: $e');
-      // Fallback to local storage only
+        // Also save to local storage as backup
+        await _saveBusinessToLocal(business);
+      } catch (e) {
+        debugPrint('Save business error: $e');
+        // Fallback to local storage only
+        await _saveBusinessToLocal(business);
+      }
+    } else {
+      // Use local storage directly
       await _saveBusinessToLocal(business);
     }
   }
 
   Future<void> deleteBusiness(String businessId) async {
-    try {
-      await _firestore
-          .collection(_businessesCollection)
-          .doc(businessId)
-          .delete();
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_businessesCollection)
+            .doc(businessId)
+            .delete();
 
-      // Also delete from local storage
-      await _deleteBusinessFromLocal(businessId);
+        // Also delete from local storage
+        await _deleteBusinessFromLocal(businessId);
 
-      // Delete related data
-      await deleteProductsByBusiness(businessId);
-      await deleteCategoriesByBusiness(businessId);
-    } catch (e) {
-      debugPrint('Delete business error: $e');
-      // Fallback to local storage
+        // Delete related data
+        await deleteProductsByBusiness(businessId);
+        await deleteCategoriesByBusiness(businessId);
+      } catch (e) {
+        debugPrint('Delete business error: $e');
+        // Fallback to local storage
+        await _deleteBusinessFromLocal(businessId);
+      }
+    } else {
+      // Use local storage directly
       await _deleteBusinessFromLocal(businessId);
     }
   }
 
   // Product Operations
   Future<List<Product>> getProducts({String? businessId}) async {
-    try {
-      Query query = _firestore.collection(_productsCollection);
+    if (_isFirebaseAvailable) {
+      try {
+        Query query = _firestore!.collection(_productsCollection);
 
-      if (businessId != null) {
-        query = query.where('businessId', isEqualTo: businessId);
+        if (businessId != null) {
+          query = query.where('businessId', isEqualTo: businessId);
+        }
+
+        final snapshot = await query.orderBy('sortOrder').get();
+        return snapshot.docs
+            .map(
+              (doc) => Product.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }),
+            )
+            .toList();
+      } catch (e) {
+        debugPrint('Get products error: $e');
+        // Fallback to local storage
+        return await _getProductsFromLocal(businessId: businessId);
       }
-
-      final snapshot = await query.orderBy('sortOrder').get();
-      return snapshot.docs
-          .map(
-            (doc) => Product.fromJson({
-              ...doc.data() as Map<String, dynamic>,
-              'id': doc.id,
-            }),
-          )
-          .toList();
-    } catch (e) {
-      debugPrint('Get products error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       return await _getProductsFromLocal(businessId: businessId);
     }
   }
 
   Future<Product?> getProduct(String productId) async {
-    try {
-      final doc = await _firestore
-          .collection(_productsCollection)
-          .doc(productId)
-          .get();
-      if (doc.exists) {
-        return Product.fromJson({...doc.data()!, 'id': doc.id});
+    if (_isFirebaseAvailable) {
+      try {
+        final doc = await _firestore!
+            .collection(_productsCollection)
+            .doc(productId)
+            .get();
+        if (doc.exists) {
+          return Product.fromJson({...doc.data()!, 'id': doc.id});
+        }
+        return null;
+      } catch (e) {
+        debugPrint('Get product error: $e');
+        // Fallback to local storage
+        return await _getProductFromLocal(productId);
       }
-      return null;
-    } catch (e) {
-      debugPrint('Get product error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       return await _getProductFromLocal(productId);
     }
   }
 
   Future<void> saveProduct(Product product) async {
-    try {
-      await _firestore
-          .collection(_productsCollection)
-          .doc(product.productId)
-          .set(product.toJson(), SetOptions(merge: true));
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_productsCollection)
+            .doc(product.productId)
+            .set(product.toJson(), SetOptions(merge: true));
 
-      // Also save to local storage as backup
-      await _saveProductToLocal(product);
-    } catch (e) {
-      debugPrint('Save product error: $e');
-      // Fallback to local storage only
+        // Also save to local storage as backup
+        await _saveProductToLocal(product);
+      } catch (e) {
+        debugPrint('Save product error: $e');
+        // Fallback to local storage only
+        await _saveProductToLocal(product);
+      }
+    } else {
+      // Use local storage directly
       await _saveProductToLocal(product);
     }
   }
 
   Future<void> deleteProduct(String productId) async {
-    try {
-      await _firestore.collection(_productsCollection).doc(productId).delete();
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_productsCollection)
+            .doc(productId)
+            .delete();
 
-      // Also delete from local storage
-      await _deleteProductFromLocal(productId);
-    } catch (e) {
-      debugPrint('Delete product error: $e');
-      // Fallback to local storage
+        // Also delete from local storage
+        await _deleteProductFromLocal(productId);
+      } catch (e) {
+        debugPrint('Delete product error: $e');
+        // Fallback to local storage
+        await _deleteProductFromLocal(productId);
+      }
+    } else {
+      // Use local storage directly
       await _deleteProductFromLocal(productId);
     }
   }
 
   Future<void> deleteProductsByBusiness(String businessId) async {
-    try {
-      final batch = _firestore.batch();
-      final snapshot = await _firestore
-          .collection(_productsCollection)
-          .where('businessId', isEqualTo: businessId)
-          .get();
+    if (_isFirebaseAvailable) {
+      try {
+        final batch = _firestore!.batch();
+        final snapshot = await _firestore!
+            .collection(_productsCollection)
+            .where('businessId', isEqualTo: businessId)
+            .get();
 
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
+
+        // Also delete from local storage
+        await _deleteProductsByBusinessFromLocal(businessId);
+      } catch (e) {
+        debugPrint('Delete products by business error: $e');
+        // Fallback to local storage
+        await _deleteProductsByBusinessFromLocal(businessId);
       }
-
-      await batch.commit();
-
-      // Also delete from local storage
-      await _deleteProductsByBusinessFromLocal(businessId);
-    } catch (e) {
-      debugPrint('Delete products by business error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       await _deleteProductsByBusinessFromLocal(businessId);
     }
   }
 
   // Category Operations
   Future<List<Category>> getCategories({String? businessId}) async {
-    try {
-      Query query = _firestore.collection(_categoriesCollection);
+    if (_isFirebaseAvailable) {
+      try {
+        Query query = _firestore!.collection(_categoriesCollection);
 
-      if (businessId != null) {
-        query = query.where('businessId', isEqualTo: businessId);
+        if (businessId != null) {
+          query = query.where('businessId', isEqualTo: businessId);
+        }
+
+        final snapshot = await query.orderBy('sortOrder').get();
+        return snapshot.docs
+            .map(
+              (doc) => Category.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }),
+            )
+            .toList();
+      } catch (e) {
+        debugPrint('Get categories error: $e');
+        // Fallback to local storage
+        return await _getCategoriesFromLocal(businessId: businessId);
       }
-
-      final snapshot = await query.orderBy('sortOrder').get();
-      return snapshot.docs
-          .map(
-            (doc) => Category.fromJson({
-              ...doc.data() as Map<String, dynamic>,
-              'id': doc.id,
-            }),
-          )
-          .toList();
-    } catch (e) {
-      debugPrint('Get categories error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       return await _getCategoriesFromLocal(businessId: businessId);
     }
   }
 
   Future<Category?> getCategory(String categoryId) async {
-    try {
-      final doc = await _firestore
-          .collection(_categoriesCollection)
-          .doc(categoryId)
-          .get();
-      if (doc.exists) {
-        return Category.fromJson({...doc.data()!, 'id': doc.id});
+    if (_isFirebaseAvailable) {
+      try {
+        final doc = await _firestore!
+            .collection(_categoriesCollection)
+            .doc(categoryId)
+            .get();
+        if (doc.exists) {
+          return Category.fromJson({...doc.data()!, 'id': doc.id});
+        }
+        return null;
+      } catch (e) {
+        debugPrint('Get category error: $e');
+        // Fallback to local storage
+        return await _getCategoryFromLocal(categoryId);
       }
-      return null;
-    } catch (e) {
-      debugPrint('Get category error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       return await _getCategoryFromLocal(categoryId);
     }
   }
 
   Future<void> saveCategory(Category category) async {
-    try {
-      await _firestore
-          .collection(_categoriesCollection)
-          .doc(category.categoryId)
-          .set(category.toJson(), SetOptions(merge: true));
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_categoriesCollection)
+            .doc(category.categoryId)
+            .set(category.toJson(), SetOptions(merge: true));
 
-      // Also save to local storage as backup
-      await _saveCategoryToLocal(category);
-    } catch (e) {
-      debugPrint('Save category error: $e');
-      // Fallback to local storage only
+        // Also save to local storage as backup
+        await _saveCategoryToLocal(category);
+      } catch (e) {
+        debugPrint('Save category error: $e');
+        // Fallback to local storage only
+        await _saveCategoryToLocal(category);
+      }
+    } else {
+      // Use local storage directly
       await _saveCategoryToLocal(category);
     }
   }
 
   Future<void> deleteCategory(String categoryId) async {
-    try {
-      await _firestore
-          .collection(_categoriesCollection)
-          .doc(categoryId)
-          .delete();
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_categoriesCollection)
+            .doc(categoryId)
+            .delete();
 
-      // Also delete from local storage
-      await _deleteCategoryFromLocal(categoryId);
-    } catch (e) {
-      debugPrint('Delete category error: $e');
-      // Fallback to local storage
+        // Also delete from local storage
+        await _deleteCategoryFromLocal(categoryId);
+      } catch (e) {
+        debugPrint('Delete category error: $e');
+        // Fallback to local storage
+        await _deleteCategoryFromLocal(categoryId);
+      }
+    } else {
+      // Use local storage directly
       await _deleteCategoryFromLocal(categoryId);
     }
   }
 
   Future<void> deleteCategoriesByBusiness(String businessId) async {
-    try {
-      final batch = _firestore.batch();
-      final snapshot = await _firestore
-          .collection(_categoriesCollection)
-          .where('businessId', isEqualTo: businessId)
-          .get();
+    if (_isFirebaseAvailable) {
+      try {
+        final batch = _firestore!.batch();
+        final snapshot = await _firestore!
+            .collection(_categoriesCollection)
+            .where('businessId', isEqualTo: businessId)
+            .get();
 
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
+
+        // Also delete from local storage
+        await _deleteCategoriesByBusinessFromLocal(businessId);
+      } catch (e) {
+        debugPrint('Delete categories by business error: $e');
+        // Fallback to local storage
+        await _deleteCategoriesByBusinessFromLocal(businessId);
       }
-
-      await batch.commit();
-
-      // Also delete from local storage
-      await _deleteCategoriesByBusinessFromLocal(businessId);
-    } catch (e) {
-      debugPrint('Delete categories by business error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       await _deleteCategoriesByBusinessFromLocal(businessId);
     }
   }
 
   // User Operations
   Future<User?> getCurrentUser() async {
-    try {
-      final firebaseUser = _auth.currentUser;
-      if (firebaseUser != null) {
-        final doc = await _firestore
-            .collection(_usersCollection)
-            .doc(firebaseUser.uid)
-            .get();
-        if (doc.exists) {
-          return User.fromJson({...doc.data()!, 'id': doc.id});
+    if (_isFirebaseAvailable) {
+      try {
+        final firebaseUser = _auth!.currentUser;
+        if (firebaseUser != null) {
+          final doc = await _firestore!
+              .collection(_usersCollection)
+              .doc(firebaseUser.uid)
+              .get();
+          if (doc.exists) {
+            return User.fromJson({...doc.data()!, 'id': doc.id});
+          }
         }
+        return null;
+      } catch (e) {
+        debugPrint('Get current user error: $e');
+        // Fallback to local storage
+        return await _getCurrentUserFromLocal();
       }
-      return null;
-    } catch (e) {
-      debugPrint('Get current user error: $e');
-      // Fallback to local storage
+    } else {
+      // Use local storage directly
       return await _getCurrentUserFromLocal();
     }
   }
 
   Future<void> saveCurrentUser(User user) async {
-    try {
-      final firebaseUser = _auth.currentUser;
-      if (firebaseUser != null) {
-        await _firestore
-            .collection(_usersCollection)
-            .doc(firebaseUser.uid)
-            .set(user.toJson(), SetOptions(merge: true));
-      }
+    if (_isFirebaseAvailable) {
+      try {
+        final firebaseUser = _auth!.currentUser;
+        if (firebaseUser != null) {
+          await _firestore!
+              .collection(_usersCollection)
+              .doc(firebaseUser.uid)
+              .set(user.toJson(), SetOptions(merge: true));
+        }
 
-      // Also save to local storage as backup
-      await _saveCurrentUserToLocal(user);
-    } catch (e) {
-      debugPrint('Save current user error: $e');
-      // Fallback to local storage only
+        // Also save to local storage as backup
+        await _saveCurrentUserToLocal(user);
+      } catch (e) {
+        debugPrint('Save current user error: $e');
+        // Fallback to local storage only
+        await _saveCurrentUserToLocal(user);
+      }
+    } else {
+      // Use local storage directly
       await _saveCurrentUserToLocal(user);
     }
   }
 
   Future<void> clearCurrentUser() async {
-    try {
-      final firebaseUser = _auth.currentUser;
-      if (firebaseUser != null) {
-        await _firestore
-            .collection(_usersCollection)
-            .doc(firebaseUser.uid)
-            .delete();
-      }
+    if (_isFirebaseAvailable) {
+      try {
+        final firebaseUser = _auth!.currentUser;
+        if (firebaseUser != null) {
+          await _firestore!
+              .collection(_usersCollection)
+              .doc(firebaseUser.uid)
+              .delete();
+        }
 
-      // Also clear from local storage
-      await _clearCurrentUserFromLocal();
-    } catch (e) {
-      debugPrint('Clear current user error: $e');
-      // Fallback to local storage
+        // Also clear from local storage
+        await _clearCurrentUserFromLocal();
+      } catch (e) {
+        debugPrint('Clear current user error: $e');
+        // Fallback to local storage
+        await _clearCurrentUserFromLocal();
+      }
+    } else {
+      // Use local storage directly
       await _clearCurrentUserFromLocal();
     }
   }
 
   // Discount Operations
+  Future<List<Discount>> getDiscountsByBusinessId(String businessId) async {
+    if (_isFirebaseAvailable) {
+      try {
+        final snapshot = await _firestore!
+            .collection(_discountsCollection)
+            .where('businessId', isEqualTo: businessId)
+            .get();
+        return snapshot.docs
+            .map((doc) => Discount.fromJson({...doc.data(), 'id': doc.id}))
+            .toList();
+      } catch (e) {
+        debugPrint('Get discounts error: $e');
+        // Fallback to local storage
+        return await _getDiscountsFromLocal(businessId);
+      }
+    } else {
+      // Use local storage directly
+      return await _getDiscountsFromLocal(businessId);
+    }
+  }
+
   Future<void> saveDiscount(String businessId, Discount discount) async {
-    try {
-      await _firestore
-          .collection(_businessesCollection)
-          .doc(businessId)
-          .collection(_discountsCollection)
-          .doc(discount.discountId)
-          .set(discount.toJson());
-    } catch (e) {
-      debugPrint('Error saving discount: $e');
-      rethrow;
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_discountsCollection)
+            .doc(discount.discountId)
+            .set(discount.toJson(), SetOptions(merge: true));
+
+        // Also save to local storage as backup
+        await _saveDiscountToLocal(businessId, discount);
+      } catch (e) {
+        debugPrint('Save discount error: $e');
+        // Fallback to local storage only
+        await _saveDiscountToLocal(businessId, discount);
+      }
+    } else {
+      // Use local storage directly
+      await _saveDiscountToLocal(businessId, discount);
     }
   }
 
   Future<void> deleteDiscount(String businessId, String discountId) async {
-    try {
-      await _firestore
-          .collection(_businessesCollection)
-          .doc(businessId)
-          .collection(_discountsCollection)
-          .doc(discountId)
-          .delete();
-    } catch (e) {
-      debugPrint('Error deleting discount: $e');
-      rethrow;
-    }
-  }
+    if (_isFirebaseAvailable) {
+      try {
+        await _firestore!
+            .collection(_discountsCollection)
+            .doc(discountId)
+            .delete();
 
-  Future<List<Discount>> getDiscountsByBusinessId(String businessId) async {
-    try {
-      final snapshot = await _firestore
-          .collection(_businessesCollection)
-          .doc(businessId)
-          .collection(_discountsCollection)
-          .get();
-
-      return snapshot.docs.map((doc) => Discount.fromJson(doc.data())).toList();
-    } catch (e) {
-      debugPrint('Error fetching discounts: $e');
-      return [];
+        // Also delete from local storage
+        await _deleteDiscountFromLocal(businessId, discountId);
+      } catch (e) {
+        debugPrint('Delete discount error: $e');
+        // Fallback to local storage
+        await _deleteDiscountFromLocal(businessId, discountId);
+      }
+    } else {
+      // Use local storage directly
+      await _deleteDiscountFromLocal(businessId, discountId);
     }
   }
 
   // Realtime subscriptions
   Stream<List<Business>> getBusinessesStream() {
-    return _firestore
-        .collection(_businessesCollection)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => Business.fromJson({...doc.data(), 'id': doc.id}))
-              .toList(),
-        );
+    if (_isFirebaseAvailable) {
+      return _firestore!
+          .collection(_businessesCollection)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => Business.fromJson({...doc.data(), 'id': doc.id}))
+                .toList(),
+          );
+    } else {
+      // Return empty stream if Firebase not available
+      return Stream.value(<Business>[]);
+    }
   }
 
   Stream<List<Product>> getProductsStream({String? businessId}) {
-    Query query = _firestore.collection(_productsCollection);
+    if (_isFirebaseAvailable) {
+      Query query = _firestore!.collection(_productsCollection);
 
-    if (businessId != null) {
-      query = query.where('businessId', isEqualTo: businessId);
+      if (businessId != null) {
+        query = query.where('businessId', isEqualTo: businessId);
+      }
+
+      return query
+          .orderBy('sortOrder')
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(
+                  (doc) => Product.fromJson({
+                    ...doc.data() as Map<String, dynamic>,
+                    'id': doc.id,
+                  }),
+                )
+                .toList(),
+          );
+    } else {
+      // Return empty stream if Firebase not available
+      return Stream.value(<Product>[]);
     }
-
-    return query
-        .orderBy('sortOrder')
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(
-                (doc) => Product.fromJson({
-                  ...doc.data() as Map<String, dynamic>,
-                  'id': doc.id,
-                }),
-              )
-              .toList(),
-        );
   }
 
   Stream<List<Category>> getCategoriesStream({String? businessId}) {
-    Query query = _firestore.collection(_categoriesCollection);
+    if (_isFirebaseAvailable) {
+      Query query = _firestore!.collection(_categoriesCollection);
 
-    if (businessId != null) {
-      query = query.where('businessId', isEqualTo: businessId);
+      if (businessId != null) {
+        query = query.where('businessId', isEqualTo: businessId);
+      }
+
+      return query
+          .orderBy('sortOrder')
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(
+                  (doc) => Category.fromJson({
+                    ...doc.data() as Map<String, dynamic>,
+                    'id': doc.id,
+                  }),
+                )
+                .toList(),
+          );
+    } else {
+      // Return empty stream if Firebase not available
+      return Stream.value(<Category>[]);
     }
-
-    return query
-        .orderBy('sortOrder')
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(
-                (doc) => Category.fromJson({
-                  ...doc.data() as Map<String, dynamic>,
-                  'id': doc.id,
-                }),
-              )
-              .toList(),
-        );
   }
 
   // Utility Operations
@@ -838,5 +987,45 @@ class DataService {
     }
 
     debugPrint('Sample data created successfully');
+  }
+
+  // Discount Local Storage Methods
+  Future<List<Discount>> _getDiscountsFromLocal(String businessId) async {
+    await initialize();
+    final discountsJson = _prefs.getStringList('discounts_$businessId') ?? [];
+    return discountsJson
+        .map((json) => Discount.fromJson(jsonDecode(json)))
+        .toList();
+  }
+
+  Future<void> _saveDiscountToLocal(
+    String businessId,
+    Discount discount,
+  ) async {
+    await initialize();
+    final discounts = await _getDiscountsFromLocal(businessId);
+
+    // Remove existing discount with same ID
+    discounts.removeWhere((d) => d.discountId == discount.discountId);
+
+    // Add new discount
+    discounts.add(discount);
+
+    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
+    await _prefs.setStringList('discounts_$businessId', discountsJson);
+  }
+
+  Future<void> _deleteDiscountFromLocal(
+    String businessId,
+    String discountId,
+  ) async {
+    await initialize();
+    final discounts = await _getDiscountsFromLocal(businessId);
+
+    // Remove discount with matching ID
+    discounts.removeWhere((d) => d.discountId == discountId);
+
+    final discountsJson = discounts.map((d) => jsonEncode(d.toJson())).toList();
+    await _prefs.setStringList('discounts_$businessId', discountsJson);
   }
 }

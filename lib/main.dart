@@ -21,30 +21,47 @@ import 'core/services/cart_service.dart';
 import 'core/services/order_service.dart';
 import 'core/services/qr_service.dart';
 
+// Global Firebase availability flag
+bool isFirebaseAvailable = false;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    // Firebase initialization
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+  // Check if Firebase is supported on this platform
+  bool firebaseSupported = _isFirebaseSupported();
 
-    // Firebase Crashlytics setup
-    if (!kDebugMode) {
-      FlutterError.onError = (errorDetails) {
-        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-      };
-      PlatformDispatcher.instance.onError = (error, stack) {
-        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-        return true;
-      };
+  if (firebaseSupported) {
+    try {
+      // Firebase initialization
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
+      // Firebase Crashlytics setup
+      if (!kDebugMode) {
+        FlutterError.onError = (errorDetails) {
+          FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+        };
+        PlatformDispatcher.instance.onError = (error, stack) {
+          FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+          return true;
+        };
+      }
+
+      isFirebaseAvailable = true;
+      print('🔥 Firebase initialized successfully');
+    } catch (e, stackTrace) {
+      print('❌ Firebase initialization error: $e');
+      print('Stack trace: $stackTrace');
+      isFirebaseAvailable = false;
     }
+  } else {
+    print('⚠️ Firebase not supported on this platform, using local storage');
+    isFirebaseAvailable = false;
+  }
 
-    // Debug: Firebase connection test
-    print('🔥 Firebase initialized successfully');
-
-    // Initialize services
+  try {
+    // Initialize services (they will handle Firebase availability internally)
     await DataService().initialize();
     await CartService().initialize();
     await OrderService().initialize();
@@ -54,15 +71,29 @@ void main() async {
     // Create sample data if needed
     await DataService().initializeSampleData();
     print('📊 Sample data check completed');
-
-    runApp(const MasamenuApp());
   } catch (e, stackTrace) {
-    print('❌ Firebase initialization error: $e');
+    print('❌ Service initialization error: $e');
     print('Stack trace: $stackTrace');
-
-    // Fallback app without Firebase
-    runApp(const MasamenuApp());
   }
+
+  runApp(const MasamenuApp());
+}
+
+bool _isFirebaseSupported() {
+  // Firebase is supported on mobile platforms and web
+  // Desktop platforms have limited support
+  if (kIsWeb) {
+    return true;
+  }
+
+  // For mobile platforms
+  if (defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS) {
+    return true;
+  }
+
+  // For desktop platforms, Firebase support is limited
+  return false;
 }
 
 class MasamenuApp extends StatelessWidget {
