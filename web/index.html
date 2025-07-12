@@ -20,10 +20,12 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="QR Menü Sistemi - İşletmeler için dijital menü çözümü">
 
-  <!-- iOS meta tags & icons -->
+  <!-- Mobile meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Masa Menü">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -100,24 +102,30 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     
-    // Enable offline persistence for Firestore
-    firebase.firestore().enablePersistence()
-      .catch((err) => {
-        if (err.code == 'failed-precondition') {
-          console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-        } else if (err.code == 'unimplemented') {
-          console.log('The current browser does not support all of the features required to enable persistence');
-        }
-      });
+    // Enable offline persistence for Firestore (new method)
+    try {
+      const db = firebase.firestore();
+      db.enablePersistence({ synchronizeTabs: true })
+        .catch((err) => {
+          if (err.code == 'failed-precondition') {
+            console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+          } else if (err.code == 'unimplemented') {
+            console.log('The current browser does not support all of the features required to enable persistence');
+          }
+        });
+    } catch (e) {
+      console.log('Firestore persistence setup error:', e);
+    }
   </script>
 
   <!-- Flutter Web -->
+  <script src="flutter.js" defer></script>
   <script>
     window.addEventListener('load', function(ev) {
       // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
+      window._flutter.loader.load({
+        serviceWorkerSettings: {
+          serviceWorkerVersion: "{{flutter_service_worker_version}}",
         },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {

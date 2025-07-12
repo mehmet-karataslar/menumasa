@@ -1,11 +1,11 @@
 {
-    "name": "masamenu",
-    "short_name": "masamenu",
+    "name": "Masa Menü",
+    "short_name": "Masa Menü",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#hexcode",
-    "theme_color": "#hexcode",
-    "description": "A new Flutter project.",
+    "background_color": "#FF6B35",
+    "theme_color": "#FF6B35",
+    "description": "QR Menü Sistemi - İşletmeler için dijital menü çözümü",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

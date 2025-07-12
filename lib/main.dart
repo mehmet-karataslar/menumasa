@@ -14,233 +14,143 @@ import 'presentation/pages/qr/qr_scanner_page.dart';
 import 'presentation/pages/qr/qr_menu_page.dart';
 import 'presentation/pages/shared/not_found_page.dart';
 
+// Core services
+import 'core/services/data_service.dart';
+import 'core/services/auth_service.dart';
+import 'core/services/cart_service.dart';
+import 'core/services/order_service.dart';
+import 'core/services/qr_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase'i initialize et
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    // Firebase initialization
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // Firebase Crashlytics'i debug modda devre dışı bırak
-  if (kDebugMode) {
-    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    // Firebase Crashlytics setup
+    if (!kDebugMode) {
+      FlutterError.onError = (errorDetails) {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+    }
+
+    // Debug: Firebase connection test
+    print('🔥 Firebase initialized successfully');
+
+    // Initialize services
+    await DataService().initialize();
+    await CartService().initialize();
+    await OrderService().initialize();
+
+    print('📱 Services initialized successfully');
+
+    // Create sample data if needed
+    await DataService().initializeSampleData();
+    print('📊 Sample data check completed');
+
+    runApp(const MasamenuApp());
+  } catch (e, stackTrace) {
+    print('❌ Firebase initialization error: $e');
+    print('Stack trace: $stackTrace');
+
+    // Fallback app without Firebase
+    runApp(const MasamenuApp());
   }
-
-  // Flutter Error Handler'ı Firebase Crashlytics'e bağla
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-
-  // Async Error Handler'ı bağla
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
-
-  // Sistem UI yapılandırması
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
-
-  runApp(const MasaMenuApp());
 }
 
-class MasaMenuApp extends StatelessWidget {
-  const MasaMenuApp({Key? key}) : super(key: key);
-
-  String _getInitialRoute() {
-    // Web platformunda direkt müşteri giriş sayfasını aç
-    // Mobile'da splash screen göster
-    if (kIsWeb) {
-      return '/customer-login';
-    }
-    return '/';
-  }
+class MasamenuApp extends StatelessWidget {
+  const MasamenuApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Masa Menü - Dijital Menü Çözümü',
-      debugShowCheckedModeBanner: false,
-
-      // Tema ayarları
-      theme: _buildTheme(),
-
-      // Web için direkt customer login, mobile için splash
-      initialRoute: _getInitialRoute(),
-
-      // Rota yapılandırması
-      routes: _buildRoutes(),
-
-      // Dinamik rota üretici - QR kod URL'leri için
-      onGenerateRoute: _generateRoute,
-
-      // Bilinmeyen rota işleyicisi
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute(builder: (context) => const NotFoundPage());
-      },
-
-      // Uygulama başlığı
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        fontFamily: AppTypography.fontFamily,
+        textTheme: AppTypography.textTheme,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          ),
+        ),
+      ),
+      // Remove deprecated textScaleFactor
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaleFactor:
-                1.0, // Kullanıcı font boyutu değişikliklerini sınırla
-          ),
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(1.0)),
           child: child!,
         );
       },
+      home: const SplashPage(),
+      debugShowCheckedModeBanner: false,
     );
-  }
-
-  ThemeData _buildTheme() {
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: AppColorScheme.lightScheme,
-      textTheme: AppTypography.textTheme,
-      fontFamily: AppTypography.fontFamily,
-
-      // AppBar teması
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: AppColors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-
-      // Buton temaları
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-
-      // Input teması
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.greyLight),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.greyLight),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-
-      // Card teması
-      cardTheme: CardThemeData(
-        color: AppColors.white,
-        shadowColor: AppColors.shadow,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-
-      // Divider teması
-      dividerTheme: const DividerThemeData(
-        color: AppColors.greyLight,
-        thickness: 1,
-      ),
-    );
-  }
-
-  Map<String, WidgetBuilder> _buildRoutes() {
-    return {
-      '/': (context) => const SplashPage(),
-      '/login': (context) => const BusinessLoginPage(),
-      '/customer-login': (context) => const CustomerLoginPage(),
-      '/menu': (context) => const MenuRouterPage(),
-      '/qr-scanner': (context) => const QRScannerPage(),
-      '/qr-test': (context) => const QRTestRouterPage(),
-      '/product-detail': (context) => const ProductDetailRouterPage(),
-      '/admin': (context) => const AdminDashboardRouterPage(),
-      '/admin/dashboard': (context) => const AdminDashboardRouterPage(),
-      '/admin/categories': (context) => const CategoryManagementRouterPage(),
-      '/admin/products': (context) => const ProductManagementRouterPage(),
-      '/admin/business-info': (context) => const BusinessInfoRouterPage(),
-      '/admin/menu-settings': (context) => const MenuSettingsRouterPage(),
-      '/admin/qr-codes': (context) => const QRCodeManagementRouterPage(),
-      '/admin/discounts': (context) => const DiscountManagementRouterPage(),
-      '/admin/orders': (context) => const OrdersRouterPage(),
-      '/customer/orders': (context) => const CustomerOrdersRouterPage(),
-    };
-  }
-
-  // Custom route generator for dynamic QR code URLs
-  Route<dynamic>? _generateRoute(RouteSettings settings) {
-    final uri = Uri.parse(settings.name ?? '');
-
-    // Handle QR code menu URLs: /menu/businessId?table=tableNumber
-    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'menu') {
-      final businessId = uri.pathSegments[1];
-      final tableNumber = uri.queryParameters['table'];
-
-      return MaterialPageRoute(
-        builder: (context) =>
-            QRMenuPage(businessId: businessId, tableNumber: tableNumber),
-        settings: settings,
-      );
-    }
-
-    // Handle QR test page routing
-    if (settings.name == '/qr-test') {
-      final args = settings.arguments as Map<String, dynamic>?;
-      final businessId = args?['businessId'] as String? ?? 'demo-business-001';
-      final tableNumber = args?['tableNumber'] as String?;
-
-      return MaterialPageRoute(
-        builder: (context) =>
-            QRTestPage(businessId: businessId, tableNumber: tableNumber),
-        settings: settings,
-      );
-    }
-
-    // Handle other dynamic routes if needed
-    return null;
   }
 }
 
-// QR Test router sayfası
-class QRTestRouterPage extends StatelessWidget {
-  const QRTestRouterPage({Key? key}) : super(key: key);
+// Debug widget to show Firebase connection status
+class FirebaseStatusWidget extends StatefulWidget {
+  const FirebaseStatusWidget({Key? key}) : super(key: key);
+
+  @override
+  State<FirebaseStatusWidget> createState() => _FirebaseStatusWidgetState();
+}
+
+class _FirebaseStatusWidgetState extends State<FirebaseStatusWidget> {
+  String _status = 'Checking Firebase...';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFirebaseStatus();
+  }
+
+  Future<void> _checkFirebaseStatus() async {
+    try {
+      final dataService = DataService();
+      final businesses = await dataService.getBusinesses();
+
+      setState(() {
+        _status = '✅ Firebase OK - ${businesses.length} business found';
+      });
+    } catch (e) {
+      setState(() {
+        _status = '❌ Firebase Error: $e';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final businessId = args?['businessId'] as String? ?? 'demo-business-001';
-    final tableNumber = args?['tableNumber'] as String?;
-
-    return QRTestPage(businessId: businessId, tableNumber: tableNumber);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.blue[50],
+      child: Text(_status, style: const TextStyle(fontSize: 12)),
+    );
   }
 }
