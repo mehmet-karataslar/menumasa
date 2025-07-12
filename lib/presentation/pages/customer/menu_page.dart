@@ -8,6 +8,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/utils/time_rule_utils.dart';
 import '../../../core/services/data_service.dart';
+import '../../../core/services/cart_service.dart';
 import '../../widgets/customer/business_header.dart';
 import '../../widgets/customer/category_list.dart';
 import '../../widgets/customer/product_grid.dart';
@@ -16,6 +17,7 @@ import '../../widgets/customer/filter_bottom_sheet.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
+import 'cart_page.dart';
 // CachedNetworkImage removed for Windows compatibility
 import 'package:shimmer/shimmer.dart';
 
@@ -46,25 +48,48 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   // Services
   final _dataService = DataService();
+  final _cartService = CartService();
 
   // UI State
   String _searchQuery = '';
   String? _selectedCategoryId;
   Map<String, dynamic> _filters = {};
   bool _showSearchBar = false;
+  int _cartItemCount = 0;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _loadMenuData();
+    _initializeCart();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _scrollController.dispose();
+    _cartService.removeCartListener(_onCartChanged);
     super.dispose();
+  }
+
+  Future<void> _initializeCart() async {
+    await _cartService.initialize();
+    _cartService.addCartListener(_onCartChanged);
+    _updateCartCount();
+  }
+
+  void _onCartChanged(cart) {
+    _updateCartCount();
+  }
+
+  Future<void> _updateCartCount() async {
+    final count = await _cartService.getCartItemCount(widget.businessId);
+    if (mounted) {
+      setState(() {
+        _cartItemCount = count;
+      });
+    }
   }
 
   Future<void> _loadMenuData() async {
@@ -201,6 +226,48 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     });
   }
 
+  void _onCartPressed() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartPage(businessId: widget.businessId),
+      ),
+    );
+  }
+
+  Future<void> _addToCart(Product product, {int quantity = 1}) async {
+    try {
+      await _cartService.addToCart(
+        product,
+        widget.businessId,
+        quantity: quantity,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product.name} sepete eklendi'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'Sepete Git',
+              textColor: Colors.white,
+              onPressed: _onCartPressed,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ürün sepete eklenirken hata oluştu: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -305,69 +372,111 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   Widget _buildMenuContent() {
-    return NestedScrollView(
-      controller: _scrollController,
-      headerSliverBuilder: (context, innerBoxIsScrolled) {
-        return [
-          // Business Header
-          SliverAppBar(
-            expandedHeight: 220,
-            floating: false,
-            pinned: true,
-            elevation: 0,
-            backgroundColor: AppColors.primary,
-            flexibleSpace: FlexibleSpaceBar(
-              background: BusinessHeader(
-                business: _business!,
-                onSharePressed: _onSharePressed,
-                onCallPressed: _onCallPressed,
-                onLocationPressed: _onLocationPressed,
-              ),
-            ),
-            actions: [
-              // Search button
-              IconButton(
-                icon: Icon(
-                  _showSearchBar ? Icons.close : Icons.search,
-                  color: AppColors.white,
+    return RefreshIndicator(
+      onRefresh: _loadMenuData,
+      child: NestedScrollView(
+        controller: _scrollController,
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            // Business Header
+            SliverAppBar(
+              expandedHeight: 220,
+              floating: false,
+              pinned: true,
+              elevation: 0,
+              backgroundColor: AppColors.primary,
+              flexibleSpace: FlexibleSpaceBar(
+                background: BusinessHeader(
+                  business: _business!,
+                  onSharePressed: _onSharePressed,
+                  onCallPressed: _onCallPressed,
+                  onLocationPressed: _onLocationPressed,
+                  onCartPressed: null, // Cart button moved to SliverAppBar
+                  cartItemCount: 0, // Not used anymore
                 ),
-                onPressed: _toggleSearchBar,
               ),
-              // Filter button
-              IconButton(
-                icon: const Icon(Icons.filter_list, color: AppColors.white),
-                onPressed: _showFilterBottomSheet,
-              ),
-            ],
-          ),
+              actions: [
+                // Search button
+                IconButton(
+                  icon: Icon(
+                    _showSearchBar ? Icons.close : Icons.search,
+                    color: AppColors.white,
+                  ),
+                  onPressed: _toggleSearchBar,
+                ),
+                // Filter button
+                IconButton(
+                  icon: const Icon(Icons.filter_list, color: AppColors.white),
+                  onPressed: _showFilterBottomSheet,
+                ),
+                // Cart button
+                IconButton(
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.shopping_cart, color: AppColors.white),
+                      if (_cartItemCount > 0)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: AppColors.error,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Text(
+                              _cartItemCount > 99
+                                  ? '99+'
+                                  : _cartItemCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: _onCartPressed,
+                ),
+              ],
+            ),
 
-          // Search Bar (if visible)
-          if (_showSearchBar)
+            // Search Bar (if visible)
+            if (_showSearchBar)
+              SliverToBoxAdapter(
+                child: Container(
+                  color: AppColors.white,
+                  padding: AppDimensions.paddingM,
+                  child: CustomSearchBar(
+                    onSearchChanged: _onSearchChanged,
+                    hintText: 'Ürün ara...',
+                  ),
+                ),
+              ),
+
+            // Category Tabs
             SliverToBoxAdapter(
               child: Container(
                 color: AppColors.white,
-                padding: AppDimensions.paddingM,
-                child: CustomSearchBar(
-                  onSearchChanged: _onSearchChanged,
-                  hintText: 'Ürün ara...',
+                child: CategoryList(
+                  categories: _categories,
+                  selectedCategoryId: _selectedCategoryId,
+                  onCategorySelected: _onCategorySelected,
                 ),
               ),
             ),
-
-          // Category Tabs
-          SliverToBoxAdapter(
-            child: Container(
-              color: AppColors.white,
-              child: CategoryList(
-                categories: _categories,
-                selectedCategoryId: _selectedCategoryId,
-                onCategorySelected: _onCategorySelected,
-              ),
-            ),
-          ),
-        ];
-      },
-      body: _buildProductContent(),
+          ];
+        },
+        body: _buildProductContent(),
+      ),
     );
   }
 
@@ -394,6 +503,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       child: ProductGrid(
         products: _filteredProducts,
         onProductTapped: _onProductTapped,
+        onAddToCart: (product) => _addToCart(product),
         padding: AppDimensions.paddingM,
       ),
     );

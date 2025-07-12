@@ -123,7 +123,12 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         _buildProductStats(),
 
         // Product list
-        Expanded(child: _buildProductList()),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadData,
+            child: _buildProductList(),
+          ),
+        ),
       ],
     );
   }
@@ -764,6 +769,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     List<String> imageUrls = List.from(
       product?.images.map((img) => img.url) ?? [],
     );
+    List<String> selectedAllergens = List.from(product?.allergens ?? []);
     final imageUrlController = TextEditingController();
 
     showDialog(
@@ -964,6 +970,58 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                 ),
 
                 const SizedBox(height: 16),
+
+                // Alerjen seçimi
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Alerjenler',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Bu ürünün içerdiği alerjenleri seçin',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: ProductAllergen.values.map((allergen) {
+                        final isSelected = selectedAllergens.contains(
+                          allergen.value,
+                        );
+                        return FilterChip(
+                          label: Text(allergen.displayName),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                selectedAllergens.add(allergen.value);
+                              } else {
+                                selectedAllergens.remove(allergen.value);
+                              }
+                            });
+                          },
+                          selectedColor: AppColors.error.withOpacity(0.2),
+                          checkmarkColor: AppColors.error,
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? AppColors.error
+                                : AppColors.textPrimary,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
                 SwitchListTile(
                   title: const Text('Aktif'),
                   subtitle: Text(
@@ -1000,6 +1058,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                     selectedCategoryId,
                     isAvailable,
                     imageUrls,
+                    selectedAllergens,
                   );
                   if (mounted) Navigator.pop(context);
                 }
@@ -1298,6 +1357,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     String categoryId,
     bool isAvailable,
     List<String> imageUrls,
+    List<String> allergens,
   ) async {
     try {
       if (product == null) {
@@ -1321,7 +1381,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                 ),
               )
               .toList(),
-          allergens: [],
+          allergens: allergens,
           tags: [],
           isActive: true,
           isAvailable: isAvailable,
@@ -1364,6 +1424,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                 ),
               )
               .toList(),
+          allergens: allergens,
           updatedAt: DateTime.now(),
         );
 

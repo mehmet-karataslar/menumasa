@@ -12,6 +12,7 @@ import 'presentation/pages/admin/qr_code_management_page.dart';
 import 'presentation/pages/admin/business_info_page.dart';
 import 'presentation/pages/admin/menu_settings_page.dart';
 import 'presentation/pages/admin/discount_management_page.dart';
+import 'presentation/pages/admin/orders_page.dart';
 import 'presentation/pages/admin/responsive_admin_dashboard.dart';
 import 'core/services/data_service.dart';
 import 'data/models/product.dart';
@@ -173,6 +174,7 @@ class MasaMenuApp extends StatelessWidget {
       '/admin/menu-settings': (context) => const MenuSettingsRouterPage(),
       '/admin/qr-codes': (context) => const QRCodeManagementRouterPage(),
       '/admin/discounts': (context) => const DiscountManagementRouterPage(),
+      '/admin/orders': (context) => const OrdersRouterPage(),
     };
   }
 }
@@ -1125,6 +1127,32 @@ class DiscountManagementRouterPage extends StatelessWidget {
       );
     } else {
       return DiscountManagementPage(businessId: businessId);
+    }
+  }
+}
+
+// Orders router sayfası
+class OrdersRouterPage extends StatelessWidget {
+  const OrdersRouterPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+
+    // Responsive layout: Use sidebar layout for web/desktop, direct page for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
+    } else {
+      return OrdersPage(businessId: businessId);
     }
   }
 }

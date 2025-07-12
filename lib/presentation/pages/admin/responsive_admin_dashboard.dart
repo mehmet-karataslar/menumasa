@@ -9,6 +9,7 @@ import 'qr_code_management_page.dart';
 import 'business_info_page.dart';
 import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
+import 'orders_page.dart';
 
 class ResponsiveAdminDashboard extends StatefulWidget {
   final String businessId;
@@ -35,6 +36,12 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
       icon: Icons.dashboard,
       color: AppColors.primary,
       route: '/admin/dashboard',
+    ),
+    AdminMenuItem(
+      title: 'Siparişler',
+      icon: Icons.receipt_long,
+      color: AppColors.warning,
+      route: '/admin/orders',
     ),
     AdminMenuItem(
       title: 'Ürün Yönetimi',
@@ -431,16 +438,18 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
       case 0:
         return _buildOverviewContent();
       case 1:
-        return ProductManagementPage(businessId: widget.businessId);
+        return OrdersPage(businessId: widget.businessId);
       case 2:
-        return CategoryManagementPage(businessId: widget.businessId);
+        return ProductManagementPage(businessId: widget.businessId);
       case 3:
-        return DiscountManagementPage(businessId: widget.businessId);
+        return CategoryManagementPage(businessId: widget.businessId);
       case 4:
-        return QRCodeManagementPage(businessId: widget.businessId);
+        return DiscountManagementPage(businessId: widget.businessId);
       case 5:
-        return BusinessInfoPage(businessId: widget.businessId);
+        return QRCodeManagementPage(businessId: widget.businessId);
       case 6:
+        return BusinessInfoPage(businessId: widget.businessId);
+      case 7:
         return MenuSettingsPage(businessId: widget.businessId);
       default:
         return _buildOverviewContent();

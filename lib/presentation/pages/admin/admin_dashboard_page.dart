@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
@@ -63,7 +62,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         IconButton(
           icon: const Icon(Icons.settings, color: AppColors.white),
           onPressed: () {
-            context.go('/admin/settings');
+            Navigator.pushNamed(
+              context,
+              '/admin/menu-settings',
+              arguments: {'businessId': widget.businessId},
+            );
           },
         ),
       ],
@@ -337,7 +340,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 icon: Icons.add,
                 label: 'Ürün Ekle',
                 color: AppColors.success,
-                onPressed: () => context.go('/admin/products/add'),
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  '/admin/products',
+                  arguments: {'businessId': widget.businessId},
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -346,7 +353,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 icon: Icons.category,
                 label: 'Kategori Ekle',
                 color: AppColors.primary,
-                onPressed: () => context.go('/admin/categories/add'),
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  '/admin/categories',
+                  arguments: {'businessId': widget.businessId},
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -407,6 +418,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 1.4,
           children: [
+            _buildManagementCard(
+              title: 'Siparişler',
+              subtitle: 'Gelen siparişler',
+              icon: Icons.receipt_long,
+              color: AppColors.warning,
+              onTap: () => Navigator.pushNamed(
+                context,
+                '/admin/orders',
+                arguments: {'businessId': widget.businessId},
+              ),
+            ),
             _buildManagementCard(
               title: 'Ürün Yönetimi',
               subtitle: '24 aktif ürün',
@@ -614,4 +636,3 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 }
- 

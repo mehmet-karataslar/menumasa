@@ -8,6 +8,7 @@ import '../../../core/constants/app_dimensions.dart';
 class ProductGrid extends StatelessWidget {
   final List<Product> products;
   final Function(Product) onProductTapped;
+  final Function(Product)? onAddToCart;
   final EdgeInsets? padding;
   final int crossAxisCount;
   final double childAspectRatio;
@@ -16,6 +17,7 @@ class ProductGrid extends StatelessWidget {
     Key? key,
     required this.products,
     required this.onProductTapped,
+    this.onAddToCart,
     this.padding,
     this.crossAxisCount = 2,
     this.childAspectRatio = 0.75,
@@ -38,6 +40,9 @@ class ProductGrid extends StatelessWidget {
           return ProductCard(
             product: product,
             onTap: () => onProductTapped(product),
+            onAddToCart: onAddToCart != null
+                ? () => onAddToCart!(product)
+                : null,
           );
         },
       ),
@@ -48,9 +53,14 @@ class ProductGrid extends StatelessWidget {
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
+  final VoidCallback? onAddToCart;
 
-  const ProductCard({Key? key, required this.product, required this.onTap})
-    : super(key: key);
+  const ProductCard({
+    Key? key,
+    required this.product,
+    required this.onTap,
+    this.onAddToCart,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -159,27 +169,52 @@ class ProductCard extends StatelessWidget {
 
                     const Spacer(),
 
-                    // Price section
+                    // Price section and add to cart button
                     Row(
                       children: [
-                        // Current price
-                        Text(
-                          product.formattedPrice,
-                          style: AppTypography.priceRegular.copyWith(
-                            color: product.hasDiscount
-                                ? AppColors.discountColor
-                                : AppColors.priceColor,
+                        // Price column
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Current price
+                              Text(
+                                product.formattedPrice,
+                                style: AppTypography.priceRegular.copyWith(
+                                  color: product.hasDiscount
+                                      ? AppColors.discountColor
+                                      : AppColors.priceColor,
+                                ),
+                              ),
+
+                              // Original price (if discounted)
+                              if (product.hasDiscount)
+                                Text(
+                                  product.formattedOriginalPrice,
+                                  style: AppTypography.priceOriginal,
+                                ),
+                            ],
                           ),
                         ),
 
-                        // Original price (if discounted)
-                        if (product.hasDiscount) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            product.formattedOriginalPrice,
-                            style: AppTypography.priceOriginal,
+                        // Add to cart button
+                        if (onAddToCart != null)
+                          InkWell(
+                            onTap: onAddToCart,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
                           ),
-                        ],
                       ],
                     ),
                   ],
@@ -418,4 +453,3 @@ class ProductListItem extends StatelessWidget {
     );
   }
 }
- 

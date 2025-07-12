@@ -10,6 +10,8 @@ class BusinessHeader extends StatelessWidget {
   final VoidCallback? onSharePressed;
   final VoidCallback? onCallPressed;
   final VoidCallback? onLocationPressed;
+  final VoidCallback? onCartPressed;
+  final int cartItemCount;
 
   const BusinessHeader({
     Key? key,
@@ -17,6 +19,8 @@ class BusinessHeader extends StatelessWidget {
     this.onSharePressed,
     this.onCallPressed,
     this.onLocationPressed,
+    this.onCartPressed,
+    this.cartItemCount = 0,
   }) : super(key: key);
 
   @override
@@ -81,6 +85,14 @@ class BusinessHeader extends StatelessWidget {
               ),
             ),
           ),
+
+          // Cart button - positioned at top right
+          if (onCartPressed != null)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: SafeArea(child: _buildCartButton()),
+            ),
         ],
       ),
     );
@@ -299,6 +311,58 @@ class BusinessHeader extends StatelessWidget {
     // await launch('https://maps.google.com/?q=${business.address.toString()}');
     print('Location: ${business.address.toString()}');
   }
+
+  Widget _buildCartButton() {
+    return InkWell(
+      onTap: onCartPressed,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(Icons.shopping_cart, color: AppColors.primary, size: 24),
+            if (cartItemCount > 0)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    cartItemCount > 99 ? '99+' : cartItemCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // Animated version with slide-in effects
@@ -307,6 +371,8 @@ class AnimatedBusinessHeader extends StatefulWidget {
   final VoidCallback? onSharePressed;
   final VoidCallback? onCallPressed;
   final VoidCallback? onLocationPressed;
+  final VoidCallback? onCartPressed;
+  final int cartItemCount;
 
   const AnimatedBusinessHeader({
     Key? key,
@@ -314,6 +380,8 @@ class AnimatedBusinessHeader extends StatefulWidget {
     this.onSharePressed,
     this.onCallPressed,
     this.onLocationPressed,
+    this.onCartPressed,
+    this.cartItemCount = 0,
   }) : super(key: key);
 
   @override
@@ -372,6 +440,8 @@ class _AnimatedBusinessHeaderState extends State<AnimatedBusinessHeader>
               onSharePressed: widget.onSharePressed,
               onCallPressed: widget.onCallPressed,
               onLocationPressed: widget.onLocationPressed,
+              onCartPressed: widget.onCartPressed,
+              cartItemCount: widget.cartItemCount,
             ),
           ),
         );
