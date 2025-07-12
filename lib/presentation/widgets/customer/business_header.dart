@@ -291,11 +291,13 @@ class BusinessHeader extends StatelessWidget {
   void _defaultCallAction() {
     // URL launcher ile telefon araması yapılacak
     // await launch('tel:${business.contactInfo.phone}');
+    print('Calling: ${business.contactInfo.phone}');
   }
 
   void _defaultLocationAction() {
     // Harita uygulamasında konum açılacak
     // await launch('https://maps.google.com/?q=${business.address.toString()}');
+    print('Location: ${business.address.toString()}');
   }
 }
 
@@ -474,4 +476,3 @@ class CompactBusinessHeader extends StatelessWidget {
     );
   }
 }
- 

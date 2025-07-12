@@ -320,6 +320,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               background: BusinessHeader(
                 business: _business!,
                 onSharePressed: _onSharePressed,
+                onCallPressed: _onCallPressed,
+                onLocationPressed: _onLocationPressed,
               ),
             ),
             actions: [
@@ -416,6 +418,34 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         backgroundColor: AppColors.success,
       ),
     );
+  }
+
+  void _onCallPressed() {
+    // Telefon araması yap
+    final phone = _business?.contactInfo.phone ?? '';
+    if (phone.isNotEmpty) {
+      // await launch('tel:$phone');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Aranıyor: $phone'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
+  void _onLocationPressed() {
+    // Konum bilgisini göster
+    final address = _business?.address.toString() ?? '';
+    if (address.isNotEmpty) {
+      // await launch('https://maps.google.com/?q=$address');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Konum: $address'),
+          backgroundColor: AppColors.info,
+        ),
+      );
+    }
   }
 
   // Sample data creation methods
@@ -624,4 +654,3 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     ];
   }
 }
- 

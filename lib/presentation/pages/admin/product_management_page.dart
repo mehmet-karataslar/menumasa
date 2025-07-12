@@ -761,6 +761,10 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     String selectedCategoryId =
         product?.categoryId ?? _categories.first.categoryId;
     bool isAvailable = product?.isAvailable ?? true;
+    List<String> imageUrls = List.from(
+      product?.images.map((img) => img.url) ?? [],
+    );
+    final imageUrlController = TextEditingController();
 
     showDialog(
       context: context,
@@ -816,6 +820,150 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                   },
                 ),
                 const SizedBox(height: 16),
+
+                // Resim ekleme bölümü
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Ürün Resimleri',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Mevcut resimler
+                    if (imageUrls.isNotEmpty)
+                      Container(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: imageUrls.length,
+                          itemBuilder: (context, index) {
+                            return Container(
+                              width: 100,
+                              margin: const EdgeInsets.only(right: 8),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: 100,
+                                    height: 100,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppColors.greyLight,
+                                      ),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        imageUrls[index],
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return const Icon(
+                                                Icons.image,
+                                                size: 40,
+                                                color: AppColors.greyLight,
+                                              );
+                                            },
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          imageUrls.removeAt(index);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.error,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: AppColors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                    const SizedBox(height: 8),
+
+                    // Yeni resim ekleme
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: imageUrlController,
+                            decoration: const InputDecoration(
+                              labelText: 'Resim URL\'si',
+                              hintText: 'https://example.com/image.jpg',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (imageUrlController.text.trim().isNotEmpty) {
+                              setState(() {
+                                imageUrls.add(imageUrlController.text.trim());
+                                imageUrlController.clear();
+                              });
+                            }
+                          },
+                          child: const Text('Ekle'),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Örnek resim butonları
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        _buildSampleImageButton(
+                          '🍕 Pizza',
+                          'https://picsum.photos/400/300?random=1',
+                          setState,
+                          imageUrls,
+                        ),
+                        _buildSampleImageButton(
+                          '🍔 Burger',
+                          'https://picsum.photos/400/300?random=2',
+                          setState,
+                          imageUrls,
+                        ),
+                        _buildSampleImageButton(
+                          '🥗 Salata',
+                          'https://picsum.photos/400/300?random=3',
+                          setState,
+                          imageUrls,
+                        ),
+                        _buildSampleImageButton(
+                          '🍝 Makarna',
+                          'https://picsum.photos/400/300?random=4',
+                          setState,
+                          imageUrls,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
                 SwitchListTile(
                   title: const Text('Aktif'),
                   subtitle: Text(
@@ -851,6 +999,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                     price,
                     selectedCategoryId,
                     isAvailable,
+                    imageUrls,
                   );
                   if (mounted) Navigator.pop(context);
                 }
@@ -1118,6 +1267,29 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     }
   }
 
+  Widget _buildSampleImageButton(
+    String label,
+    String imageUrl,
+    Function setState,
+    List<String> imageUrls,
+  ) {
+    return ElevatedButton(
+      onPressed: () {
+        setState(() {
+          if (!imageUrls.contains(imageUrl)) {
+            imageUrls.add(imageUrl);
+          }
+        });
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary.withOpacity(0.1),
+        foregroundColor: AppColors.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12)),
+    );
+  }
+
   Future<void> _saveProduct(
     Product? product,
     String name,
@@ -1125,6 +1297,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     double price,
     String categoryId,
     bool isAvailable,
+    List<String> imageUrls,
   ) async {
     try {
       if (product == null) {
@@ -1139,7 +1312,15 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
           price: price,
           currentPrice: price,
           currency: 'TL',
-          images: [],
+          images: imageUrls
+              .map(
+                (url) => ProductImage(
+                  url: url,
+                  alt: name,
+                  isPrimary: imageUrls.indexOf(url) == 0,
+                ),
+              )
+              .toList(),
           allergens: [],
           tags: [],
           isActive: true,
@@ -1174,6 +1355,15 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
           currentPrice: price,
           categoryId: categoryId,
           isAvailable: isAvailable,
+          images: imageUrls
+              .map(
+                (url) => ProductImage(
+                  url: url,
+                  alt: name,
+                  isPrimary: imageUrls.indexOf(url) == 0,
+                ),
+              )
+              .toList(),
           updatedAt: DateTime.now(),
         );
 
