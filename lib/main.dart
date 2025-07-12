@@ -139,6 +139,17 @@ class MasamenuApp extends StatelessWidget {
         );
       },
       home: const SplashPage(),
+      // Routes tanımlamaları
+      routes: {
+        '/login': (context) => const BusinessLoginPage(),
+        '/customer-login': (context) => const CustomerLoginPage(),
+        '/qr-scanner': (context) => const QRScannerPage(),
+        '/not-found': (context) => const NotFoundPage(),
+      },
+      // Unknown route handler
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(builder: (context) => const NotFoundPage());
+      },
       debugShowCheckedModeBanner: false,
     );
   }
