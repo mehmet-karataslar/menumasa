@@ -416,7 +416,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           crossAxisSpacing: 12,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.2,
+          childAspectRatio: 1.1,
           children: [
             _buildManagementCard(
               title: 'Siparişler',

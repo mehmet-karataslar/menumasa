@@ -291,9 +291,9 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.8,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.9,
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
@@ -323,7 +323,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         children: [
           // Product image
           Expanded(
-            flex: 3,
+            flex: 2,
             child: Stack(
               children: [
                 Container(
@@ -335,24 +335,29 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                     color: AppColors.greyLight,
                   ),
                   child: product.images.isNotEmpty
-                      ? Image.network(
-                          product.images.first.url,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return _buildImagePlaceholder();
-                          },
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildImagePlaceholder(),
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child: Image.network(
+                            product.images.first.url,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return _buildImagePlaceholder();
+                            },
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildImagePlaceholder(),
+                          ),
                         )
                       : _buildImagePlaceholder(),
                 ),
 
                 // Status badge
-                Positioned(top: 8, right: 8, child: _buildStatusBadge(product)),
+                Positioned(top: 6, right: 6, child: _buildStatusBadge(product)),
 
                 // Actions
-                Positioned(top: 8, left: 8, child: _buildQuickActions(product)),
+                Positioned(top: 6, left: 6, child: _buildQuickActions(product)),
               ],
             ),
           ),
@@ -361,51 +366,63 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Product name
-                  Text(
-                    product.name,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
+                  // Product name and category
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          style: AppTypography.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _getCategoryName(product.categoryId),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
 
-                  const SizedBox(height: 4),
-
-                  // Category
-                  Text(
-                    _getCategoryName(product.categoryId),
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // Price
+                  // Price and actions
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${product.price.toStringAsFixed(2)} ₺',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.priceColor,
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Text(
+                          '${product.price.toStringAsFixed(2)} ₺',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.priceColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                       PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        iconSize: 20,
                         onSelected: (value) =>
                             _handleProductAction(value, product),
                         itemBuilder: (context) => [
                           const PopupMenuItem(
                             value: 'edit',
                             child: ListTile(
-                              leading: Icon(Icons.edit),
+                              leading: Icon(Icons.edit, size: 18),
                               title: Text('Düzenle'),
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -413,7 +430,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                           const PopupMenuItem(
                             value: 'price',
                             child: ListTile(
-                              leading: Icon(Icons.price_change),
+                              leading: Icon(Icons.price_change, size: 18),
                               title: Text('Fiyat Güncelle'),
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -425,6 +442,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                                 product.isAvailable
                                     ? Icons.visibility_off
                                     : Icons.visibility,
+                                size: 18,
                               ),
                               title: Text(
                                 product.isAvailable ? 'Pasif Yap' : 'Aktif Yap',
@@ -438,6 +456,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                               leading: Icon(
                                 Icons.delete,
                                 color: AppColors.error,
+                                size: 18,
                               ),
                               title: Text(
                                 'Sil',
@@ -500,7 +519,9 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
               ),
             ),
             const SizedBox(height: 4),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 // Price with discount info
                 Column(
@@ -525,7 +546,6 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                       ),
                   ],
                 ),
-                const SizedBox(width: 8),
                 // Discount badge
                 if (product.hasDiscount)
                   Container(
@@ -545,7 +565,6 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                       ),
                     ),
                   ),
-                const SizedBox(width: 8),
                 _buildStatusBadge(product),
               ],
             ),
@@ -775,7 +794,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: Text(isEditing ? 'Ürün Düzenle' : 'Ürün Ekle'),
           content: SingleChildScrollView(
             child: Column(
@@ -819,7 +838,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      setState(() {
+                      setDialogState(() {
                         selectedCategoryId = value;
                       });
                     }
@@ -880,7 +899,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                                     right: 4,
                                     child: InkWell(
                                       onTap: () {
-                                        setState(() {
+                                        setDialogState(() {
                                           imageUrls.removeAt(index);
                                         });
                                       },
@@ -923,7 +942,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                         ElevatedButton(
                           onPressed: () {
                             if (imageUrlController.text.trim().isNotEmpty) {
-                              setState(() {
+                              setDialogState(() {
                                 imageUrls.add(imageUrlController.text.trim());
                                 imageUrlController.clear();
                               });
@@ -943,25 +962,25 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                         _buildSampleImageButton(
                           '🍕 Pizza',
                           'https://picsum.photos/400/300?random=1',
-                          setState,
+                          setDialogState,
                           imageUrls,
                         ),
                         _buildSampleImageButton(
                           '🍔 Burger',
                           'https://picsum.photos/400/300?random=2',
-                          setState,
+                          setDialogState,
                           imageUrls,
                         ),
                         _buildSampleImageButton(
                           '🥗 Salata',
                           'https://picsum.photos/400/300?random=3',
-                          setState,
+                          setDialogState,
                           imageUrls,
                         ),
                         _buildSampleImageButton(
                           '🍝 Makarna',
                           'https://picsum.photos/400/300?random=4',
-                          setState,
+                          setDialogState,
                           imageUrls,
                         ),
                       ],
@@ -999,7 +1018,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                           label: Text(allergen.displayName),
                           selected: isSelected,
                           onSelected: (selected) {
-                            setState(() {
+                            setDialogState(() {
                               if (selected) {
                                 selectedAllergens.add(allergen.value);
                               } else {
@@ -1031,7 +1050,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
                   ),
                   value: isAvailable,
                   onChanged: (value) {
-                    setState(() {
+                    setDialogState(() {
                       isAvailable = value;
                     });
                   },
@@ -1329,12 +1348,12 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
   Widget _buildSampleImageButton(
     String label,
     String imageUrl,
-    Function setState,
+    Function setDialogState,
     List<String> imageUrls,
   ) {
     return ElevatedButton(
       onPressed: () {
-        setState(() {
+        setDialogState(() {
           if (!imageUrls.contains(imageUrl)) {
             imageUrls.add(imageUrl);
           }
@@ -1728,4 +1747,3 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     ];
   }
 }
- 
