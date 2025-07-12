@@ -412,39 +412,67 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   icon: Icon(
                     _showSearchBar ? Icons.close : Icons.search,
                     color: AppColors.white,
+                    size: 22,
                   ),
                   onPressed: _toggleSearchBar,
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
                 // Filter button
                 IconButton(
-                  icon: const Icon(Icons.filter_list, color: AppColors.white),
+                  icon: const Icon(
+                    Icons.filter_list,
+                    color: AppColors.white,
+                    size: 22,
+                  ),
                   onPressed: _showFilterBottomSheet,
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
                 // Orders button
                 IconButton(
-                  icon: const Icon(Icons.receipt_long, color: AppColors.white),
+                  icon: const Icon(
+                    Icons.receipt_long,
+                    color: AppColors.white,
+                    size: 22,
+                  ),
                   onPressed: _onOrdersPressed,
                   tooltip: 'Siparişlerim',
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
                 // Cart button
                 IconButton(
                   icon: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      const Icon(Icons.shopping_cart, color: AppColors.white),
+                      const Icon(
+                        Icons.shopping_cart,
+                        color: AppColors.white,
+                        size: 22,
+                      ),
                       if (_cartItemCount > 0)
                         Positioned(
                           right: -4,
                           top: -4,
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(3),
                             decoration: const BoxDecoration(
                               color: AppColors.error,
                               shape: BoxShape.circle,
                             ),
                             constraints: const BoxConstraints(
-                              minWidth: 18,
-                              minHeight: 18,
+                              minWidth: 16,
+                              minHeight: 16,
                             ),
                             child: Text(
                               _cartItemCount > 99
@@ -452,7 +480,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                   : _cartItemCount.toString(),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 9,
                                 fontWeight: FontWeight.bold,
                               ),
                               textAlign: TextAlign.center,
@@ -462,6 +490,11 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     ],
                   ),
                   onPressed: _onCartPressed,
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
               ],
             ),

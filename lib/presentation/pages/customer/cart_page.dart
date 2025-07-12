@@ -585,7 +585,7 @@ class _CartPageState extends State<CartPage> {
 
   Widget _buildOrderForm() {
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.spacing16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -595,7 +595,7 @@ class _CartPageState extends State<CartPage> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: AppDimensions.spacing16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -604,17 +604,25 @@ class _CartPageState extends State<CartPage> {
                   decoration: const InputDecoration(
                     labelText: 'Adınız *',
                     border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   textInputAction: TextInputAction.next,
                 ),
               ),
-              const SizedBox(width: AppDimensions.spacing16),
+              const SizedBox(width: 12),
               Expanded(
                 child: TextFormField(
                   controller: _tableNumberController,
                   decoration: const InputDecoration(
                     labelText: 'Masa No *',
                     border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
@@ -622,27 +630,29 @@ class _CartPageState extends State<CartPage> {
               ),
             ],
           ),
-          const SizedBox(height: AppDimensions.spacing16),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _customerPhoneController,
             decoration: const InputDecoration(
               labelText: 'Telefon (Opsiyonel)',
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
           ),
-          const SizedBox(height: AppDimensions.spacing16),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _notesController,
             decoration: const InputDecoration(
               labelText: 'Özel İstekler (Opsiyonel)',
               border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             maxLines: 2,
             textInputAction: TextInputAction.done,
           ),
-          const SizedBox(height: AppDimensions.spacing24),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -650,7 +660,7 @@ class _CartPageState extends State<CartPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),

@@ -348,6 +348,11 @@ class MenuSettings {
   final bool showImages;
   final String imageSize;
   final String language;
+  final bool? showDescriptions;
+  final bool? showCategories;
+  final bool? showAllergens;
+  final bool? showRatings;
+  final String? layoutStyle;
 
   MenuSettings({
     required this.theme,
@@ -358,6 +363,11 @@ class MenuSettings {
     required this.showImages,
     required this.imageSize,
     required this.language,
+    this.showDescriptions,
+    this.showCategories,
+    this.showAllergens,
+    this.showRatings,
+    this.layoutStyle,
   });
 
   factory MenuSettings.fromMap(Map<String, dynamic> map) {
@@ -370,6 +380,11 @@ class MenuSettings {
       showImages: map['showImages'] ?? true,
       imageSize: map['imageSize'] ?? 'medium',
       language: map['language'] ?? 'tr',
+      showDescriptions: map['showDescriptions'],
+      showCategories: map['showCategories'],
+      showAllergens: map['showAllergens'],
+      showRatings: map['showRatings'],
+      layoutStyle: map['layoutStyle'],
     );
   }
 
@@ -383,6 +398,11 @@ class MenuSettings {
       'showImages': showImages,
       'imageSize': imageSize,
       'language': language,
+      'showDescriptions': showDescriptions,
+      'showCategories': showCategories,
+      'showAllergens': showAllergens,
+      'showRatings': showRatings,
+      'layoutStyle': layoutStyle,
     };
   }
 
@@ -395,6 +415,11 @@ class MenuSettings {
     bool? showImages,
     String? imageSize,
     String? language,
+    bool? showDescriptions,
+    bool? showCategories,
+    bool? showAllergens,
+    bool? showRatings,
+    String? layoutStyle,
   }) {
     return MenuSettings(
       theme: theme ?? this.theme,
@@ -405,6 +430,11 @@ class MenuSettings {
       showImages: showImages ?? this.showImages,
       imageSize: imageSize ?? this.imageSize,
       language: language ?? this.language,
+      showDescriptions: showDescriptions ?? this.showDescriptions,
+      showCategories: showCategories ?? this.showCategories,
+      showAllergens: showAllergens ?? this.showAllergens,
+      showRatings: showRatings ?? this.showRatings,
+      layoutStyle: layoutStyle ?? this.layoutStyle,
     );
   }
 
@@ -441,6 +471,11 @@ class BusinessDefaults {
     showImages: true,
     imageSize: 'medium',
     language: 'tr',
+    showDescriptions: true,
+    showCategories: true,
+    showAllergens: true,
+    showRatings: false,
+    layoutStyle: 'card',
   );
 
   static Business createDefault({
