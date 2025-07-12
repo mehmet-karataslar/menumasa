@@ -12,9 +12,13 @@ import 'discount_management_page.dart';
 
 class ResponsiveAdminDashboard extends StatefulWidget {
   final String businessId;
+  final String? initialRoute;
 
-  const ResponsiveAdminDashboard({Key? key, required this.businessId})
-    : super(key: key);
+  const ResponsiveAdminDashboard({
+    Key? key,
+    required this.businessId,
+    this.initialRoute,
+  }) : super(key: key);
 
   @override
   State<ResponsiveAdminDashboard> createState() =>
@@ -30,43 +34,71 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
       title: 'Genel Bakış',
       icon: Icons.dashboard,
       color: AppColors.primary,
+      route: '/admin/dashboard',
     ),
     AdminMenuItem(
       title: 'Ürün Yönetimi',
       icon: Icons.restaurant_menu,
       color: AppColors.primary,
+      route: '/admin/products',
     ),
     AdminMenuItem(
       title: 'Kategori Yönetimi',
       icon: Icons.category,
       color: AppColors.success,
+      route: '/admin/categories',
     ),
     AdminMenuItem(
       title: 'İndirim Yönetimi',
       icon: Icons.local_offer,
       color: AppColors.error,
+      route: '/admin/discounts',
     ),
     AdminMenuItem(
       title: 'QR Kod Yönetimi',
       icon: Icons.qr_code,
       color: AppColors.secondary,
+      route: '/admin/qr-codes',
     ),
     AdminMenuItem(
       title: 'İşletme Bilgileri',
       icon: Icons.business,
       color: AppColors.info,
+      route: '/admin/business-info',
     ),
     AdminMenuItem(
       title: 'Menü Ayarları',
       icon: Icons.settings,
       color: AppColors.warning,
+      route: '/admin/menu-settings',
     ),
   ];
 
   @override
   void initState() {
     super.initState();
+    _setInitialIndex();
     _loadBusinessData();
+  }
+
+  void _setInitialIndex() {
+    if (widget.initialRoute != null) {
+      final index = _menuItems.indexWhere(
+        (item) => item.route == widget.initialRoute,
+      );
+      if (index != -1) {
+        _selectedIndex = index;
+      }
+    }
+  }
+
+  void _navigateToPage(int index, String route) {
+    setState(() => _selectedIndex = index);
+    Navigator.pushNamed(
+      context,
+      route,
+      arguments: {'businessId': widget.businessId},
+    );
   }
 
   Future<void> _loadBusinessData() async {
@@ -216,7 +248,7 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => setState(() => _selectedIndex = index),
+          onTap: () => _navigateToPage(index, item.route),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -382,8 +414,8 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
                   ),
                   selected: isSelected,
                   onTap: () {
-                    setState(() => _selectedIndex = index);
                     Navigator.pop(context);
+                    _navigateToPage(index, item.route);
                   },
                 );
               },
@@ -512,19 +544,19 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
                 title: 'Yeni Ürün Ekle',
                 icon: Icons.add_box,
                 color: AppColors.primary,
-                onTap: () => setState(() => _selectedIndex = 1),
+                onTap: () => _navigateToPage(1, '/admin/products'),
               ),
               _buildQuickActionCard(
                 title: 'İndirim Oluştur',
                 icon: Icons.local_offer,
                 color: AppColors.error,
-                onTap: () => setState(() => _selectedIndex = 3),
+                onTap: () => _navigateToPage(3, '/admin/discounts'),
               ),
               _buildQuickActionCard(
                 title: 'QR Kod Paylaş',
                 icon: Icons.share,
                 color: AppColors.success,
-                onTap: () => setState(() => _selectedIndex = 4),
+                onTap: () => _navigateToPage(4, '/admin/qr-codes'),
               ),
             ],
           ),
@@ -665,6 +697,12 @@ class AdminMenuItem {
   final String title;
   final IconData icon;
   final Color color;
+  final String route;
 
-  AdminMenuItem({required this.title, required this.icon, required this.color});
+  AdminMenuItem({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.route,
+  });
 }

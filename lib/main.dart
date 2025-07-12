@@ -233,7 +233,7 @@ class _QRMenuPageState extends State<QRMenuPage> {
         _showQRWelcomeMessage();
       }
     } catch (e) {
-    setState(() {
+      setState(() {
         _businessExists = false;
         _isLoading = false;
       });
@@ -379,12 +379,18 @@ class AdminDashboardRouterPage extends StatelessWidget {
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
 
+    // Get current route to determine which page to show
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+
     // Responsive layout: Use sidebar layout for web/desktop, card layout for mobile
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktopOrTablet = screenWidth > 768;
 
     if (isDesktopOrTablet) {
-      return ResponsiveAdminDashboard(businessId: businessId);
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
     } else {
       return AdminDashboardPage(businessId: businessId);
     }
@@ -400,8 +406,20 @@ class CategoryManagementRouterPage extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final currentRoute = ModalRoute.of(context)?.settings.name;
 
-    return CategoryManagementPage(businessId: businessId);
+    // Responsive layout: Use sidebar layout for web/desktop, direct page for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
+    } else {
+      return CategoryManagementPage(businessId: businessId);
+    }
   }
 }
 
@@ -414,8 +432,20 @@ class ProductManagementRouterPage extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final currentRoute = ModalRoute.of(context)?.settings.name;
 
-    return ProductManagementPage(businessId: businessId);
+    // Responsive layout: Use sidebar layout for web/desktop, direct page for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
+    } else {
+      return ProductManagementPage(businessId: businessId);
+    }
   }
 }
 
@@ -428,8 +458,20 @@ class BusinessInfoRouterPage extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final currentRoute = ModalRoute.of(context)?.settings.name;
 
-    return BusinessInfoPage(businessId: businessId);
+    // Responsive layout: Use sidebar layout for web/desktop, direct page for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
+    } else {
+      return BusinessInfoPage(businessId: businessId);
+    }
   }
 }
 
@@ -442,8 +484,20 @@ class MenuSettingsRouterPage extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final currentRoute = ModalRoute.of(context)?.settings.name;
 
-    return MenuSettingsPage(businessId: businessId);
+    // Responsive layout: Use sidebar layout for web/desktop, direct page for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
+    } else {
+      return MenuSettingsPage(businessId: businessId);
+    }
   }
 }
 
@@ -1032,8 +1086,20 @@ class QRCodeManagementRouterPage extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final currentRoute = ModalRoute.of(context)?.settings.name;
 
-    return QRCodeManagementPage(businessId: businessId);
+    // Responsive layout: Use sidebar layout for web/desktop, direct page for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
+    } else {
+      return QRCodeManagementPage(businessId: businessId);
+    }
   }
 }
 
@@ -1046,7 +1112,19 @@ class DiscountManagementRouterPage extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
+    final currentRoute = ModalRoute.of(context)?.settings.name;
 
-    return DiscountManagementPage(businessId: businessId);
+    // Responsive layout: Use sidebar layout for web/desktop, direct page for mobile
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopOrTablet = screenWidth > 768;
+
+    if (isDesktopOrTablet) {
+      return ResponsiveAdminDashboard(
+        businessId: businessId,
+        initialRoute: currentRoute,
+      );
+    } else {
+      return DiscountManagementPage(businessId: businessId);
+    }
   }
 }
