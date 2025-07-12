@@ -24,6 +24,7 @@ dependencies:
   
   # QR Code
   qr_flutter: ^4.1.0
+  mobile_scanner: ^3.5.7
   
   # UI Components
   flutter_svg: ^2.0.10+1

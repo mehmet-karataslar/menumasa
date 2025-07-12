@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_typography.dart';
 import 'presentation/pages/customer/menu_page.dart';
@@ -16,6 +17,7 @@ import 'presentation/pages/admin/orders_page.dart';
 import 'presentation/pages/customer/customer_orders_page.dart';
 import 'presentation/pages/admin/responsive_admin_dashboard.dart';
 import 'core/services/data_service.dart';
+import 'core/services/qr_service.dart';
 import 'data/models/product.dart';
 import 'data/models/business.dart';
 
@@ -61,6 +63,9 @@ class MasaMenuApp extends StatelessWidget {
 
       // Rota yapılandırması
       routes: _buildRoutes(),
+
+      // Dinamik rota üretici - QR kod URL'leri için
+      onGenerateRoute: _generateRoute,
 
       // Bilinmeyen rota işleyicisi
       onUnknownRoute: (settings) {
@@ -178,6 +183,26 @@ class MasaMenuApp extends StatelessWidget {
       '/admin/orders': (context) => const OrdersRouterPage(),
       '/customer/orders': (context) => const CustomerOrdersRouterPage(),
     };
+  }
+
+  // Custom route generator for dynamic QR code URLs
+  Route<dynamic>? _generateRoute(RouteSettings settings) {
+    final uri = Uri.parse(settings.name ?? '');
+
+    // Handle QR code menu URLs: /menu/businessId?table=tableNumber
+    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'menu') {
+      final businessId = uri.pathSegments[1];
+      final tableNumber = uri.queryParameters['table'];
+
+      return MaterialPageRoute(
+        builder: (context) =>
+            QRMenuPage(businessId: businessId, tableNumber: tableNumber),
+        settings: settings,
+      );
+    }
+
+    // Handle other dynamic routes if needed
+    return null;
   }
 }
 
@@ -850,107 +875,182 @@ class QRScannerPage extends StatefulWidget {
 }
 
 class _QRScannerPageState extends State<QRScannerPage> {
-  final TextEditingController _urlController = TextEditingController();
-  bool _isProcessing = false;
+  final QRService _qrService = QRService();
+  MobileScannerController? _scannerController;
+  bool _isScanning = false;
+  bool _flashEnabled = false;
+  bool _hasScanned = false;
+  String _scanStatusText = 'QR kod taramak için kamerayı QR koda doğrultun';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeScanner();
+  }
+
+  void _initializeScanner() {
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      formats: [BarcodeFormat.qrCode],
+      autoStart: true,
+    );
+
+    setState(() {
+      _isScanning = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.black,
       appBar: AppBar(
         title: const Text('QR Kod Tarayıcı'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.black,
+        foregroundColor: AppColors.white,
+        actions: [
+          // Flash Toggle
+          IconButton(
+            icon: Icon(_flashEnabled ? Icons.flash_on : Icons.flash_off),
+            onPressed: _toggleFlash,
+          ),
+          // Manual URL Input
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _showManualInputDialog,
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // QR Icon
-            Icon(
-              Icons.qr_code_scanner,
-              size: 120,
-              color: AppColors.primary.withOpacity(0.7),
+      body: Stack(
+        children: [
+          // Camera Scanner
+          if (_isScanning && _scannerController != null)
+            MobileScanner(
+              controller: _scannerController!,
+              onDetect: _onQRCodeDetected,
             ),
 
-            const SizedBox(height: 32),
+          // Scanning Overlay
+          _buildScanningOverlay(),
 
-            // Title
-            const Text(
-              'QR Kod ile Menüye Erişin',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ),
-              textAlign: TextAlign.center,
-            ),
+          // Bottom Info Panel
+          _buildBottomPanel(),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 16),
-
-            const Text(
-              'QR kod URL\'ini girin veya demo menüyü görüntüleyin',
-              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 48),
-
-            // URL Input
-            TextField(
-              controller: _urlController,
-              decoration: InputDecoration(
-                labelText: 'QR Kod URL\'i',
-                hintText: 'https://masamenu.app/menu/...',
-                prefixIcon: const Icon(Icons.link),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+  Widget _buildScanningOverlay() {
+    return Container(
+      decoration: BoxDecoration(color: AppColors.black.withOpacity(0.5)),
+      child: Stack(
+        children: [
+          // Scanning Frame
+          Center(
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _hasScanned ? AppColors.success : AppColors.white,
+                  width: 2,
                 ),
-                filled: true,
-                fillColor: AppColors.greyLight,
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Process Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isProcessing ? null : _processQRCode,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isProcessing
-                    ? const CircularProgressIndicator(color: AppColors.white)
-                    : const Text(
-                        'Menüyü Aç',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
+              child: Stack(
+                children: [
+                  // Corner decorations
+                  ...List.generate(4, (index) {
+                    final isTop = index < 2;
+                    final isLeft = index % 2 == 0;
+                    return Positioned(
+                      top: isTop ? 0 : null,
+                      bottom: isTop ? null : 0,
+                      left: isLeft ? 0 : null,
+                      right: isLeft ? null : 0,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: _hasScanned
+                              ? AppColors.success
+                              : AppColors.primary,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(isTop && isLeft ? 10 : 0),
+                            topRight: Radius.circular(
+                              isTop && !isLeft ? 10 : 0,
+                            ),
+                            bottomLeft: Radius.circular(
+                              !isTop && isLeft ? 10 : 0,
+                            ),
+                            bottomRight: Radius.circular(
+                              !isTop && !isLeft ? 10 : 0,
+                            ),
+                          ),
                         ),
                       ),
+                    );
+                  }),
+
+                  // Success Icon
+                  if (_hasScanned)
+                    const Center(
+                      child: Icon(
+                        Icons.check_circle,
+                        color: AppColors.success,
+                        size: 50,
+                      ),
+                    ),
+                ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 32),
-
-            const Divider(),
-
-            const SizedBox(height: 16),
-
-            // Demo Button
-            const Text(
-              'veya',
-              style: TextStyle(color: AppColors.textSecondary),
+          // Status Text
+          Positioned(
+            bottom: 120,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.black.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Text(
+                _scanStatusText,
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 16),
-
+  Widget _buildBottomPanel() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Demo Button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
@@ -965,7 +1065,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 child: const Text(
                   'Demo Menüyü Görüntüle',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primary,
                   ),
@@ -973,7 +1073,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // Help Text
             Container(
@@ -982,27 +1082,18 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 color: AppColors.info.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.info),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'QR Kod Nasıl Taranır?',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.info,
+                  Icon(Icons.info_outline, color: AppColors.info, size: 20),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'QR kodu taramak için kamerayı QR koda doğrultun',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '1. Telefon kameranızı QR koda doğrultun\n'
-                    '2. Açılan linke dokunun\n'
-                    '3. Veya linki kopyalayıp buraya yapıştırın',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -1013,61 +1104,137 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
-  Future<void> _processQRCode() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen QR kod URL\'ini girin'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
+  void _onQRCodeDetected(BarcodeCapture capture) {
+    if (_hasScanned) return;
+
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final String? qrData = barcodes.first.rawValue;
+    if (qrData == null) return;
 
     setState(() {
-      _isProcessing = true;
+      _hasScanned = true;
+      _scanStatusText = 'QR kod başarıyla tarandı!';
     });
 
+    // Vibration feedback
+    HapticFeedback.lightImpact();
+
+    // Process QR code
+    _processQRCode(qrData);
+  }
+
+  Future<void> _processQRCode(String qrData) async {
     try {
-      // Parse QR URL to extract business ID
-      final uri = Uri.parse(url);
+      // Parse QR code using QR service
+      final scanResult = _qrService.parseQRCode(qrData);
 
-      if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'menu') {
-        final businessId = uri.pathSegments[1];
-        final tableNumber = uri.queryParameters['table'];
-
+      if (scanResult != null) {
         // Navigate to menu
         if (mounted) {
-          Navigator.pushNamed(
+          Navigator.pushReplacementNamed(
             context,
             '/menu',
-            arguments: {'businessId': businessId, 'tableNumber': tableNumber},
+            arguments: {
+              'businessId': scanResult.businessId,
+              'tableNumber': scanResult.tableNumber,
+            },
           );
         }
       } else {
-        throw Exception('Geçersiz QR kod URL\'i');
+        // Try to parse as regular URL
+        final uri = Uri.tryParse(qrData);
+        if (uri != null &&
+            uri.pathSegments.length >= 2 &&
+            uri.pathSegments[0] == 'menu') {
+          final businessId = uri.pathSegments[1];
+          final tableNumber = uri.queryParameters['table'];
+
+          if (mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/menu',
+              arguments: {'businessId': businessId, 'tableNumber': tableNumber},
+            );
+          }
+        } else {
+          throw Exception('Bu QR kod desteklenmiyor');
+        }
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _hasScanned = false;
+          _scanStatusText = 'QR kod okunamadı. Tekrar deneyin.';
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('QR kod işlenirken hata oluştu: $e'),
+            content: Text('QR kod hatası: $e'),
             backgroundColor: AppColors.error,
+            action: SnackBarAction(
+              label: 'Tekrar Dene',
+              onPressed: () {
+                setState(() {
+                  _hasScanned = false;
+                  _scanStatusText =
+                      'QR kod taramak için kamerayı QR koda doğrultun';
+                });
+              },
+            ),
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
       }
     }
   }
 
+  void _toggleFlash() {
+    if (_scannerController != null) {
+      _scannerController!.toggleTorch();
+      setState(() {
+        _flashEnabled = !_flashEnabled;
+      });
+    }
+  }
+
+  void _showManualInputDialog() {
+    final TextEditingController urlController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('QR Kod URL\'i Girin'),
+        content: TextField(
+          controller: urlController,
+          decoration: const InputDecoration(
+            labelText: 'QR Kod URL\'i',
+            hintText: 'https://masamenu.app/menu/...',
+            prefixIcon: Icon(Icons.link),
+          ),
+          keyboardType: TextInputType.url,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (urlController.text.isNotEmpty) {
+                _processQRCode(urlController.text.trim());
+              }
+            },
+            child: const Text('Menüyü Aç'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openDemoMenu() {
-    Navigator.pushNamed(
+    Navigator.pushReplacementNamed(
       context,
       '/menu',
       arguments: {'businessId': 'demo-business-001'},
@@ -1076,7 +1243,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
   @override
   void dispose() {
-    _urlController.dispose();
+    _scannerController?.dispose();
     super.dispose();
   }
 }

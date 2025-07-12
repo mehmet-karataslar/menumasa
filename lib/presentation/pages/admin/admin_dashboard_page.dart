@@ -560,54 +560,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   void _shareQRCode() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('QR Kod Paylaş'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: AppColors.lightGrey,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(
-                child: Text(
-                  'QR KOD\nBURASI',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Bu QR kodu müşterilerinizle paylaşarak menünüze erişim sağlayabilirsiniz.',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Kapat'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('QR kod paylaşıldı!'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            child: const Text('Paylaş'),
-          ),
-        ],
-      ),
+    // Navigate to QR code management page
+    Navigator.pushNamed(
+      context,
+      '/admin/qr-codes',
+      arguments: {'businessId': widget.businessId},
     );
   }
 
@@ -645,4 +602,3 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 }
- 

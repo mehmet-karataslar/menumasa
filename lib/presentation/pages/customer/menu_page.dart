@@ -163,7 +163,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   void _filterProducts() {
     _filteredProducts = _products.where((product) {
       // Kategori filtresi - 'all' kategorisi seçildiğinde tüm ürünleri göster
-      if (_selectedCategoryId != null && 
+      if (_selectedCategoryId != null &&
           _selectedCategoryId != 'all' &&
           product.categoryId != _selectedCategoryId) {
         return false;
@@ -290,6 +290,47 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
             : _hasError
             ? _buildErrorState()
             : _buildMenuContent(),
+      ),
+      floatingActionButton: _cartItemCount > 0 ? _buildCartFAB() : null,
+    );
+  }
+
+  Widget _buildCartFAB() {
+    return FloatingActionButton.extended(
+      onPressed: _onCartPressed,
+      backgroundColor: AppColors.primary,
+      foregroundColor: AppColors.white,
+      elevation: 8,
+      icon: Stack(
+        children: [
+          const Icon(Icons.shopping_cart, size: 24),
+          if (_cartItemCount > 0)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: AppColors.error,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  _cartItemCount.toString(),
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+      label: Text(
+        'Sepet (${_cartItemCount})',
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
       ),
     );
   }
