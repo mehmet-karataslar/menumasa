@@ -16,7 +16,7 @@ import '../../presentation/pages/shared/not_found_page.dart';
 import '../../data/models/product.dart';
 import '../../data/models/business.dart';
 
-// Menü router sayfası - businessId ve tableNumber parametrelerini alır
+// Menü router sayfası - businessId ve customerPhone/tableNumber parametrelerini alır
 class MenuRouterPage extends StatelessWidget {
   const MenuRouterPage({Key? key}) : super(key: key);
 
@@ -25,7 +25,8 @@ class MenuRouterPage extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String? ?? 'demo-business-001';
-    final tableNumber = args?['tableNumber'] as String?;
+    final tableNumber =
+        args?['tableNumber'] as String? ?? args?['customerPhone'] as String?;
 
     return QRMenuPage(businessId: businessId, tableNumber: tableNumber);
   }

@@ -146,6 +146,115 @@ class MasamenuApp extends StatelessWidget {
         '/qr-scanner': (context) => const QRScannerPage(),
         '/not-found': (context) => const NotFoundPage(),
       },
+      // Route generator for dynamic routes with arguments
+      onGenerateRoute: (settings) {
+        final args = settings.arguments as Map<String, dynamic>?;
+
+        switch (settings.name) {
+          case '/admin':
+            // Admin Dashboard route
+            final businessId =
+                args?['businessId'] as String? ?? 'demo-business-001';
+            return MaterialPageRoute(
+              builder: (context) => AdminDashboardRouterPage(),
+              settings: RouteSettings(name: '/admin', arguments: args),
+            );
+
+          case '/menu':
+            // Customer Menu route
+            final businessId =
+                args?['businessId'] as String? ?? 'demo-business-001';
+            final customerPhone = args?['customerPhone'] as String?;
+            return MaterialPageRoute(
+              builder: (context) => MenuRouterPage(),
+              settings: RouteSettings(name: '/menu', arguments: args),
+            );
+
+          case '/product-detail':
+            // Product Detail route
+            return MaterialPageRoute(
+              builder: (context) => ProductDetailRouterPage(),
+              settings: RouteSettings(name: '/product-detail', arguments: args),
+            );
+
+          case '/admin/categories':
+            // Category Management route
+            return MaterialPageRoute(
+              builder: (context) => CategoryManagementRouterPage(),
+              settings: RouteSettings(
+                name: '/admin/categories',
+                arguments: args,
+              ),
+            );
+
+          case '/admin/products':
+            // Product Management route
+            return MaterialPageRoute(
+              builder: (context) => ProductManagementRouterPage(),
+              settings: RouteSettings(name: '/admin/products', arguments: args),
+            );
+
+          case '/admin/qr-codes':
+            // QR Code Management route
+            return MaterialPageRoute(
+              builder: (context) => QRCodeManagementRouterPage(),
+              settings: RouteSettings(name: '/admin/qr-codes', arguments: args),
+            );
+
+          case '/admin/business-info':
+            // Business Info route
+            return MaterialPageRoute(
+              builder: (context) => BusinessInfoRouterPage(),
+              settings: RouteSettings(
+                name: '/admin/business-info',
+                arguments: args,
+              ),
+            );
+
+          case '/admin/menu-settings':
+            // Menu Settings route
+            return MaterialPageRoute(
+              builder: (context) => MenuSettingsRouterPage(),
+              settings: RouteSettings(
+                name: '/admin/menu-settings',
+                arguments: args,
+              ),
+            );
+
+          case '/admin/discounts':
+            // Discount Management route
+            return MaterialPageRoute(
+              builder: (context) => DiscountManagementRouterPage(),
+              settings: RouteSettings(
+                name: '/admin/discounts',
+                arguments: args,
+              ),
+            );
+
+          case '/admin/orders':
+            // Orders route
+            return MaterialPageRoute(
+              builder: (context) => OrdersRouterPage(),
+              settings: RouteSettings(name: '/admin/orders', arguments: args),
+            );
+
+          case '/customer-orders':
+            // Customer Orders route
+            return MaterialPageRoute(
+              builder: (context) => CustomerOrdersRouterPage(),
+              settings: RouteSettings(
+                name: '/customer-orders',
+                arguments: args,
+              ),
+            );
+
+          default:
+            // Unknown route
+            return MaterialPageRoute(
+              builder: (context) => const NotFoundPage(),
+            );
+        }
+      },
       // Unknown route handler
       onUnknownRoute: (settings) {
         return MaterialPageRoute(builder: (context) => const NotFoundPage());
