@@ -162,8 +162,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   void _filterProducts() {
     _filteredProducts = _products.where((product) {
-      // Kategori filtresi
-      if (_selectedCategoryId != null &&
+      // Kategori filtresi - 'all' kategorisi seçildiğinde tüm ürünleri göster
+      if (_selectedCategoryId != null && 
+          _selectedCategoryId != 'all' &&
           product.categoryId != _selectedCategoryId) {
         return false;
       }

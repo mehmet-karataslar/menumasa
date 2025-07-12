@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io' if (dart.library.html) 'dart:html';
 // CachedNetworkImage removed for Windows compatibility
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
@@ -783,308 +786,419 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
       text: product?.price.toString() ?? '',
     );
     String selectedCategoryId =
-        product?.categoryId ?? _categories.first.categoryId;
+        product?.categoryId ??
+        (_categories.isNotEmpty ? _categories.first.categoryId : '');
     bool isAvailable = product?.isAvailable ?? true;
     List<String> imageUrls = List.from(
       product?.images.map((img) => img.url) ?? [],
     );
     List<String> selectedAllergens = List.from(product?.allergens ?? []);
-    final imageUrlController = TextEditingController();
+    bool _isDialogLoading = false;
 
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevent accidental closing
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(isEditing ? 'Ürün Düzenle' : 'Ürün Ekle'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ürün Adı',
-                    hintText: 'Örn: Adana Kebap',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Açıklama',
-                    hintText: 'Ürün açıklaması',
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: priceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Fiyat (₺)',
-                    hintText: '0.00',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedCategoryId,
-                  decoration: const InputDecoration(labelText: 'Kategori'),
-                  items: _categories.map((category) {
-                    return DropdownMenuItem(
-                      value: category.categoryId,
-                      child: Text(category.name),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setDialogState(() {
-                        selectedCategoryId = value;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Resim ekleme bölümü
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Ürün Resimleri',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Mevcut resimler
-                    if (imageUrls.isNotEmpty)
-                      Container(
-                        height: 100,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: imageUrls.length,
-                          itemBuilder: (context, index) {
-                            return Container(
-                              width: 100,
-                              margin: const EdgeInsets.only(right: 8),
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    width: 100,
-                                    height: 100,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: AppColors.greyLight,
-                                      ),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        imageUrls[index],
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return const Icon(
-                                                Icons.image,
-                                                size: 40,
-                                                color: AppColors.greyLight,
-                                              );
-                                            },
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: InkWell(
-                                      onTap: () {
-                                        setDialogState(() {
-                                          imageUrls.removeAt(index);
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.error,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          color: AppColors.white,
-                                          size: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+        builder: (context, setDialogState) => WillPopScope(
+          onWillPop: () async => !_isDialogLoading,
+          child: AlertDialog(
+            title: Text(isEditing ? 'Ürün Düzenle' : 'Ürün Ekle'),
+            content: _isDialogLoading
+                ? SizedBox(
+                    height: 200,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('İşlem yapılıyor...'),
+                        ],
                       ),
-
-                    const SizedBox(height: 8),
-
-                    // Yeni resim ekleme
-                    Row(
+                    ),
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: TextField(
-                            controller: imageUrlController,
-                            decoration: const InputDecoration(
-                              labelText: 'Resim URL\'si',
-                              hintText: 'https://example.com/image.jpg',
-                            ),
+                        TextField(
+                          controller: nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Ürün Adı',
+                            hintText: 'Örn: Adana Kebap',
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () {
-                            if (imageUrlController.text.trim().isNotEmpty) {
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: descriptionController,
+                          decoration: const InputDecoration(
+                            labelText: 'Açıklama',
+                            hintText: 'Ürün açıklaması',
+                          ),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: priceController,
+                          decoration: const InputDecoration(
+                            labelText: 'Fiyat (₺)',
+                            hintText: '0.00',
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedCategoryId,
+                          decoration: const InputDecoration(
+                            labelText: 'Kategori',
+                          ),
+                          items: _categories.map((category) {
+                            return DropdownMenuItem(
+                              value: category.categoryId,
+                              child: Text(category.name),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
                               setDialogState(() {
-                                imageUrls.add(imageUrlController.text.trim());
-                                imageUrlController.clear();
+                                selectedCategoryId = value;
                               });
                             }
                           },
-                          child: const Text('Ekle'),
                         ),
-                      ],
-                    ),
+                        const SizedBox(height: 16),
 
-                    const SizedBox(height: 8),
+                        // Resim ekleme bölümü
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ürün Resimleri',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 8),
 
-                    // Örnek resim butonları
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        _buildSampleImageButton(
-                          '🍕 Pizza',
-                          'https://picsum.photos/400/300?random=1',
-                          setDialogState,
-                          imageUrls,
-                        ),
-                        _buildSampleImageButton(
-                          '🍔 Burger',
-                          'https://picsum.photos/400/300?random=2',
-                          setDialogState,
-                          imageUrls,
-                        ),
-                        _buildSampleImageButton(
-                          '🥗 Salata',
-                          'https://picsum.photos/400/300?random=3',
-                          setDialogState,
-                          imageUrls,
-                        ),
-                        _buildSampleImageButton(
-                          '🍝 Makarna',
-                          'https://picsum.photos/400/300?random=4',
-                          setDialogState,
-                          imageUrls,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                            // Mevcut resimler
+                            if (imageUrls.isNotEmpty)
+                              Container(
+                                height: 100,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: imageUrls.length,
+                                  itemBuilder: (context, index) {
+                                    return Container(
+                                      width: 100,
+                                      margin: const EdgeInsets.only(right: 8),
+                                      child: Stack(
+                                        children: [
+                                          Container(
+                                            width: 100,
+                                            height: 100,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: AppColors.greyLight,
+                                              ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.network(
+                                                imageUrls[index],
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return const Icon(
+                                                        Icons.image,
+                                                        size: 40,
+                                                        color:
+                                                            AppColors.greyLight,
+                                                      );
+                                                    },
+                                              ),
+                                            ),
+                                          ),
 
-                const SizedBox(height: 16),
+                                          // Düzenle butonu
+                                          Positioned(
+                                            top: 4,
+                                            left: 4,
+                                            child: InkWell(
+                                              onTap: () {
+                                                _showImageEditDialog(
+                                                  context,
+                                                  imageUrls[index],
+                                                  (editedUrl) {
+                                                    setDialogState(() {
+                                                      imageUrls[index] =
+                                                          editedUrl;
+                                                    });
+                                                  },
+                                                );
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  4,
+                                                ),
+                                                decoration: const BoxDecoration(
+                                                  color: AppColors.primary,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.edit,
+                                                  color: AppColors.white,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
 
-                // Alerjen seçimi
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Alerjenler',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Bu ürünün içerdiği alerjenleri seçin',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: ProductAllergen.values.map((allergen) {
-                        final isSelected = selectedAllergens.contains(
-                          allergen.value,
-                        );
-                        return FilterChip(
-                          label: Text(allergen.displayName),
-                          selected: isSelected,
-                          onSelected: (selected) {
+                                          // Sil butonu
+                                          Positioned(
+                                            top: 4,
+                                            right: 4,
+                                            child: InkWell(
+                                              onTap: () {
+                                                setDialogState(() {
+                                                  imageUrls.removeAt(index);
+                                                });
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  4,
+                                                ),
+                                                decoration: const BoxDecoration(
+                                                  color: AppColors.error,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.close,
+                                                  color: AppColors.white,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+
+                            const SizedBox(height: 8),
+
+                            // Resim ekleme seçenekleri
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      _showImagePickerDialog(context, (
+                                        imageUrl,
+                                      ) {
+                                        setDialogState(() {
+                                          imageUrls.add(imageUrl);
+                                        });
+                                      });
+                                    },
+                                    icon: const Icon(Icons.add_photo_alternate),
+                                    label: const Text('Resim Ekle'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: AppColors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      _showBulkImageDialog(context, (urls) {
+                                        setDialogState(() {
+                                          imageUrls.addAll(urls);
+                                        });
+                                      });
+                                    },
+                                    icon: const Icon(Icons.photo_library),
+                                    label: const Text('Toplu Ekle'),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // Örnek resim butonları
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                _buildSampleImageButton(
+                                  '🍕 Pizza',
+                                  'https://picsum.photos/400/300?random=1',
+                                  setDialogState,
+                                  imageUrls,
+                                ),
+                                _buildSampleImageButton(
+                                  '🍔 Burger',
+                                  'https://picsum.photos/400/300?random=2',
+                                  setDialogState,
+                                  imageUrls,
+                                ),
+                                _buildSampleImageButton(
+                                  '🥗 Salata',
+                                  'https://picsum.photos/400/300?random=3',
+                                  setDialogState,
+                                  imageUrls,
+                                ),
+                                _buildSampleImageButton(
+                                  '🍝 Makarna',
+                                  'https://picsum.photos/400/300?random=4',
+                                  setDialogState,
+                                  imageUrls,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Alerjen seçimi
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Alerjenler',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Bu ürünün içerdiği alerjenleri seçin',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: ProductAllergen.values.map((allergen) {
+                                final isSelected = selectedAllergens.contains(
+                                  allergen.value,
+                                );
+                                return FilterChip(
+                                  label: Text(allergen.displayName),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setDialogState(() {
+                                      if (selected) {
+                                        selectedAllergens.add(allergen.value);
+                                      } else {
+                                        selectedAllergens.remove(
+                                          allergen.value,
+                                        );
+                                      }
+                                    });
+                                  },
+                                  selectedColor: AppColors.error.withOpacity(
+                                    0.2,
+                                  ),
+                                  checkmarkColor: AppColors.error,
+                                  labelStyle: TextStyle(
+                                    color: isSelected
+                                        ? AppColors.error
+                                        : AppColors.textPrimary,
+                                    fontSize: 12,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+                        SwitchListTile(
+                          title: const Text('Aktif'),
+                          subtitle: Text(
+                            isAvailable
+                                ? 'Ürün müşteriler tarafından görülecek'
+                                : 'Ürün gizli olacak',
+                          ),
+                          value: isAvailable,
+                          onChanged: (value) {
                             setDialogState(() {
-                              if (selected) {
-                                selectedAllergens.add(allergen.value);
-                              } else {
-                                selectedAllergens.remove(allergen.value);
-                              }
+                              isAvailable = value;
                             });
                           },
-                          selectedColor: AppColors.error.withOpacity(0.2),
-                          checkmarkColor: AppColors.error,
-                          labelStyle: TextStyle(
-                            color: isSelected
-                                ? AppColors.error
-                                : AppColors.textPrimary,
-                            fontSize: 12,
-                          ),
-                        );
-                      }).toList(),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Aktif'),
-                  subtitle: Text(
-                    isAvailable
-                        ? 'Ürün müşteriler tarafından görülecek'
-                        : 'Ürün gizli olacak',
                   ),
-                  value: isAvailable,
-                  onChanged: (value) {
-                    setDialogState(() {
-                      isAvailable = value;
-                    });
-                  },
-                ),
-              ],
-            ),
+            actions: [
+              TextButton(
+                onPressed: _isDialogLoading
+                    ? null
+                    : () => Navigator.pop(context),
+                child: const Text('İptal'),
+              ),
+              ElevatedButton(
+                onPressed: _isDialogLoading
+                    ? null
+                    : () async {
+                        if (nameController.text.trim().isNotEmpty &&
+                            priceController.text.trim().isNotEmpty) {
+                          setDialogState(() {
+                            _isDialogLoading = true;
+                          });
+
+                          try {
+                            final price =
+                                double.tryParse(priceController.text.trim()) ??
+                                0;
+                            await _saveProduct(
+                              product,
+                              nameController.text.trim(),
+                              descriptionController.text.trim(),
+                              price,
+                              selectedCategoryId,
+                              isAvailable,
+                              imageUrls,
+                              selectedAllergens,
+                            );
+                            if (mounted) Navigator.pop(context);
+                          } catch (e) {
+                            setDialogState(() {
+                              _isDialogLoading = false;
+                            });
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Hata oluştu: $e'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                child: _isDialogLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(isEditing ? 'Güncelle' : 'Ekle'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('İptal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.trim().isNotEmpty &&
-                    priceController.text.trim().isNotEmpty) {
-                  final price =
-                      double.tryParse(priceController.text.trim()) ?? 0;
-                  await _saveProduct(
-                    product,
-                    nameController.text.trim(),
-                    descriptionController.text.trim(),
-                    price,
-                    selectedCategoryId,
-                    isAvailable,
-                    imageUrls,
-                    selectedAllergens,
-                  );
-                  if (mounted) Navigator.pop(context);
-                }
-              },
-              child: Text(isEditing ? 'Güncelle' : 'Ekle'),
-            ),
-          ],
         ),
       ),
     );
@@ -1368,6 +1482,417 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     );
   }
 
+  void _showImagePickerDialog(
+    BuildContext context,
+    Function(String) onImageSelected,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resim Ekle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('URL\'den Ekle'),
+              subtitle: const Text('İnternetteki bir resim linkini kullan'),
+              onTap: () {
+                Navigator.pop(context);
+                _showUrlInputDialog(context, onImageSelected);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galeri'),
+              subtitle: const Text('Örnek resimlerden seç'),
+              onTap: () {
+                Navigator.pop(context);
+                _showSampleImagesDialog(context, onImageSelected);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Kamera'),
+              subtitle: const Text('Yeni fotoğraf çek'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromCamera(onImageSelected);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder),
+              title: const Text('Dosya Seç'),
+              subtitle: const Text('Bilgisayardan dosya seç'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromFile(onImageSelected);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUrlInputDialog(
+    BuildContext context,
+    Function(String) onImageSelected,
+  ) {
+    final urlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('URL\'den Resim Ekle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: 'Resim URL\'si',
+                hintText: 'https://example.com/image.jpg',
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (urlController.text.isNotEmpty)
+              Container(
+                height: 100,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.greyLight),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    urlController.text,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.broken_image,
+                      size: 40,
+                      color: AppColors.greyLight,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (urlController.text.trim().isNotEmpty) {
+                onImageSelected(urlController.text.trim());
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSampleImagesDialog(
+    BuildContext context,
+    Function(String) onImageSelected,
+  ) {
+    final sampleImages = [
+      {'label': '🍕 Pizza', 'url': 'https://picsum.photos/400/300?random=1'},
+      {'label': '🍔 Burger', 'url': 'https://picsum.photos/400/300?random=2'},
+      {'label': '🥗 Salata', 'url': 'https://picsum.photos/400/300?random=3'},
+      {'label': '🍝 Makarna', 'url': 'https://picsum.photos/400/300?random=4'},
+      {'label': '🍰 Tatlı', 'url': 'https://picsum.photos/400/300?random=5'},
+      {'label': '☕ İçecek', 'url': 'https://picsum.photos/400/300?random=6'},
+      {'label': '🥘 Yemek', 'url': 'https://picsum.photos/400/300?random=7'},
+      {'label': '🍲 Çorba', 'url': 'https://picsum.photos/400/300?random=8'},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Örnek Resimler'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.2,
+            ),
+            itemCount: sampleImages.length,
+            itemBuilder: (context, index) {
+              final image = sampleImages[index];
+              return InkWell(
+                onTap: () {
+                  onImageSelected(image['url']!);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.greyLight),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8),
+                          ),
+                          child: Image.network(
+                            image['url']!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          image['label']!,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromCamera(Function(String) onImageSelected) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        // Web için file path'i direkt kullan, mobil için path'i url olarak kullan
+        final imagePath = image.path;
+        onImageSelected(imagePath);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Fotoğraf başarıyla çekildi'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kamera hatası: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickImageFromFile(Function(String) onImageSelected) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+
+        if (file.bytes != null) {
+          // Web için base64 formatında veya blob URL oluştur
+          final bytes = file.bytes!;
+          // Burada dosyayı upload etmek veya base64 olarak kullanmak gerekiyor
+          // Şimdilik mock URL olarak kullanıyoruz
+          final mockUrl =
+              'data:image/${file.extension};base64,${bytes.toString()}';
+          onImageSelected(mockUrl);
+        } else if (file.path != null) {
+          // Mobil için file path'i kullan
+          onImageSelected(file.path!);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dosya başarıyla seçildi'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Dosya seçme hatası: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showBulkImageDialog(
+    BuildContext context,
+    Function(List<String>) onImagesSelected,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Toplu Resim Ekle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Birden fazla resim eklemek için seçenekler:'),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.restaurant_menu),
+              title: const Text('Yemek Kategorisi'),
+              subtitle: const Text('Hazır yemek resimleri ekle'),
+              onTap: () {
+                Navigator.pop(context);
+                onImagesSelected([
+                  'https://picsum.photos/400/300?random=1',
+                  'https://picsum.photos/400/300?random=2',
+                  'https://picsum.photos/400/300?random=3',
+                ]);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.local_drink),
+              title: const Text('İçecek Kategorisi'),
+              subtitle: const Text('Hazır içecek resimleri ekle'),
+              onTap: () {
+                Navigator.pop(context);
+                onImagesSelected([
+                  'https://picsum.photos/400/300?random=4',
+                  'https://picsum.photos/400/300?random=5',
+                  'https://picsum.photos/400/300?random=6',
+                ]);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImageEditDialog(
+    BuildContext context,
+    String imageUrl,
+    Function(String) onImageEdited,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resim Düzenle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.greyLight),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image,
+                    size: 40,
+                    color: AppColors.greyLight,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Düzenleme özellikleri:'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                Chip(
+                  label: const Text('Kırp'),
+                  avatar: const Icon(Icons.crop, size: 18),
+                  onDeleted: () {
+                    // Kırpma özelliği
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Kırpma özelliği yakında eklenecek'),
+                      ),
+                    );
+                  },
+                ),
+                Chip(
+                  label: const Text('Döndür'),
+                  avatar: const Icon(Icons.rotate_right, size: 18),
+                  onDeleted: () {
+                    // Döndürme özelliği
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Döndürme özelliği yakında eklenecek'),
+                      ),
+                    );
+                  },
+                ),
+                Chip(
+                  label: const Text('Filtre'),
+                  avatar: const Icon(Icons.filter_alt, size: 18),
+                  onDeleted: () {
+                    // Filtre özelliği
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Filtre özelliği yakında eklenecek'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Şimdilik orijinal URL'i geri döndür
+              onImageEdited(imageUrl);
+              Navigator.pop(context);
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveProduct(
     Product? product,
     String name,
@@ -1378,6 +1903,20 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     List<String> imageUrls,
     List<String> allergens,
   ) async {
+    // Validation
+    if (name.trim().isEmpty) {
+      throw Exception('Ürün adı boş olamaz');
+    }
+    if (price <= 0) {
+      throw Exception('Fiyat sıfırdan büyük olmalıdır');
+    }
+    if (categoryId.isEmpty) {
+      throw Exception('Kategori seçilmelidir');
+    }
+
+    // Add delay for better UX
+    await Future.delayed(const Duration(milliseconds: 500));
+
     try {
       if (product == null) {
         // Add new product
@@ -1412,15 +1951,16 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
 
         await _dataService.saveProduct(newProduct);
 
-        setState(() {
-          _products.add(newProduct);
-        });
-
         if (mounted) {
+          setState(() {
+            _products.add(newProduct);
+          });
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$name ürünü eklendi'),
+              content: Text('$name ürünü başarıyla eklendi'),
               backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -1449,33 +1989,27 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
 
         await _dataService.saveProduct(updatedProduct);
 
-        final index = _products.indexWhere(
-          (p) => p.productId == product.productId,
-        );
-        if (index != -1) {
-          setState(() {
-            _products[index] = updatedProduct;
-          });
-        }
-
         if (mounted) {
+          final index = _products.indexWhere(
+            (p) => p.productId == product.productId,
+          );
+          if (index != -1) {
+            setState(() {
+              _products[index] = updatedProduct;
+            });
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$name ürünü güncellendi'),
+              content: Text('$name ürünü başarıyla güncellendi'),
               backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 2),
             ),
           );
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hata oluştu: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      rethrow; // Let the dialog handle the error
     }
   }
 

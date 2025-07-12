@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -238,11 +240,14 @@ Dijital menümüz: https://menumasa.com/menu/${widget.businessId}
     );
   }
 
-  Widget _buildSampleLogoButton(String label, String imageUrl) {
+  Widget _buildSampleLogoButton(
+    String label,
+    String imageUrl,
+    TextEditingController controller,
+  ) {
     return ElevatedButton(
       onPressed: () {
-        // Bu button'a tıklandığında logoUrlController'ı güncelle
-        // Ancak dialog içinde bu controller'a erişmek için farklı bir yaklaşım gerekiyor
+        controller.text = imageUrl;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$label logosu seçildi'),
@@ -256,6 +261,300 @@ Dijital menümüz: https://menumasa.com/menu/${widget.businessId}
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
       child: Text(label, style: const TextStyle(fontSize: 12)),
+    );
+  }
+
+  void _showLogoPickerDialog(
+    BuildContext context,
+    Function(String) onLogoSelected,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logo Ekle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('URL\'den Ekle'),
+              subtitle: const Text('İnternetteki bir logo linkini kullan'),
+              onTap: () {
+                Navigator.pop(context);
+                _showUrlInputDialog(context, onLogoSelected);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Hazır Logolar'),
+              subtitle: const Text('Örnek logolardan seç'),
+              onTap: () {
+                Navigator.pop(context);
+                _showSampleLogosDialog(context, onLogoSelected);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Kamera'),
+              subtitle: const Text('Yeni fotoğraf çek'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickLogoFromCamera(onLogoSelected);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder),
+              title: const Text('Dosya Seç'),
+              subtitle: const Text('Bilgisayardan logo seç'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickLogoFromFile(onLogoSelected);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUrlInputDialog(
+    BuildContext context,
+    Function(String) onLogoSelected,
+  ) {
+    final urlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('URL\'den Logo Ekle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: 'Logo URL\'si',
+                hintText: 'https://example.com/logo.jpg',
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (urlController.text.isNotEmpty)
+              Container(
+                height: 100,
+                width: 100,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.greyLight),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    urlController.text,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.broken_image,
+                      size: 40,
+                      color: AppColors.greyLight,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (urlController.text.trim().isNotEmpty) {
+                onLogoSelected(urlController.text.trim());
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSampleLogosDialog(
+    BuildContext context,
+    Function(String) onLogoSelected,
+  ) {
+    final sampleLogos = [
+      {'label': '🍕 Pizza', 'url': 'https://picsum.photos/200/200?random=10'},
+      {'label': '🍔 Burger', 'url': 'https://picsum.photos/200/200?random=11'},
+      {'label': '☕ Kafe', 'url': 'https://picsum.photos/200/200?random=12'},
+      {
+        'label': '🍽️ Restoran',
+        'url': 'https://picsum.photos/200/200?random=13',
+      },
+      {'label': '🥘 Yemek', 'url': 'https://picsum.photos/200/200?random=14'},
+      {'label': '🧊 Bar', 'url': 'https://picsum.photos/200/200?random=15'},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hazır Logolar'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: sampleLogos.length,
+            itemBuilder: (context, index) {
+              final logo = sampleLogos[index];
+              return InkWell(
+                onTap: () {
+                  onLogoSelected(logo['url']!);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.greyLight),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8),
+                          ),
+                          child: Image.network(
+                            logo['url']!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          logo['label']!,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLogoEditDialog(
+    BuildContext context,
+    String logoUrl,
+    Function(String) onLogoEdited,
+  ) {
+    if (logoUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Önce bir logo ekleyin'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logo Düzenle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 200,
+              width: 200,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.greyLight),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  logoUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image,
+                    size: 40,
+                    color: AppColors.greyLight,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Düzenleme özellikleri:'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                Chip(
+                  label: const Text('Kırp'),
+                  avatar: const Icon(Icons.crop, size: 18),
+                  onDeleted: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Kırpma özelliği yakında eklenecek'),
+                      ),
+                    );
+                  },
+                ),
+                Chip(
+                  label: const Text('Boyutlandır'),
+                  avatar: const Icon(Icons.photo_size_select_large, size: 18),
+                  onDeleted: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Boyutlandırma özelliği yakında eklenecek',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                Chip(
+                  label: const Text('Filtre'),
+                  avatar: const Icon(Icons.filter_alt, size: 18),
+                  onDeleted: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Filtre özelliği yakında eklenecek'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              onLogoEdited(logoUrl);
+              Navigator.pop(context);
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -340,92 +639,81 @@ Dijital menümüz: https://menumasa.com/menu/${widget.businessId}
 
                     const SizedBox(height: 8),
 
-                    // Logo URL girişi
-                    TextField(
-                      controller: logoUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Logo URL\'si',
-                        hintText: 'https://example.com/logo.jpg',
-                      ),
+                    // Logo ekleme seçenekleri
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _showLogoPickerDialog(context, (logoUrl) {
+                                logoUrlController.text = logoUrl;
+                              });
+                            },
+                            icon: const Icon(Icons.add_photo_alternate),
+                            label: const Text('Logo Ekle'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              _showLogoEditDialog(
+                                context,
+                                logoUrlController.text,
+                                (editedUrl) {
+                                  logoUrlController.text = editedUrl;
+                                },
+                              );
+                            },
+                            icon: const Icon(Icons.edit),
+                            label: const Text('Düzenle'),
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 8),
 
-                    // Örnek logo butonları
+                    // Hızlı seçim butonları
+                    Text('Hızlı Seçim:', style: AppTypography.bodySmall),
+                    const SizedBox(height: 4),
                     Wrap(
-                      spacing: 8,
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            logoUrlController.text =
-                                'https://picsum.photos/200/200?random=10';
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                          ),
-                          child: const Text(
-                            '🍕 Pizza',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                        _buildSampleLogoButton(
+                          '🍕 Pizza',
+                          'https://picsum.photos/200/200?random=10',
+                          logoUrlController,
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            logoUrlController.text =
-                                'https://picsum.photos/200/200?random=11';
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                          ),
-                          child: const Text(
-                            '🍔 Burger',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                        _buildSampleLogoButton(
+                          '🍔 Burger',
+                          'https://picsum.photos/200/200?random=11',
+                          logoUrlController,
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            logoUrlController.text =
-                                'https://picsum.photos/200/200?random=12';
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                          ),
-                          child: const Text(
-                            '☕ Kafe',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                        _buildSampleLogoButton(
+                          '☕ Kafe',
+                          'https://picsum.photos/200/200?random=12',
+                          logoUrlController,
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            logoUrlController.text =
-                                'https://picsum.photos/200/200?random=13';
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                          ),
-                          child: const Text(
-                            '🍽️ Restoran',
-                            style: TextStyle(fontSize: 12),
-                          ),
+                        _buildSampleLogoButton(
+                          '🍽️ Restoran',
+                          'https://picsum.photos/200/200?random=13',
+                          logoUrlController,
+                        ),
+                        _buildSampleLogoButton(
+                          '🥘 Yemek',
+                          'https://picsum.photos/200/200?random=14',
+                          logoUrlController,
+                        ),
+                        _buildSampleLogoButton(
+                          '🧊 Bar',
+                          'https://picsum.photos/200/200?random=15',
+                          logoUrlController,
                         ),
                       ],
                     ),
@@ -561,5 +849,82 @@ Dijital menümüz: https://menumasa.com/menu/${widget.businessId}
       }
     }
   }
+
+  Future<void> _pickLogoFromCamera(Function(String) onLogoSelected) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        final imagePath = image.path;
+        onLogoSelected(imagePath);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Logo fotoğrafı başarıyla çekildi'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kamera hatası: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickLogoFromFile(Function(String) onLogoSelected) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+
+        if (file.bytes != null) {
+          // Web için bytes kullan
+          final bytes = file.bytes!;
+          final mockUrl =
+              'data:image/${file.extension};base64,${bytes.toString()}';
+          onLogoSelected(mockUrl);
+        } else if (file.path != null) {
+          // Mobil için file path kullan
+          onLogoSelected(file.path!);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Logo dosyası başarıyla seçildi'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Dosya seçme hatası: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 }
- 

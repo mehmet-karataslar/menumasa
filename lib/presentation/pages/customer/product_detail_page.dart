@@ -8,6 +8,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/business.dart';
 import '../../../core/services/cart_service.dart';
+import 'cart_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
@@ -722,10 +723,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               textColor: Colors.white,
               onPressed: () {
                 Navigator.pop(context); // Go back to menu
-                Navigator.pushNamed(
+                Navigator.push(
                   context,
-                  '/cart',
-                  arguments: {'businessId': widget.business.businessId},
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        CartPage(businessId: widget.business.businessId),
+                  ),
                 );
               },
             ),

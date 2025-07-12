@@ -35,6 +35,10 @@ dependencies:
   share_plus: ^7.2.2
   path_provider: ^2.1.2
   
+  # File & Image Picking
+  image_picker: ^1.0.7
+  file_picker: ^6.1.1
+  
   # HTTP & Network
   dio: ^5.4.1
   connectivity_plus: ^5.0.2

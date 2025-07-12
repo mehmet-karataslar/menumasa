@@ -390,6 +390,14 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
                 _buildThemeOption('light', 'Açık Tema', AppColors.info),
                 _buildThemeOption('dark', 'Koyu Tema', AppColors.textPrimary),
                 _buildThemeOption('elegant', 'Şık Tema', AppColors.secondary),
+                _buildThemeOption('modern', 'Modern', Color(0xFF2196F3)),
+                _buildThemeOption('classic', 'Klasik', Color(0xFF795548)),
+                _buildThemeOption('colorful', 'Renkli', Color(0xFFE91E63)),
+                _buildThemeOption('minimal', 'Minimal', Color(0xFF607D8B)),
+                _buildThemeOption('vibrant', 'Canlı', Color(0xFFFF5722)),
+                _buildThemeOption('nature', 'Doğa', Color(0xFF4CAF50)),
+                _buildThemeOption('sunset', 'Günbatımı', Color(0xFFFF9800)),
+                _buildThemeOption('ocean', 'Okyanus', Color(0xFF00BCD4)),
               ],
             ),
           ],
@@ -501,6 +509,22 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
                 _buildColorPreset('#7B1FA2', 'Mor'),
                 _buildColorPreset('#C62828', 'Kırmızı'),
                 _buildColorPreset('#5D4037', 'Kahve'),
+                _buildColorPreset('#E91E63', 'Pembe'),
+                _buildColorPreset('#FF5722', 'Kırmızı-Turuncu'),
+                _buildColorPreset('#795548', 'Kahve-Açık'),
+                _buildColorPreset('#607D8B', 'Mavi-Gri'),
+                _buildColorPreset('#9C27B0', 'Mor-Açık'),
+                _buildColorPreset('#3F51B5', 'İndigo'),
+                _buildColorPreset('#009688', 'Teal'),
+                _buildColorPreset('#4CAF50', 'Yeşil-Açık'),
+                _buildColorPreset('#FF9800', 'Turuncu-Açık'),
+                _buildColorPreset('#FFC107', 'Sarı'),
+                _buildColorPreset('#8BC34A', 'Lime'),
+                _buildColorPreset('#00BCD4', 'Cyan'),
+                _buildColorPreset('#673AB7', 'Mor-Koyu'),
+                _buildColorPreset('#FF1744', 'Kırmızı-Koyu'),
+                _buildColorPreset('#00C853', 'Yeşil-Koyu'),
+                _buildColorPreset('#2196F3', 'Mavi-Açık'),
               ],
             ),
           ],
@@ -757,6 +781,54 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
                 setState(() {
                   _currentSettings = _currentSettings.copyWith(
                     showAllergens: value,
+                  );
+                });
+              },
+            ),
+
+            // Show nutrition info
+            SwitchListTile(
+              title: const Text('Beslenme Bilgilerini Göster'),
+              subtitle: const Text(
+                'Ürünlerde kalori ve beslenme değerlerini gösterir',
+              ),
+              value: _currentSettings.showNutritionInfo ?? false,
+              onChanged: (bool value) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    showNutritionInfo: value,
+                  );
+                });
+              },
+            ),
+
+            // Show badges
+            SwitchListTile(
+              title: const Text('Ürün Rozetlerini Göster'),
+              subtitle: const Text(
+                'Yeni, popüler, vegetaryen gibi rozetleri gösterir',
+              ),
+              value: _currentSettings.showBadges ?? true,
+              onChanged: (bool value) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    showBadges: value,
+                  );
+                });
+              },
+            ),
+
+            // Show availability status
+            SwitchListTile(
+              title: const Text('Stok Durumunu Göster'),
+              subtitle: const Text(
+                'Ürünlerin mevcut/tükendi durumunu gösterir',
+              ),
+              value: _currentSettings.showAvailability ?? true,
+              onChanged: (bool value) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    showAvailability: value,
                   );
                 });
               },

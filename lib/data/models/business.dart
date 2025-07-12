@@ -353,6 +353,9 @@ class MenuSettings {
   final bool? showAllergens;
   final bool? showRatings;
   final String? layoutStyle;
+  final bool? showNutritionInfo;
+  final bool? showBadges;
+  final bool? showAvailability;
 
   MenuSettings({
     required this.theme,
@@ -368,6 +371,9 @@ class MenuSettings {
     this.showAllergens,
     this.showRatings,
     this.layoutStyle,
+    this.showNutritionInfo,
+    this.showBadges,
+    this.showAvailability,
   });
 
   factory MenuSettings.fromMap(Map<String, dynamic> map) {
@@ -385,6 +391,9 @@ class MenuSettings {
       showAllergens: map['showAllergens'],
       showRatings: map['showRatings'],
       layoutStyle: map['layoutStyle'],
+      showNutritionInfo: map['showNutritionInfo'],
+      showBadges: map['showBadges'],
+      showAvailability: map['showAvailability'],
     );
   }
 
@@ -403,6 +412,9 @@ class MenuSettings {
       'showAllergens': showAllergens,
       'showRatings': showRatings,
       'layoutStyle': layoutStyle,
+      'showNutritionInfo': showNutritionInfo,
+      'showBadges': showBadges,
+      'showAvailability': showAvailability,
     };
   }
 
@@ -420,6 +432,9 @@ class MenuSettings {
     bool? showAllergens,
     bool? showRatings,
     String? layoutStyle,
+    bool? showNutritionInfo,
+    bool? showBadges,
+    bool? showAvailability,
   }) {
     return MenuSettings(
       theme: theme ?? this.theme,
@@ -435,6 +450,9 @@ class MenuSettings {
       showAllergens: showAllergens ?? this.showAllergens,
       showRatings: showRatings ?? this.showRatings,
       layoutStyle: layoutStyle ?? this.layoutStyle,
+      showNutritionInfo: showNutritionInfo ?? this.showNutritionInfo,
+      showBadges: showBadges ?? this.showBadges,
+      showAvailability: showAvailability ?? this.showAvailability,
     );
   }
 
