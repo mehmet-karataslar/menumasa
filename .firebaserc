@@ -1,18 +1,5 @@
 {
   "projects": {
-    "default": "mekaqr-2121"
-  },
-  "targets": {
-    "mekaqr-2121": {
-      "hosting": {
-        "masamenu21": [
-          "masamenu21"
-        ],
-        "masamenu1": [
-          "masamenu1"
-        ]
-      }
-    }
-  },
-  "etags": {}
+    "default": "masamenu"
+  }
 }

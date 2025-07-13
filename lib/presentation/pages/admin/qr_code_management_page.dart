@@ -178,25 +178,14 @@ class _QRCodeManagementPageState extends State<QRCodeManagementPage> {
 
             const SizedBox(height: 20),
 
-            // QR Code Display
+            // QR Code Display - Enhanced with business branding
             Center(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: _qrService.createBusinessQRWidget(
-                  businessId: widget.businessId,
-                  size: 200,
-                ),
+              child: _qrService.createBrandedQRWidget(
+                businessId: widget.businessId,
+                businessName: _business?.businessName ?? 'İşletme',
+                size: 200,
+                showBusinessName: true,
+                showTableInfo: false,
               ),
             ),
 
@@ -253,6 +242,39 @@ class _QRCodeManagementPageState extends State<QRCodeManagementPage> {
                     onPressed: _printBusinessQR,
                     icon: const Icon(Icons.print),
                     label: const Text('Yazdır'),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Quick Actions
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _qrService.openQRUrl(
+                      _qrService.generateBusinessQRUrl(widget.businessId),
+                    ),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Test Et'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _copyToClipboard(
+                      _qrService.generateBusinessQRUrl(widget.businessId),
+                    ),
+                    icon: const Icon(Icons.link),
+                    label: const Text('Link'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
                   ),
                 ),
               ],
@@ -667,15 +689,20 @@ class _QRCodeManagementPageState extends State<QRCodeManagementPage> {
                   itemBuilder: (context, index) {
                     final qrData = package.tableQRs[index];
                     return Card(
+                      elevation: 4,
                       child: Padding(
                         padding: const EdgeInsets.all(8),
                         child: Column(
                           children: [
                             Expanded(
-                              child: _qrService.createTableQRWidget(
+                              child: _qrService.createBrandedQRWidget(
                                 businessId: widget.businessId,
+                                businessName:
+                                    _business?.businessName ?? 'İşletme',
                                 tableNumber: qrData.tableNumber!,
                                 size: 80,
+                                showBusinessName: false,
+                                showTableInfo: true,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -684,6 +711,26 @@ class _QRCodeManagementPageState extends State<QRCodeManagementPage> {
                               style: AppTypography.bodySmall.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                IconButton(
+                                  onPressed: () => _qrService.shareTableQR(
+                                    widget.businessId,
+                                    qrData.tableNumber!,
+                                  ),
+                                  icon: const Icon(Icons.share, size: 16),
+                                  tooltip: 'Paylaş',
+                                ),
+                                IconButton(
+                                  onPressed: () =>
+                                      _copyToClipboard(qrData.qrUrl),
+                                  icon: const Icon(Icons.copy, size: 16),
+                                  tooltip: 'Kopyala',
+                                ),
+                              ],
                             ),
                           ],
                         ),

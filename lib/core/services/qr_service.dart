@@ -13,8 +13,8 @@ class QRService {
 
   final DataService _dataService = DataService();
 
-  // Base URL for QR codes - in production this would be your domain
-  static const String baseUrl = 'https://masamenu.app';
+  // Base URL for QR codes - updated to actual deployment URL
+  static const String baseUrl = 'https://masamenu21.web.app';
 
   /// Generates a unique QR code URL for a business
   String generateBusinessQRUrl(String businessId) {
@@ -24,6 +24,29 @@ class QRService {
   /// Generates a QR code URL for a specific table
   String generateTableQRUrl(String businessId, String tableNumber) {
     return '$baseUrl/menu/$businessId?table=$tableNumber';
+  }
+
+  /// Generates a unique QR code URL for a specific business with custom path
+  String generateCustomBusinessQRUrl(String businessId, String customPath) {
+    return '$baseUrl/menu/$businessId/$customPath';
+  }
+
+  /// Generates a QR code URL for a specific table with additional parameters
+  String generateAdvancedTableQRUrl(
+    String businessId,
+    String tableNumber, {
+    String? waiterCode,
+    String? sessionId,
+    Map<String, String>? extraParams,
+  }) {
+    final uri = Uri.parse('$baseUrl/menu/$businessId');
+    final queryParams = <String, String>{'table': tableNumber};
+
+    if (waiterCode != null) queryParams['waiter'] = waiterCode;
+    if (sessionId != null) queryParams['session'] = sessionId;
+    if (extraParams != null) queryParams.addAll(extraParams);
+
+    return uri.replace(queryParameters: queryParams).toString();
   }
 
   /// Creates QR code widget for business
@@ -59,8 +82,17 @@ class QRService {
     double size = 200.0,
     Color? foregroundColor,
     Color? backgroundColor,
+    String? waiterCode,
+    String? sessionId,
+    Map<String, String>? extraParams,
   }) {
-    final qrData = generateTableQRUrl(businessId, tableNumber);
+    final qrData = generateAdvancedTableQRUrl(
+      businessId,
+      tableNumber,
+      waiterCode: waiterCode,
+      sessionId: sessionId,
+      extraParams: extraParams,
+    );
 
     return QrImageView(
       data: qrData,
@@ -76,6 +108,92 @@ class QRService {
           ),
         );
       },
+    );
+  }
+
+  /// Creates a complete QR code widget with business branding
+  Widget createBrandedQRWidget({
+    required String businessId,
+    required String businessName,
+    String? tableNumber,
+    double size = 200.0,
+    Color? foregroundColor,
+    Color? backgroundColor,
+    String? logoUrl,
+    bool showBusinessName = true,
+    bool showTableInfo = true,
+  }) {
+    final qrData = tableNumber != null
+        ? generateTableQRUrl(businessId, tableNumber)
+        : generateBusinessQRUrl(businessId);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showBusinessName)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                businessName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          QrImageView(
+            data: qrData,
+            version: QrVersions.auto,
+            size: size,
+            foregroundColor: foregroundColor ?? Colors.black,
+            backgroundColor: backgroundColor ?? Colors.white,
+            gapless: false,
+            errorStateBuilder: (cxt, err) {
+              return Container(
+                child: Center(
+                  child: Text(
+                    'QR Kod Oluşturulamadı',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            },
+          ),
+          if (showTableInfo && tableNumber != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'Masa $tableNumber',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          const Text(
+            'Menümüze ulaşmak için QR kodu tarayın',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
