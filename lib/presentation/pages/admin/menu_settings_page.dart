@@ -41,6 +41,7 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
   @override
   void initState() {
     super.initState();
+    _currentSettings = BusinessDefaults.defaultMenuSettings;
     _loadSettings();
   }
 
@@ -124,6 +125,7 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
   }
 
   bool get _hasChanges {
+    if (_isLoading || _originalSettings == null) return false;
     return _originalSettings?.toMap().toString() !=
         _currentSettings.toMap().toString();
   }
