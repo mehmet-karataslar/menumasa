@@ -14,7 +14,7 @@ class QRService {
   final DataService _dataService = DataService();
 
   // Base URL for QR codes - updated to actual deployment URL
-  static const String baseUrl = 'https://menuyebak.web.app';
+  static const String baseUrl = 'https://menumebak.web.app';
 
   /// Generates a unique QR code URL for a business
   String generateBusinessQRUrl(String businessId) {
