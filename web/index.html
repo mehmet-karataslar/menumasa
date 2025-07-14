@@ -40,6 +40,21 @@
 
   <title>Masa Menü - Dijital Menü Çözümü</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Hash routing removal script -->
+  <script>
+    // Remove hash from URL on page load
+    if (window.location.hash) {
+      const path = window.location.hash.substring(1);
+      window.history.replaceState(null, null, path);
+    }
+    
+    // Handle hash changes
+    window.addEventListener('hashchange', function() {
+      const path = window.location.hash.substring(1);
+      window.history.replaceState(null, null, path);
+    });
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

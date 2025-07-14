@@ -98,6 +98,14 @@ class AppTypography {
     height: 1.6,
   );
 
+  static const TextStyle caption = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeSmall,
+    fontWeight: fontWeightRegular,
+    color: AppColors.textLight,
+    height: 1.4,
+  );
+
   // Buton Stilleri
   static const TextStyle buttonLarge = TextStyle(
     fontFamily: fontFamily,

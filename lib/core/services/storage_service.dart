@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -19,7 +20,7 @@ class StorageService {
   }
 
   /// Bytes'dan dosya yükleme (web için)
-  Future<String> uploadBytes(List<int> bytes, String fileName) async {
+  Future<String> uploadBytes(Uint8List bytes, String fileName) async {
     try {
       final ref = _storage.ref().child(fileName);
       final uploadTask = ref.putData(bytes);
@@ -35,7 +36,7 @@ class StorageService {
   Future<String> uploadXFile(XFile file, String fileName) async {
     try {
       final bytes = await file.readAsBytes();
-      return await uploadBytes(bytes, fileName);
+      return await uploadBytes(Uint8List.fromList(bytes), fileName);
     } catch (e) {
       throw Exception('Dosya yüklenirken hata: $e');
     }
