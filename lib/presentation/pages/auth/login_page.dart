@@ -166,6 +166,11 @@ class _LoginPageState extends State<LoginPage> {
 
                 // Kayıt ol bağlantısı
                 _buildSignUpLink(),
+
+                const SizedBox(height: 24),
+
+                // Admin olarak giriş yap butonu
+                _buildAdminLoginButton(),
               ],
             ),
           ),
@@ -351,6 +356,40 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAdminLoginButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : () {
+          Navigator.pushReplacementNamed(context, '/admin/login');
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: AppColors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                'Admin olarak giriş yap',
+                style: AppTypography.buttonLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
     );
   }
 }
