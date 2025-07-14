@@ -57,10 +57,10 @@ class _LoginPageState extends State<LoginPage> {
             arguments: {'userId': user.uid},
           );
         } else {
-          // İşletme giriş sonrası - admin dashboarda yönlendir
+          // İşletme giriş sonrası - işletme ana sayfasına yönlendir
           Navigator.pushReplacementNamed(
             context,
-            '/admin',
+            '/business/home',
             arguments: {'businessId': user.uid},
           );
         }

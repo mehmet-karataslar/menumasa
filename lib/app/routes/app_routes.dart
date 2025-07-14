@@ -12,6 +12,7 @@ import '../../presentation/pages/customer/customer_home_page.dart';
 import '../../presentation/pages/customer/customer_dashboard_page.dart';
 import '../../presentation/pages/customer/business_detail_page.dart';
 import '../../presentation/pages/customer/search_page.dart';
+import '../../presentation/pages/business/business_home_page.dart';
 import '../../data/models/category.dart' as app_category;
 import '../../data/models/business.dart';
 import '../../admin/admin.dart';
@@ -40,6 +41,7 @@ class AppRoutes {
   static const String customerDashboard = '/customer/dashboard';
   static const String businessDetail = '/business/detail';
   static const String search = '/search';
+  static const String businessHome = '/business/home';
 
   // Admin routes
   static const String admin = '/admin';
@@ -66,6 +68,7 @@ class AppRoutes {
     customerDashboard: (context) => const CustomerDashboardRouterPage(),
     businessDetail: (context) => const BusinessDetailRouterPage(),
     search: (context) => const SearchRouterPage(),
+    businessHome: (context) => const BusinessHomeRouterPage(),
     admin: (context) => const ResponsiveAdminRouterPage(),
     adminDashboard: (context) => const ResponsiveAdminRouterPage(),
     adminCategories: (context) => const ResponsiveAdminRouterPage(),
@@ -277,5 +280,22 @@ class SearchRouterPage extends StatelessWidget {
       businesses: businesses.cast<Business>(),
       categories: categories.cast<app_category.Category>(),
     );
+  }
+}
+
+class BusinessHomeRouterPage extends StatelessWidget {
+  const BusinessHomeRouterPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final businessId = args?['businessId'] as String?;
+
+    if (businessId == null || businessId.isEmpty) {
+      return const RouterPage();
+    }
+
+    return BusinessHomePage(businessId: businessId);
   }
 }

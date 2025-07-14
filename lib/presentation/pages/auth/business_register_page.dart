@@ -295,10 +295,10 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       }
 
       if (mounted) {
-        // Registration successful, navigate to admin dashboard
+        // Registration successful, navigate to business home page
         Navigator.pushReplacementNamed(
           context,
-          '/admin',
+          '/business/home',
           arguments: {'businessId': businessId},
         );
       }
