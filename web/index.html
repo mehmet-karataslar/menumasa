@@ -43,17 +43,50 @@
   
   <!-- Hash routing removal script -->
   <script>
-    // Remove hash from URL on page load
-    if (window.location.hash) {
-      const path = window.location.hash.substring(1);
-      window.history.replaceState(null, null, path);
-    }
+    // Immediately remove hash and redirect
+    (function() {
+      if (window.location.hash) {
+        const path = window.location.hash.substring(1);
+        if (path && path !== '/') {
+          window.history.replaceState(null, null, path);
+          window.location.replace(path);
+        } else {
+          window.history.replaceState(null, null, '/');
+          window.location.replace('/');
+        }
+      }
+    })();
     
-    // Handle hash changes
-    window.addEventListener('hashchange', function() {
+    // Intercept all hash changes
+    window.addEventListener('hashchange', function(e) {
+      e.preventDefault();
       const path = window.location.hash.substring(1);
-      window.history.replaceState(null, null, path);
+      if (path && path !== '/') {
+        window.history.replaceState(null, null, path);
+        window.location.replace(path);
+      } else {
+        window.history.replaceState(null, null, '/');
+        window.location.replace('/');
+      }
     });
+    
+    // Override pushState to prevent hash
+    const originalPushState = history.pushState;
+    history.pushState = function(state, title, url) {
+      if (url && url.includes('#')) {
+        url = url.split('#')[0];
+      }
+      return originalPushState.call(this, state, title, url);
+    };
+    
+    // Override replaceState to prevent hash
+    const originalReplaceState = history.replaceState;
+    history.replaceState = function(state, title, url) {
+      if (url && url.includes('#')) {
+        url = url.split('#')[0];
+      }
+      return originalReplaceState.call(this, state, title, url);
+    };
   </script>
 </head>
 <body>
