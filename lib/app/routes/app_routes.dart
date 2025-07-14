@@ -9,6 +9,7 @@ import '../../presentation/pages/customer/menu_page.dart';
 import '../../presentation/pages/customer/product_detail_page.dart';
 import '../../presentation/pages/customer/customer_orders_page.dart';
 import '../../presentation/pages/admin/admin_dashboard_page.dart';
+import '../../presentation/pages/admin/responsive_admin_dashboard.dart';
 import '../../presentation/pages/admin/category_management_page.dart';
 import '../../presentation/pages/admin/product_management_page.dart';
 import '../../presentation/pages/admin/business_info_page.dart';
@@ -39,6 +40,7 @@ class AppRoutes {
   static const String adminMenuSettings = '/admin/menu-settings';
   static const String adminDiscounts = '/admin/discounts';
   static const String adminOrders = '/admin/orders';
+  static const String responsiveAdmin = '/admin/responsive';
 
   // Route map
   static Map<String, WidgetBuilder> get routes => {
@@ -50,14 +52,15 @@ class AppRoutes {
     menu: (context) => const MenuRouterPage(),
     productDetail: (context) => const ProductDetailRouterPage(),
     customerOrders: (context) => const CustomerOrdersRouterPage(),
-    admin: (context) => const AdminDashboardRouterPage(),
-    adminDashboard: (context) => const AdminDashboardRouterPage(),
-    adminCategories: (context) => const CategoryManagementRouterPage(),
-    adminProducts: (context) => const ProductManagementRouterPage(),
-    adminBusinessInfo: (context) => const BusinessInfoRouterPage(),
-    adminMenuSettings: (context) => const MenuSettingsRouterPage(),
-    adminDiscounts: (context) => const DiscountManagementRouterPage(),
-    adminOrders: (context) => const OrdersRouterPage(),
+    admin: (context) => const ResponsiveAdminRouterPage(),
+    adminDashboard: (context) => const ResponsiveAdminRouterPage(),
+    adminCategories: (context) => const ResponsiveAdminRouterPage(),
+    adminProducts: (context) => const ResponsiveAdminRouterPage(),
+    adminBusinessInfo: (context) => const ResponsiveAdminRouterPage(),
+    adminMenuSettings: (context) => const ResponsiveAdminRouterPage(),
+    adminDiscounts: (context) => const ResponsiveAdminRouterPage(),
+    adminOrders: (context) => const ResponsiveAdminRouterPage(),
+    responsiveAdmin: (context) => const ResponsiveAdminRouterPage(),
   };
 
   // Custom route generator for dynamic URLs
@@ -164,62 +167,20 @@ class CustomerOrdersRouterPage extends StatelessWidget {
   }
 }
 
-class CategoryManagementRouterPage extends StatelessWidget {
-  const CategoryManagementRouterPage({super.key});
+class ResponsiveAdminRouterPage extends StatelessWidget {
+  const ResponsiveAdminRouterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Admin sayfalarına erişim için auth kontrolü yapılacak
-    return const RouterPage();
-  }
-}
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final businessId = args?['businessId'] as String?;
 
-class ProductManagementRouterPage extends StatelessWidget {
-  const ProductManagementRouterPage({super.key});
+    // businessId yoksa router'a yönlendir
+    if (businessId == null || businessId.isEmpty) {
+      return const RouterPage();
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    // Admin sayfalarına erişim için auth kontrolü yapılacak
-    return const RouterPage();
-  }
-}
-
-class BusinessInfoRouterPage extends StatelessWidget {
-  const BusinessInfoRouterPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Admin sayfalarına erişim için auth kontrolü yapılacak
-    return const RouterPage();
-  }
-}
-
-class MenuSettingsRouterPage extends StatelessWidget {
-  const MenuSettingsRouterPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Admin sayfalarına erişim için auth kontrolü yapılacak
-    return const RouterPage();
-  }
-}
-
-class DiscountManagementRouterPage extends StatelessWidget {
-  const DiscountManagementRouterPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Admin sayfalarına erişim için auth kontrolü yapılacak
-    return const RouterPage();
-  }
-}
-
-class OrdersRouterPage extends StatelessWidget {
-  const OrdersRouterPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Admin sayfalarına erişim için auth kontrolü yapılacak
-    return const RouterPage();
+    return ResponsiveAdminDashboard(businessId: businessId);
   }
 }
