@@ -1,7 +1,12 @@
-"targets": {
-  "mekaqr-2121": {
-    "hosting": {
-      "menumebak": [ "menumebak" ]
+{
+  "projects": {
+    "default": "mekaqr-2121"
+  },
+  "targets": {
+    "mekaqr-2121": {
+      "hosting": {
+        "menumebak": ["menumebak"]
+      }
     }
   }
 }

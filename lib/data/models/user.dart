@@ -1,4 +1,4 @@
-// Firebase imports removed for Windows compatibility
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class User {
   final String uid;
@@ -31,21 +31,31 @@ class User {
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       phone: data['phone'],
-      createdAt: data['createdAt'] != null
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: data['updatedAt'] != null
-          ? DateTime.parse(data['updatedAt'] as String)
-          : DateTime.now(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       isActive: data['isActive'] ?? true,
       subscriptionType: SubscriptionType.fromString(
         data['subscriptionType'] ?? 'free',
       ),
       subscriptionExpiry: data['subscriptionExpiry'] != null
-          ? DateTime.parse(data['subscriptionExpiry'] as String)
+          ? _parseDateTime(data['subscriptionExpiry'])
           : null,
       profile: UserProfile.fromMap(data['profile'] ?? {}),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.parse(value);
+    } else if (value is DateTime) {
+      return value;
+    }
+    
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -172,7 +182,7 @@ class UserProfile {
       location: map['location'],
       preferences: UserPreferences.fromMap(map['preferences'] ?? {}),
       lastLoginAt: map['lastLoginAt'] != null
-          ? DateTime.parse(map['lastLoginAt'] as String)
+          ? User._parseDateTime(map['lastLoginAt'])
           : null,
       totalBusinesses: map['totalBusinesses'] ?? 0,
       totalProducts: map['totalProducts'] ?? 0,
