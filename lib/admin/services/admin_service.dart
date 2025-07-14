@@ -170,9 +170,10 @@ class AdminService {
   }
 
   /// Tüm admin kullanıcılarını getir
-  Future<List<AdminUser>> getAllAdmins() async {
+  Future<List<AdminUser>> getAllAdmins({bool skipPermissionCheck = false}) async {
     try {
-      if (!_hasPermission(AdminPermission.manageAdmins)) {
+      // İlk admin oluşturulurken yetki kontrolü yapma
+      if (!skipPermissionCheck && !_hasPermission(AdminPermission.manageAdmins)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -198,9 +199,11 @@ class AdminService {
     required String password,
     required AdminRole role,
     required List<AdminPermission> permissions,
+    bool skipPermissionCheck = false,
   }) async {
     try {
-      if (!_hasPermission(AdminPermission.manageAdmins)) {
+      // İlk admin oluşturulurken yetki kontrolü yapma
+      if (!skipPermissionCheck && !_hasPermission(AdminPermission.manageAdmins)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -248,15 +251,17 @@ class AdminService {
         'passwordHash': hashedPassword,
       });
 
-      // Activity log kaydet
-      await _logActivity(
-        adminId: _currentAdmin!.adminId,
-        adminUsername: _currentAdmin!.username,
-        action: 'CREATE_ADMIN',
-        targetType: 'ADMIN_USER',
-        targetId: adminId,
-        details: 'Yeni admin kullanıcısı oluşturuldu: $username',
-      );
+      // Activity log kaydet (sadece mevcut admin varsa)
+      if (_currentAdmin != null) {
+        await _logActivity(
+          adminId: _currentAdmin!.adminId,
+          adminUsername: _currentAdmin!.username,
+          action: 'CREATE_ADMIN',
+          targetType: 'ADMIN_USER',
+          targetId: adminId,
+          details: 'Yeni admin kullanıcısı oluşturuldu: $username',
+        );
+      }
 
       return adminId;
     } catch (e) {

@@ -94,8 +94,8 @@ class AdminModule {
       // Admin service'i başlat
       final adminService = AdminService();
       
-      // Admin kullanıcılarını kontrol et
-      final admins = await adminService.getAllAdmins();
+      // Admin kullanıcılarını kontrol et (yetki kontrolü yapma)
+      final admins = await adminService.getAllAdmins(skipPermissionCheck: true);
       
       // Eğer hiç admin yoksa, ilk admin'i oluştur
       if (admins.isEmpty) {
@@ -106,6 +106,7 @@ class AdminModule {
           password: 'admin123',
           role: AdminRole.superAdmin,
           permissions: AdminPermission.values.toList(),
+          skipPermissionCheck: true, // İlk admin için yetki kontrolü yapma
         );
         
         print('İlk admin kullanıcısı oluşturuldu: superadmin / admin123');
