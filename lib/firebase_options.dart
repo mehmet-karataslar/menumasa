@@ -29,21 +29,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAz6cCTMdVOoQOLZfbL-o_FWwJgV_XQBuE',
-    appId: '1:123456789:web:abcdef123456',
-    messagingSenderId: '123456789',
-    projectId: 'masamenu-app',
-    authDomain: 'masamenu-app.firebaseapp.com',
-    storageBucket: 'masamenu-app.appspot.com',
-    measurementId: 'G-MEASUREMENT_ID',
+    apiKey: 'AIzaSyCgZGh8jQBpfVvU02nrIpOezEmJTRfETLw',
+    appId: '1:217482368976:web:5975f19910a42cc4d30bd5',
+    messagingSenderId: '217482368976',
+    projectId: 'mekaqr-2121',
+    authDomain: 'mekaqr-2121.firebaseapp.com',
+    storageBucket: 'mekaqr-2121.firebasestorage.app',
+    measurementId: 'G-DYR9JEPKD6',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAz6cCTMdVOoQOLZfbL-o_FWwJgV_XQBuE',
-    appId: '1:123456789:android:abcdef123456',
-    messagingSenderId: '123456789',
-    projectId: 'masamenu-app',
-    storageBucket: 'masamenu-app.appspot.com',
+    apiKey: 'AIzaSyB9HBL6ycpQWyp6tDoZpN5X2yHzy9oB30c',
+    appId: '1:217482368976:android:fe7c4f02e493b052d30bd5',
+    messagingSenderId: '217482368976',
+    projectId: 'mekaqr-2121',
+    storageBucket: 'mekaqr-2121.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

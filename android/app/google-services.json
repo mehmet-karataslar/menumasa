@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "217482368976",
+    "project_id": "mekaqr-2121",
+    "storage_bucket": "mekaqr-2121.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:217482368976:android:fe7c4f02e493b052d30bd5",
+        "android_client_info": {
+          "package_name": "com.example.masamenu"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "217482368976-ghjt767j5h76pje98930baup9a9fugsc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.masamenu",
+            "certificate_hash": "6d93391d7d72dea21a2ddbef5aeda32ecc2b5dd4"
+          }
+        },
+        {
+          "client_id": "217482368976-qt61ep5n4ea3spprjkamo8ifnaealvnd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9HBL6ycpQWyp6tDoZpN5X2yHzy9oB30c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "217482368976-qt61ep5n4ea3spprjkamo8ifnaealvnd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "217482368976-57flnv9hb0u5rdcb28giskig5toetbdh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mekaqr.mekamenu",
+                "app_store_id": "2121"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

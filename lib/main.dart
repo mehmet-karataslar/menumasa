@@ -27,12 +27,21 @@ import 'core/services/auth_service.dart';
 import 'data/models/product.dart';
 import 'data/models/business.dart';
 import 'app/routes/app_routes.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Initialize Firebase with error handling
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    print('Firebase initialization failed: $e');
+    // Continue anyway, Firebase might already be initialized
+  }
+
+  // App Check is disabled for now to avoid hot restart issues
+  // Firebase will work without App Check in development
 
   // Initialize Firestore database
   final firestoreService = FirestoreService();
