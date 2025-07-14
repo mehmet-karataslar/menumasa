@@ -49,6 +49,7 @@ class AdminService {
       } catch (e) {
         // Eğer kullanıcı yoksa, ilk admin için otomatik oluştur
         if (e.toString().contains('user-not-found')) {
+          print('İlk admin kullanıcısı oluşturuluyor: $username');
           userCredential = await _auth.createUserWithEmailAndPassword(
             email: adminEmail,
             password: password,
@@ -56,8 +57,10 @@ class AdminService {
           
           // İlk admin kullanıcısını Firestore'a kaydet
           await _createFirstAdmin(username, password, userCredential.user!.uid);
-        } else {
+        } else if (e.toString().contains('wrong-password')) {
           throw AdminException('Geçersiz kullanıcı adı veya şifre');
+        } else {
+          throw AdminException('Giriş sırasında hata: $e');
         }
       }
 
@@ -68,7 +71,34 @@ class AdminService {
           .get();
 
       if (!adminDoc.exists) {
-        throw AdminException('Admin kullanıcısı bulunamadı');
+        // Eğer Firestore'da admin yoksa, oluştur
+        print('Firestore\'da admin bulunamadı, oluşturuluyor...');
+        await _createFirstAdmin(username, password, userCredential.user!.uid);
+        
+        // Tekrar al
+        final newAdminDoc = await _firestore
+            .collection(_adminCollection)
+            .doc(userCredential.user!.uid)
+            .get();
+            
+        if (!newAdminDoc.exists) {
+          throw AdminException('Admin kullanıcısı oluşturulamadı');
+        }
+        
+        final adminData = newAdminDoc.data()!;
+        final admin = AdminUser.fromJson({...adminData, 'id': newAdminDoc.id});
+        
+        // Session oluştur
+        final session = await _createSession(
+          adminId: admin.id,
+          ipAddress: ipAddress ?? 'unknown',
+          userAgent: userAgent ?? 'unknown',
+        );
+
+        _currentAdmin = admin;
+        _currentSession = session;
+
+        return admin;
       }
 
       final adminData = adminDoc.data()!;
@@ -141,6 +171,8 @@ class AdminService {
       ...admin.toJson(),
       'passwordHash': hashedPassword,
     });
+    
+    print('Admin kullanıcısı Firestore\'a kaydedildi: $username');
   }
 
   /// Admin çıkışı

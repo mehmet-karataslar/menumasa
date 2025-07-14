@@ -83,8 +83,6 @@ class AdminModule {
     print('$moduleName v1.0.0 başlatılıyor...');
     
     try {
-      final adminService = AdminService();
-      
       // Firebase Authentication durumunu kontrol et
       final auth = FirebaseAuth.instance;
       final currentUser = auth.currentUser;
@@ -109,48 +107,57 @@ class AdminModule {
         }
       }
       
-      // Admin kullanıcılarını kontrol et (yetki kontrolü yapma)
-      final admins = await adminService.getAllAdmins(skipPermissionCheck: true);
-      
-      // Eğer hiç admin yoksa, ilk admin'i oluştur
-      if (admins.isEmpty) {
-        print('İlk admin kullanıcısı oluşturuluyor...');
+      // Admin kullanıcılarını kontrol et (Firebase Auth olmadan)
+      try {
+        final adminQuery = await FirebaseFirestore.instance
+            .collection('admin_users')
+            .limit(1)
+            .get();
         
-        // Firebase Authentication ile ilk admin'i oluştur
-        final adminEmail = 'superadmin@admin.masamenu.com';
-        final adminPassword = 'admin123';
-        
-        try {
-          final userCredential = await auth.createUserWithEmailAndPassword(
-            email: adminEmail,
-            password: adminPassword,
-          );
+        // Eğer hiç admin yoksa, ilk admin'i oluştur
+        if (adminQuery.docs.isEmpty) {
+          print('İlk admin kullanıcısı oluşturuluyor...');
           
-          // Firestore'a admin bilgilerini kaydet
-          await FirebaseFirestore.instance
-              .collection('admin_users')
-              .doc(userCredential.user!.uid)
-              .set({
-            'id': userCredential.user!.uid,
-            'username': 'superadmin',
-            'email': adminEmail,
-            'name': 'Süper Yönetici',
-            'role': 'superAdmin',
-            'permissions': AdminPermission.values.map((p) => p.value).toList(),
-            'createdAt': DateTime.now().toIso8601String(),
-            'lastLoginAt': DateTime.now().toIso8601String(),
-            'isActive': true,
-            'passwordHash': '', // Firebase Auth kullandığımız için boş
-          });
+          // Firebase Authentication ile ilk admin'i oluştur
+          final adminEmail = 'superadmin@admin.masamenu.com';
+          final adminPassword = 'admin123';
           
-          print('İlk admin kullanıcısı oluşturuldu: superadmin / admin123');
-          print('⚠️  Güvenlik için şifreyi değiştirmeyi unutmayın!');
-        } catch (e) {
-          print('İlk admin oluşturulurken hata: $e');
+          try {
+            final userCredential = await auth.createUserWithEmailAndPassword(
+              email: adminEmail,
+              password: adminPassword,
+            );
+            
+            // Firestore'a admin bilgilerini kaydet
+            await FirebaseFirestore.instance
+                .collection('admin_users')
+                .doc(userCredential.user!.uid)
+                .set({
+              'id': userCredential.user!.uid,
+              'username': 'superadmin',
+              'email': adminEmail,
+              'name': 'Süper Yönetici',
+              'role': 'superAdmin',
+              'permissions': AdminPermission.values.map((p) => p.value).toList(),
+              'createdAt': DateTime.now().toIso8601String(),
+              'lastLoginAt': DateTime.now().toIso8601String(),
+              'isActive': true,
+              'passwordHash': '', // Firebase Auth kullandığımız için boş
+            });
+            
+            print('İlk admin kullanıcısı oluşturuldu: superadmin / admin123');
+            print('⚠️  Güvenlik için şifreyi değiştirmeyi unutmayın!');
+          } catch (e) {
+            print('İlk admin oluşturulurken hata: $e');
+          }
+        } else {
+          print('Mevcut admin kullanıcıları bulundu');
         }
+      } catch (e) {
+        print('Admin kullanıcıları kontrol edilirken hata: $e');
       }
     } catch (e) {
-      print('İlk admin oluşturulurken hata: $e');
+      print('Admin modülü başlatılırken hata: $e');
     }
     
     print('$moduleName başarıyla başlatıldı');
