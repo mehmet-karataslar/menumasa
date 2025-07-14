@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
 import '../services/admin_service.dart';
-import '../../../presentation/widgets/shared/loading_indicator.dart';
-import '../../../presentation/widgets/shared/error_message.dart';
-import 'admin_dashboard_page.dart';
-import '../../business/services/business_service.dart';
+import '../models/admin_user.dart';
+import '../admin.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -45,17 +41,15 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       final admin = await _adminService.signInWithCredentials(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
-        ipAddress: 'web', // TODO: Gerçek IP adresi al
-        userAgent: 'web', // TODO: Gerçek user agent al
+        ipAddress: 'web',
+        userAgent: 'web',
       );
 
       if (admin != null && mounted) {
-        // Giriş başarılı, admin dashboard'a yönlendir
-        Navigator.pushReplacement(
+        Navigator.pushReplacementNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => const AdminDashboardPage(),
-          ),
+          '/admin/dashboard',
+          arguments: {'adminId': admin.id},
         );
       }
     } on AdminException catch (e) {
@@ -76,7 +70,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF1a1a1a), // Dark background
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -93,7 +87,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                 // Giriş formu
                 _buildLoginForm(),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Giriş butonu
                 _buildLoginButton(),
@@ -102,12 +96,12 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
                 // Hata mesajı
                 if (_errorMessage != null)
-                  ErrorMessage(message: _errorMessage!),
+                  _buildErrorMessage(),
 
                 const SizedBox(height: 32),
 
-                // Güvenlik uyarısı
-                _buildSecurityWarning(),
+                // Geri dön butonu
+                _buildBackButton(),
               ],
             ),
           ),
@@ -123,27 +117,31 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: AppColors.error,
+            color: const Color(0xFFD32F2F), // Admin red color
             borderRadius: BorderRadius.circular(20),
           ),
           child: const Icon(
             Icons.admin_panel_settings,
-            color: AppColors.white,
+            color: Colors.white,
             size: 40,
           ),
         ),
         const SizedBox(height: 24),
-        Text(
-          'Sistem Yönetimi',
-          style: AppTypography.h1.copyWith(
-            color: AppColors.textPrimary,
+        const Text(
+          'Admin Girişi',
+          style: TextStyle(
+            fontSize: 28,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          'Yönetici paneline erişim',
-          style: AppTypography.bodyLarge.copyWith(color: AppColors.textLight),
+        const Text(
+          'Sistem yönetim paneline hoş geldiniz',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -159,10 +157,25 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           TextFormField(
             controller: _usernameController,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
               labelText: 'Kullanıcı Adı',
-              hintText: 'admin',
-              prefixIcon: Icon(Icons.person_outline),
+              hintText: 'superadmin',
+              hintStyle: const TextStyle(color: Colors.grey),
+              labelStyle: const TextStyle(color: Colors.grey),
+              prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.grey),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.grey),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFD32F2F)),
+              ),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -180,32 +193,45 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
             controller: _passwordController,
             obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
+            style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               labelText: 'Şifre',
-              hintText: '••••••••',
-              prefixIcon: const Icon(Icons.lock_outline),
+              hintText: 'Şifrenizi girin',
+              hintStyle: const TextStyle(color: Colors.grey),
+              labelStyle: const TextStyle(color: Colors.grey),
+              prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
               suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
                 onPressed: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;
                   });
                 },
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                  color: AppColors.textLight,
-                ),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.grey),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.grey),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFD32F2F)),
               ),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Şifre gerekli';
               }
-              if (value.length < 6) {
-                return 'Şifre en az 6 karakter olmalı';
-              }
               return null;
             },
             enabled: !_isLoading,
+            onFieldSubmitted: (_) => _handleLogin(),
           ),
         ],
       ),
@@ -219,26 +245,25 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.error,
-          foregroundColor: AppColors.white,
+          backgroundColor: const Color(0xFFD32F2F),
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 2,
         ),
         child: _isLoading
             ? const SizedBox(
-                width: 24,
-                height: 24,
+                width: 20,
+                height: 20,
                 child: CircularProgressIndicator(
+                  color: Colors.white,
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
                 ),
               )
-            : Text(
-                'Giriş Yap',
-                style: AppTypography.buttonLarge.copyWith(
-                  color: AppColors.white,
+            : const Text(
+                'Admin Girişi',
+                style: TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -246,44 +271,37 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     );
   }
 
-  Widget _buildSecurityWarning() {
+  Widget _buildErrorMessage() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
+        color: const Color(0xFFD32F2F).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.error.withOpacity(0.3),
-        ),
+        border: Border.all(color: const Color(0xFFD32F2F)),
       ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.security,
-                color: AppColors.error,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Güvenlik Uyarısı',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Bu alan sadece yetkili sistem yöneticileri içindir. Yetkisiz erişim denemeleri loglanacak ve raporlanacaktır.',
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textLight,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      child: Text(
+        _errorMessage!,
+        style: const TextStyle(
+          color: Color(0xFFD32F2F),
+          fontSize: 14,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return TextButton(
+      onPressed: _isLoading ? null : () {
+        Navigator.pushReplacementNamed(context, '/');
+      },
+      child: const Text(
+        '← Ana Sayfaya Dön',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 14,
+        ),
       ),
     );
   }
