@@ -28,14 +28,23 @@ class AuthService {
       );
 
       if (credential.user != null) {
-        // Update last login time
-        await _firestore.collection('users').doc(credential.user!.uid).update({
-          'profile.lastLoginAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        // Get user data from Firestore
-        return await _getUserFromFirestore(credential.user!.uid);
+        // Get user data from Firestore first
+        final user = await _getUserFromFirestore(credential.user!.uid);
+        
+        if (user != null) {
+          // Update last login time only if user exists
+          try {
+            await _firestore.collection('users').doc(credential.user!.uid).update({
+              'profile.lastLoginAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          } catch (e) {
+            print('Failed to update last login time: $e');
+            // Continue anyway, this is not critical
+          }
+        }
+        
+        return user;
       }
       return null;
     } on FirebaseAuthException catch (e) {
@@ -191,10 +200,46 @@ class AuthService {
       if (doc.exists) {
         return app_user.User.fromJson(doc.data()!, id: uid);
       }
-      return null;
+      // If user document doesn't exist, create a default user
+      print('User document not found for UID: $uid, creating default user');
+      return _createDefaultUser(uid);
     } catch (e) {
-      throw AuthException('Kullanıcı bilgileri alınırken bir hata oluştu: $e');
+      print('Error getting user from Firestore: $e');
+      // Try to create default user as fallback
+      return _createDefaultUser(uid);
     }
+  }
+
+  // Create default user when document doesn't exist
+  app_user.User _createDefaultUser(String uid) {
+    final currentUser = _auth.currentUser;
+    return app_user.User(
+      uid: uid,
+      email: currentUser?.email ?? '',
+      name: currentUser?.displayName ?? 'Kullanıcı',
+      phone: null,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isActive: true,
+      subscriptionType: app_user.SubscriptionType.free,
+      subscriptionExpiry: null,
+      profile: app_user.UserProfile(
+        preferences: app_user.UserPreferences(
+          language: 'tr',
+          currency: 'TL',
+          timezone: 'Europe/Istanbul',
+          emailNotifications: true,
+          pushNotifications: true,
+          smsNotifications: false,
+          theme: 'light',
+          analytics: true,
+          marketing: false,
+        ),
+        lastLoginAt: DateTime.now(),
+        totalBusinesses: 0,
+        totalProducts: 0,
+      ),
+    );
   }
 
   // Get current user data
