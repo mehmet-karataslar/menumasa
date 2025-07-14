@@ -243,7 +243,11 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         ownerId: currentUser.uid,
         businessName: businessName,
         businessDescription: businessDescription,
+        businessType: 'Restoran',
+        businessAddress: '$street, $district, $city',
         logoUrl: null,
+        phone: phone,
+        email: email,
         address: Address(
           street: street,
           city: city,
@@ -277,6 +281,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
           showAvailability: true,
         ),
         isActive: true,
+        isOpen: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

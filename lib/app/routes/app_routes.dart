@@ -12,7 +12,9 @@ import '../../presentation/pages/customer/customer_home_page.dart';
 import '../../presentation/pages/customer/customer_dashboard_page.dart';
 import '../../presentation/pages/customer/business_detail_page.dart';
 import '../../presentation/pages/customer/search_page.dart';
-import '../../presentation/pages/admin/admin_dashboard_page.dart';
+import '../../data/models/category.dart' as app_category;
+import '../../data/models/business.dart';
+import '../../admin/admin.dart';
 import '../../presentation/pages/admin/responsive_admin_dashboard.dart';
 import '../../presentation/pages/admin/category_management_page.dart';
 import '../../presentation/pages/admin/product_management_page.dart';
@@ -78,6 +80,11 @@ class AppRoutes {
   // Custom route generator for dynamic URLs
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
+
+    // Handle admin routes
+    if (AdminModule.isAdminRoute(settings.name ?? '')) {
+      return AdminRoutes.generateRoute(settings);
+    }
 
     // Handle login and register routes with userType parameter
     if (settings.name == login) {
@@ -267,8 +274,8 @@ class SearchRouterPage extends StatelessWidget {
     }
 
     return SearchPage(
-      businesses: businesses.cast<dynamic>(),
-      categories: categories.cast<dynamic>(),
+      businesses: businesses.cast<Business>(),
+      categories: categories.cast<app_category.Category>(),
     );
   }
 }

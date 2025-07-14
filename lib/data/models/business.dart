@@ -547,10 +547,13 @@ class BusinessDefaults {
       ownerId: ownerId,
       businessName: businessName,
       businessDescription: businessDescription,
+      businessType: 'Restoran',
+      businessAddress: '',
       address: defaultAddress,
       contactInfo: defaultContactInfo,
       menuSettings: defaultMenuSettings,
       isActive: true,
+      isOpen: true,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

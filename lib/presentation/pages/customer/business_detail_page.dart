@@ -586,9 +586,9 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: product.imageUrl != null
+          child: product.primaryImage?.url != null
               ? Image.network(
-                  product.imageUrl!,
+                  product.primaryImage!.url,
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
@@ -615,7 +615,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
                 ),
         ),
         title: Text(
-          product.productName,
+          product.name,
           style: AppTypography.bodyMedium.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -624,7 +624,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              product.productDescription,
+              product.description,
               style: AppTypography.caption.copyWith(
                 color: AppColors.textLight,
               ),

@@ -657,8 +657,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       ownerId: 'sample-owner',
       businessName: 'Lezzet Durağı',
       businessDescription: 'Geleneksel Türk mutfağının en lezzetli örnekleri',
+      businessType: 'Restoran',
+      businessAddress: 'Atatürk Caddesi No:123, Beyoğlu, İstanbul',
       logoUrl:
           'https://www.google.com/imgres?q=geleneksel%20t%C3%BCrk%20mutfa%C4%9F%C4%B1%20logo&imgurl=https%3A%2F%2Fst3.depositphotos.com%2F1028367%2F33466%2Fv%2F450%2Fdepositphotos_334661516-stock-illustration-turkish-cuisine-dishes-restaurant-menu.jpg&imgrefurl=https%3A%2F%2Fdepositphotos.com%2Ftr%2Fillustrations%2Ft%25C3%25BCrk-mutfa%25C4%259F%25C4%25B1.html&docid=4rKVzLDFD3XJzM&tbnid=ba70uSI9_dRH_M&vet=12ahUKEwjM-ZXQ6bWOAxVdQ_EDHXBEHicQM3oECHkQAA..i&w=600&h=600&hcb=2&ved=2ahUKEwjM-ZXQ6bWOAxVdQ_EDHXBEHicQM3oECHkQAA',
+      phone: '+90 212 123 45 67',
+      email: 'info@lezzetduragi.com',
       address: Address(
         street: 'Atatürk Caddesi No:123',
         city: 'İstanbul',
@@ -681,6 +685,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         language: 'tr',
       ),
       isActive: true,
+      isOpen: true,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

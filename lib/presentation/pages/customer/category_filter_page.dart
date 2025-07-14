@@ -1,102 +1,46 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../data/models/business.dart';
 import '../../../data/models/category.dart';
+import '../../../data/models/business.dart';
 import '../../widgets/shared/empty_state.dart';
 import 'business_detail_page.dart';
 
-class SearchPage extends StatefulWidget {
-  final List<Business> businesses;
+class CategoryFilterPage extends StatefulWidget {
   final List<Category> categories;
+  final List<Business> businesses;
 
-  const SearchPage({
+  const CategoryFilterPage({
     super.key,
-    required this.businesses,
     required this.categories,
+    required this.businesses,
   });
 
   @override
-  State<SearchPage> createState() => _SearchPageState();
+  State<CategoryFilterPage> createState() => _CategoryFilterPageState();
 }
 
-class _SearchPageState extends State<SearchPage> {
-  final TextEditingController _searchController = TextEditingController();
-  
-  List<Business> _filteredBusinesses = [];
-  String _searchQuery = '';
+class _CategoryFilterPageState extends State<CategoryFilterPage> {
   String _selectedCategory = 'Tümü';
-  String _selectedSortBy = 'İsim';
+  List<Business> _filteredBusinesses = [];
 
   @override
   void initState() {
     super.initState();
     _filteredBusinesses = widget.businesses;
-    _searchController.addListener(_onSearchChanged);
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text;
-    });
-    _filterBusinesses();
-  }
-
-  void _filterBusinesses() {
-    setState(() {
-      _filteredBusinesses = widget.businesses.where((business) {
-        // Kategori filtresi
-        bool categoryMatch = _selectedCategory == 'Tümü' ||
-            business.businessType == _selectedCategory;
-
-        // Arama filtresi
-        bool searchMatch = _searchQuery.isEmpty ||
-            business.businessName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            business.businessDescription.toLowerCase().contains(_searchQuery.toLowerCase());
-
-        return categoryMatch && searchMatch;
-      }).toList();
-
-      // Sıralama
-      _sortBusinesses();
-    });
-  }
-
-  void _sortBusinesses() {
-    switch (_selectedSortBy) {
-      case 'İsim':
-        _filteredBusinesses.sort((a, b) => a.businessName.compareTo(b.businessName));
-        break;
-      case 'Tür':
-        _filteredBusinesses.sort((a, b) => a.businessType.compareTo(b.businessType));
-        break;
-      case 'Durum':
-        _filteredBusinesses.sort((a, b) {
-          if (a.isOpen == b.isOpen) return 0;
-          return a.isOpen ? -1 : 1;
-        });
-        break;
-    }
-  }
-
-  void _onCategoryChanged(String category) {
+  void _filterByCategory(String category) {
     setState(() {
       _selectedCategory = category;
+      if (category == 'Tümü') {
+        _filteredBusinesses = widget.businesses;
+      } else {
+        _filteredBusinesses = widget.businesses
+            .where((business) => business.businessType == category)
+            .toList();
+      }
     });
-    _filterBusinesses();
-  }
-
-  void _onSortChanged(String sortBy) {
-    setState(() {
-      _selectedSortBy = sortBy;
-    });
-    _sortBusinesses();
   }
 
   @override
@@ -106,141 +50,73 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
-        title: const Text('Arama'),
+        title: const Text('Kategori Filtrele'),
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Arama ve filtreler
-          _buildSearchAndFilters(),
+          // Kategori seçimi
+          _buildCategorySelector(),
           
-          // Sonuçlar
+          // İşletme listesi
           Expanded(
-            child: _buildResults(),
+            child: _buildBusinessList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchAndFilters() {
+  Widget _buildCategorySelector() {
+    final allCategories = ['Tümü', ...widget.categories.map((c) => c.name)];
+
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Arama çubuğu
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'İşletme veya yemek ara...',
-              prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      onPressed: () {
-                        _searchController.clear();
-                      },
-                      icon: const Icon(Icons.clear, color: AppColors.textLight),
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: AppColors.greyLighter,
+          Text(
+            'Kategori Seçin',
+            style: AppTypography.h5.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Filtreler
-          Row(
-            children: [
-              // Kategori filtresi
-              Expanded(
-                child: _buildFilterDropdown(
-                  title: 'Kategori',
-                  value: _selectedCategory,
-                  items: ['Tümü', ...widget.categories.map((c) => c.name)],
-                  onChanged: _onCategoryChanged,
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: allCategories.map((category) {
+              final isSelected = category == _selectedCategory;
+              return FilterChip(
+                label: Text(category),
+                selected: isSelected,
+                onSelected: (selected) {
+                  if (selected) {
+                    _filterByCategory(category);
+                  }
+                },
+                backgroundColor: AppColors.greyLighter,
+                selectedColor: AppColors.primary.withOpacity(0.2),
+                labelStyle: TextStyle(
+                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
-              ),
-              
-              const SizedBox(width: 12),
-              
-              // Sıralama
-              Expanded(
-                child: _buildFilterDropdown(
-                  title: 'Sırala',
-                  value: _selectedSortBy,
-                  items: ['İsim', 'Tür', 'Durum'],
-                  onChanged: _onSortChanged,
-                ),
-              ),
-            ],
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterDropdown({
-    required String title,
-    required String value,
-    required List<String> items,
-    required Function(String) onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: AppTypography.caption.copyWith(
-            color: AppColors.textLight,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.greyLighter,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.greyLight),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              icon: const Icon(Icons.arrow_drop_down, color: AppColors.textLight),
-              items: items.map((String item) {
-                return DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(
-                    item,
-                    style: AppTypography.bodyMedium,
-                  ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  onChanged(newValue);
-                }
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResults() {
+  Widget _buildBusinessList() {
     if (_filteredBusinesses.isEmpty) {
       return const EmptyState(
-        icon: Icons.search_off,
-        title: 'Sonuç bulunamadı',
-        message: 'Arama kriterlerinize uygun işletme bulunamadı',
+        icon: Icons.store,
+        title: 'İşletme bulunamadı',
+        message: 'Seçilen kategoride işletme bulunmuyor',
       );
     }
 

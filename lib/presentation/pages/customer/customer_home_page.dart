@@ -6,7 +6,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../data/models/user.dart' as app_user;
 import '../../../data/models/business.dart';
-import '../../../data/models/category.dart';
+import '../../../data/models/category.dart' as app_category;
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
@@ -32,7 +32,7 @@ class _CustomerHomePageState extends State<CustomerHomePage>
   app_user.User? _user;
   app_user.CustomerData? _customerData;
   List<Business> _businesses = [];
-  List<Category> _categories = [];
+  List<app_category.Category> _categories = [];
   List<Business> _filteredBusinesses = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -334,7 +334,7 @@ class _CustomerHomePageState extends State<CustomerHomePage>
   }
 
   Widget _buildCategoryFilters() {
-    final allCategories = ['Tümü', ..._categories.map((c) => c.categoryName)];
+    final allCategories = ['Tümü', ..._categories.map((c) => c.name)];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,9 +610,29 @@ class _CustomerHomePageState extends State<CustomerHomePage>
                   businessId: favorite.businessId,
                   businessName: favorite.businessName,
                   businessDescription: '',
-                  businessType: '',
+                  businessType: 'Restoran',
                   businessAddress: '',
                   ownerId: '',
+                  address: Address(
+                    street: '',
+                    city: '',
+                    district: '',
+                    postalCode: '',
+                  ),
+                  contactInfo: ContactInfo(
+                    phone: '',
+                    email: '',
+                  ),
+                  menuSettings: MenuSettings(
+                    theme: 'default',
+                    primaryColor: '#2C1810',
+                    fontFamily: 'Poppins',
+                    fontSize: 16.0,
+                    showPrices: true,
+                    showImages: true,
+                    imageSize: 'medium',
+                    language: 'tr',
+                  ),
                   isActive: false,
                   isOpen: false,
                   createdAt: DateTime.now(),

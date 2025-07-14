@@ -8,7 +8,7 @@ import 'core/constants/app_typography.dart';
 import 'core/services/firestore_service.dart';
 import 'presentation/pages/customer/menu_page.dart';
 import 'presentation/pages/customer/product_detail_page.dart';
-import 'presentation/pages/admin/admin_dashboard_page.dart';
+import 'admin/admin.dart';
 import 'presentation/pages/admin/category_management_page.dart';
 import 'presentation/pages/admin/product_management_page.dart';
 import 'presentation/pages/admin/qr_code_management_page.dart';
@@ -46,6 +46,9 @@ void main() async {
   // Initialize Firestore database
   final firestoreService = FirestoreService();
   await firestoreService.initializeDatabase();
+
+  // Initialize Admin Module
+  await AdminModule.initialize();
 
   // System UI configuration
   SystemChrome.setSystemUIOverlayStyle(

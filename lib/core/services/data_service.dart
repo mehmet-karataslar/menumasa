@@ -235,7 +235,11 @@ class DataService {
       ownerId: 'demo-owner',
       businessName: 'Lezzet Durağı',
       businessDescription: 'Geleneksel Türk mutfağının en lezzetli örnekleri',
+      businessType: 'Restoran',
+      businessAddress: 'Atatürk Caddesi No:123, Beyoğlu, İstanbul',
       logoUrl: 'https://picsum.photos/200/200?random=logo',
+      phone: '+90 212 555 1234',
+      email: 'info@lezzetduragi.com',
       address: Address(
         street: 'Atatürk Caddesi No:123',
         city: 'İstanbul',
@@ -259,6 +263,7 @@ class DataService {
         language: 'tr',
       ),
       isActive: true,
+      isOpen: true,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

@@ -470,17 +470,9 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         color = AppColors.warning;
         text = 'Bekliyor';
         break;
-      case app_order.OrderStatus.confirmed:
-        color = AppColors.info;
-        text = 'Onaylandı';
-        break;
-      case app_order.OrderStatus.preparing:
+      case app_order.OrderStatus.inProgress:
         color = AppColors.primary;
         text = 'Hazırlanıyor';
-        break;
-      case app_order.OrderStatus.ready:
-        color = AppColors.success;
-        text = 'Hazır';
         break;
       case app_order.OrderStatus.completed:
         color = AppColors.success;
