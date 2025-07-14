@@ -4,76 +4,91 @@ service cloud.firestore {
     // Admin users collection - allow read/write for authenticated users
     match /admin_users/{adminId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Admin sessions collection - allow read/write for authenticated users
     match /admin_sessions/{sessionId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Admin activity logs collection - allow read/write for authenticated users
     match /admin_activity_logs/{logId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Business users collection - allow read/write for authenticated users
     match /business_users/{businessId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Business sessions collection - allow read/write for authenticated users
     match /business_sessions/{sessionId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Business activity logs collection - allow read/write for authenticated users
     match /business_activity_logs/{logId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Users collection - allow read/write for authenticated users
     match /users/{userId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Businesses collection - allow read/write for authenticated users
     match /businesses/{businessId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Categories collection - allow read/write for authenticated users
     match /categories/{categoryId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Products collection - allow read/write for authenticated users
     match /products/{productId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Orders collection - allow read/write for authenticated users
     match /orders/{orderId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Carts collection - allow read/write for authenticated users
     match /carts/{cartId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Discounts collection - allow read/write for authenticated users
     match /discounts/{discountId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // QR codes collection - allow read/write for authenticated users
     match /qr_codes/{qrId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // System settings collection - allow read/write for authenticated users
     match /system_settings/{settingId} {
       allow read, write: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // Default rule - deny all other access

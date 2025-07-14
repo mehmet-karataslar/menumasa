@@ -170,25 +170,37 @@ class AdminModule {
       final adminService = AdminService();
       
       // Admin kullanıcılarını kontrol et (yetki kontrolü yapma)
-      final admins = await adminService.getAllAdmins(skipPermissionCheck: true);
+      List<AdminUser> admins = [];
+      try {
+        admins = await adminService.getAllAdmins(skipPermissionCheck: true);
+      } catch (e) {
+        print('Admin kullanıcıları kontrol edilirken hata: $e');
+        // Firestore permission hatası durumunda boş liste kullan
+        admins = [];
+      }
       
       // Eğer hiç admin yoksa, ilk admin'i oluştur
       if (admins.isEmpty) {
-        await adminService.createAdmin(
-          username: 'superadmin',
-          email: 'admin@masamenu.com',
-          fullName: 'Süper Yönetici',
-          password: 'admin123',
-          role: AdminRole.superAdmin,
-          permissions: AdminPermission.values.toList(),
-          skipPermissionCheck: true, // İlk admin için yetki kontrolü yapma
-        );
-        
-        print('İlk admin kullanıcısı oluşturuldu: superadmin / admin123');
-        print('⚠️  Güvenlik için şifreyi değiştirmeyi unutmayın!');
+        try {
+          await adminService.createAdmin(
+            username: 'superadmin',
+            email: 'admin@masamenu.com',
+            fullName: 'Süper Yönetici',
+            password: 'admin123',
+            role: AdminRole.superAdmin,
+            permissions: AdminPermission.values.toList(),
+            skipPermissionCheck: true, // İlk admin için yetki kontrolü yapma
+          );
+          
+          print('İlk admin kullanıcısı oluşturuldu: superadmin / admin123');
+          print('⚠️  Güvenlik için şifreyi değiştirmeyi unutmayın!');
+        } catch (createError) {
+          print('İlk admin oluşturulurken hata: $createError');
+          // Admin oluşturma hatası durumunda devam et
+        }
       }
     } catch (e) {
-      print('İlk admin oluşturulurken hata: $e');
+      print('İlk admin oluşturulurken genel hata: $e');
     }
   }
   

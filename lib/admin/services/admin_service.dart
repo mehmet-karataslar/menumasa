@@ -198,15 +198,15 @@ class AdminService {
   /// Admin çıkışı
   Future<void> signOut() async {
     try {
-      // Firebase Authentication'dan çıkış yap
-      await _auth.signOut();
-      
       if (_currentSession != null) {
-        // Session'ı deaktif et
+        // Session'ı geçersiz kıl
         await _firestore
             .collection(_adminSessionsCollection)
-            .doc(_currentSession!.sessionId)
-            .update({'isActive': false});
+            .doc(_currentSession!.id)
+            .update({
+          'isValid': false,
+          'endedAt': DateTime.now().toIso8601String(),
+        });
 
         // Activity log kaydet
         if (_currentAdmin != null) {
@@ -221,11 +221,63 @@ class AdminService {
         }
       }
 
+      // Firebase Auth'dan çıkış yap
+      await _auth.signOut();
+
+      // Local state'i temizle
       _currentAdmin = null;
       _currentSession = null;
     } catch (e) {
-      print('Çıkış sırasında hata: $e');
+      print('Admin çıkış hatası: $e');
+      // Hata olsa bile local state'i temizle
+      _currentAdmin = null;
+      _currentSession = null;
+      throw AdminException('Çıkış sırasında hata: $e');
     }
+  }
+
+  /// Mevcut admin bilgilerini al
+  Future<AdminUser?> getCurrentAdmin() async {
+    try {
+      // Eğer zaten yüklüyse döndür
+      if (_currentAdmin != null) {
+        return _currentAdmin;
+      }
+
+      // Firebase Auth'dan mevcut kullanıcıyı al
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        return null;
+      }
+
+      // Firestore'dan admin bilgilerini al
+      final adminDoc = await _firestore
+          .collection(_adminCollection)
+          .doc(currentUser.uid)
+          .get();
+
+      if (!adminDoc.exists) {
+        return null;
+      }
+
+      final adminData = adminDoc.data()!;
+      if (!adminData['isActive']) {
+        return null;
+      }
+
+      final admin = AdminUser.fromJson({...adminData, 'id': adminDoc.id});
+      _currentAdmin = admin;
+
+      return admin;
+    } catch (e) {
+      print('Mevcut admin alınırken hata: $e');
+      return null;
+    }
+  }
+
+  /// Admin çıkışı (logout alias)
+  Future<void> logout() async {
+    return await signOut();
   }
 
   /// Session doğrulama
