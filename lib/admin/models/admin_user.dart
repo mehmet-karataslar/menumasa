@@ -131,6 +131,7 @@ extension AdminPermissionExtension on AdminPermission {
 
 class AdminUser {
   final String id;
+  final String username;
   final String email;
   final String name;
   final AdminRole role;
@@ -142,6 +143,7 @@ class AdminUser {
 
   AdminUser({
     required this.id,
+    required this.username,
     required this.email,
     required this.name,
     required this.role,
@@ -154,7 +156,6 @@ class AdminUser {
 
   // Getters for compatibility with admin pages
   String get displayName => name;
-  String get username => email.split('@').first;
   String get fullName => name;
   String get adminId => id;
   String get initials {
@@ -170,6 +171,7 @@ class AdminUser {
     final data = doc.data() as Map<String, dynamic>;
     return AdminUser(
       id: doc.id,
+      username: data['username'] ?? '',
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       role: AdminRole.values.firstWhere(
@@ -194,6 +196,7 @@ class AdminUser {
   factory AdminUser.fromJson(Map<String, dynamic> json) {
     return AdminUser(
       id: json['id'] ?? '',
+      username: json['username'] ?? '',
       email: json['email'] ?? '',
       name: json['name'] ?? '',
       role: AdminRole.values.firstWhere(
@@ -217,6 +220,7 @@ class AdminUser {
 
   Map<String, dynamic> toFirestore() {
     return {
+      'username': username,
       'email': email,
       'name': name,
       'role': role.toString().split('.').last,
@@ -233,6 +237,7 @@ class AdminUser {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'username': username,
       'email': email,
       'name': name,
       'role': role.toString().split('.').last,
@@ -248,6 +253,7 @@ class AdminUser {
 
   AdminUser copyWith({
     String? id,
+    String? username,
     String? email,
     String? name,
     AdminRole? role,
@@ -259,6 +265,7 @@ class AdminUser {
   }) {
     return AdminUser(
       id: id ?? this.id,
+      username: username ?? this.username,
       email: email ?? this.email,
       name: name ?? this.name,
       role: role ?? this.role,
