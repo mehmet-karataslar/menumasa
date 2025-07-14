@@ -160,6 +160,7 @@ class UserProfile {
   final DateTime? lastLoginAt;
   final int totalBusinesses;
   final int totalProducts;
+  final CustomerData? customerData; // Müşteri verileri
 
   UserProfile({
     this.avatarUrl,
@@ -171,6 +172,7 @@ class UserProfile {
     this.lastLoginAt,
     required this.totalBusinesses,
     required this.totalProducts,
+    this.customerData,
   });
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
@@ -186,6 +188,9 @@ class UserProfile {
           : null,
       totalBusinesses: map['totalBusinesses'] ?? 0,
       totalProducts: map['totalProducts'] ?? 0,
+      customerData: map['customerData'] != null
+          ? CustomerData.fromMap(map['customerData'])
+          : null,
     );
   }
 
@@ -200,6 +205,7 @@ class UserProfile {
       'lastLoginAt': lastLoginAt?.toIso8601String(),
       'totalBusinesses': totalBusinesses,
       'totalProducts': totalProducts,
+      'customerData': customerData?.toMap(),
     };
   }
 
@@ -213,6 +219,7 @@ class UserProfile {
     DateTime? lastLoginAt,
     int? totalBusinesses,
     int? totalProducts,
+    CustomerData? customerData,
   }) {
     return UserProfile(
       avatarUrl: avatarUrl ?? this.avatarUrl,
@@ -224,6 +231,7 @@ class UserProfile {
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       totalBusinesses: totalBusinesses ?? this.totalBusinesses,
       totalProducts: totalProducts ?? this.totalProducts,
+      customerData: customerData ?? this.customerData,
     );
   }
 
@@ -242,6 +250,476 @@ class UserProfile {
 
   @override
   int get hashCode => avatarUrl.hashCode ^ company.hashCode;
+}
+
+// Müşteri verileri sınıfı
+class CustomerData {
+  final List<CustomerOrder> orderHistory;
+  final List<CustomerFavorite> favorites;
+  final List<CustomerVisit> visitHistory;
+  final CustomerStats stats;
+  final CustomerPreferences preferences;
+  final List<CustomerAddress> addresses;
+  final CustomerPaymentInfo? paymentInfo;
+
+  CustomerData({
+    required this.orderHistory,
+    required this.favorites,
+    required this.visitHistory,
+    required this.stats,
+    required this.preferences,
+    required this.addresses,
+    this.paymentInfo,
+  });
+
+  factory CustomerData.fromMap(Map<String, dynamic> map) {
+    return CustomerData(
+      orderHistory: (map['orderHistory'] as List<dynamic>?)
+              ?.map((e) => CustomerOrder.fromMap(e))
+              .toList() ??
+          [],
+      favorites: (map['favorites'] as List<dynamic>?)
+              ?.map((e) => CustomerFavorite.fromMap(e))
+              .toList() ??
+          [],
+      visitHistory: (map['visitHistory'] as List<dynamic>?)
+              ?.map((e) => CustomerVisit.fromMap(e))
+              .toList() ??
+          [],
+      stats: CustomerStats.fromMap(map['stats'] ?? {}),
+      preferences: CustomerPreferences.fromMap(map['preferences'] ?? {}),
+      addresses: (map['addresses'] as List<dynamic>?)
+              ?.map((e) => CustomerAddress.fromMap(e))
+              .toList() ??
+          [],
+      paymentInfo: map['paymentInfo'] != null
+          ? CustomerPaymentInfo.fromMap(map['paymentInfo'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'orderHistory': orderHistory.map((e) => e.toMap()).toList(),
+      'favorites': favorites.map((e) => e.toMap()).toList(),
+      'visitHistory': visitHistory.map((e) => e.toMap()).toList(),
+      'stats': stats.toMap(),
+      'preferences': preferences.toMap(),
+      'addresses': addresses.map((e) => e.toMap()).toList(),
+      'paymentInfo': paymentInfo?.toMap(),
+    };
+  }
+
+  CustomerData copyWith({
+    List<CustomerOrder>? orderHistory,
+    List<CustomerFavorite>? favorites,
+    List<CustomerVisit>? visitHistory,
+    CustomerStats? stats,
+    CustomerPreferences? preferences,
+    List<CustomerAddress>? addresses,
+    CustomerPaymentInfo? paymentInfo,
+  }) {
+    return CustomerData(
+      orderHistory: orderHistory ?? this.orderHistory,
+      favorites: favorites ?? this.favorites,
+      visitHistory: visitHistory ?? this.visitHistory,
+      stats: stats ?? this.stats,
+      preferences: preferences ?? this.preferences,
+      addresses: addresses ?? this.addresses,
+      paymentInfo: paymentInfo ?? this.paymentInfo,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'CustomerData(orderHistory: ${orderHistory.length}, favorites: ${favorites.length}, totalSpent: ${stats.totalSpent})';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is CustomerData &&
+        other.orderHistory.length == orderHistory.length &&
+        other.favorites.length == favorites.length;
+  }
+
+  @override
+  int get hashCode => orderHistory.length.hashCode ^ favorites.length.hashCode;
+}
+
+// Müşteri sipariş geçmişi
+class CustomerOrder {
+  final String orderId;
+  final String businessId;
+  final String businessName;
+  final List<CustomerOrderItem> items;
+  final double totalAmount;
+  final DateTime orderDate;
+  final String status;
+  final String? notes;
+  final String? tableNumber;
+
+  CustomerOrder({
+    required this.orderId,
+    required this.businessId,
+    required this.businessName,
+    required this.items,
+    required this.totalAmount,
+    required this.orderDate,
+    required this.status,
+    this.notes,
+    this.tableNumber,
+  });
+
+  factory CustomerOrder.fromMap(Map<String, dynamic> map) {
+    return CustomerOrder(
+      orderId: map['orderId'] ?? '',
+      businessId: map['businessId'] ?? '',
+      businessName: map['businessName'] ?? '',
+      items: (map['items'] as List<dynamic>?)
+              ?.map((e) => CustomerOrderItem.fromMap(e))
+              .toList() ??
+          [],
+      totalAmount: (map['totalAmount'] ?? 0.0).toDouble(),
+      orderDate: User._parseDateTime(map['orderDate']),
+      status: map['status'] ?? 'completed',
+      notes: map['notes'],
+      tableNumber: map['tableNumber'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'orderId': orderId,
+      'businessId': businessId,
+      'businessName': businessName,
+      'items': items.map((e) => e.toMap()).toList(),
+      'totalAmount': totalAmount,
+      'orderDate': orderDate.toIso8601String(),
+      'status': status,
+      'notes': notes,
+      'tableNumber': tableNumber,
+    };
+  }
+}
+
+// Müşteri sipariş öğesi
+class CustomerOrderItem {
+  final String productId;
+  final String productName;
+  final int quantity;
+  final double unitPrice;
+  final double totalPrice;
+  final String? notes;
+
+  CustomerOrderItem({
+    required this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.totalPrice,
+    this.notes,
+  });
+
+  factory CustomerOrderItem.fromMap(Map<String, dynamic> map) {
+    return CustomerOrderItem(
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      quantity: map['quantity'] ?? 1,
+      unitPrice: (map['unitPrice'] ?? 0.0).toDouble(),
+      totalPrice: (map['totalPrice'] ?? 0.0).toDouble(),
+      notes: map['notes'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'productId': productId,
+      'productName': productName,
+      'quantity': quantity,
+      'unitPrice': unitPrice,
+      'totalPrice': totalPrice,
+      'notes': notes,
+    };
+  }
+}
+
+// Müşteri favori işletmeleri
+class CustomerFavorite {
+  final String businessId;
+  final String businessName;
+  final String? businessLogo;
+  final DateTime addedDate;
+  final int visitCount;
+  final double totalSpent;
+
+  CustomerFavorite({
+    required this.businessId,
+    required this.businessName,
+    this.businessLogo,
+    required this.addedDate,
+    required this.visitCount,
+    required this.totalSpent,
+  });
+
+  factory CustomerFavorite.fromMap(Map<String, dynamic> map) {
+    return CustomerFavorite(
+      businessId: map['businessId'] ?? '',
+      businessName: map['businessName'] ?? '',
+      businessLogo: map['businessLogo'],
+      addedDate: User._parseDateTime(map['addedDate']),
+      visitCount: map['visitCount'] ?? 0,
+      totalSpent: (map['totalSpent'] ?? 0.0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'businessId': businessId,
+      'businessName': businessName,
+      'businessLogo': businessLogo,
+      'addedDate': addedDate.toIso8601String(),
+      'visitCount': visitCount,
+      'totalSpent': totalSpent,
+    };
+  }
+}
+
+// Müşteri ziyaret geçmişi
+class CustomerVisit {
+  final String businessId;
+  final String businessName;
+  final DateTime visitDate;
+  final String? tableNumber;
+  final int orderCount;
+  final double totalSpent;
+
+  CustomerVisit({
+    required this.businessId,
+    required this.businessName,
+    required this.visitDate,
+    this.tableNumber,
+    required this.orderCount,
+    required this.totalSpent,
+  });
+
+  factory CustomerVisit.fromMap(Map<String, dynamic> map) {
+    return CustomerVisit(
+      businessId: map['businessId'] ?? '',
+      businessName: map['businessName'] ?? '',
+      visitDate: User._parseDateTime(map['visitDate']),
+      tableNumber: map['tableNumber'],
+      orderCount: map['orderCount'] ?? 0,
+      totalSpent: (map['totalSpent'] ?? 0.0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'businessId': businessId,
+      'businessName': businessName,
+      'visitDate': visitDate.toIso8601String(),
+      'tableNumber': tableNumber,
+      'orderCount': orderCount,
+      'totalSpent': totalSpent,
+    };
+  }
+}
+
+// Müşteri istatistikleri
+class CustomerStats {
+  final int totalOrders;
+  final double totalSpent;
+  final int favoriteBusinessCount;
+  final int totalVisits;
+  final DateTime? firstOrderDate;
+  final DateTime? lastOrderDate;
+  final Map<String, int> categoryPreferences;
+  final Map<String, double> businessSpending;
+
+  CustomerStats({
+    required this.totalOrders,
+    required this.totalSpent,
+    required this.favoriteBusinessCount,
+    required this.totalVisits,
+    this.firstOrderDate,
+    this.lastOrderDate,
+    required this.categoryPreferences,
+    required this.businessSpending,
+  });
+
+  factory CustomerStats.fromMap(Map<String, dynamic> map) {
+    return CustomerStats(
+      totalOrders: map['totalOrders'] ?? 0,
+      totalSpent: (map['totalSpent'] ?? 0.0).toDouble(),
+      favoriteBusinessCount: map['favoriteBusinessCount'] ?? 0,
+      totalVisits: map['totalVisits'] ?? 0,
+      firstOrderDate: map['firstOrderDate'] != null
+          ? User._parseDateTime(map['firstOrderDate'])
+          : null,
+      lastOrderDate: map['lastOrderDate'] != null
+          ? User._parseDateTime(map['lastOrderDate'])
+          : null,
+      categoryPreferences: Map<String, int>.from(
+        map['categoryPreferences'] ?? {},
+      ),
+      businessSpending: Map<String, double>.from(
+        map['businessSpending'] ?? {},
+      ),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'totalOrders': totalOrders,
+      'totalSpent': totalSpent,
+      'favoriteBusinessCount': favoriteBusinessCount,
+      'totalVisits': totalVisits,
+      'firstOrderDate': firstOrderDate?.toIso8601String(),
+      'lastOrderDate': lastOrderDate?.toIso8601String(),
+      'categoryPreferences': categoryPreferences,
+      'businessSpending': businessSpending,
+    };
+  }
+}
+
+// Müşteri tercihleri
+class CustomerPreferences {
+  final List<String> favoriteCategories;
+  final List<String> dietaryRestrictions;
+  final bool allowNotifications;
+  final bool allowMarketing;
+  final String preferredLanguage;
+  final String preferredCurrency;
+  final double maxOrderAmount;
+  final bool autoSavePaymentInfo;
+
+  CustomerPreferences({
+    required this.favoriteCategories,
+    required this.dietaryRestrictions,
+    required this.allowNotifications,
+    required this.allowMarketing,
+    required this.preferredLanguage,
+    required this.preferredCurrency,
+    required this.maxOrderAmount,
+    required this.autoSavePaymentInfo,
+  });
+
+  factory CustomerPreferences.fromMap(Map<String, dynamic> map) {
+    return CustomerPreferences(
+      favoriteCategories: List<String>.from(
+        map['favoriteCategories'] ?? [],
+      ),
+      dietaryRestrictions: List<String>.from(
+        map['dietaryRestrictions'] ?? [],
+      ),
+      allowNotifications: map['allowNotifications'] ?? true,
+      allowMarketing: map['allowMarketing'] ?? false,
+      preferredLanguage: map['preferredLanguage'] ?? 'tr',
+      preferredCurrency: map['preferredCurrency'] ?? 'TL',
+      maxOrderAmount: (map['maxOrderAmount'] ?? 1000.0).toDouble(),
+      autoSavePaymentInfo: map['autoSavePaymentInfo'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'favoriteCategories': favoriteCategories,
+      'dietaryRestrictions': dietaryRestrictions,
+      'allowNotifications': allowNotifications,
+      'allowMarketing': allowMarketing,
+      'preferredLanguage': preferredLanguage,
+      'preferredCurrency': preferredCurrency,
+      'maxOrderAmount': maxOrderAmount,
+      'autoSavePaymentInfo': autoSavePaymentInfo,
+    };
+  }
+}
+
+// Müşteri adres bilgileri
+class CustomerAddress {
+  final String id;
+  final String title;
+  final String address;
+  final String city;
+  final String district;
+  final String postalCode;
+  final bool isDefault;
+  final String? notes;
+
+  CustomerAddress({
+    required this.id,
+    required this.title,
+    required this.address,
+    required this.city,
+    required this.district,
+    required this.postalCode,
+    required this.isDefault,
+    this.notes,
+  });
+
+  factory CustomerAddress.fromMap(Map<String, dynamic> map) {
+    return CustomerAddress(
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      address: map['address'] ?? '',
+      city: map['city'] ?? '',
+      district: map['district'] ?? '',
+      postalCode: map['postalCode'] ?? '',
+      isDefault: map['isDefault'] ?? false,
+      notes: map['notes'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'address': address,
+      'city': city,
+      'district': district,
+      'postalCode': postalCode,
+      'isDefault': isDefault,
+      'notes': notes,
+    };
+  }
+}
+
+// Müşteri ödeme bilgileri
+class CustomerPaymentInfo {
+  final String cardType;
+  final String lastFourDigits;
+  final String cardholderName;
+  final DateTime expiryDate;
+  final bool isDefault;
+
+  CustomerPaymentInfo({
+    required this.cardType,
+    required this.lastFourDigits,
+    required this.cardholderName,
+    required this.expiryDate,
+    required this.isDefault,
+  });
+
+  factory CustomerPaymentInfo.fromMap(Map<String, dynamic> map) {
+    return CustomerPaymentInfo(
+      cardType: map['cardType'] ?? '',
+      lastFourDigits: map['lastFourDigits'] ?? '',
+      cardholderName: map['cardholderName'] ?? '',
+      expiryDate: User._parseDateTime(map['expiryDate']),
+      isDefault: map['isDefault'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'cardType': cardType,
+      'lastFourDigits': lastFourDigits,
+      'cardholderName': cardholderName,
+      'expiryDate': expiryDate.toIso8601String(),
+      'isDefault': isDefault,
+    };
+  }
 }
 
 class UserPreferences {
@@ -402,6 +880,7 @@ class UserDefaults {
     preferences: defaultUserPreferences,
     totalBusinesses: 0,
     totalProducts: 0,
+    customerData: defaultCustomerData,
   );
 
   static UserPreferences get defaultUserPreferences => UserPreferences(
@@ -414,6 +893,35 @@ class UserDefaults {
     theme: 'light',
     analytics: true,
     marketing: false,
+  );
+
+  static CustomerData get defaultCustomerData => CustomerData(
+    orderHistory: [],
+    favorites: [],
+    visitHistory: [],
+    stats: defaultCustomerStats,
+    preferences: defaultCustomerPreferences,
+    addresses: [],
+  );
+
+  static CustomerStats get defaultCustomerStats => CustomerStats(
+    totalOrders: 0,
+    totalSpent: 0.0,
+    favoriteBusinessCount: 0,
+    totalVisits: 0,
+    categoryPreferences: {},
+    businessSpending: {},
+  );
+
+  static CustomerPreferences get defaultCustomerPreferences => CustomerPreferences(
+    favoriteCategories: [],
+    dietaryRestrictions: [],
+    allowNotifications: true,
+    allowMarketing: false,
+    preferredLanguage: 'tr',
+    preferredCurrency: 'TL',
+    maxOrderAmount: 1000.0,
+    autoSavePaymentInfo: false,
   );
 }
 

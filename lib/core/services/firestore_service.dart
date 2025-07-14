@@ -548,4 +548,268 @@ class FirestoreService {
       throw Exception('Sipariş silinirken bir hata oluştu: $e');
     }
   }
+
+  // Customer Data Operations
+  Future<List<app_order.Order>> getOrdersByCustomer(String customerId) async {
+    try {
+      final snapshot = await _ordersRef
+          .where('customerId', isEqualTo: customerId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map(
+            (doc) => app_order.Order.fromJson(
+              doc.data() as Map<String, dynamic>,
+              id: doc.id,
+            ),
+          )
+          .toList();
+    } catch (e) {
+      throw Exception('Müşteri siparişleri alınırken bir hata oluştu: $e');
+    }
+  }
+
+  Future<void> updateCustomerData(String userId, Map<String, dynamic> customerData) async {
+    try {
+      await _usersRef.doc(userId).update({
+        'profile.customerData': customerData,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Müşteri verileri güncellenirken bir hata oluştu: $e');
+    }
+  }
+
+  Future<void> addCustomerOrder(String userId, app_user.CustomerOrder order) async {
+    try {
+      final userDoc = await _usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('Kullanıcı bulunamadı');
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final profile = userData['profile'] as Map<String, dynamic>? ?? {};
+      final customerData = profile['customerData'] as Map<String, dynamic>? ?? {};
+
+      // Mevcut sipariş geçmişini al
+      final orderHistory = (customerData['orderHistory'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
+
+      // Yeni siparişi ekle
+      orderHistory.insert(0, order.toMap());
+
+      // İstatistikleri güncelle
+      final stats = customerData['stats'] as Map<String, dynamic>? ?? {};
+      final totalOrders = (stats['totalOrders'] ?? 0) + 1;
+      final totalSpent = (stats['totalSpent'] ?? 0.0) + order.totalAmount;
+
+      // İşletme harcama istatistiklerini güncelle
+      final businessSpending = Map<String, double>.from(
+        stats['businessSpending'] ?? {},
+      );
+      businessSpending[order.businessId] = 
+          (businessSpending[order.businessId] ?? 0.0) + order.totalAmount;
+
+      // Güncellenmiş müşteri verilerini hazırla
+      final updatedCustomerData = {
+        ...customerData,
+        'orderHistory': orderHistory,
+        'stats': {
+          ...stats,
+          'totalOrders': totalOrders,
+          'totalSpent': totalSpent,
+          'lastOrderDate': order.orderDate.toIso8601String(),
+          'businessSpending': businessSpending,
+        },
+      };
+
+      await updateCustomerData(userId, updatedCustomerData);
+    } catch (e) {
+      throw Exception('Müşteri siparişi eklenirken bir hata oluştu: $e');
+    }
+  }
+
+  Future<void> addCustomerFavorite(String userId, app_user.CustomerFavorite favorite) async {
+    try {
+      final userDoc = await _usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('Kullanıcı bulunamadı');
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final profile = userData['profile'] as Map<String, dynamic>? ?? {};
+      final customerData = profile['customerData'] as Map<String, dynamic>? ?? {};
+
+      // Mevcut favorileri al
+      final favorites = (customerData['favorites'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
+
+      // Aynı işletme zaten favorilerde mi kontrol et
+      final existingIndex = favorites.indexWhere(
+        (f) => f['businessId'] == favorite.businessId,
+      );
+
+      if (existingIndex != -1) {
+        // Mevcut favoriyi güncelle
+        favorites[existingIndex] = favorite.toMap();
+      } else {
+        // Yeni favori ekle
+        favorites.add(favorite.toMap());
+      }
+
+      // İstatistikleri güncelle
+      final stats = customerData['stats'] as Map<String, dynamic>? ?? {};
+      final favoriteBusinessCount = favorites.length;
+
+      // Güncellenmiş müşteri verilerini hazırla
+      final updatedCustomerData = {
+        ...customerData,
+        'favorites': favorites,
+        'stats': {
+          ...stats,
+          'favoriteBusinessCount': favoriteBusinessCount,
+        },
+      };
+
+      await updateCustomerData(userId, updatedCustomerData);
+    } catch (e) {
+      throw Exception('Müşteri favorisi eklenirken bir hata oluştu: $e');
+    }
+  }
+
+  Future<void> addCustomerVisit(String userId, app_user.CustomerVisit visit) async {
+    try {
+      final userDoc = await _usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('Kullanıcı bulunamadı');
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final profile = userData['profile'] as Map<String, dynamic>? ?? {};
+      final customerData = profile['customerData'] as Map<String, dynamic>? ?? {};
+
+      // Mevcut ziyaret geçmişini al
+      final visitHistory = (customerData['visitHistory'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
+
+      // Yeni ziyareti ekle
+      visitHistory.insert(0, visit.toMap());
+
+      // İstatistikleri güncelle
+      final stats = customerData['stats'] as Map<String, dynamic>? ?? {};
+      final totalVisits = (stats['totalVisits'] ?? 0) + 1;
+
+      // Güncellenmiş müşteri verilerini hazırla
+      final updatedCustomerData = {
+        ...customerData,
+        'visitHistory': visitHistory,
+        'stats': {
+          ...stats,
+          'totalVisits': totalVisits,
+        },
+      };
+
+      await updateCustomerData(userId, updatedCustomerData);
+    } catch (e) {
+      throw Exception('Müşteri ziyareti eklenirken bir hata oluştu: $e');
+    }
+  }
+
+  Future<void> updateCustomerPreferences(String userId, app_user.CustomerPreferences preferences) async {
+    try {
+      final userDoc = await _usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('Kullanıcı bulunamadı');
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final profile = userData['profile'] as Map<String, dynamic>? ?? {};
+      final customerData = profile['customerData'] as Map<String, dynamic>? ?? {};
+
+      // Güncellenmiş müşteri verilerini hazırla
+      final updatedCustomerData = {
+        ...customerData,
+        'preferences': preferences.toMap(),
+      };
+
+      await updateCustomerData(userId, updatedCustomerData);
+    } catch (e) {
+      throw Exception('Müşteri tercihleri güncellenirken bir hata oluştu: $e');
+    }
+  }
+
+  Future<void> addCustomerAddress(String userId, app_user.CustomerAddress address) async {
+    try {
+      final userDoc = await _usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('Kullanıcı bulunamadı');
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final profile = userData['profile'] as Map<String, dynamic>? ?? {};
+      final customerData = profile['customerData'] as Map<String, dynamic>? ?? {};
+
+      // Mevcut adresleri al
+      final addresses = (customerData['addresses'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
+
+      // Yeni adresi ekle
+      addresses.add(address.toMap());
+
+      // Güncellenmiş müşteri verilerini hazırla
+      final updatedCustomerData = {
+        ...customerData,
+        'addresses': addresses,
+      };
+
+      await updateCustomerData(userId, updatedCustomerData);
+    } catch (e) {
+      throw Exception('Müşteri adresi eklenirken bir hata oluştu: $e');
+    }
+  }
+
+  Future<void> updateCustomerPaymentInfo(String userId, app_user.CustomerPaymentInfo paymentInfo) async {
+    try {
+      final userDoc = await _usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('Kullanıcı bulunamadı');
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final profile = userData['profile'] as Map<String, dynamic>? ?? {};
+      final customerData = profile['customerData'] as Map<String, dynamic>? ?? {};
+
+      // Güncellenmiş müşteri verilerini hazırla
+      final updatedCustomerData = {
+        ...customerData,
+        'paymentInfo': paymentInfo.toMap(),
+      };
+
+      await updateCustomerData(userId, updatedCustomerData);
+    } catch (e) {
+      throw Exception('Müşteri ödeme bilgileri güncellenirken bir hata oluştu: $e');
+    }
+  }
+
+  Future<app_user.CustomerData?> getCustomerData(String userId) async {
+    try {
+      final userDoc = await _usersRef.doc(userId).get();
+      if (!userDoc.exists) {
+        return null;
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final profile = userData['profile'] as Map<String, dynamic>? ?? {};
+      final customerData = profile['customerData'] as Map<String, dynamic>?;
+
+      if (customerData == null) {
+        return null;
+      }
+
+      return app_user.CustomerData.fromMap(customerData);
+    } catch (e) {
+      throw Exception('Müşteri verileri alınırken bir hata oluştu: $e');
+    }
+  }
 }

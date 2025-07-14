@@ -43,8 +43,18 @@
   
   <!-- Hash routing removal script -->
   <script>
-    // Immediately remove hash and redirect
+    // Clear cache and remove hash immediately
     (function() {
+      // Clear browser cache for this page
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+      
+      // Remove hash and redirect
       if (window.location.hash) {
         const path = window.location.hash.substring(1);
         if (path && path !== '/') {
@@ -87,6 +97,15 @@
       }
       return originalReplaceState.call(this, state, title, url);
     };
+    
+    // Force reload without cache
+    window.addEventListener('load', function() {
+      if (window.location.hash) {
+        const path = window.location.hash.substring(1);
+        window.history.replaceState(null, null, path || '/');
+        window.location.reload();
+      }
+    });
   </script>
 </head>
 <body>

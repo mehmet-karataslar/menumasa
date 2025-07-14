@@ -50,8 +50,12 @@ class _LoginPageState extends State<LoginPage> {
       if (user != null && mounted) {
         // Giriş başarılı, kullanıcı tipine göre yönlendir
         if (widget.userType == 'customer') {
-          // Müşteri giriş sonrası - ana sayfaya yönlendir
-          Navigator.pushReplacementNamed(context, '/');
+          // Müşteri giriş sonrası - müşteri dashboard'a yönlendir
+          Navigator.pushReplacementNamed(
+            context,
+            '/customer/dashboard',
+            arguments: {'userId': user.uid},
+          );
         } else {
           // İşletme giriş sonrası - admin dashboarda yönlendir
           Navigator.pushReplacementNamed(
