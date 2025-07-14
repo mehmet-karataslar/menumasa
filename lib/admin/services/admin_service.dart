@@ -47,18 +47,37 @@ class AdminService {
           password: password,
         );
       } catch (e) {
+        print('Firebase Auth hatası: $e');
+        
         // Eğer kullanıcı yoksa, ilk admin için otomatik oluştur
         if (e.toString().contains('user-not-found')) {
           print('İlk admin kullanıcısı oluşturuluyor: $username');
-          userCredential = await _auth.createUserWithEmailAndPassword(
-            email: adminEmail,
-            password: password,
-          );
-          
-          // İlk admin kullanıcısını Firestore'a kaydet
-          await _createFirstAdmin(username, password, userCredential.user!.uid);
+          try {
+            userCredential = await _auth.createUserWithEmailAndPassword(
+              email: adminEmail,
+              password: password,
+            );
+            
+            // İlk admin kullanıcısını Firestore'a kaydet
+            await _createFirstAdmin(username, password, userCredential.user!.uid);
+          } catch (createError) {
+            print('Admin oluşturma hatası: $createError');
+            if (createError.toString().contains('email-already-in-use')) {
+              // Kullanıcı zaten var, tekrar giriş yapmayı dene
+              userCredential = await _auth.signInWithEmailAndPassword(
+                email: adminEmail,
+                password: password,
+              );
+            } else {
+              throw AdminException('Admin hesabı oluşturulamadı: $createError');
+            }
+          }
         } else if (e.toString().contains('wrong-password')) {
           throw AdminException('Geçersiz kullanıcı adı veya şifre');
+        } else if (e.toString().contains('invalid-credential')) {
+          throw AdminException('Geçersiz kullanıcı adı veya şifre');
+        } else if (e.toString().contains('reCAPTCHA')) {
+          throw AdminException('Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.');
         } else {
           throw AdminException('Giriş sırasında hata: $e');
         }
@@ -143,6 +162,7 @@ class AdminService {
       return admin;
     } catch (e) {
       if (e is AdminException) rethrow;
+      print('Admin giriş hatası: $e');
       throw AdminException('Giriş sırasında hata: $e');
     }
   }

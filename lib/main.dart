@@ -35,6 +35,14 @@ void main() async {
   // Initialize Firebase with error handling
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    
+    // Configure Firebase Auth for development
+    if (kIsWeb) {
+      // Disable reCAPTCHA for development
+      await FirebaseAuth.instance.setSettings(
+        appVerificationDisabledForTesting: true,
+      );
+    }
   } catch (e) {
     print('Firebase initialization failed: $e');
     // Continue anyway, Firebase might already be initialized
