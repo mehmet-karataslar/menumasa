@@ -1,9 +1,10 @@
-// Admin Module - Sistem Yönetimi Modülü
-// Bu modül tamamen ayrı ve güvenli bir şekilde çalışır
-
-// Models
-import 'models/admin_user.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/admin_service.dart';
+import 'models/admin_user.dart';
+import 'models/admin_session.dart';
+import 'models/admin_activity_log.dart';
 
 export 'models/admin_user.dart';
 
@@ -77,13 +78,80 @@ class AdminModule {
     'support': 'Destek',
   };
   
-  // Admin module initialization
+  /// Admin modülünü başlat
   static Future<void> initialize() async {
-    // Admin modülü başlatma işlemleri
-    print('$moduleName v$version başlatılıyor...');
+    print('$moduleName v1.0.0 başlatılıyor...');
     
-    // İlk admin kullanıcısını oluştur (eğer yoksa)
-    await _createInitialAdmin();
+    try {
+      final adminService = AdminService();
+      
+      // Firebase Authentication durumunu kontrol et
+      final auth = FirebaseAuth.instance;
+      final currentUser = auth.currentUser;
+      
+      if (currentUser != null) {
+        // Kullanıcı zaten giriş yapmış, admin bilgilerini kontrol et
+        try {
+          final adminDoc = await FirebaseFirestore.instance
+              .collection('admin_users')
+              .doc(currentUser.uid)
+              .get();
+          
+          if (adminDoc.exists) {
+            final adminData = adminDoc.data()!;
+            if (adminData['isActive']) {
+              print('Mevcut admin oturumu bulundu');
+              return;
+            }
+          }
+        } catch (e) {
+          print('Admin oturumu kontrol edilirken hata: $e');
+        }
+      }
+      
+      // Admin kullanıcılarını kontrol et (yetki kontrolü yapma)
+      final admins = await adminService.getAllAdmins(skipPermissionCheck: true);
+      
+      // Eğer hiç admin yoksa, ilk admin'i oluştur
+      if (admins.isEmpty) {
+        print('İlk admin kullanıcısı oluşturuluyor...');
+        
+        // Firebase Authentication ile ilk admin'i oluştur
+        final adminEmail = 'superadmin@admin.masamenu.com';
+        final adminPassword = 'admin123';
+        
+        try {
+          final userCredential = await auth.createUserWithEmailAndPassword(
+            email: adminEmail,
+            password: adminPassword,
+          );
+          
+          // Firestore'a admin bilgilerini kaydet
+          await FirebaseFirestore.instance
+              .collection('admin_users')
+              .doc(userCredential.user!.uid)
+              .set({
+            'id': userCredential.user!.uid,
+            'username': 'superadmin',
+            'email': adminEmail,
+            'name': 'Süper Yönetici',
+            'role': 'superAdmin',
+            'permissions': AdminPermission.values.map((p) => p.value).toList(),
+            'createdAt': DateTime.now().toIso8601String(),
+            'lastLoginAt': DateTime.now().toIso8601String(),
+            'isActive': true,
+            'passwordHash': '', // Firebase Auth kullandığımız için boş
+          });
+          
+          print('İlk admin kullanıcısı oluşturuldu: superadmin / admin123');
+          print('⚠️  Güvenlik için şifreyi değiştirmeyi unutmayın!');
+        } catch (e) {
+          print('İlk admin oluşturulurken hata: $e');
+        }
+      }
+    } catch (e) {
+      print('İlk admin oluşturulurken hata: $e');
+    }
     
     print('$moduleName başarıyla başlatıldı');
   }

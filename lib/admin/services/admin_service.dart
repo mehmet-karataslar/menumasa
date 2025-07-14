@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 
@@ -6,13 +7,13 @@ import '../models/admin_user.dart';
 import '../models/admin_session.dart';
 import '../models/admin_activity_log.dart';
 
-
 class AdminService {
   static const String _adminCollection = 'admin_users';
   static const String _adminSessionsCollection = 'admin_sessions';
   static const String _adminLogsCollection = 'admin_activity_logs';
   
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   AdminUser? _currentAdmin;
   AdminSession? _currentSession;
 
@@ -34,30 +35,52 @@ class AdminService {
     String? userAgent,
   }) async {
     try {
-      // Kullanıcı adı ile admin kullanıcısını bul
-      final adminQuery = await _firestore
+      // Önce Firebase Authentication ile giriş yap
+      UserCredential userCredential;
+      
+      // Admin kullanıcıları için özel email formatı kullan
+      final adminEmail = '$username@admin.masamenu.com';
+      
+      try {
+        userCredential = await _auth.signInWithEmailAndPassword(
+          email: adminEmail,
+          password: password,
+        );
+      } catch (e) {
+        // Eğer kullanıcı yoksa, ilk admin için otomatik oluştur
+        if (e.toString().contains('user-not-found')) {
+          userCredential = await _auth.createUserWithEmailAndPassword(
+            email: adminEmail,
+            password: password,
+          );
+          
+          // İlk admin kullanıcısını Firestore'a kaydet
+          await _createFirstAdmin(username, password, userCredential.user!.uid);
+        } else {
+          throw AdminException('Geçersiz kullanıcı adı veya şifre');
+        }
+      }
+
+      // Firestore'dan admin bilgilerini al
+      final adminDoc = await _firestore
           .collection(_adminCollection)
-          .where('username', isEqualTo: username)
-          .where('isActive', isEqualTo: true)
-          .limit(1)
+          .doc(userCredential.user!.uid)
           .get();
 
-      if (adminQuery.docs.isEmpty) {
-        throw AdminException('Geçersiz kullanıcı adı veya şifre');
+      if (!adminDoc.exists) {
+        throw AdminException('Admin kullanıcısı bulunamadı');
       }
 
-      final adminData = adminQuery.docs.first.data();
-      final admin = AdminUser.fromJson({...adminData, 'id': adminQuery.docs.first.id});
-
-      // Şifre doğrulama (hash ile)
-      final hashedPassword = _hashPassword(password);
-      if (adminData['passwordHash'] != hashedPassword) {
-        throw AdminException('Geçersiz kullanıcı adı veya şifre');
+      final adminData = adminDoc.data()!;
+      if (!adminData['isActive']) {
+        throw AdminException('Admin hesabı aktif değil');
       }
+
+      final admin = AdminUser.fromJson({...adminData, 'id': adminDoc.id});
 
       // Session oluştur
       final session = await _createSession(
-        adminId: admin.adminId,
+        adminId: admin.id,
         ipAddress: ipAddress ?? 'unknown',
         userAgent: userAgent ?? 'unknown',
       );
@@ -65,7 +88,7 @@ class AdminService {
       // Admin bilgilerini güncelle
       await _firestore
           .collection(_adminCollection)
-          .doc(admin.adminId)
+          .doc(admin.id)
           .update({
         'lastLoginAt': DateTime.now().toIso8601String(),
         'lastLoginIp': ipAddress,
@@ -74,7 +97,7 @@ class AdminService {
 
       // Activity log kaydet
       await _logActivity(
-        adminId: admin.adminId,
+        adminId: admin.id,
         adminUsername: admin.username,
         action: 'LOGIN',
         targetType: 'SYSTEM',
@@ -94,9 +117,38 @@ class AdminService {
     }
   }
 
+  /// İlk admin kullanıcısını oluştur
+  Future<void> _createFirstAdmin(String username, String password, String uid) async {
+    final adminId = uid;
+    final hashedPassword = _hashPassword(password);
+
+    final admin = AdminUser(
+      id: adminId,
+      username: username,
+      email: '$username@admin.masamenu.com',
+      name: 'Süper Yönetici',
+      role: AdminRole.superAdmin,
+      permissions: AdminPermission.values.toList(),
+      createdAt: DateTime.now(),
+      lastLoginAt: DateTime.now(),
+      isActive: true,
+    );
+
+    await _firestore
+        .collection(_adminCollection)
+        .doc(adminId)
+        .set({
+      ...admin.toJson(),
+      'passwordHash': hashedPassword,
+    });
+  }
+
   /// Admin çıkışı
   Future<void> signOut() async {
     try {
+      // Firebase Authentication'dan çıkış yap
+      await _auth.signOut();
+      
       if (_currentSession != null) {
         // Session'ı deaktif et
         await _firestore
@@ -107,7 +159,7 @@ class AdminService {
         // Activity log kaydet
         if (_currentAdmin != null) {
           await _logActivity(
-            adminId: _currentAdmin!.adminId,
+            adminId: _currentAdmin!.id,
             adminUsername: _currentAdmin!.username,
             action: 'LOGOUT',
             targetType: 'SYSTEM',
@@ -127,6 +179,10 @@ class AdminService {
   /// Session doğrulama
   Future<bool> validateSession(String sessionToken) async {
     try {
+      // Firebase Authentication durumunu kontrol et
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
       final sessionQuery = await _firestore
           .collection(_adminSessionsCollection)
           .where('sessionToken', isEqualTo: sessionToken)
@@ -172,6 +228,12 @@ class AdminService {
   /// Tüm admin kullanıcılarını getir
   Future<List<AdminUser>> getAllAdmins({bool skipPermissionCheck = false}) async {
     try {
+      // Firebase Authentication kontrolü
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw AdminException('Oturum açmanız gerekiyor');
+      }
+
       // İlk admin oluşturulurken yetki kontrolü yapma
       if (!skipPermissionCheck && !_hasPermission(AdminPermission.manageAdmins)) {
         throw AdminException('Bu işlem için yetkiniz yok');
@@ -202,6 +264,12 @@ class AdminService {
     bool skipPermissionCheck = false,
   }) async {
     try {
+      // Firebase Authentication kontrolü
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw AdminException('Oturum açmanız gerekiyor');
+      }
+
       // İlk admin oluşturulurken yetki kontrolü yapma
       if (!skipPermissionCheck && !_hasPermission(AdminPermission.manageAdmins)) {
         throw AdminException('Bu işlem için yetkiniz yok');
@@ -234,6 +302,7 @@ class AdminService {
 
       final admin = AdminUser(
         id: adminId,
+        username: username,
         email: email,
         name: fullName,
         role: role,
@@ -254,7 +323,7 @@ class AdminService {
       // Activity log kaydet (sadece mevcut admin varsa)
       if (_currentAdmin != null) {
         await _logActivity(
-          adminId: _currentAdmin!.adminId,
+          adminId: _currentAdmin!.id,
           adminUsername: _currentAdmin!.username,
           action: 'CREATE_ADMIN',
           targetType: 'ADMIN_USER',
@@ -305,7 +374,7 @@ class AdminService {
 
       // Activity log kaydet
       await _logActivity(
-        adminId: _currentAdmin!.adminId,
+        adminId: _currentAdmin!.id,
         adminUsername: _currentAdmin!.username,
         action: 'UPDATE_ADMIN',
         targetType: 'ADMIN_USER',
@@ -340,7 +409,7 @@ class AdminService {
 
       // Activity log kaydet
       await _logActivity(
-        adminId: _currentAdmin!.adminId,
+        adminId: _currentAdmin!.id,
         adminUsername: _currentAdmin!.username,
         action: 'CHANGE_PASSWORD',
         targetType: 'ADMIN_USER',
@@ -361,7 +430,7 @@ class AdminService {
       }
 
       // Kendini silmeye çalışıyorsa engelle
-      if (adminId == _currentAdmin?.adminId) {
+      if (adminId == _currentAdmin?.id) {
         throw AdminException('Kendi hesabınızı silemezsiniz');
       }
 
@@ -372,7 +441,7 @@ class AdminService {
 
       // Activity log kaydet
       await _logActivity(
-        adminId: _currentAdmin!.adminId,
+        adminId: _currentAdmin!.id,
         adminUsername: _currentAdmin!.username,
         action: 'DELETE_ADMIN',
         targetType: 'ADMIN_USER',
