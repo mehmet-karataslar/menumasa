@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'pages/admin_login_page.dart';
+import 'pages/admin_register_page.dart';
 import 'pages/admin_dashboard_page.dart';
 import '../business/pages/business_management_page.dart' hide AdminManagementPage;
 import 'pages/customer_management_page.dart';
@@ -10,6 +11,7 @@ import 'pages/activity_logs_page.dart';
 
 class AdminRoutes {
   static const String adminLogin = '/admin/login';
+  static const String adminRegister = '/admin/register';
   static const String adminDashboard = '/admin/dashboard';
   static const String businessManagement = '/admin/businesses';
   static const String customerManagement = '/admin/customers';
@@ -23,6 +25,12 @@ class AdminRoutes {
       case adminLogin:
         return MaterialPageRoute(
           builder: (_) => const AdminLoginPage(),
+          settings: settings,
+        );
+
+      case adminRegister:
+        return MaterialPageRoute(
+          builder: (_) => const AdminRegisterPage(),
           settings: settings,
         );
 
@@ -79,6 +87,7 @@ class AdminRoutes {
   // Admin route'larının tam listesi
   static List<String> get allRoutes => [
     adminLogin,
+    adminRegister,
     adminDashboard,
     businessManagement,
     customerManagement,

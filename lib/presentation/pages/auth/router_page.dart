@@ -142,6 +142,96 @@ class RouterPage extends StatelessWidget {
 
               const SizedBox(height: 32),
 
+              // Admin bölümü
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD32F2F).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFD32F2F).withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.admin_panel_settings,
+                          color: Color(0xFFD32F2F),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Sistem Yönetimi',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: const Color(0xFFD32F2F),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Admin girişi butonu
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/admin/login');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD32F2F),
+                          foregroundColor: AppColors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.admin_panel_settings,
+                              color: AppColors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Admin Girişi',
+                              style: AppTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Admin kayıt linki
+                    InkWell(
+                      onTap: () {
+                        // Admin kayıt sayfasına yönlendir
+                        Navigator.pushNamed(context, '/admin/register');
+                      },
+                      child: Text(
+                        'Admin Kayıt Ol',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: const Color(0xFFD32F2F),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
               // Kayıt ol linkleri
               Container(
                 padding: const EdgeInsets.all(16),
