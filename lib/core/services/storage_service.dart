@@ -1,139 +1,83 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as path;
-import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StorageService {
-  static final StorageService _instance = StorageService._internal();
-  factory StorageService() => _instance;
-  StorageService._internal();
-
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final Uuid _uuid = const Uuid();
 
-  // Upload a file to Firebase Storage
-  Future<String> uploadFile(File file, String folderPath) async {
+  /// Dosya yükleme
+  Future<String> uploadFile(File file, String fileName) async {
     try {
-      // Generate unique file name
-      final fileName = _uuid.v4() + path.extension(file.path);
-      final storageRef = _storage.ref().child('$folderPath/$fileName');
-
-      // Upload file
-      final uploadTask = storageRef.putFile(file);
-      final snapshot = await uploadTask.whenComplete(() {});
-
-      // Get download URL
+      final ref = _storage.ref().child(fileName);
+      final uploadTask = ref.putFile(file);
+      final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
       return downloadUrl;
     } catch (e) {
-      throw Exception('Dosya yüklenirken bir hata oluştu: $e');
+      throw Exception('Dosya yüklenirken hata: $e');
     }
   }
 
-  // Upload web file (Uint8List) to Firebase Storage
-  Future<String> uploadWebFile(
-    Uint8List fileBytes,
-    String fileName,
-    String folderPath,
-  ) async {
+  /// Bytes'dan dosya yükleme (web için)
+  Future<String> uploadBytes(List<int> bytes, String fileName) async {
     try {
-      // Generate unique file name
-      final uniqueFileName = _uuid.v4() + path.extension(fileName);
-      final storageRef = _storage.ref().child('$folderPath/$uniqueFileName');
-
-      // Upload file
-      final uploadTask = storageRef.putData(fileBytes);
-      final snapshot = await uploadTask.whenComplete(() {});
-
-      // Get download URL
+      final ref = _storage.ref().child(fileName);
+      final uploadTask = ref.putData(bytes);
+      final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
       return downloadUrl;
     } catch (e) {
-      throw Exception('Dosya yüklenirken bir hata oluştu: $e');
+      throw Exception('Dosya yüklenirken hata: $e');
     }
   }
 
-  // Delete a file from Firebase Storage
-  Future<void> deleteFile(String fileUrl) async {
+  /// XFile'dan dosya yükleme
+  Future<String> uploadXFile(XFile file, String fileName) async {
     try {
-      if (fileUrl.isEmpty) return;
+      final bytes = await file.readAsBytes();
+      return await uploadBytes(bytes, fileName);
+    } catch (e) {
+      throw Exception('Dosya yüklenirken hata: $e');
+    }
+  }
 
-      final ref = _storage.refFromURL(fileUrl);
+  /// Dosya silme
+  Future<void> deleteFile(String fileName) async {
+    try {
+      final ref = _storage.ref().child(fileName);
       await ref.delete();
     } catch (e) {
-      throw Exception('Dosya silinirken bir hata oluştu: $e');
+      throw Exception('Dosya silinirken hata: $e');
     }
   }
 
-  // Upload a profile image
-  Future<String> uploadProfileImage(File file, String userId) async {
-    return uploadFile(file, 'profile_images/$userId');
+  /// URL'den dosya silme
+  Future<void> deleteFileFromUrl(String url) async {
+    try {
+      final ref = _storage.refFromURL(url);
+      await ref.delete();
+    } catch (e) {
+      throw Exception('Dosya silinirken hata: $e');
+    }
   }
 
-  // Upload a business logo
-  Future<String> uploadBusinessLogo(File file, String businessId) async {
-    return uploadFile(file, 'business_logos/$businessId');
+  /// Dosya boyutu kontrolü
+  bool isValidFileSize(File file, {int maxSizeInMB = 5}) {
+    final sizeInBytes = file.lengthSync();
+    final sizeInMB = sizeInBytes / (1024 * 1024);
+    return sizeInMB <= maxSizeInMB;
   }
 
-  // Upload a product image
-  Future<String> uploadProductImage(
-    File file,
-    String businessId,
-    String productId,
-  ) async {
-    return uploadFile(file, 'product_images/$businessId/$productId');
+  /// Dosya türü kontrolü
+  bool isValidImageType(File file) {
+    final extension = file.path.split('.').last.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension);
   }
 
-  // Upload a category image
-  Future<String> uploadCategoryImage(
-    File file,
-    String businessId,
-    String categoryId,
-  ) async {
-    return uploadFile(file, 'category_images/$businessId/$categoryId');
-  }
-
-  // Web specific upload methods
-  Future<String> uploadWebProfileImage(
-    Uint8List fileBytes,
-    String fileName,
-    String userId,
-  ) async {
-    return uploadWebFile(fileBytes, fileName, 'profile_images/$userId');
-  }
-
-  Future<String> uploadWebBusinessLogo(
-    Uint8List fileBytes,
-    String fileName,
-    String businessId,
-  ) async {
-    return uploadWebFile(fileBytes, fileName, 'business_logos/$businessId');
-  }
-
-  Future<String> uploadWebProductImage(
-    Uint8List fileBytes,
-    String fileName,
-    String businessId,
-    String productId,
-  ) async {
-    return uploadWebFile(
-      fileBytes,
-      fileName,
-      'product_images/$businessId/$productId',
-    );
-  }
-
-  Future<String> uploadWebCategoryImage(
-    Uint8List fileBytes,
-    String fileName,
-    String businessId,
-    String categoryId,
-  ) async {
-    return uploadWebFile(
-      fileBytes,
-      fileName,
-      'category_images/$businessId/$categoryId',
-    );
+  /// Güvenli dosya adı oluşturma
+  String generateSafeFileName(String originalName) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final extension = originalName.split('.').last.toLowerCase();
+    return '${timestamp}_${originalName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}.$extension';
   }
 }

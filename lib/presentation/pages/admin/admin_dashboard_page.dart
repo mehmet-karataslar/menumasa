@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../widgets/shared/loading_indicator.dart';
+import '../../widgets/shared/error_message.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../data/models/business.dart';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -18,6 +20,8 @@ class AdminDashboardPage extends StatefulWidget {
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Business? _business;
   bool _isLoading = true;
+  String? _errorMessage;
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -26,13 +30,31 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Future<void> _loadBusinessData() async {
-    // Simulate loading business data
-    await Future.delayed(const Duration(seconds: 1));
-
     setState(() {
-      _business = _createSampleBusiness();
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      final business = await _firestoreService.getBusiness(widget.businessId);
+      if (business != null) {
+        setState(() {
+          _business = business;
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'İşletme bulunamadı';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'İşletme bilgileri yüklenirken hata: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -40,7 +62,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: _buildAppBar(),
-      body: _isLoading ? const LoadingIndicator() : _buildDashboardContent(),
+      body: _isLoading 
+        ? const LoadingIndicator() 
+        : _business == null
+          ? Center(child: ErrorMessage(message: _errorMessage ?? 'İşletme bulunamadı'))
+          : _buildDashboardContent(),
     );
   }
 
@@ -121,6 +147,31 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             Row(
               children: [
                 if (_business?.logoUrl != null)
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.white,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        _business!.logoUrl!,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.restaurant,
+                            size: 30,
+                            color: AppColors.primary,
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                else
                   Container(
                     width: 60,
                     height: 60,

@@ -1,4 +1,4 @@
-// Firebase imports removed for Windows compatibility
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Business {
   final String businessId;
@@ -41,13 +41,23 @@ class Business {
       qrCodeUrl: data['qrCodeUrl'],
       menuSettings: MenuSettings.fromMap(data['menuSettings'] ?? {}),
       isActive: data['isActive'] ?? true,
-      createdAt: data['createdAt'] != null
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: data['updatedAt'] != null
-          ? DateTime.parse(data['updatedAt'] as String)
-          : DateTime.now(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.parse(value);
+    } else if (value is DateTime) {
+      return value;
+    }
+    
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
