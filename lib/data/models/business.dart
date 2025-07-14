@@ -5,12 +5,17 @@ class Business {
   final String ownerId;
   final String businessName;
   final String businessDescription;
+  final String businessType;
+  final String businessAddress;
   final String? logoUrl;
+  final String? phone;
+  final String? email;
   final Address address;
   final ContactInfo contactInfo;
   final String? qrCodeUrl;
   final MenuSettings menuSettings;
   final bool isActive;
+  final bool isOpen;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,12 +24,17 @@ class Business {
     required this.ownerId,
     required this.businessName,
     required this.businessDescription,
+    required this.businessType,
+    required this.businessAddress,
     this.logoUrl,
+    this.phone,
+    this.email,
     required this.address,
     required this.contactInfo,
     this.qrCodeUrl,
     required this.menuSettings,
     required this.isActive,
+    required this.isOpen,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -35,12 +45,17 @@ class Business {
       ownerId: data['ownerId'] ?? '',
       businessName: data['businessName'] ?? '',
       businessDescription: data['businessDescription'] ?? '',
+      businessType: data['businessType'] ?? 'Restoran',
+      businessAddress: data['businessAddress'] ?? '',
       logoUrl: data['logoUrl'],
+      phone: data['phone'],
+      email: data['email'],
       address: Address.fromMap(data['address'] ?? {}),
       contactInfo: ContactInfo.fromMap(data['contactInfo'] ?? {}),
       qrCodeUrl: data['qrCodeUrl'],
       menuSettings: MenuSettings.fromMap(data['menuSettings'] ?? {}),
       isActive: data['isActive'] ?? true,
+      isOpen: data['isOpen'] ?? true,
       createdAt: _parseDateTime(data['createdAt']),
       updatedAt: _parseDateTime(data['updatedAt']),
     );
@@ -66,12 +81,17 @@ class Business {
       'ownerId': ownerId,
       'businessName': businessName,
       'businessDescription': businessDescription,
+      'businessType': businessType,
+      'businessAddress': businessAddress,
       'logoUrl': logoUrl,
+      'phone': phone,
+      'email': email,
       'address': address.toMap(),
       'contactInfo': contactInfo.toMap(),
       'qrCodeUrl': qrCodeUrl,
       'menuSettings': menuSettings.toMap(),
       'isActive': isActive,
+      'isOpen': isOpen,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -82,12 +102,17 @@ class Business {
     String? ownerId,
     String? businessName,
     String? businessDescription,
+    String? businessType,
+    String? businessAddress,
     String? logoUrl,
+    String? phone,
+    String? email,
     Address? address,
     ContactInfo? contactInfo,
     String? qrCodeUrl,
     MenuSettings? menuSettings,
     bool? isActive,
+    bool? isOpen,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -96,12 +121,17 @@ class Business {
       ownerId: ownerId ?? this.ownerId,
       businessName: businessName ?? this.businessName,
       businessDescription: businessDescription ?? this.businessDescription,
+      businessType: businessType ?? this.businessType,
+      businessAddress: businessAddress ?? this.businessAddress,
       logoUrl: logoUrl ?? this.logoUrl,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
       address: address ?? this.address,
       contactInfo: contactInfo ?? this.contactInfo,
       qrCodeUrl: qrCodeUrl ?? this.qrCodeUrl,
       menuSettings: menuSettings ?? this.menuSettings,
       isActive: isActive ?? this.isActive,
+      isOpen: isOpen ?? this.isOpen,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
