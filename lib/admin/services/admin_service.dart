@@ -533,11 +533,6 @@ class AdminService {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
-      // Kendini silmeye çalışıyorsa engelle
-      if (adminId == _currentAdmin?.id) {
-        throw AdminException('Kendi hesabınızı silemezsiniz');
-      }
-
       await _firestore
           .collection(_adminCollection)
           .doc(adminId)
@@ -555,6 +550,285 @@ class AdminService {
     } catch (e) {
       if (e is AdminException) rethrow;
       throw AdminException('Admin silinirken hata: $e');
+    }
+  }
+
+  // =============================================================================
+  // BUSINESS MANAGEMENT METHODS
+  // =============================================================================
+
+  /// Tüm işletmeleri getir
+  Future<List<Map<String, dynamic>>> getAllBusinesses() async {
+    try {
+      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      final querySnapshot = await _firestore
+          .collection('businesses')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('İşletme listesi alınırken hata: $e');
+    }
+  }
+
+  /// İşletme detaylarını getir
+  Future<Map<String, dynamic>?> getBusinessById(String businessId) async {
+    try {
+      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      final doc = await _firestore
+          .collection('businesses')
+          .doc(businessId)
+          .get();
+
+      if (!doc.exists) {
+        return null;
+      }
+
+      final data = doc.data()!;
+      data['id'] = doc.id;
+      return data;
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('İşletme detayları alınırken hata: $e');
+    }
+  }
+
+  /// İşletme durumunu güncelle
+  Future<void> updateBusinessStatus({
+    required String businessId,
+    required bool isApproved,
+    required String status,
+  }) async {
+    try {
+      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      final updates = <String, dynamic>{
+        'isApproved': isApproved,
+        'status': status,
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      if (isApproved) {
+        updates['approvedAt'] = DateTime.now().toIso8601String();
+        updates['approvedBy'] = _currentAdmin?.id;
+      }
+
+      await _firestore
+          .collection('businesses')
+          .doc(businessId)
+          .update(updates);
+
+      // Activity log kaydet
+      await _logActivity(
+        adminId: _currentAdmin!.id,
+        adminUsername: _currentAdmin!.username,
+        action: 'UPDATE_BUSINESS_STATUS',
+        targetType: 'BUSINESS',
+        targetId: businessId,
+        details: 'İşletme durumu güncellendi: $status',
+      );
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('İşletme durumu güncellenirken hata: $e');
+    }
+  }
+
+  /// İşletmeyi aktif/pasif yap
+  Future<void> toggleBusinessActive({
+    required String businessId,
+    required bool isActive,
+  }) async {
+    try {
+      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      await _firestore
+          .collection('businesses')
+          .doc(businessId)
+          .update({
+        'isActive': isActive,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      // Activity log kaydet
+      await _logActivity(
+        adminId: _currentAdmin!.id,
+        adminUsername: _currentAdmin!.username,
+        action: 'TOGGLE_BUSINESS_ACTIVE',
+        targetType: 'BUSINESS',
+        targetId: businessId,
+        details: 'İşletme ${isActive ? 'aktif' : 'pasif'} yapıldı',
+      );
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('İşletme durumu değiştirilirken hata: $e');
+    }
+  }
+
+  /// İşletme istatistiklerini getir
+  Future<Map<String, dynamic>> getBusinessStats() async {
+    try {
+      if (!_hasPermission(AdminPermission.viewAnalytics)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      final businessesSnapshot = await _firestore
+          .collection('businesses')
+          .get();
+
+      final totalBusinesses = businessesSnapshot.docs.length;
+      final activeBusinesses = businessesSnapshot.docs
+          .where((doc) => doc.data()['isActive'] == true)
+          .length;
+      final approvedBusinesses = businessesSnapshot.docs
+          .where((doc) => doc.data()['isApproved'] == true)
+          .length;
+      final pendingBusinesses = businessesSnapshot.docs
+          .where((doc) => doc.data()['status'] == 'pending')
+          .length;
+
+      return {
+        'totalBusinesses': totalBusinesses,
+        'activeBusinesses': activeBusinesses,
+        'approvedBusinesses': approvedBusinesses,
+        'pendingBusinesses': pendingBusinesses,
+        'inactiveBusinesses': totalBusinesses - activeBusinesses,
+      };
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('İşletme istatistikleri alınırken hata: $e');
+    }
+  }
+
+  // =============================================================================
+  // CUSTOMER MANAGEMENT METHODS
+  // =============================================================================
+
+  /// Tüm müşterileri getir
+  Future<List<Map<String, dynamic>>> getAllCustomers() async {
+    try {
+      if (!_hasPermission(AdminPermission.manageCustomers)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'customer')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('Müşteri listesi alınırken hata: $e');
+    }
+  }
+
+  /// Müşteri istatistiklerini getir
+  Future<Map<String, dynamic>> getCustomerStats() async {
+    try {
+      if (!_hasPermission(AdminPermission.viewAnalytics)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      final customersSnapshot = await _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'customer')
+          .get();
+
+      final totalCustomers = customersSnapshot.docs.length;
+      final activeCustomers = customersSnapshot.docs
+          .where((doc) => doc.data()['isActive'] == true)
+          .length;
+
+      return {
+        'totalCustomers': totalCustomers,
+        'activeCustomers': activeCustomers,
+        'inactiveCustomers': totalCustomers - activeCustomers,
+      };
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('Müşteri istatistikleri alınırken hata: $e');
+    }
+  }
+
+  // =============================================================================
+  // SYSTEM STATISTICS METHODS
+  // =============================================================================
+
+  /// Sistem genel istatistiklerini getir
+  Future<Map<String, dynamic>> getSystemStats() async {
+    try {
+      if (!_hasPermission(AdminPermission.viewAnalytics)) {
+        throw AdminException('Bu işlem için yetkiniz yok');
+      }
+
+      // İşletme istatistikleri
+      final businessStats = await getBusinessStats();
+      
+      // Müşteri istatistikleri
+      final customerStats = await getCustomerStats();
+      
+      // Admin istatistikleri
+      final adminsSnapshot = await _firestore
+          .collection(_adminCollection)
+          .get();
+      
+      final totalAdmins = adminsSnapshot.docs.length;
+      final activeAdmins = adminsSnapshot.docs
+          .where((doc) => doc.data()['isActive'] == true)
+          .length;
+
+      // Sipariş istatistikleri
+      final ordersSnapshot = await _firestore
+          .collection('orders')
+          .get();
+      
+      final totalOrders = ordersSnapshot.docs.length;
+      final completedOrders = ordersSnapshot.docs
+          .where((doc) => doc.data()['status'] == 'completed')
+          .length;
+
+      return {
+        'businesses': businessStats,
+        'customers': customerStats,
+        'admins': {
+          'totalAdmins': totalAdmins,
+          'activeAdmins': activeAdmins,
+          'inactiveAdmins': totalAdmins - activeAdmins,
+        },
+        'orders': {
+          'totalOrders': totalOrders,
+          'completedOrders': completedOrders,
+          'pendingOrders': totalOrders - completedOrders,
+        },
+        'system': {
+          'totalUsers': businessStats['totalBusinesses'] + customerStats['totalCustomers'] + totalAdmins,
+          'totalActiveUsers': businessStats['activeBusinesses'] + customerStats['activeCustomers'] + activeAdmins,
+        },
+      };
+    } catch (e) {
+      if (e is AdminException) rethrow;
+      throw AdminException('Sistem istatistikleri alınırken hata: $e');
     }
   }
 

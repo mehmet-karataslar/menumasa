@@ -15,11 +15,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   AdminUser? _currentAdmin;
   bool _isLoading = true;
   int _selectedIndex = 0;
+  Map<String, dynamic> _systemStats = {};
 
   @override
   void initState() {
     super.initState();
     _loadCurrentAdmin();
+    _loadSystemStats();
   }
 
   Future<void> _loadCurrentAdmin() async {
@@ -27,10 +29,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       final admin = await _adminService.getCurrentAdmin();
       setState(() {
         _currentAdmin = admin;
-        _isLoading = false;
       });
     } catch (e) {
       print('Admin yüklenirken hata: $e');
+    }
+  }
+
+  Future<void> _loadSystemStats() async {
+    try {
+      final stats = await _adminService.getSystemStats();
+      setState(() {
+        _systemStats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Sistem istatistikleri yüklenirken hata: $e');
       setState(() {
         _isLoading = false;
       });
@@ -489,31 +502,27 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             children: [
               _buildStatCard(
                 title: 'Toplam İşletme',
-                value: '0',
+                value: '${_systemStats['businesses']?['totalBusinesses'] ?? 0}',
                 icon: Icons.business,
                 color: const Color(0xFF1976D2),
-                isMobile: isMobile,
               ),
               _buildStatCard(
                 title: 'Toplam Müşteri',
-                value: '0',
+                value: '${_systemStats['customers']?['totalCustomers'] ?? 0}',
                 icon: Icons.people,
                 color: const Color(0xFF388E3C),
-                isMobile: isMobile,
               ),
               _buildStatCard(
                 title: 'Toplam Sipariş',
-                value: '0',
+                value: '${_systemStats['orders']?['totalOrders'] ?? 0}',
                 icon: Icons.shopping_cart,
                 color: const Color(0xFFFF9800),
-                isMobile: isMobile,
               ),
               _buildStatCard(
                 title: 'Aktif Admin',
-                value: '1',
+                value: '${_systemStats['admins']?['activeAdmins'] ?? 1}',
                 icon: Icons.admin_panel_settings,
                 color: const Color(0xFFD32F2F),
-                isMobile: isMobile,
               ),
             ],
           ),
@@ -910,8 +919,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     required String value,
     required IconData icon,
     required Color color,
-    required bool isMobile,
   }) {
+    final isMobile = MediaQuery.of(context).size.width <= 768;
+    
     return Container(
       padding: EdgeInsets.all(isMobile ? 12 : 20),
       decoration: BoxDecoration(
@@ -943,7 +953,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isMobile ? 12 : 16),
           Text(
             title,
             style: TextStyle(
