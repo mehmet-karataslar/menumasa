@@ -560,7 +560,7 @@ class AdminService {
   /// Tüm işletmeleri getir
   Future<List<Map<String, dynamic>>> getAllBusinesses() async {
     try {
-      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+      if (!_hasPermission(AdminPermission.viewBusinesses)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -583,7 +583,7 @@ class AdminService {
   /// İşletme detaylarını getir
   Future<Map<String, dynamic>?> getBusinessById(String businessId) async {
     try {
-      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+      if (!_hasPermission(AdminPermission.viewBusinesses)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -612,7 +612,7 @@ class AdminService {
     required String status,
   }) async {
     try {
-      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+      if (!_hasPermission(AdminPermission.editBusinesses)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -653,7 +653,7 @@ class AdminService {
     required bool isActive,
   }) async {
     try {
-      if (!_hasPermission(AdminPermission.manageBusinesses)) {
+      if (!_hasPermission(AdminPermission.editBusinesses)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -722,7 +722,7 @@ class AdminService {
   /// Tüm müşterileri getir
   Future<List<Map<String, dynamic>>> getAllCustomers() async {
     try {
-      if (!_hasPermission(AdminPermission.manageCustomers)) {
+      if (!_hasPermission(AdminPermission.viewCustomers)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
