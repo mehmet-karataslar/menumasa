@@ -360,36 +360,55 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildAdminLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : () {
-          Navigator.pushReplacementNamed(context, '/admin/login');
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    return Column(
+      children: [
+        const Divider(
+          color: Colors.grey,
+          thickness: 1,
+          height: 32,
+        ),
+        const Text(
+          'Sistem Yöneticisi',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        child: _isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: AppColors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                'Admin olarak giriş yap',
-                style: AppTypography.buttonLarge.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : () {
+              Navigator.pushReplacementNamed(context, '/admin/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F), // Admin red color
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-      ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.admin_panel_settings,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Admin Girişi',
+                  style: AppTypography.buttonLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
