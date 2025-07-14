@@ -33,7 +33,7 @@ class DataService {
   Future<Business?> getBusiness(String businessId) async {
     final businesses = await getBusinesses();
     try {
-      return businesses.firstWhere((b) => b.businessId == businessId);
+      return businesses.firstWhere((b) => b.id == businessId);
     } catch (e) {
       return null;
     }
@@ -43,7 +43,7 @@ class DataService {
     await initialize();
     final businesses = await getBusinesses();
     final index = businesses.indexWhere(
-      (b) => b.businessId == business.businessId,
+      (b) => b.id == business.id,
     );
 
     if (index >= 0) {
@@ -61,7 +61,7 @@ class DataService {
   Future<void> deleteBusiness(String businessId) async {
     await initialize();
     final businesses = await getBusinesses();
-    businesses.removeWhere((b) => b.businessId == businessId);
+    businesses.removeWhere((b) => b.id == businessId);
 
     final businessesJson = businesses
         .map((b) => jsonEncode(b.toJson()))
@@ -230,12 +230,11 @@ class DataService {
 
   Future<void> _createSampleData() async {
     // Create sample business
-    final sampleBusiness = Business(
-      businessId: 'demo-business-001',
+    final sampleBusiness = Business.restaurant(
+      id: 'demo-business-001',
       ownerId: 'demo-owner',
       businessName: 'Lezzet Durağı',
       businessDescription: 'Geleneksel Türk mutfağının en lezzetli örnekleri',
-      businessType: 'Restoran',
       businessAddress: 'Atatürk Caddesi No:123, Beyoğlu, İstanbul',
       logoUrl: 'https://picsum.photos/200/200?random=logo',
       phone: '+90 212 555 1234',
@@ -252,18 +251,13 @@ class DataService {
         website: 'www.lezzetduragi.com',
       ),
       qrCodeUrl: null, // Will be generated
-      menuSettings: MenuSettings(
-        theme: 'light',
-        primaryColor: '#FF6B35',
-        fontFamily: 'Poppins',
-        fontSize: 16.0,
-        showPrices: true,
-        showImages: true,
-        imageSize: 'medium',
-        language: 'tr',
-      ),
+      menuSettings: MenuSettings.defaultRestaurant(),
+      settings: BusinessSettings.defaultRestaurant(),
+      stats: BusinessStats.empty(),
       isActive: true,
       isOpen: true,
+      isApproved: true,
+      status: BusinessStatus.active,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -274,7 +268,7 @@ class DataService {
     final categories = [
       Category(
         categoryId: 'cat-001',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         name: 'Ana Yemekler',
         description: 'Doyurucu ve lezzetli ana yemeklerimiz',
         imageUrl: 'https://picsum.photos/300/200?random=main',
@@ -287,7 +281,7 @@ class DataService {
       ),
       Category(
         categoryId: 'cat-002',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         name: 'Başlangıçlar',
         description: 'Yemeğe lezzetli bir başlangıç',
         imageUrl: 'https://picsum.photos/300/200?random=starter',
@@ -300,7 +294,7 @@ class DataService {
       ),
       Category(
         categoryId: 'cat-003',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         name: 'İçecekler',
         description: 'Serinletici ve enerji verici içecekler',
         imageUrl: 'https://picsum.photos/300/200?random=drinks',
@@ -321,7 +315,7 @@ class DataService {
     final products = [
       Product(
         productId: 'prod-001',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         categoryId: 'cat-001',
         name: 'Adana Kebap',
         description:
@@ -350,7 +344,7 @@ class DataService {
       ),
       Product(
         productId: 'prod-002',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         categoryId: 'cat-001',
         name: 'Kuzu Şiş',
         description: 'Yumuşacık kuzu eti ile hazırlanan özel şiş kebap',
@@ -378,7 +372,7 @@ class DataService {
       ),
       Product(
         productId: 'prod-003',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         categoryId: 'cat-002',
         name: 'Humus',
         description: 'Ev yapımı humus, taze sebzeler ile',
@@ -406,7 +400,7 @@ class DataService {
       ),
       Product(
         productId: 'prod-004',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         categoryId: 'cat-003',
         name: 'Ayran',
         description: 'Ev yapımı taze ayran',
@@ -441,15 +435,15 @@ class DataService {
     // Create sample discounts
     final discounts = [
       DiscountDefaults.happyHourDiscount.copyWith(
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         targetCategoryIds: ['cat-003'], // İçecekler kategorisi
       ),
       DiscountDefaults.weekendSpecial.copyWith(
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
       ),
       Discount(
         discountId: 'breakfast-discount',
-        businessId: sampleBusiness.businessId,
+        businessId: sampleBusiness.id,
         name: 'Kahvaltı Saatleri İndirimi',
         description: 'Sabah 8-11 arası başlangıçlarda %10 indirim',
         type: DiscountType.percentage,

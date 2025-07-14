@@ -1,0 +1,34 @@
+// Business Module - İşletme Yönetimi Modülü
+
+// Models
+export 'models/business_user.dart';
+export 'models/business_session.dart';
+export 'models/business_activity_log.dart';
+
+// Services
+export 'services/business_service.dart';
+
+// Pages
+export 'pages/business_login_page.dart';
+export 'pages/business_dashboard_page.dart';
+export 'pages/business_management_page.dart';
+export 'pages/customer_management_page.dart';
+export 'pages/analytics_page.dart';
+export 'pages/system_settings_page.dart';
+export 'pages/activity_logs_page.dart';
+
+// Routes
+import 'business_routes.dart';
+export 'business_routes.dart';
+
+// Business Module sınıfı
+class BusinessModule {
+  static void initialize() {
+    // Business modülü başlatma işlemleri
+    print('Business Module initialized');
+  }
+
+  static Map<String, dynamic> getRoutes() {
+    return BusinessRoutes.getRoutes();
+  }
+} 

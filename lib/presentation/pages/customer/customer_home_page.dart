@@ -425,7 +425,7 @@ class _CustomerHomePageState extends State<CustomerHomePage>
 
   Widget _buildBusinessCard(Business business) {
     final isFavorite = _customerData?.favorites
-        .any((f) => f.businessId == business.businessId) ?? false;
+        .any((f) => f.businessId == business.id) ?? false;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -605,36 +605,44 @@ class _CustomerHomePageState extends State<CustomerHomePage>
             itemBuilder: (context, index) {
               final favorite = favorites[index];
               final business = _businesses.firstWhere(
-                (b) => b.businessId == favorite.businessId,
+                (b) => b.id == favorite.businessId,
                 orElse: () => Business(
-                  businessId: favorite.businessId,
-                  businessName: favorite.businessName,
+                  id: favorite.businessId,
+                  ownerId: '',
+                  businessName: favorite.businessName ?? '',
                   businessDescription: '',
                   businessType: 'Restoran',
                   businessAddress: '',
-                  ownerId: '',
                   address: Address(
                     street: '',
                     city: '',
                     district: '',
                     postalCode: '',
+                    coordinates: null,
                   ),
                   contactInfo: ContactInfo(
                     phone: '',
                     email: '',
                   ),
                   menuSettings: MenuSettings(
-                    theme: 'default',
+                    theme: 'light',
                     primaryColor: '#2C1810',
                     fontFamily: 'Poppins',
                     fontSize: 16.0,
-                    showPrices: true,
-                    showImages: true,
-                    imageSize: 'medium',
-                    language: 'tr',
+                    imageSize: 120.0,
+                    showCategories: true,
+                    showRatings: false,
+                    layoutStyle: 'card',
+                    showNutritionInfo: false,
+                    showBadges: true,
+                    showAvailability: true,
                   ),
+                  settings: BusinessSettings.defaultRestaurant(),
+                  stats: BusinessStats.empty(),
                   isActive: false,
                   isOpen: false,
+                  isApproved: false,
+                  status: BusinessStatus.pending,
                   createdAt: DateTime.now(),
                   updatedAt: DateTime.now(),
                 ),
@@ -832,12 +840,12 @@ class _CustomerHomePageState extends State<CustomerHomePage>
   Future<void> _toggleFavorite(Business business) async {
     try {
       final isFavorite = _customerData?.favorites
-          .any((f) => f.businessId == business.businessId) ?? false;
+          .any((f) => f.businessId == business.id) ?? false;
 
       if (isFavorite) {
         // Favorilerden çıkar
         final updatedFavorites = _customerData!.favorites
-            .where((f) => f.businessId != business.businessId)
+            .where((f) => f.businessId != business.id)
             .toList();
 
         final updatedCustomerData = _customerData!.copyWith(
@@ -864,8 +872,12 @@ class _CustomerHomePageState extends State<CustomerHomePage>
       } else {
         // Favorilere ekle
         final newFavorite = app_user.CustomerFavorite(
-          businessId: business.businessId,
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          businessId: business.id,
+          customerId: _user!.id,
+          createdAt: DateTime.now(),
           businessName: business.businessName,
+          businessType: business.businessType,
           businessLogo: business.logoUrl,
           addedDate: DateTime.now(),
           visitCount: 0,

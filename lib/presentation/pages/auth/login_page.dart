@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../data/models/user.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 
@@ -48,20 +50,24 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (user != null && mounted) {
-        // Giriş başarılı, kullanıcı tipine göre yönlendir
-        if (widget.userType == 'customer') {
-          // Müşteri giriş sonrası - müşteri ana sayfasına yönlendir
+        // Navigate based on user type
+        if (user.userType == UserType.customer) {
           Navigator.pushReplacementNamed(
             context,
             '/customer/home',
-            arguments: {'userId': user.uid},
+            arguments: {'userId': user.id},
           );
-        } else {
-          // İşletme giriş sonrası - işletme ana sayfasına yönlendir
+        } else if (user.userType == UserType.business) {
           Navigator.pushReplacementNamed(
             context,
             '/business/home',
-            arguments: {'businessId': user.uid},
+            arguments: {'businessId': user.id},
+          );
+        } else if (user.userType == UserType.admin) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/admin/dashboard',
+            arguments: {'adminId': user.id},
           );
         }
       }

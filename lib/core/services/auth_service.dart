@@ -79,32 +79,15 @@ class AuthService {
         await credential.user!.updateDisplayName(name);
 
         // Create user profile in Firestore
-        final newUser = app_user.User(
-          uid: credential.user!.uid,
+        final newUser = app_user.User.customer(
+          id: credential.user!.uid,
           email: email,
           name: name,
           phone: phone,
           createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
           isActive: true,
-          subscriptionType: app_user.SubscriptionType.free,
-          subscriptionExpiry: null,
-          profile: app_user.UserProfile(
-            preferences: app_user.UserPreferences(
-              language: 'tr',
-              currency: 'TL',
-              timezone: 'Europe/Istanbul',
-              emailNotifications: true,
-              pushNotifications: true,
-              smsNotifications: false,
-              theme: 'light',
-              analytics: true,
-              marketing: false,
-            ),
-            lastLoginAt: DateTime.now(),
-            totalBusinesses: 0,
-            totalProducts: 0,
-          ),
+          isEmailVerified: false,
+          lastLoginAt: DateTime.now(),
         );
 
         // Save to Firestore with user's UID as document ID
@@ -145,7 +128,7 @@ class AuthService {
   Future<void> updateUserProfile(app_user.User user) async {
     try {
       // Update display name in Firebase Auth if it's the current user
-      if (currentUser != null && currentUser!.uid == user.uid) {
+      if (currentUser != null && currentUser!.uid == user.id) {
         await currentUser!.updateDisplayName(user.name);
         if (user.email != currentUser!.email) {
           await currentUser!.updateEmail(user.email);
@@ -156,7 +139,7 @@ class AuthService {
       final data = user.toJson();
       data['updatedAt'] = FieldValue.serverTimestamp();
 
-      await _firestore.collection('users').doc(user.uid).update(data);
+      await _firestore.collection('users').doc(user.id).update(data);
     } on FirebaseAuthException catch (e) {
       throw AuthException(_getErrorMessage(e.code));
     } catch (e) {
@@ -213,32 +196,15 @@ class AuthService {
   // Create default user when document doesn't exist
   app_user.User _createDefaultUser(String uid) {
     final currentUser = _auth.currentUser;
-    return app_user.User(
-      uid: uid,
+    return app_user.User.customer(
+      id: uid,
       email: currentUser?.email ?? '',
       name: currentUser?.displayName ?? 'Kullanıcı',
       phone: null,
       createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
       isActive: true,
-      subscriptionType: app_user.SubscriptionType.free,
-      subscriptionExpiry: null,
-      profile: app_user.UserProfile(
-        preferences: app_user.UserPreferences(
-          language: 'tr',
-          currency: 'TL',
-          timezone: 'Europe/Istanbul',
-          emailNotifications: true,
-          pushNotifications: true,
-          smsNotifications: false,
-          theme: 'light',
-          analytics: true,
-          marketing: false,
-        ),
-        lastLoginAt: DateTime.now(),
-        totalBusinesses: 0,
-        totalProducts: 0,
-      ),
+      isEmailVerified: currentUser?.emailVerified ?? false,
+      lastLoginAt: DateTime.now(),
     );
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'pages/admin_login_page.dart';
 import 'pages/admin_dashboard_page.dart';
-import 'pages/business_management_page.dart';
+import '../business/pages/business_management_page.dart' hide AdminManagementPage;
 import 'pages/customer_management_page.dart';
 import 'pages/admin_management_page.dart';
 import 'pages/analytics_page.dart';

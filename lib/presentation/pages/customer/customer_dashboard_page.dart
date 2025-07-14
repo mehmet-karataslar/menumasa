@@ -606,7 +606,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      favorite.businessName,
+                      favorite.businessName ?? 'İsimsiz İşletme',
                       style: AppTypography.bodyMedium.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -641,7 +641,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => MenuPage(businessId: business.businessId),
+                builder: (context) => MenuPage(businessId: business.id),
               ),
             );
           },
@@ -752,7 +752,39 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             ),
             itemCount: favorites.length,
             itemBuilder: (context, index) {
-              return _buildFavoriteBusinessGridCard(favorites[index]);
+              final favorite = favorites[index];
+              final business = _nearbyBusinesses.firstWhere(
+                (b) => b.id == favorite.businessId,
+                orElse: () => Business(
+                  id: favorite.businessId,
+                  ownerId: '',
+                  businessName: favorite.businessName ?? 'İsimsiz İşletme',
+                  businessDescription: '',
+                  businessType: 'Restoran',
+                  businessAddress: '',
+                  address: Address(
+                    street: '',
+                    city: '',
+                    district: '',
+                    postalCode: '',
+                    coordinates: null,
+                  ),
+                  contactInfo: ContactInfo(
+                    phone: '',
+                    email: '',
+                  ),
+                  menuSettings: MenuSettings.defaultRestaurant(),
+                  settings: BusinessSettings.defaultRestaurant(),
+                  stats: BusinessStats.empty(),
+                  isActive: false,
+                  isOpen: false,
+                  isApproved: false,
+                  status: BusinessStatus.pending,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              );
+              return _buildFavoriteBusinessGridCard(favorite);
             },
           );
   }
@@ -816,7 +848,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    favorite.businessName,
+                    favorite.businessName ?? 'İsimsiz İşletme',
                     style: AppTypography.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -848,7 +880,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MenuPage(businessId: business.businessId),
+              builder: (context) => MenuPage(businessId: business.id),
             ),
           );
         },

@@ -78,7 +78,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
   Future<void> _loadProducts() async {
     try {
       final products = await _firestoreService.getProducts(
-        businessId: widget.business.businessId,
+        businessId: widget.business.id,
       );
       setState(() {
         _products = products;
@@ -91,7 +91,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
   Future<void> _loadCategories() async {
     try {
       final categories = await _firestoreService.getCategories(
-        businessId: widget.business.businessId,
+        businessId: widget.business.id,
       );
       setState(() {
         _categories = categories;
@@ -105,7 +105,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
     if (widget.customerData != null) {
       setState(() {
         _isFavorite = widget.customerData!.favorites
-            .any((f) => f.businessId == widget.business.businessId);
+            .any((f) => f.businessId == widget.business.id);
       });
     }
   }
@@ -162,7 +162,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
             context,
             MaterialPageRoute(
               builder: (context) => MenuPage(
-                businessId: widget.business.businessId,
+                businessId: widget.business.id,
               ),
             ),
           );

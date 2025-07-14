@@ -9,15 +9,15 @@ import 'core/services/firestore_service.dart';
 import 'presentation/pages/customer/menu_page.dart';
 import 'presentation/pages/customer/product_detail_page.dart';
 import 'admin/admin.dart';
-import 'presentation/pages/admin/category_management_page.dart';
-import 'presentation/pages/admin/product_management_page.dart';
-import 'presentation/pages/admin/qr_code_management_page.dart';
-import 'presentation/pages/admin/business_info_page.dart';
-import 'presentation/pages/admin/menu_settings_page.dart';
-import 'presentation/pages/admin/discount_management_page.dart';
-import 'presentation/pages/admin/orders_page.dart';
+import 'presentation/pages/business/category_management_page.dart';
+import 'presentation/pages/business/product_management_page.dart';
+import 'presentation/pages/business/qr_management_page.dart';
+import 'presentation/pages/business/business_profile_page.dart';
+import 'presentation/pages/business/menu_settings_page.dart';
+import 'presentation/pages/business/discount_management_page.dart';
+import 'presentation/pages/business/order_management_page.dart';
 import 'presentation/pages/customer/customer_orders_page.dart';
-import 'presentation/pages/admin/responsive_admin_dashboard.dart';
+import 'presentation/pages/business/business_dashboard_page.dart';
 import 'presentation/pages/auth/login_page.dart';
 import 'presentation/pages/auth/register_page.dart';
 import 'presentation/pages/auth/business_register_page.dart';
@@ -242,7 +242,7 @@ class AdminDashboardRouterPage extends StatelessWidget {
       return const NotFoundPage();
     }
 
-    return AdminDashboardPage(businessId: businessId);
+    return ResponsiveAdminDashboard(businessId: businessId);
   }
 }
 
@@ -282,9 +282,9 @@ class ProductManagementRouterPage extends StatelessWidget {
   }
 }
 
-// Business Info router page
-class BusinessInfoRouterPage extends StatelessWidget {
-  const BusinessInfoRouterPage({Key? key}) : super(key: key);
+// Business Profile router page
+class BusinessProfileRouterPage extends StatelessWidget {
+  const BusinessProfileRouterPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +296,7 @@ class BusinessInfoRouterPage extends StatelessWidget {
       return const NotFoundPage();
     }
 
-    return BusinessInfoPage(businessId: businessId);
+    return BusinessProfilePage(businessId: businessId);
   }
 }
 
@@ -318,9 +318,9 @@ class MenuSettingsRouterPage extends StatelessWidget {
   }
 }
 
-// QR Code Management router page
-class QRCodeManagementRouterPage extends StatelessWidget {
-  const QRCodeManagementRouterPage({Key? key}) : super(key: key);
+// QR Management router page
+class QRManagementRouterPage extends StatelessWidget {
+  const QRManagementRouterPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +332,7 @@ class QRCodeManagementRouterPage extends StatelessWidget {
       return const NotFoundPage();
     }
 
-    return QRCodeManagementPage(businessId: businessId);
+    return QRManagementPage(businessId: businessId);
   }
 }
 
@@ -354,9 +354,9 @@ class DiscountManagementRouterPage extends StatelessWidget {
   }
 }
 
-// Orders router page
-class OrdersRouterPage extends StatelessWidget {
-  const OrdersRouterPage({Key? key}) : super(key: key);
+// Order Management router page
+class OrderManagementRouterPage extends StatelessWidget {
+  const OrderManagementRouterPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +368,7 @@ class OrdersRouterPage extends StatelessWidget {
       return const NotFoundPage();
     }
 
-    return OrdersPage(businessId: businessId);
+    return OrderManagementPage(businessId: businessId);
   }
 }
 

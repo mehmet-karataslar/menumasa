@@ -1,49 +1,384 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'business.dart';
+
+// =============================================================================
+// USER TYPES AND ROLES
+// =============================================================================
+
+enum UserType {
+  customer('customer', 'Müşteri'),
+  business('business', 'İşletme'),
+  admin('admin', 'Yönetici');
+
+  const UserType(this.value, this.displayName);
+  final String value;
+  final String displayName;
+
+  static UserType fromString(String value) {
+    return UserType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => UserType.customer,
+    );
+  }
+}
+
+enum CustomerRole {
+  regular('regular', 'Normal Müşteri'),
+  premium('premium', 'Premium Müşteri'),
+  vip('vip', 'VIP Müşteri');
+
+  const CustomerRole(this.value, this.displayName);
+  final String value;
+  final String displayName;
+
+  static CustomerRole fromString(String value) {
+    return CustomerRole.values.firstWhere(
+      (role) => role.value == value,
+      orElse: () => CustomerRole.regular,
+    );
+  }
+}
+
+enum BusinessRole {
+  owner('owner', 'İşletme Sahibi', 'Tam işletme kontrolü'),
+  manager('manager', 'Yönetici', 'Genel yönetim yetkileri'),
+  staff('staff', 'Personel', 'Temel işlemler'),
+  cashier('cashier', 'Kasiyer', 'Sipariş ve ödeme işlemleri');
+
+  const BusinessRole(this.value, this.displayName, this.description);
+  final String value;
+  final String displayName;
+  final String description;
+
+  static BusinessRole fromString(String value) {
+    return BusinessRole.values.firstWhere(
+      (role) => role.value == value,
+      orElse: () => BusinessRole.staff,
+    );
+  }
+}
+
+enum AdminRole {
+  superAdmin('super_admin', 'Süper Admin', 'Tam sistem kontrolü'),
+  systemAdmin('system_admin', 'Sistem Admin', 'Sistem yönetimi'),
+  admin('admin', 'Admin', 'Genel yönetim'),
+  moderator('moderator', 'Moderatör', 'İçerik moderasyonu'),
+  support('support', 'Destek', 'Müşteri desteği');
+
+  const AdminRole(this.value, this.displayName, this.description);
+  final String value;
+  final String displayName;
+  final String description;
+
+  static AdminRole fromString(String value) {
+    return AdminRole.values.firstWhere(
+      (role) => role.value == value,
+      orElse: () => AdminRole.support,
+    );
+  }
+}
+
+// =============================================================================
+// PERMISSIONS
+// =============================================================================
+
+enum BusinessPermission {
+  // Menu Management
+  viewMenu('view_menu', 'Menüyü Görüntüle'),
+  editMenu('edit_menu', 'Menüyü Düzenle'),
+  addProducts('add_products', 'Ürün Ekle'),
+  editProducts('edit_products', 'Ürün Düzenle'),
+  deleteProducts('delete_products', 'Ürün Sil'),
+  manageCategories('manage_categories', 'Kategorileri Yönet'),
+  
+  // Order Management
+  viewOrders('view_orders', 'Siparişleri Görüntüle'),
+  editOrders('edit_orders', 'Siparişleri Düzenle'),
+  cancelOrders('cancel_orders', 'Siparişleri İptal Et'),
+  managePayments('manage_payments', 'Ödemeleri Yönet'),
+  
+  // Business Management
+  viewAnalytics('view_analytics', 'Analitikleri Görüntüle'),
+  manageSettings('manage_settings', 'Ayarları Yönet'),
+  manageStaff('manage_staff', 'Personeli Yönet'),
+  manageDiscounts('manage_discounts', 'İndirimleri Yönet'),
+  manageQrCodes('manage_qr_codes', 'QR Kodları Yönet'),
+  
+  // Customer Management
+  viewCustomers('view_customers', 'Müşterileri Görüntüle'),
+  manageCustomers('manage_customers', 'Müşterileri Yönet'),
+  
+  // Reports
+  viewReports('view_reports', 'Raporları Görüntüle'),
+  exportData('export_data', 'Veri Dışa Aktar');
+
+  const BusinessPermission(this.value, this.displayName);
+  final String value;
+  final String displayName;
+
+  static BusinessPermission fromString(String value) {
+    return BusinessPermission.values.firstWhere(
+      (perm) => perm.value == value,
+      orElse: () => BusinessPermission.viewMenu,
+    );
+  }
+}
+
+enum AdminPermission {
+  // User Management
+  viewUsers('view_users', 'Kullanıcıları Görüntüle'),
+  createUsers('create_users', 'Kullanıcı Oluştur'),
+  editUsers('edit_users', 'Kullanıcı Düzenle'),
+  deleteUsers('delete_users', 'Kullanıcı Sil'),
+  viewCustomers('view_customers', 'Müşterileri Görüntüle'),
+  editCustomers('edit_customers', 'Müşterileri Düzenle'),
+  
+  // Business Management
+  viewBusinesses('view_businesses', 'İşletmeleri Görüntüle'),
+  createBusinesses('create_businesses', 'İşletme Oluştur'),
+  editBusinesses('edit_businesses', 'İşletme Düzenle'),
+  deleteBusinesses('delete_businesses', 'İşletme Sil'),
+  approveBusinesses('approve_businesses', 'İşletme Onayla'),
+  
+  // Order Management
+  viewOrders('view_orders', 'Siparişleri Görüntüle'),
+  editOrders('edit_orders', 'Siparişleri Düzenle'),
+  deleteOrders('delete_orders', 'Siparişleri Sil'),
+  
+  // System Management
+  viewAnalytics('view_analytics', 'Analitikleri Görüntüle'),
+  manageSystemSettings('manage_system_settings', 'Sistem Ayarlarını Yönet'),
+  viewActivityLogs('view_activity_logs', 'Aktivite Loglarını Görüntüle'),
+  manageAdminUsers('manage_admin_users', 'Admin Kullanıcılarını Yönet'),
+  manageAdmins('manage_admins', 'Adminleri Yönet'),
+  manageSystem('manage_system', 'Sistemi Yönet'),
+  viewAuditLogs('view_audit_logs', 'Denetim Loglarını Görüntüle'),
+  
+  // Content Management
+  moderateContent('moderate_content', 'İçerik Modere Et'),
+  manageCategories('manage_categories', 'Kategorileri Yönet'),
+  manageProducts('manage_products', 'Ürünleri Yönet'),
+  
+  // Reports
+  viewReports('view_reports', 'Raporları Görüntüle');
+
+  const AdminPermission(this.value, this.displayName);
+  final String value;
+  final String displayName;
+
+  static AdminPermission fromString(String value) {
+    return AdminPermission.values.firstWhere(
+      (perm) => perm.value == value,
+      orElse: () => AdminPermission.viewUsers,
+    );
+  }
+}
+
+// =============================================================================
+// MAIN USER MODEL
+// =============================================================================
 
 class User {
-  final String uid;
+  final String id;
   final String email;
   final String name;
   final String? phone;
+  final UserType userType;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
-  final SubscriptionType subscriptionType;
-  final DateTime? subscriptionExpiry;
-  final UserProfile profile;
+  final bool isEmailVerified;
+  final String? avatarUrl;
+  final DateTime? lastLoginAt;
+  final String? lastLoginIp;
+  final String? sessionToken;
+  
+  // Role-specific data
+  final CustomerData? customerData;
+  final BusinessData? businessData;
+  final AdminData? adminData;
 
   User({
-    required this.uid,
+    required this.id,
     required this.email,
     required this.name,
     this.phone,
+    required this.userType,
     required this.createdAt,
     required this.updatedAt,
     required this.isActive,
-    required this.subscriptionType,
-    this.subscriptionExpiry,
-    required this.profile,
+    required this.isEmailVerified,
+    this.avatarUrl,
+    this.lastLoginAt,
+    this.lastLoginIp,
+    this.sessionToken,
+    this.customerData,
+    this.businessData,
+    this.adminData,
   });
 
-  factory User.fromJson(Map<String, dynamic> data, {String? id}) {
+  // Factory methods for different user types
+  factory User.customer({
+    required String id,
+    required String email,
+    required String name,
+    String? phone,
+    required DateTime createdAt,
+    DateTime? updatedAt,
+    bool isActive = true,
+    bool isEmailVerified = false,
+    String? avatarUrl,
+    DateTime? lastLoginAt,
+    String? lastLoginIp,
+    String? sessionToken,
+    CustomerData? customerData,
+  }) {
     return User(
-      uid: id ?? data['uid'] ?? '',
-      email: data['email'] ?? '',
-      name: data['name'] ?? '',
-      phone: data['phone'],
-      createdAt: _parseDateTime(data['createdAt']),
-      updatedAt: _parseDateTime(data['updatedAt']),
-      isActive: data['isActive'] ?? true,
-      subscriptionType: SubscriptionType.fromString(
-        data['subscriptionType'] ?? 'free',
-      ),
-      subscriptionExpiry: data['subscriptionExpiry'] != null
-          ? _parseDateTime(data['subscriptionExpiry'])
-          : null,
-      profile: UserProfile.fromMap(data['profile'] ?? {}),
+      id: id,
+      email: email,
+      name: name,
+      phone: phone,
+      userType: UserType.customer,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? createdAt,
+      isActive: isActive,
+      isEmailVerified: isEmailVerified,
+      avatarUrl: avatarUrl,
+      lastLoginAt: lastLoginAt,
+      lastLoginIp: lastLoginIp,
+      sessionToken: sessionToken,
+      customerData: customerData ?? CustomerData(),
     );
   }
 
+  factory User.business({
+    required String id,
+    required String email,
+    required String name,
+    String? phone,
+    required DateTime createdAt,
+    DateTime? updatedAt,
+    bool isActive = true,
+    bool isEmailVerified = false,
+    String? avatarUrl,
+    DateTime? lastLoginAt,
+    String? lastLoginIp,
+    String? sessionToken,
+    required BusinessData businessData,
+  }) {
+    return User(
+      id: id,
+      email: email,
+      name: name,
+      phone: phone,
+      userType: UserType.business,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? createdAt,
+      isActive: isActive,
+      isEmailVerified: isEmailVerified,
+      avatarUrl: avatarUrl,
+      lastLoginAt: lastLoginAt,
+      lastLoginIp: lastLoginIp,
+      sessionToken: sessionToken,
+      businessData: businessData,
+    );
+  }
+
+  factory User.admin({
+    required String id,
+    required String email,
+    required String name,
+    String? phone,
+    required DateTime createdAt,
+    DateTime? updatedAt,
+    bool isActive = true,
+    bool isEmailVerified = false,
+    String? avatarUrl,
+    DateTime? lastLoginAt,
+    String? lastLoginIp,
+    String? sessionToken,
+    required AdminData adminData,
+  }) {
+    return User(
+      id: id,
+      email: email,
+      name: name,
+      phone: phone,
+      userType: UserType.admin,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? createdAt,
+      isActive: isActive,
+      isEmailVerified: isEmailVerified,
+      avatarUrl: avatarUrl,
+      lastLoginAt: lastLoginAt,
+      lastLoginIp: lastLoginIp,
+      sessionToken: sessionToken,
+      adminData: adminData,
+    );
+  }
+
+  // JSON serialization
+  factory User.fromJson(Map<String, dynamic> json, {String? id}) {
+    final userType = UserType.fromString(json['userType'] ?? 'customer');
+    
+    return User(
+      id: id ?? json['id'] ?? '',
+      email: json['email'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'],
+      userType: userType,
+      createdAt: _parseDateTime(json['createdAt']),
+      updatedAt: _parseDateTime(json['updatedAt']),
+      isActive: json['isActive'] ?? true,
+      isEmailVerified: json['isEmailVerified'] ?? false,
+      avatarUrl: json['avatarUrl'],
+      lastLoginAt: json['lastLoginAt'] != null ? _parseDateTime(json['lastLoginAt']) : null,
+      lastLoginIp: json['lastLoginIp'],
+      sessionToken: json['sessionToken'],
+      customerData: json['customerData'] != null ? CustomerData.fromJson(json['customerData']) : null,
+      businessData: json['businessData'] != null ? BusinessData.fromJson(json['businessData']) : null,
+      adminData: json['adminData'] != null ? AdminData.fromJson(json['adminData']) : null,
+    );
+  }
+
+  factory User.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return User.fromJson({...data, 'id': doc.id});
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'name': name,
+      'phone': phone,
+      'userType': userType.value,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'isActive': isActive,
+      'isEmailVerified': isEmailVerified,
+      'avatarUrl': avatarUrl,
+      'lastLoginAt': lastLoginAt?.toIso8601String(),
+      'lastLoginIp': lastLoginIp,
+      'sessionToken': sessionToken,
+      'customerData': customerData?.toJson(),
+      'businessData': businessData?.toJson(),
+      'adminData': adminData?.toJson(),
+    };
+  }
+
+  Map<String, dynamic> toFirestore() {
+    final data = toJson();
+    data.remove('id');
+    data['createdAt'] = Timestamp.fromDate(createdAt);
+    data['updatedAt'] = Timestamp.fromDate(updatedAt);
+    if (lastLoginAt != null) {
+      data['lastLoginAt'] = Timestamp.fromDate(lastLoginAt!);
+    }
+    return data;
+  }
+
+  // Helper methods
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
     
@@ -58,73 +393,9 @@ class User {
     return DateTime.now();
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'uid': uid,
-      'email': email,
-      'name': name,
-      'phone': phone,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'isActive': isActive,
-      'subscriptionType': subscriptionType.value,
-      'subscriptionExpiry': subscriptionExpiry?.toIso8601String(),
-      'profile': profile.toMap(),
-    };
-  }
-
-  User copyWith({
-    String? uid,
-    String? email,
-    String? name,
-    String? phone,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    bool? isActive,
-    SubscriptionType? subscriptionType,
-    DateTime? subscriptionExpiry,
-    UserProfile? profile,
-  }) {
-    return User(
-      uid: uid ?? this.uid,
-      email: email ?? this.email,
-      name: name ?? this.name,
-      phone: phone ?? this.phone,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      isActive: isActive ?? this.isActive,
-      subscriptionType: subscriptionType ?? this.subscriptionType,
-      subscriptionExpiry: subscriptionExpiry ?? this.subscriptionExpiry,
-      profile: profile ?? this.profile,
-    );
-  }
-
-  // Helper methods
-  bool get hasActiveSubscription {
-    if (subscriptionType == SubscriptionType.free) return true;
-    if (subscriptionExpiry == null) return false;
-    return DateTime.now().isBefore(subscriptionExpiry!);
-  }
-
-  bool get isSubscriptionExpired {
-    if (subscriptionType == SubscriptionType.free) return false;
-    if (subscriptionExpiry == null) return true;
-    return DateTime.now().isAfter(subscriptionExpiry!);
-  }
-
-  int get daysUntilExpiry {
-    if (subscriptionExpiry == null) return 0;
-    return subscriptionExpiry!.difference(DateTime.now()).inDays;
-  }
-
-  bool get isSubscriptionExpiringSoon {
-    return daysUntilExpiry > 0 && daysUntilExpiry <= 7;
-  }
-
-  String get displayName {
-    return name.isNotEmpty ? name : email.split('@').first;
-  }
-
+  // Getters
+  String get displayName => name.isNotEmpty ? name : email.split('@').first;
+  String get username => email.split('@').first;
   String get initials {
     final names = name.split(' ');
     if (names.length >= 2) {
@@ -135,276 +406,706 @@ class User {
     return email[0].toUpperCase();
   }
 
-  @override
-  String toString() {
-    return 'User(uid: $uid, email: $email, name: $name, subscriptionType: $subscriptionType, isActive: $isActive)';
+  // Type checking
+  bool get isCustomer => userType == UserType.customer;
+  bool get isBusiness => userType == UserType.business;
+  bool get isAdmin => userType == UserType.admin;
+
+  // Permission checking
+  bool hasBusinessPermission(BusinessPermission permission) {
+    if (!isBusiness || businessData == null) return false;
+    return businessData!.hasPermission(permission);
   }
 
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is User && other.uid == uid;
+  bool hasAdminPermission(AdminPermission permission) {
+    if (!isAdmin || adminData == null) return false;
+    return adminData!.hasPermission(permission);
   }
 
-  @override
-  int get hashCode => uid.hashCode;
-}
-
-class UserProfile {
-  final String? avatarUrl;
-  final String? bio;
-  final String? company;
-  final String? website;
-  final String? location;
-  final UserPreferences preferences;
-  final DateTime? lastLoginAt;
-  final int totalBusinesses;
-  final int totalProducts;
-  final CustomerData? customerData; // Müşteri verileri
-
-  UserProfile({
-    this.avatarUrl,
-    this.bio,
-    this.company,
-    this.website,
-    this.location,
-    required this.preferences,
-    this.lastLoginAt,
-    required this.totalBusinesses,
-    required this.totalProducts,
-    this.customerData,
-  });
-
-  factory UserProfile.fromMap(Map<String, dynamic> map) {
-    return UserProfile(
-      avatarUrl: map['avatarUrl'],
-      bio: map['bio'],
-      company: map['company'],
-      website: map['website'],
-      location: map['location'],
-      preferences: UserPreferences.fromMap(map['preferences'] ?? {}),
-      lastLoginAt: map['lastLoginAt'] != null
-          ? User._parseDateTime(map['lastLoginAt'])
-          : null,
-      totalBusinesses: map['totalBusinesses'] ?? 0,
-      totalProducts: map['totalProducts'] ?? 0,
-      customerData: map['customerData'] != null
-          ? CustomerData.fromMap(map['customerData'])
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'avatarUrl': avatarUrl,
-      'bio': bio,
-      'company': company,
-      'website': website,
-      'location': location,
-      'preferences': preferences.toMap(),
-      'lastLoginAt': lastLoginAt?.toIso8601String(),
-      'totalBusinesses': totalBusinesses,
-      'totalProducts': totalProducts,
-      'customerData': customerData?.toMap(),
-    };
-  }
-
-  UserProfile copyWith({
+  // Copy with
+  User copyWith({
+    String? id,
+    String? email,
+    String? name,
+    String? phone,
+    UserType? userType,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isActive,
+    bool? isEmailVerified,
     String? avatarUrl,
-    String? bio,
-    String? company,
-    String? website,
-    String? location,
-    UserPreferences? preferences,
     DateTime? lastLoginAt,
-    int? totalBusinesses,
-    int? totalProducts,
+    String? lastLoginIp,
+    String? sessionToken,
     CustomerData? customerData,
+    BusinessData? businessData,
+    AdminData? adminData,
   }) {
-    return UserProfile(
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      userType: userType ?? this.userType,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isActive: isActive ?? this.isActive,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       avatarUrl: avatarUrl ?? this.avatarUrl,
-      bio: bio ?? this.bio,
-      company: company ?? this.company,
-      website: website ?? this.website,
-      location: location ?? this.location,
-      preferences: preferences ?? this.preferences,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
-      totalBusinesses: totalBusinesses ?? this.totalBusinesses,
-      totalProducts: totalProducts ?? this.totalProducts,
+      lastLoginIp: lastLoginIp ?? this.lastLoginIp,
+      sessionToken: sessionToken ?? this.sessionToken,
       customerData: customerData ?? this.customerData,
+      businessData: businessData ?? this.businessData,
+      adminData: adminData ?? this.adminData,
     );
   }
 
   @override
   String toString() {
-    return 'UserProfile(company: $company, totalBusinesses: $totalBusinesses, totalProducts: $totalProducts)';
+    return 'User(id: $id, email: $email, name: $name, userType: $userType, isActive: $isActive)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is UserProfile &&
-        other.avatarUrl == avatarUrl &&
-        other.company == company;
+    return other is User && other.id == id;
   }
 
   @override
-  int get hashCode => avatarUrl.hashCode ^ company.hashCode;
+  int get hashCode => id.hashCode;
 }
 
-// Müşteri verileri sınıfı
+// =============================================================================
+// CUSTOMER DATA
+// =============================================================================
+
 class CustomerData {
-  final List<CustomerOrder> orderHistory;
-  final List<CustomerFavorite> favorites;
-  final List<CustomerVisit> visitHistory;
-  final CustomerStats stats;
+  final CustomerRole role;
+  final String? address;
+  final String? city;
+  final String? district;
+  final String? postalCode;
+  final Coordinates? location;
   final CustomerPreferences preferences;
+  final CustomerStats stats;
+  final List<String> favoriteBusinessIds;
+  final List<String> recentBusinessIds;
+  final List<CustomerFavorite> favorites;
+  final List<CustomerOrder> orderHistory;
   final List<CustomerAddress> addresses;
-  final CustomerPaymentInfo? paymentInfo;
+  final List<CustomerPaymentInfo> paymentMethods;
+  final DateTime? lastOrderAt;
+  final int totalOrders;
+  final double totalSpent;
+  final bool isPremium;
+  final DateTime? premiumExpiry;
 
   CustomerData({
-    required this.orderHistory,
-    required this.favorites,
-    required this.visitHistory,
-    required this.stats,
-    required this.preferences,
-    required this.addresses,
-    this.paymentInfo,
+    this.role = CustomerRole.regular,
+    this.address,
+    this.city,
+    this.district,
+    this.postalCode,
+    this.location,
+    this.preferences = const CustomerPreferences(),
+    this.stats = const CustomerStats(),
+    this.favoriteBusinessIds = const [],
+    this.recentBusinessIds = const [],
+    this.favorites = const [],
+    this.orderHistory = const [],
+    this.addresses = const [],
+    this.paymentMethods = const [],
+    this.lastOrderAt,
+    this.totalOrders = 0,
+    this.totalSpent = 0.0,
+    this.isPremium = false,
+    this.premiumExpiry,
   });
 
-  factory CustomerData.fromMap(Map<String, dynamic> map) {
+  factory CustomerData.fromJson(Map<String, dynamic> json) {
     return CustomerData(
-      orderHistory: (map['orderHistory'] as List<dynamic>?)
-              ?.map((e) => CustomerOrder.fromMap(e))
-              .toList() ??
-          [],
-      favorites: (map['favorites'] as List<dynamic>?)
-              ?.map((e) => CustomerFavorite.fromMap(e))
-              .toList() ??
-          [],
-      visitHistory: (map['visitHistory'] as List<dynamic>?)
-              ?.map((e) => CustomerVisit.fromMap(e))
-              .toList() ??
-          [],
-      stats: CustomerStats.fromMap(map['stats'] ?? {}),
-      preferences: CustomerPreferences.fromMap(map['preferences'] ?? {}),
-      addresses: (map['addresses'] as List<dynamic>?)
-              ?.map((e) => CustomerAddress.fromMap(e))
-              .toList() ??
-          [],
-      paymentInfo: map['paymentInfo'] != null
-          ? CustomerPaymentInfo.fromMap(map['paymentInfo'])
-          : null,
+      role: CustomerRole.fromString(json['role'] ?? 'regular'),
+      address: json['address'],
+      city: json['city'],
+      district: json['district'],
+      postalCode: json['postalCode'],
+      location: json['location'] != null ? Coordinates.fromJson(json['location']) : null,
+      preferences: CustomerPreferences.fromJson(json['preferences'] ?? {}),
+      stats: CustomerStats.fromJson(json['stats'] ?? {}),
+      favoriteBusinessIds: List<String>.from(json['favoriteBusinessIds'] ?? []),
+      recentBusinessIds: List<String>.from(json['recentBusinessIds'] ?? []),
+      favorites: (json['favorites'] as List<dynamic>? ?? [])
+          .map((f) => CustomerFavorite.fromJson(f))
+          .toList(),
+      orderHistory: (json['orderHistory'] as List<dynamic>? ?? [])
+          .map((o) => CustomerOrder.fromJson(o))
+          .toList(),
+      addresses: (json['addresses'] as List<dynamic>? ?? [])
+          .map((a) => CustomerAddress.fromJson(a))
+          .toList(),
+      paymentMethods: (json['paymentMethods'] as List<dynamic>? ?? [])
+          .map((p) => CustomerPaymentInfo.fromJson(p))
+          .toList(),
+      lastOrderAt: json['lastOrderAt'] != null ? DateTime.parse(json['lastOrderAt']) : null,
+      totalOrders: json['totalOrders'] ?? 0,
+      totalSpent: (json['totalSpent'] ?? 0.0).toDouble(),
+      isPremium: json['isPremium'] ?? false,
+      premiumExpiry: json['premiumExpiry'] != null ? DateTime.parse(json['premiumExpiry']) : null,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  // Alias for fromJson to match the expected method name
+  factory CustomerData.fromMap(Map<String, dynamic> map) => CustomerData.fromJson(map);
+
+  Map<String, dynamic> toJson() {
     return {
-      'orderHistory': orderHistory.map((e) => e.toMap()).toList(),
-      'favorites': favorites.map((e) => e.toMap()).toList(),
-      'visitHistory': visitHistory.map((e) => e.toMap()).toList(),
-      'stats': stats.toMap(),
-      'preferences': preferences.toMap(),
-      'addresses': addresses.map((e) => e.toMap()).toList(),
-      'paymentInfo': paymentInfo?.toMap(),
+      'role': role.value,
+      'address': address,
+      'city': city,
+      'district': district,
+      'postalCode': postalCode,
+      'location': location?.toJson(),
+      'preferences': preferences.toJson(),
+      'stats': stats.toJson(),
+      'favoriteBusinessIds': favoriteBusinessIds,
+      'recentBusinessIds': recentBusinessIds,
+      'favorites': favorites.map((f) => f.toJson()).toList(),
+      'orderHistory': orderHistory.map((o) => o.toJson()).toList(),
+      'addresses': addresses.map((a) => a.toJson()).toList(),
+      'paymentMethods': paymentMethods.map((p) => p.toJson()).toList(),
+      'lastOrderAt': lastOrderAt?.toIso8601String(),
+      'totalOrders': totalOrders,
+      'totalSpent': totalSpent,
+      'isPremium': isPremium,
+      'premiumExpiry': premiumExpiry?.toIso8601String(),
     };
   }
 
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
+
   CustomerData copyWith({
-    List<CustomerOrder>? orderHistory,
-    List<CustomerFavorite>? favorites,
-    List<CustomerVisit>? visitHistory,
-    CustomerStats? stats,
+    CustomerRole? role,
+    String? address,
+    String? city,
+    String? district,
+    String? postalCode,
+    Coordinates? location,
     CustomerPreferences? preferences,
+    CustomerStats? stats,
+    List<String>? favoriteBusinessIds,
+    List<String>? recentBusinessIds,
+    List<CustomerFavorite>? favorites,
+    List<CustomerOrder>? orderHistory,
     List<CustomerAddress>? addresses,
-    CustomerPaymentInfo? paymentInfo,
+    List<CustomerPaymentInfo>? paymentMethods,
+    DateTime? lastOrderAt,
+    int? totalOrders,
+    double? totalSpent,
+    bool? isPremium,
+    DateTime? premiumExpiry,
   }) {
     return CustomerData(
-      orderHistory: orderHistory ?? this.orderHistory,
-      favorites: favorites ?? this.favorites,
-      visitHistory: visitHistory ?? this.visitHistory,
-      stats: stats ?? this.stats,
+      role: role ?? this.role,
+      address: address ?? this.address,
+      city: city ?? this.city,
+      district: district ?? this.district,
+      postalCode: postalCode ?? this.postalCode,
+      location: location ?? this.location,
       preferences: preferences ?? this.preferences,
+      stats: stats ?? this.stats,
+      favoriteBusinessIds: favoriteBusinessIds ?? this.favoriteBusinessIds,
+      recentBusinessIds: recentBusinessIds ?? this.recentBusinessIds,
+      favorites: favorites ?? this.favorites,
+      orderHistory: orderHistory ?? this.orderHistory,
       addresses: addresses ?? this.addresses,
-      paymentInfo: paymentInfo ?? this.paymentInfo,
+      paymentMethods: paymentMethods ?? this.paymentMethods,
+      lastOrderAt: lastOrderAt ?? this.lastOrderAt,
+      totalOrders: totalOrders ?? this.totalOrders,
+      totalSpent: totalSpent ?? this.totalSpent,
+      isPremium: isPremium ?? this.isPremium,
+      premiumExpiry: premiumExpiry ?? this.premiumExpiry,
     );
+  }
+}
+
+class CustomerPreferences {
+  final bool pushNotifications;
+  final bool emailNotifications;
+  final bool smsNotifications;
+  final String language;
+  final String currency;
+  final bool darkMode;
+  final double maxDeliveryDistance;
+  final List<String> dietaryRestrictions;
+  final List<String> favoriteCategories;
+
+  const CustomerPreferences({
+    this.pushNotifications = true,
+    this.emailNotifications = true,
+    this.smsNotifications = false,
+    this.language = 'tr',
+    this.currency = 'TRY',
+    this.darkMode = false,
+    this.maxDeliveryDistance = 10.0,
+    this.dietaryRestrictions = const [],
+    this.favoriteCategories = const [],
+  });
+
+  factory CustomerPreferences.fromJson(Map<String, dynamic> json) {
+    return CustomerPreferences(
+      pushNotifications: json['pushNotifications'] ?? true,
+      emailNotifications: json['emailNotifications'] ?? true,
+      smsNotifications: json['smsNotifications'] ?? false,
+      language: json['language'] ?? 'tr',
+      currency: json['currency'] ?? 'TRY',
+      darkMode: json['darkMode'] ?? false,
+      maxDeliveryDistance: (json['maxDeliveryDistance'] ?? 10.0).toDouble(),
+      dietaryRestrictions: List<String>.from(json['dietaryRestrictions'] ?? []),
+      favoriteCategories: List<String>.from(json['favoriteCategories'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'pushNotifications': pushNotifications,
+      'emailNotifications': emailNotifications,
+      'smsNotifications': smsNotifications,
+      'language': language,
+      'currency': currency,
+      'darkMode': darkMode,
+      'maxDeliveryDistance': maxDeliveryDistance,
+      'dietaryRestrictions': dietaryRestrictions,
+      'favoriteCategories': favoriteCategories,
+    };
+  }
+
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
+}
+
+class CustomerStats {
+  final int totalOrders;
+  final double totalSpent;
+  final int favoriteBusinesses;
+  final int favoriteBusinessCount;
+  final int totalVisits;
+  final int reviewsGiven;
+  final double averageRating;
+  final DateTime? firstOrderAt;
+  final DateTime? lastOrderAt;
+  final Map<String, int> categoryPreferences;
+  final Map<String, double> businessSpending;
+
+  const CustomerStats({
+    this.totalOrders = 0,
+    this.totalSpent = 0.0,
+    this.favoriteBusinesses = 0,
+    this.favoriteBusinessCount = 0,
+    this.totalVisits = 0,
+    this.reviewsGiven = 0,
+    this.averageRating = 0.0,
+    this.firstOrderAt,
+    this.lastOrderAt,
+    this.categoryPreferences = const {},
+    this.businessSpending = const {},
+  });
+
+  factory CustomerStats.fromJson(Map<String, dynamic> json) {
+    return CustomerStats(
+      totalOrders: json['totalOrders'] ?? 0,
+      totalSpent: (json['totalSpent'] ?? 0.0).toDouble(),
+      favoriteBusinesses: json['favoriteBusinesses'] ?? 0,
+      favoriteBusinessCount: json['favoriteBusinessCount'] ?? 0,
+      totalVisits: json['totalVisits'] ?? 0,
+      reviewsGiven: json['reviewsGiven'] ?? 0,
+      averageRating: (json['averageRating'] ?? 0.0).toDouble(),
+      firstOrderAt: json['firstOrderAt'] != null ? DateTime.parse(json['firstOrderAt']) : null,
+      lastOrderAt: json['lastOrderAt'] != null ? DateTime.parse(json['lastOrderAt']) : null,
+      categoryPreferences: Map<String, int>.from(json['categoryPreferences'] ?? {}),
+      businessSpending: Map<String, double>.from(json['businessSpending'] ?? {}),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'totalOrders': totalOrders,
+      'totalSpent': totalSpent,
+      'favoriteBusinesses': favoriteBusinesses,
+      'favoriteBusinessCount': favoriteBusinessCount,
+      'totalVisits': totalVisits,
+      'reviewsGiven': reviewsGiven,
+      'averageRating': averageRating,
+      'firstOrderAt': firstOrderAt?.toIso8601String(),
+      'lastOrderAt': lastOrderAt?.toIso8601String(),
+      'categoryPreferences': categoryPreferences,
+      'businessSpending': businessSpending,
+    };
+  }
+}
+
+// =============================================================================
+// BUSINESS DATA
+// =============================================================================
+
+class BusinessData {
+  final BusinessRole role;
+  final List<BusinessPermission> permissions;
+  final List<String> businessIds;
+  final BusinessStats stats;
+  final BusinessSettings settings;
+  final List<String> staffIds;
+  final List<String> managedCategoryIds;
+
+  BusinessData({
+    this.role = BusinessRole.staff,
+    this.permissions = const [],
+    this.businessIds = const [],
+    required this.stats,
+    required this.settings,
+    this.staffIds = const [],
+    this.managedCategoryIds = const [],
+  });
+
+  factory BusinessData.fromJson(Map<String, dynamic> json) {
+    return BusinessData(
+      role: BusinessRole.fromString(json['role'] ?? 'staff'),
+      permissions: (json['permissions'] as List<dynamic>? ?? [])
+          .map((perm) => BusinessPermission.fromString(perm))
+          .toList(),
+      businessIds: List<String>.from(json['businessIds'] ?? []),
+      stats: BusinessStats.fromJson(json['stats'] ?? {}),
+      settings: BusinessSettings.fromJson(json['settings'] ?? {}),
+      staffIds: List<String>.from(json['staffIds'] ?? []),
+      managedCategoryIds: List<String>.from(json['managedCategoryIds'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'role': role.value,
+      'permissions': permissions.map((p) => p.value).toList(),
+      'businessIds': businessIds,
+      'stats': stats.toJson(),
+      'settings': settings.toJson(),
+      'staffIds': staffIds,
+      'managedCategoryIds': managedCategoryIds,
+    };
+  }
+
+  // Permission checking
+  bool hasPermission(BusinessPermission permission) {
+    if (role == BusinessRole.owner) return true;
+    return permissions.contains(permission);
+  }
+
+  bool hasAnyPermission(List<BusinessPermission> requiredPermissions) {
+    if (role == BusinessRole.owner) return true;
+    return requiredPermissions.any((perm) => permissions.contains(perm));
+  }
+
+  bool hasAllPermissions(List<BusinessPermission> requiredPermissions) {
+    if (role == BusinessRole.owner) return true;
+    return requiredPermissions.every((perm) => permissions.contains(perm));
+  }
+
+  BusinessData copyWith({
+    BusinessRole? role,
+    List<BusinessPermission>? permissions,
+    List<String>? businessIds,
+    BusinessStats? stats,
+    BusinessSettings? settings,
+    List<String>? staffIds,
+    List<String>? managedCategoryIds,
+  }) {
+    return BusinessData(
+      role: role ?? this.role,
+      permissions: permissions ?? this.permissions,
+      businessIds: businessIds ?? this.businessIds,
+      stats: stats ?? this.stats,
+      settings: settings ?? this.settings,
+      staffIds: staffIds ?? this.staffIds,
+      managedCategoryIds: managedCategoryIds ?? this.managedCategoryIds,
+    );
+  }
+}
+
+// =============================================================================
+// ADMIN DATA
+// =============================================================================
+
+class AdminData {
+  final AdminRole role;
+  final List<AdminPermission> permissions;
+  final AdminStats stats;
+  final AdminSettings settings;
+  final List<String> managedBusinessIds;
+  final List<String> managedCustomerIds;
+
+  AdminData({
+    this.role = AdminRole.support,
+    this.permissions = const [],
+    required this.stats,
+    required this.settings,
+    this.managedBusinessIds = const [],
+    this.managedCustomerIds = const [],
+  });
+
+  factory AdminData.fromJson(Map<String, dynamic> json) {
+    return AdminData(
+      role: AdminRole.fromString(json['role'] ?? 'support'),
+      permissions: (json['permissions'] as List<dynamic>? ?? [])
+          .map((perm) => AdminPermission.fromString(perm))
+          .toList(),
+      stats: AdminStats.fromJson(json['stats'] ?? {}),
+      settings: AdminSettings.fromJson(json['settings'] ?? {}),
+      managedBusinessIds: List<String>.from(json['managedBusinessIds'] ?? []),
+      managedCustomerIds: List<String>.from(json['managedCustomerIds'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'role': role.value,
+      'permissions': permissions.map((p) => p.value).toList(),
+      'stats': stats.toJson(),
+      'settings': settings.toJson(),
+      'managedBusinessIds': managedBusinessIds,
+      'managedCustomerIds': managedCustomerIds,
+    };
+  }
+
+  // Permission checking
+  bool hasPermission(AdminPermission permission) {
+    if (role == AdminRole.superAdmin) return true;
+    return permissions.contains(permission);
+  }
+
+  bool hasAnyPermission(List<AdminPermission> requiredPermissions) {
+    if (role == AdminRole.superAdmin) return true;
+    return requiredPermissions.any((perm) => permissions.contains(perm));
+  }
+
+  bool hasAllPermissions(List<AdminPermission> requiredPermissions) {
+    if (role == AdminRole.superAdmin) return true;
+    return requiredPermissions.every((perm) => permissions.contains(perm));
+  }
+
+  AdminData copyWith({
+    AdminRole? role,
+    List<AdminPermission>? permissions,
+    AdminStats? stats,
+    AdminSettings? settings,
+    List<String>? managedBusinessIds,
+    List<String>? managedCustomerIds,
+  }) {
+    return AdminData(
+      role: role ?? this.role,
+      permissions: permissions ?? this.permissions,
+      stats: stats ?? this.stats,
+      settings: settings ?? this.settings,
+      managedBusinessIds: managedBusinessIds ?? this.managedBusinessIds,
+      managedCustomerIds: managedCustomerIds ?? this.managedCustomerIds,
+    );
+  }
+}
+
+class AdminStats {
+  final int totalUsers;
+  final int totalBusinesses;
+  final int totalOrders;
+  final int totalRevenue;
+  final int totalAdmins;
+  final int totalCustomers;
+  final DateTime? lastActivityAt;
+
+  const AdminStats({
+    this.totalUsers = 0,
+    this.totalBusinesses = 0,
+    this.totalOrders = 0,
+    this.totalRevenue = 0,
+    this.totalAdmins = 0,
+    this.totalCustomers = 0,
+    this.lastActivityAt,
+  });
+
+  factory AdminStats.fromJson(Map<String, dynamic> json) {
+    return AdminStats(
+      totalUsers: json['totalUsers'] ?? 0,
+      totalBusinesses: json['totalBusinesses'] ?? 0,
+      totalOrders: json['totalOrders'] ?? 0,
+      totalRevenue: json['totalRevenue'] ?? 0,
+      totalAdmins: json['totalAdmins'] ?? 0,
+      totalCustomers: json['totalCustomers'] ?? 0,
+      lastActivityAt: json['lastActivityAt'] != null ? DateTime.parse(json['lastActivityAt']) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'totalUsers': totalUsers,
+      'totalBusinesses': totalBusinesses,
+      'totalOrders': totalOrders,
+      'totalRevenue': totalRevenue,
+      'totalAdmins': totalAdmins,
+      'totalCustomers': totalCustomers,
+      'lastActivityAt': lastActivityAt?.toIso8601String(),
+    };
+  }
+}
+
+class AdminSettings {
+  final bool emailNotifications;
+  final bool pushNotifications;
+  final String language;
+  final String timezone;
+  final bool darkMode;
+  final List<String> dashboardWidgets;
+
+  const AdminSettings({
+    this.emailNotifications = true,
+    this.pushNotifications = true,
+    this.language = 'tr',
+    this.timezone = 'Europe/Istanbul',
+    this.darkMode = false,
+    this.dashboardWidgets = const ['users', 'businesses', 'orders', 'revenue'],
+  });
+
+  factory AdminSettings.fromJson(Map<String, dynamic> json) {
+    return AdminSettings(
+      emailNotifications: json['emailNotifications'] ?? true,
+      pushNotifications: json['pushNotifications'] ?? true,
+      language: json['language'] ?? 'tr',
+      timezone: json['timezone'] ?? 'Europe/Istanbul',
+      darkMode: json['darkMode'] ?? false,
+      dashboardWidgets: List<String>.from(json['dashboardWidgets'] ?? ['users', 'businesses', 'orders', 'revenue']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'emailNotifications': emailNotifications,
+      'pushNotifications': pushNotifications,
+      'language': language,
+      'timezone': timezone,
+      'darkMode': darkMode,
+      'dashboardWidgets': dashboardWidgets,
+    };
+  }
+}
+
+// =============================================================================
+// SUPPORTING MODELS
+// =============================================================================
+
+class Coordinates {
+  final double latitude;
+  final double longitude;
+
+  const Coordinates({
+    required this.latitude,
+    required this.longitude,
+  });
+
+  factory Coordinates.fromJson(Map<String, dynamic> json) {
+    return Coordinates(
+      latitude: (json['latitude'] ?? 0.0).toDouble(),
+      longitude: (json['longitude'] ?? 0.0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+    };
   }
 
   @override
   String toString() {
-    return 'CustomerData(orderHistory: ${orderHistory.length}, favorites: ${favorites.length}, totalSpent: ${stats.totalSpent})';
+    return 'Coordinates(lat: $latitude, lng: $longitude)';
   }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is CustomerData &&
-        other.orderHistory.length == orderHistory.length &&
-        other.favorites.length == favorites.length;
-  }
-
-  @override
-  int get hashCode => orderHistory.length.hashCode ^ favorites.length.hashCode;
 }
 
-// Müşteri sipariş geçmişi
+// =============================================================================
+// CUSTOMER-RELATED MODELS
+// =============================================================================
+
 class CustomerOrder {
-  final String orderId;
+  final String id;
   final String businessId;
+  final String customerId;
   final String businessName;
-  final List<CustomerOrderItem> items;
+  final List<OrderItem> items;
   final double totalAmount;
-  final DateTime orderDate;
   final String status;
+  final DateTime createdAt;
+  final DateTime orderDate;
+  final DateTime? completedAt;
   final String? notes;
-  final String? tableNumber;
+  final String? paymentMethod;
+  final bool isPaid;
 
   CustomerOrder({
-    required this.orderId,
+    required this.id,
     required this.businessId,
+    required this.customerId,
     required this.businessName,
     required this.items,
     required this.totalAmount,
-    required this.orderDate,
     required this.status,
+    required this.createdAt,
+    required this.orderDate,
+    this.completedAt,
     this.notes,
-    this.tableNumber,
+    this.paymentMethod,
+    this.isPaid = false,
   });
 
-  factory CustomerOrder.fromMap(Map<String, dynamic> map) {
+  factory CustomerOrder.fromJson(Map<String, dynamic> json) {
     return CustomerOrder(
-      orderId: map['orderId'] ?? '',
-      businessId: map['businessId'] ?? '',
-      businessName: map['businessName'] ?? '',
-      items: (map['items'] as List<dynamic>?)
-              ?.map((e) => CustomerOrderItem.fromMap(e))
-              .toList() ??
-          [],
-      totalAmount: (map['totalAmount'] ?? 0.0).toDouble(),
-      orderDate: User._parseDateTime(map['orderDate']),
-      status: map['status'] ?? 'completed',
-      notes: map['notes'],
-      tableNumber: map['tableNumber'],
+      id: json['id'] ?? '',
+      businessId: json['businessId'] ?? '',
+      customerId: json['customerId'] ?? '',
+      businessName: json['businessName'] ?? '',
+      items: (json['items'] as List<dynamic>? ?? [])
+          .map((item) => OrderItem.fromJson(item))
+          .toList(),
+      totalAmount: (json['totalAmount'] ?? 0.0).toDouble(),
+      status: json['status'] ?? 'pending',
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      orderDate: DateTime.parse(json['orderDate'] ?? DateTime.now().toIso8601String()),
+      completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt']) : null,
+      notes: json['notes'],
+      paymentMethod: json['paymentMethod'],
+      isPaid: json['isPaid'] ?? false,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'orderId': orderId,
+      'id': id,
       'businessId': businessId,
+      'customerId': customerId,
       'businessName': businessName,
-      'items': items.map((e) => e.toMap()).toList(),
+      'items': items.map((item) => item.toJson()).toList(),
       'totalAmount': totalAmount,
-      'orderDate': orderDate.toIso8601String(),
       'status': status,
+      'createdAt': createdAt.toIso8601String(),
+      'orderDate': orderDate.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
       'notes': notes,
-      'tableNumber': tableNumber,
+      'paymentMethod': paymentMethod,
+      'isPaid': isPaid,
     };
   }
+
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
 }
 
-// Müşteri sipariş öğesi
-class CustomerOrderItem {
+class OrderItem {
   final String productId;
   final String productName;
   final int quantity;
@@ -412,7 +1113,7 @@ class CustomerOrderItem {
   final double totalPrice;
   final String? notes;
 
-  CustomerOrderItem({
+  OrderItem({
     required this.productId,
     required this.productName,
     required this.quantity,
@@ -421,18 +1122,18 @@ class CustomerOrderItem {
     this.notes,
   });
 
-  factory CustomerOrderItem.fromMap(Map<String, dynamic> map) {
-    return CustomerOrderItem(
-      productId: map['productId'] ?? '',
-      productName: map['productName'] ?? '',
-      quantity: map['quantity'] ?? 1,
-      unitPrice: (map['unitPrice'] ?? 0.0).toDouble(),
-      totalPrice: (map['totalPrice'] ?? 0.0).toDouble(),
-      notes: map['notes'],
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    return OrderItem(
+      productId: json['productId'] ?? '',
+      productName: json['productName'] ?? '',
+      quantity: json['quantity'] ?? 1,
+      unitPrice: (json['unitPrice'] ?? 0.0).toDouble(),
+      totalPrice: (json['totalPrice'] ?? 0.0).toDouble(),
+      notes: json['notes'],
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'productId': productId,
       'productName': productName,
@@ -444,551 +1145,219 @@ class CustomerOrderItem {
   }
 }
 
-// Müşteri favori işletmeleri
 class CustomerFavorite {
+  final String id;
   final String businessId;
-  final String businessName;
+  final String customerId;
+  final DateTime createdAt;
+  final String? businessName;
+  final String? businessType;
   final String? businessLogo;
-  final DateTime addedDate;
   final int visitCount;
   final double totalSpent;
+  final DateTime? addedDate;
 
   CustomerFavorite({
+    required this.id,
     required this.businessId,
-    required this.businessName,
+    required this.customerId,
+    required this.createdAt,
+    this.businessName,
+    this.businessType,
     this.businessLogo,
-    required this.addedDate,
-    required this.visitCount,
-    required this.totalSpent,
+    this.visitCount = 0,
+    this.totalSpent = 0.0,
+    this.addedDate,
   });
 
-  factory CustomerFavorite.fromMap(Map<String, dynamic> map) {
+  factory CustomerFavorite.fromJson(Map<String, dynamic> json) {
     return CustomerFavorite(
-      businessId: map['businessId'] ?? '',
-      businessName: map['businessName'] ?? '',
-      businessLogo: map['businessLogo'],
-      addedDate: User._parseDateTime(map['addedDate']),
-      visitCount: map['visitCount'] ?? 0,
-      totalSpent: (map['totalSpent'] ?? 0.0).toDouble(),
+      id: json['id'] ?? '',
+      businessId: json['businessId'] ?? '',
+      customerId: json['customerId'] ?? '',
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      businessName: json['businessName'],
+      businessType: json['businessType'],
+      businessLogo: json['businessLogo'],
+      visitCount: json['visitCount'] ?? 0,
+      totalSpent: (json['totalSpent'] ?? 0.0).toDouble(),
+      addedDate: json['addedDate'] != null ? DateTime.parse(json['addedDate']) : null,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'businessId': businessId,
+      'customerId': customerId,
+      'createdAt': createdAt.toIso8601String(),
       'businessName': businessName,
+      'businessType': businessType,
       'businessLogo': businessLogo,
-      'addedDate': addedDate.toIso8601String(),
       'visitCount': visitCount,
       'totalSpent': totalSpent,
+      'addedDate': addedDate?.toIso8601String(),
     };
   }
+
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
 }
 
-// Müşteri ziyaret geçmişi
 class CustomerVisit {
+  final String id;
   final String businessId;
-  final String businessName;
-  final DateTime visitDate;
-  final String? tableNumber;
-  final int orderCount;
-  final double totalSpent;
+  final String customerId;
+  final DateTime visitedAt;
+  final int visitDuration; // in minutes
+  final String? visitPurpose;
+  final double? amountSpent;
 
   CustomerVisit({
+    required this.id,
     required this.businessId,
-    required this.businessName,
-    required this.visitDate,
-    this.tableNumber,
-    required this.orderCount,
-    required this.totalSpent,
+    required this.customerId,
+    required this.visitedAt,
+    this.visitDuration = 0,
+    this.visitPurpose,
+    this.amountSpent,
   });
 
-  factory CustomerVisit.fromMap(Map<String, dynamic> map) {
+  factory CustomerVisit.fromJson(Map<String, dynamic> json) {
     return CustomerVisit(
-      businessId: map['businessId'] ?? '',
-      businessName: map['businessName'] ?? '',
-      visitDate: User._parseDateTime(map['visitDate']),
-      tableNumber: map['tableNumber'],
-      orderCount: map['orderCount'] ?? 0,
-      totalSpent: (map['totalSpent'] ?? 0.0).toDouble(),
+      id: json['id'] ?? '',
+      businessId: json['businessId'] ?? '',
+      customerId: json['customerId'] ?? '',
+      visitedAt: DateTime.parse(json['visitedAt'] ?? DateTime.now().toIso8601String()),
+      visitDuration: json['visitDuration'] ?? 0,
+      visitPurpose: json['visitPurpose'],
+      amountSpent: json['amountSpent']?.toDouble(),
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'businessId': businessId,
-      'businessName': businessName,
-      'visitDate': visitDate.toIso8601String(),
-      'tableNumber': tableNumber,
-      'orderCount': orderCount,
-      'totalSpent': totalSpent,
+      'customerId': customerId,
+      'visitedAt': visitedAt.toIso8601String(),
+      'visitDuration': visitDuration,
+      'visitPurpose': visitPurpose,
+      'amountSpent': amountSpent,
     };
   }
+
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
 }
 
-// Müşteri istatistikleri
-class CustomerStats {
-  final int totalOrders;
-  final double totalSpent;
-  final int favoriteBusinessCount;
-  final int totalVisits;
-  final DateTime? firstOrderDate;
-  final DateTime? lastOrderDate;
-  final Map<String, int> categoryPreferences;
-  final Map<String, double> businessSpending;
-
-  CustomerStats({
-    required this.totalOrders,
-    required this.totalSpent,
-    required this.favoriteBusinessCount,
-    required this.totalVisits,
-    this.firstOrderDate,
-    this.lastOrderDate,
-    required this.categoryPreferences,
-    required this.businessSpending,
-  });
-
-  factory CustomerStats.fromMap(Map<String, dynamic> map) {
-    return CustomerStats(
-      totalOrders: map['totalOrders'] ?? 0,
-      totalSpent: (map['totalSpent'] ?? 0.0).toDouble(),
-      favoriteBusinessCount: map['favoriteBusinessCount'] ?? 0,
-      totalVisits: map['totalVisits'] ?? 0,
-      firstOrderDate: map['firstOrderDate'] != null
-          ? User._parseDateTime(map['firstOrderDate'])
-          : null,
-      lastOrderDate: map['lastOrderDate'] != null
-          ? User._parseDateTime(map['lastOrderDate'])
-          : null,
-      categoryPreferences: Map<String, int>.from(
-        map['categoryPreferences'] ?? {},
-      ),
-      businessSpending: Map<String, double>.from(
-        map['businessSpending'] ?? {},
-      ),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'totalOrders': totalOrders,
-      'totalSpent': totalSpent,
-      'favoriteBusinessCount': favoriteBusinessCount,
-      'totalVisits': totalVisits,
-      'firstOrderDate': firstOrderDate?.toIso8601String(),
-      'lastOrderDate': lastOrderDate?.toIso8601String(),
-      'categoryPreferences': categoryPreferences,
-      'businessSpending': businessSpending,
-    };
-  }
-}
-
-// Müşteri tercihleri
-class CustomerPreferences {
-  final List<String> favoriteCategories;
-  final List<String> dietaryRestrictions;
-  final bool allowNotifications;
-  final bool allowMarketing;
-  final String preferredLanguage;
-  final String preferredCurrency;
-  final double maxOrderAmount;
-  final bool autoSavePaymentInfo;
-
-  CustomerPreferences({
-    required this.favoriteCategories,
-    required this.dietaryRestrictions,
-    required this.allowNotifications,
-    required this.allowMarketing,
-    required this.preferredLanguage,
-    required this.preferredCurrency,
-    required this.maxOrderAmount,
-    required this.autoSavePaymentInfo,
-  });
-
-  factory CustomerPreferences.fromMap(Map<String, dynamic> map) {
-    return CustomerPreferences(
-      favoriteCategories: List<String>.from(
-        map['favoriteCategories'] ?? [],
-      ),
-      dietaryRestrictions: List<String>.from(
-        map['dietaryRestrictions'] ?? [],
-      ),
-      allowNotifications: map['allowNotifications'] ?? true,
-      allowMarketing: map['allowMarketing'] ?? false,
-      preferredLanguage: map['preferredLanguage'] ?? 'tr',
-      preferredCurrency: map['preferredCurrency'] ?? 'TL',
-      maxOrderAmount: (map['maxOrderAmount'] ?? 1000.0).toDouble(),
-      autoSavePaymentInfo: map['autoSavePaymentInfo'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'favoriteCategories': favoriteCategories,
-      'dietaryRestrictions': dietaryRestrictions,
-      'allowNotifications': allowNotifications,
-      'allowMarketing': allowMarketing,
-      'preferredLanguage': preferredLanguage,
-      'preferredCurrency': preferredCurrency,
-      'maxOrderAmount': maxOrderAmount,
-      'autoSavePaymentInfo': autoSavePaymentInfo,
-    };
-  }
-}
-
-// Müşteri adres bilgileri
 class CustomerAddress {
   final String id;
+  final String customerId;
   final String title;
-  final String address;
-  final String city;
-  final String district;
-  final String postalCode;
+  final String fullAddress;
+  final String? apartment;
+  final String? floor;
+  final String? building;
+  final Coordinates? coordinates;
   final bool isDefault;
-  final String? notes;
+  final DateTime createdAt;
 
   CustomerAddress({
     required this.id,
+    required this.customerId,
     required this.title,
-    required this.address,
-    required this.city,
-    required this.district,
-    required this.postalCode,
-    required this.isDefault,
-    this.notes,
+    required this.fullAddress,
+    this.apartment,
+    this.floor,
+    this.building,
+    this.coordinates,
+    this.isDefault = false,
+    required this.createdAt,
   });
 
-  factory CustomerAddress.fromMap(Map<String, dynamic> map) {
+  factory CustomerAddress.fromJson(Map<String, dynamic> json) {
     return CustomerAddress(
-      id: map['id'] ?? '',
-      title: map['title'] ?? '',
-      address: map['address'] ?? '',
-      city: map['city'] ?? '',
-      district: map['district'] ?? '',
-      postalCode: map['postalCode'] ?? '',
-      isDefault: map['isDefault'] ?? false,
-      notes: map['notes'],
+      id: json['id'] ?? '',
+      customerId: json['customerId'] ?? '',
+      title: json['title'] ?? '',
+      fullAddress: json['fullAddress'] ?? '',
+      apartment: json['apartment'],
+      floor: json['floor'],
+      building: json['building'],
+      coordinates: json['coordinates'] != null ? Coordinates.fromJson(json['coordinates']) : null,
+      isDefault: json['isDefault'] ?? false,
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'customerId': customerId,
       'title': title,
-      'address': address,
-      'city': city,
-      'district': district,
-      'postalCode': postalCode,
+      'fullAddress': fullAddress,
+      'apartment': apartment,
+      'floor': floor,
+      'building': building,
+      'coordinates': coordinates?.toJson(),
       'isDefault': isDefault,
-      'notes': notes,
+      'createdAt': createdAt.toIso8601String(),
     };
   }
+
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
 }
 
-// Müşteri ödeme bilgileri
 class CustomerPaymentInfo {
+  final String id;
+  final String customerId;
   final String cardType;
   final String lastFourDigits;
   final String cardholderName;
   final DateTime expiryDate;
   final bool isDefault;
+  final DateTime createdAt;
 
   CustomerPaymentInfo({
+    required this.id,
+    required this.customerId,
     required this.cardType,
     required this.lastFourDigits,
     required this.cardholderName,
     required this.expiryDate,
-    required this.isDefault,
+    this.isDefault = false,
+    required this.createdAt,
   });
 
-  factory CustomerPaymentInfo.fromMap(Map<String, dynamic> map) {
+  factory CustomerPaymentInfo.fromJson(Map<String, dynamic> json) {
     return CustomerPaymentInfo(
-      cardType: map['cardType'] ?? '',
-      lastFourDigits: map['lastFourDigits'] ?? '',
-      cardholderName: map['cardholderName'] ?? '',
-      expiryDate: User._parseDateTime(map['expiryDate']),
-      isDefault: map['isDefault'] ?? false,
+      id: json['id'] ?? '',
+      customerId: json['customerId'] ?? '',
+      cardType: json['cardType'] ?? '',
+      lastFourDigits: json['lastFourDigits'] ?? '',
+      cardholderName: json['cardholderName'] ?? '',
+      expiryDate: DateTime.parse(json['expiryDate'] ?? DateTime.now().toIso8601String()),
+      isDefault: json['isDefault'] ?? false,
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
+      'id': id,
+      'customerId': customerId,
       'cardType': cardType,
       'lastFourDigits': lastFourDigits,
       'cardholderName': cardholderName,
       'expiryDate': expiryDate.toIso8601String(),
       'isDefault': isDefault,
-    };
-  }
-}
-
-class UserPreferences {
-  final String language;
-  final String currency;
-  final String timezone;
-  final bool emailNotifications;
-  final bool pushNotifications;
-  final bool smsNotifications;
-  final String theme;
-  final bool analytics;
-  final bool marketing;
-
-  UserPreferences({
-    required this.language,
-    required this.currency,
-    required this.timezone,
-    required this.emailNotifications,
-    required this.pushNotifications,
-    required this.smsNotifications,
-    required this.theme,
-    required this.analytics,
-    required this.marketing,
-  });
-
-  factory UserPreferences.fromMap(Map<String, dynamic> map) {
-    return UserPreferences(
-      language: map['language'] ?? 'tr',
-      currency: map['currency'] ?? 'TL',
-      timezone: map['timezone'] ?? 'Europe/Istanbul',
-      emailNotifications: map['emailNotifications'] ?? true,
-      pushNotifications: map['pushNotifications'] ?? true,
-      smsNotifications: map['smsNotifications'] ?? false,
-      theme: map['theme'] ?? 'light',
-      analytics: map['analytics'] ?? true,
-      marketing: map['marketing'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'language': language,
-      'currency': currency,
-      'timezone': timezone,
-      'emailNotifications': emailNotifications,
-      'pushNotifications': pushNotifications,
-      'smsNotifications': smsNotifications,
-      'theme': theme,
-      'analytics': analytics,
-      'marketing': marketing,
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 
-  UserPreferences copyWith({
-    String? language,
-    String? currency,
-    String? timezone,
-    bool? emailNotifications,
-    bool? pushNotifications,
-    bool? smsNotifications,
-    String? theme,
-    bool? analytics,
-    bool? marketing,
-  }) {
-    return UserPreferences(
-      language: language ?? this.language,
-      currency: currency ?? this.currency,
-      timezone: timezone ?? this.timezone,
-      emailNotifications: emailNotifications ?? this.emailNotifications,
-      pushNotifications: pushNotifications ?? this.pushNotifications,
-      smsNotifications: smsNotifications ?? this.smsNotifications,
-      theme: theme ?? this.theme,
-      analytics: analytics ?? this.analytics,
-      marketing: marketing ?? this.marketing,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'UserPreferences(language: $language, currency: $currency, theme: $theme)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is UserPreferences &&
-        other.language == language &&
-        other.currency == currency &&
-        other.theme == theme;
-  }
-
-  @override
-  int get hashCode => language.hashCode ^ currency.hashCode ^ theme.hashCode;
-}
-
-enum SubscriptionType {
-  free('free', 'Ücretsiz', 1, 50),
-  premium('premium', 'Premium', 3, 200),
-  business('business', 'İşletme', 10, 1000),
-  enterprise('enterprise', 'Kurumsal', -1, -1);
-
-  const SubscriptionType(
-    this.value,
-    this.displayName,
-    this.maxBusinesses,
-    this.maxProducts,
-  );
-
-  final String value;
-  final String displayName;
-  final int maxBusinesses; // -1 = unlimited
-  final int maxProducts; // -1 = unlimited
-
-  static SubscriptionType fromString(String value) {
-    return SubscriptionType.values.firstWhere(
-      (type) => type.value == value,
-      orElse: () => SubscriptionType.free,
-    );
-  }
-
-  bool get isUnlimited => maxBusinesses == -1 && maxProducts == -1;
-
-  bool canCreateBusiness(int currentBusinessCount) {
-    return isUnlimited || currentBusinessCount < maxBusinesses;
-  }
-
-  bool canCreateProduct(int currentProductCount) {
-    return isUnlimited || currentProductCount < maxProducts;
-  }
-
-  String get businessLimit =>
-      isUnlimited ? 'Sınırsız' : '$maxBusinesses işletme';
-  String get productLimit => isUnlimited ? 'Sınırsız' : '$maxProducts ürün';
-}
-
-// Default instances and helper methods
-class UserDefaults {
-  static User createDefault({
-    required String uid,
-    required String email,
-    required String name,
-    String? phone,
-  }) {
-    return User(
-      uid: uid,
-      email: email,
-      name: name,
-      phone: phone,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      isActive: true,
-      subscriptionType: SubscriptionType.free,
-      profile: defaultUserProfile,
-    );
-  }
-
-  static UserProfile get defaultUserProfile => UserProfile(
-    preferences: defaultUserPreferences,
-    totalBusinesses: 0,
-    totalProducts: 0,
-    customerData: defaultCustomerData,
-  );
-
-  static UserPreferences get defaultUserPreferences => UserPreferences(
-    language: 'tr',
-    currency: 'TL',
-    timezone: 'Europe/Istanbul',
-    emailNotifications: true,
-    pushNotifications: true,
-    smsNotifications: false,
-    theme: 'light',
-    analytics: true,
-    marketing: false,
-  );
-
-  static CustomerData get defaultCustomerData => CustomerData(
-    orderHistory: [],
-    favorites: [],
-    visitHistory: [],
-    stats: defaultCustomerStats,
-    preferences: defaultCustomerPreferences,
-    addresses: [],
-  );
-
-  static CustomerStats get defaultCustomerStats => CustomerStats(
-    totalOrders: 0,
-    totalSpent: 0.0,
-    favoriteBusinessCount: 0,
-    totalVisits: 0,
-    categoryPreferences: {},
-    businessSpending: {},
-  );
-
-  static CustomerPreferences get defaultCustomerPreferences => CustomerPreferences(
-    favoriteCategories: [],
-    dietaryRestrictions: [],
-    allowNotifications: true,
-    allowMarketing: false,
-    preferredLanguage: 'tr',
-    preferredCurrency: 'TL',
-    maxOrderAmount: 1000.0,
-    autoSavePaymentInfo: false,
-  );
-}
-
-// Extension methods for better usability
-extension UserExtensions on User {
-  /// Kullanıcının abonelik durumunu kontrol eder
-  String getSubscriptionStatus() {
-    if (subscriptionType == SubscriptionType.free) {
-      return 'Ücretsiz Plan';
-    }
-
-    if (hasActiveSubscription) {
-      if (isSubscriptionExpiringSoon) {
-        return '${subscriptionType.displayName} - ${daysUntilExpiry} gün kaldı';
-      }
-      return '${subscriptionType.displayName} - Aktif';
-    }
-
-    return '${subscriptionType.displayName} - Süresi Dolmuş';
-  }
-
-  /// Kullanıcının yeni işletme oluşturup oluşturamayacağını kontrol eder
-  bool canCreateNewBusiness() {
-    return subscriptionType.canCreateBusiness(profile.totalBusinesses);
-  }
-
-  /// Kullanıcının yeni ürün oluşturup oluşturamayacağını kontrol eder
-  bool canCreateNewProduct() {
-    return subscriptionType.canCreateProduct(profile.totalProducts);
-  }
-
-  /// Kullanıcının hesap yaşını döndürür
-  int get accountAgeInDays {
-    return DateTime.now().difference(createdAt).inDays;
-  }
-
-  /// Kullanıcının son giriş tarihini döndürür
-  String get lastLoginString {
-    if (profile.lastLoginAt == null) return 'Hiç giriş yapmamış';
-
-    final difference = DateTime.now().difference(profile.lastLoginAt!);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} gün önce';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} saat önce';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} dakika önce';
-    } else {
-      return 'Şimdi';
-    }
-  }
-
-  /// Kullanıcının aktiflik durumunu döndürür
-  String get activityStatus {
-    if (!isActive) return 'Pasif';
-
-    if (profile.lastLoginAt == null) return 'Yeni Kullanıcı';
-
-    final daysSinceLogin = DateTime.now()
-        .difference(profile.lastLoginAt!)
-        .inDays;
-
-    if (daysSinceLogin == 0) return 'Aktif';
-    if (daysSinceLogin <= 7) return 'Düzenli';
-    if (daysSinceLogin <= 30) return 'Ara sıra';
-    return 'Pasif';
-  }
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
 }
  

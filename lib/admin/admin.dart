@@ -2,6 +2,9 @@
 // Bu modül tamamen ayrı ve güvenli bir şekilde çalışır
 
 // Models
+import 'models/admin_user.dart';
+import 'services/admin_service.dart';
+
 export 'models/admin_user.dart';
 
 // Services
@@ -11,7 +14,7 @@ export 'services/admin_service.dart';
 export 'pages/admin_login_page.dart';
 export 'pages/admin_dashboard_page.dart';
 export 'pages/admin_management_page.dart';
-export 'pages/business_management_page.dart';
+
 export 'pages/customer_management_page.dart';
 export 'pages/analytics_page.dart';
 export 'pages/system_settings_page.dart';
@@ -79,18 +82,18 @@ class AdminModule {
     // Admin modülü başlatma işlemleri
     print('$moduleName v$version başlatılıyor...');
     
-    // Admin service'i başlat
-    final adminService = AdminService();
-    
     // İlk admin kullanıcısını oluştur (eğer yoksa)
-    await _createInitialAdmin(adminService);
+    await _createInitialAdmin();
     
     print('$moduleName başarıyla başlatıldı');
   }
   
   // İlk admin kullanıcısını oluştur
-  static Future<void> _createInitialAdmin(AdminService adminService) async {
+  static Future<void> _createInitialAdmin() async {
     try {
+      // Admin service'i başlat
+      final adminService = AdminService();
+      
       // Admin kullanıcılarını kontrol et
       final admins = await adminService.getAllAdmins();
       
@@ -138,8 +141,12 @@ class AdminModule {
     print('$moduleName kapatılıyor...');
     
     // Admin service'i temizle
-    final adminService = AdminService();
-    await adminService.signOut();
+    try {
+      final adminService = AdminService();
+      await adminService.signOut();
+    } catch (e) {
+      print('Admin service kapatılırken hata: $e');
+    }
     
     print('$moduleName kapatıldı');
   }
@@ -171,7 +178,6 @@ class AdminConstants {
   
   // Admin Animation
   static const Duration adminAnimationDuration = Duration(milliseconds: 300);
-  static const Curve adminAnimationCurve = Curves.easeInOut;
 }
 
 // Admin Module Utils

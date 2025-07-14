@@ -8,6 +8,9 @@ import '../../../core/services/data_service.dart';
 import '../../../data/models/business.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../core/services/storage_service.dart';
+import '../../../business/models/business_user.dart';
 
 class MenuSettingsPage extends StatefulWidget {
   final String businessId;
@@ -713,13 +716,25 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButton<String>(
-                      value: _currentSettings.imageSize,
+                      value: _getImageSizeString(_currentSettings.imageSize),
                       isExpanded: true,
                       onChanged: (String? newSize) {
                         if (newSize != null) {
+                          double sizeValue = 120.0;
+                          switch (newSize) {
+                            case 'small':
+                              sizeValue = 80.0;
+                              break;
+                            case 'medium':
+                              sizeValue = 120.0;
+                              break;
+                            case 'large':
+                              sizeValue = 160.0;
+                              break;
+                          }
                           setState(() {
                             _currentSettings = _currentSettings.copyWith(
-                              imageSize: newSize,
+                              imageSize: sizeValue,
                             );
                           });
                         }
@@ -1158,6 +1173,13 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
 
   String _colorToHex(Color color) {
     return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+  }
+
+  String _getImageSizeString(double size) {
+    if (size == 80.0) return 'small';
+    if (size == 120.0) return 'medium';
+    if (size == 160.0) return 'large';
+    return 'medium'; // Default
   }
 }
 

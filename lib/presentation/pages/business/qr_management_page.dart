@@ -10,17 +10,17 @@ import '../../../data/models/business.dart';
 import '../../../core/services/data_service.dart';
 import '../../../core/services/qr_service.dart';
 
-class QRCodeManagementPage extends StatefulWidget {
+class QRManagementPage extends StatefulWidget {
   final String businessId;
 
-  const QRCodeManagementPage({Key? key, required this.businessId})
+  const QRManagementPage({Key? key, required this.businessId})
     : super(key: key);
 
   @override
-  State<QRCodeManagementPage> createState() => _QRCodeManagementPageState();
+  State<QRManagementPage> createState() => _QRManagementPageState();
 }
 
-class _QRCodeManagementPageState extends State<QRCodeManagementPage> {
+class _QRManagementPageState extends State<QRManagementPage> {
   final DataService _dataService = DataService();
   final QRService _qrService = QRService();
 

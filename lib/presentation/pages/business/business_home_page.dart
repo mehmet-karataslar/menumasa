@@ -5,20 +5,20 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../data/models/business.dart';
-import '../../../data/models/order.dart';
+import '../../../data/models/order.dart' as app_order;
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
-import '../admin/responsive_admin_dashboard.dart';
-import '../admin/business_info_page.dart';
-import '../admin/category_management_page.dart';
-import '../admin/product_management_page.dart';
-import '../admin/orders_page.dart';
-import '../admin/menu_settings_page.dart';
-import '../admin/discount_management_page.dart';
-import '../admin/qr_code_management_page.dart';
+import 'business_dashboard_page.dart';
+import 'business_profile_page.dart';
+import 'category_management_page.dart';
+import 'product_management_page.dart';
+import 'order_management_page.dart';
+import 'menu_settings_page.dart';
+import 'discount_management_page.dart';
+import 'qr_management_page.dart';
 
 class BusinessHomePage extends StatefulWidget {
   final String businessId;
@@ -34,7 +34,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
   final FirestoreService _firestoreService = FirestoreService();
 
   Business? _business;
-  List<Order> _recentOrders = [];
+  List<app_order.Order> _recentOrders = [];
   List<Product> _popularProducts = [];
   List<Category> _categories = [];
   
@@ -826,10 +826,10 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                 children: _recentOrders.map((order) {
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: _getOrderStatusColor(order.status).withOpacity(0.1),
+                      backgroundColor: _getOrderStatusColor(order.status.value).withOpacity(0.1),
                       child: Icon(
-                        _getOrderStatusIcon(order.status),
-                        color: _getOrderStatusColor(order.status),
+                        _getOrderStatusIcon(order.status.value),
+                        color: _getOrderStatusColor(order.status.value),
                         size: 20,
                       ),
                     ),
@@ -840,7 +840,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                       ),
                     ),
                     subtitle: Text(
-                      '₺${order.totalAmount.toStringAsFixed(2)} • ${_getOrderStatusText(order.status)}',
+                      '₺${order.totalAmount.toStringAsFixed(2)} • ${_getOrderStatusText(order.status.value)}',
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.textLight,
                       ),
@@ -900,11 +900,11 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                         borderRadius: BorderRadius.circular(8),
                         color: AppColors.greyLight,
                       ),
-                      child: product.imageUrl != null
+                      child: product.primaryImage != null && product.primaryImage!.url.isNotEmpty
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.network(
-                                product.imageUrl!,
+                                product.primaryImage!.url,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return const Icon(
@@ -985,7 +985,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                   color: AppColors.success,
                   onTap: () => Navigator.pushNamed(
                     context,
-                    '/admin/products',
+                    '/business/products',
                     arguments: {'businessId': widget.businessId},
                   ),
                 ),
@@ -995,7 +995,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                   color: AppColors.primary,
                   onTap: () => Navigator.pushNamed(
                     context,
-                    '/admin/categories',
+                    '/business/categories',
                     arguments: {'businessId': widget.businessId},
                   ),
                 ),
@@ -1005,7 +1005,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                   color: AppColors.info,
                   onTap: () => Navigator.pushNamed(
                     context,
-                    '/admin/qr-codes',
+                    '/business/qr-codes',
                     arguments: {'businessId': widget.businessId},
                   ),
                 ),
@@ -1015,7 +1015,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                   color: AppColors.warning,
                   onTap: () => Navigator.pushNamed(
                     context,
-                    '/admin/discounts',
+                    '/business/discounts',
                     arguments: {'businessId': widget.businessId},
                   ),
                 ),

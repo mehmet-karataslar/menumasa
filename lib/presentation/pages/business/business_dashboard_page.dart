@@ -6,12 +6,12 @@ import '../../../core/services/firestore_service.dart';
 import '../../../data/models/business.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
-import 'admin_dashboard_page.dart';
-import 'business_info_page.dart';
+import '../../../admin/pages/admin_dashboard_page.dart';
+import 'business_profile_page.dart';
 import 'product_management_page.dart';
 import 'category_management_page.dart';
-import 'orders_page.dart';
-import 'qr_code_management_page.dart';
+import 'order_management_page.dart';
+import 'qr_management_page.dart';
 import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
 
@@ -119,23 +119,23 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
   Widget _getPageByIndex(int index) {
     switch (index) {
       case 0:
-        return AdminDashboardPage(businessId: widget.businessId);
+        return const AdminDashboardPage();
       case 1:
-        return BusinessInfoPage(businessId: widget.businessId);
+        return BusinessProfilePage(businessId: widget.businessId);
       case 2:
         return ProductManagementPage(businessId: widget.businessId);
       case 3:
         return CategoryManagementPage(businessId: widget.businessId);
       case 4:
-        return OrdersPage(businessId: widget.businessId);
+        return OrderManagementPage(businessId: widget.businessId);
       case 5:
-        return QRCodeManagementPage(businessId: widget.businessId);
+        return QRManagementPage(businessId: widget.businessId);
       case 6:
         return MenuSettingsPage(businessId: widget.businessId);
       case 7:
         return DiscountManagementPage(businessId: widget.businessId);
       default:
-        return AdminDashboardPage(businessId: widget.businessId);
+        return const AdminDashboardPage();
     }
   }
 
@@ -143,7 +143,7 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
   Widget build(BuildContext context) {
     // Mobil cihazlarda normal admin dashboard kullan
     if (!kIsWeb || MediaQuery.of(context).size.width < 768) {
-      return AdminDashboardPage(businessId: widget.businessId);
+      return const AdminDashboardPage();
     }
 
     if (_isLoading) {

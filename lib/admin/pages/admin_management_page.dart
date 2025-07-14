@@ -6,6 +6,7 @@ import '../models/admin_user.dart';
 import '../../../presentation/widgets/shared/loading_indicator.dart';
 import '../../../presentation/widgets/shared/error_message.dart';
 import '../../../presentation/widgets/shared/empty_state.dart';
+import '../../business/services/business_service.dart';
 
 class AdminManagementPage extends StatefulWidget {
   const AdminManagementPage({super.key});
@@ -222,7 +223,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  'Son giriş: ${_formatDate(admin.lastLoginAt)}',
+                  'Son giriş: ${admin.lastLoginAt != null ? _formatDate(admin.lastLoginAt!) :'Hiç giriş yapmamış'}',
                   style: AppTypography.caption.copyWith(
                     color: AppColors.textLight,
                   ),
@@ -597,6 +598,33 @@ class _AddAdminDialogState extends State<AddAdminDialog> {
       case AdminRole.superAdmin:
         _selectedPermissions = AdminPermission.values.toList();
         break;
+      case AdminRole.systemAdmin:
+        _selectedPermissions = [
+          AdminPermission.viewUsers,
+          AdminPermission.createUsers,
+          AdminPermission.editUsers,
+          AdminPermission.deleteUsers,
+          AdminPermission.viewBusinesses,
+          AdminPermission.createBusinesses,
+          AdminPermission.editBusinesses,
+          AdminPermission.deleteBusinesses,
+          AdminPermission.approveBusinesses,
+          AdminPermission.viewOrders,
+          AdminPermission.editOrders,
+          AdminPermission.deleteOrders,
+          AdminPermission.viewAnalytics,
+          AdminPermission.manageSystemSettings,
+          AdminPermission.viewActivityLogs,
+          AdminPermission.manageAdminUsers,
+          AdminPermission.manageAdmins,
+          AdminPermission.manageSystem,
+          AdminPermission.viewAuditLogs,
+          AdminPermission.moderateContent,
+          AdminPermission.manageCategories,
+          AdminPermission.manageProducts,
+          AdminPermission.viewReports,
+        ];
+        break;
       case AdminRole.admin:
         _selectedPermissions = [
           AdminPermission.viewBusinesses,
@@ -826,6 +854,33 @@ class _EditAdminDialogState extends State<EditAdminDialog> {
     switch (_selectedRole) {
       case AdminRole.superAdmin:
         _selectedPermissions = AdminPermission.values.toList();
+        break;
+      case AdminRole.systemAdmin:
+        _selectedPermissions = [
+          AdminPermission.viewUsers,
+          AdminPermission.createUsers,
+          AdminPermission.editUsers,
+          AdminPermission.deleteUsers,
+          AdminPermission.viewBusinesses,
+          AdminPermission.createBusinesses,
+          AdminPermission.editBusinesses,
+          AdminPermission.deleteBusinesses,
+          AdminPermission.approveBusinesses,
+          AdminPermission.viewOrders,
+          AdminPermission.editOrders,
+          AdminPermission.deleteOrders,
+          AdminPermission.viewAnalytics,
+          AdminPermission.manageSystemSettings,
+          AdminPermission.viewActivityLogs,
+          AdminPermission.manageAdminUsers,
+          AdminPermission.manageAdmins,
+          AdminPermission.manageSystem,
+          AdminPermission.viewAuditLogs,
+          AdminPermission.moderateContent,
+          AdminPermission.manageCategories,
+          AdminPermission.manageProducts,
+          AdminPermission.viewReports,
+        ];
         break;
       case AdminRole.admin:
         _selectedPermissions = [

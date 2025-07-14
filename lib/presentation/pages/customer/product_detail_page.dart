@@ -705,7 +705,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     try {
       await _cartService.addToCart(
         widget.product,
-        widget.business.businessId,
+        widget.business.id,
         quantity: _quantity,
       );
 
@@ -727,7 +727,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        CartPage(businessId: widget.business.businessId),
+                        CartPage(businessId: widget.business.id),
                   ),
                 );
               },

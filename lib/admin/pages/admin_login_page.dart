@@ -6,6 +6,7 @@ import '../services/admin_service.dart';
 import '../../../presentation/widgets/shared/loading_indicator.dart';
 import '../../../presentation/widgets/shared/error_message.dart';
 import 'admin_dashboard_page.dart';
+import '../../business/services/business_service.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -236,7 +237,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
               )
             : Text(
                 'Giriş Yap',
-                style: AppTypography.button.copyWith(
+                style: AppTypography.buttonLarge.copyWith(
                   color: AppColors.white,
                   fontWeight: FontWeight.w600,
                 ),

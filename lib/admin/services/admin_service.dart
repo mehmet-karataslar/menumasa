@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+
 import '../models/admin_user.dart';
+import '../models/admin_session.dart';
+import '../models/admin_activity_log.dart';
+
 
 class AdminService {
   static const String _adminCollection = 'admin_users';
@@ -43,7 +47,7 @@ class AdminService {
       }
 
       final adminData = adminQuery.docs.first.data();
-      final admin = AdminUser.fromJson(adminData, id: adminQuery.docs.first.id);
+      final admin = AdminUser.fromJson({...adminData, 'id': adminQuery.docs.first.id});
 
       // Şifre doğrulama (hash ile)
       final hashedPassword = _hashPassword(password);
@@ -133,7 +137,7 @@ class AdminService {
       if (sessionQuery.docs.isEmpty) return false;
 
       final sessionData = sessionQuery.docs.first.data();
-      final session = AdminSession.fromJson(sessionData, id: sessionQuery.docs.first.id);
+      final session = AdminSession.fromJson({...sessionData, 'id': sessionQuery.docs.first.id});
 
       if (!session.isValid) {
         // Session'ı deaktif et
@@ -155,7 +159,7 @@ class AdminService {
       final adminData = adminDoc.data()!;
       if (!adminData['isActive']) return false;
 
-      _currentAdmin = AdminUser.fromJson(adminData, id: adminDoc.id);
+      _currentAdmin = AdminUser.fromJson({...adminData, 'id': adminDoc.id});
       _currentSession = session;
 
       return true;
@@ -178,7 +182,7 @@ class AdminService {
           .get();
 
       return querySnapshot.docs
-          .map((doc) => AdminUser.fromJson(doc.data(), id: doc.id))
+          .map((doc) => AdminUser.fromJson({...(doc.data() as Map<String, dynamic>), 'id': doc.id}))
           .toList();
     } catch (e) {
       if (e is AdminException) rethrow;
@@ -226,17 +230,14 @@ class AdminService {
       final hashedPassword = _hashPassword(password);
 
       final admin = AdminUser(
-        adminId: adminId,
-        username: username,
+        id: adminId,
         email: email,
-        fullName: fullName,
+        name: fullName,
         role: role,
         permissions: permissions,
-        isActive: true,
-        isSuperAdmin: false,
-        lastLoginAt: DateTime.now(),
         createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        isActive: true,
       );
 
       await _firestore
@@ -416,7 +417,7 @@ class AdminService {
       final querySnapshot = await query.get();
 
       return querySnapshot.docs
-          .map((doc) => AdminActivityLog.fromJson(doc.data(), id: doc.id))
+          .map((doc) => AdminActivityLog.fromJson({...(doc.data() as Map<String, dynamic>), 'id': doc.id}))
           .toList();
     } catch (e) {
       if (e is AdminException) rethrow;
@@ -442,18 +443,16 @@ class AdminService {
     required String userAgent,
   }) async {
     final sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}';
-    final sessionToken = _generateSessionToken();
     final expiresAt = DateTime.now().add(const Duration(hours: 24));
 
     final session = AdminSession(
-      sessionId: sessionId,
-      adminId: adminId,
-      sessionToken: sessionToken,
+      id: sessionId,
+      adminUserId: adminId,
+      createdAt: DateTime.now(),
       expiresAt: expiresAt,
       ipAddress: ipAddress,
       userAgent: userAgent,
       isActive: true,
-      createdAt: DateTime.now(),
     );
 
     await _firestore
@@ -485,16 +484,15 @@ class AdminService {
       final logId = 'log_${DateTime.now().millisecondsSinceEpoch}';
       
       final log = AdminActivityLog(
-        logId: logId,
-        adminId: adminId,
-        adminUsername: adminUsername,
-        action: action,
-        targetType: targetType,
-        targetId: targetId,
-        details: details,
+        id: logId,
+        adminUserId: adminId,
+        adminUserName: adminUsername,
+        activityType: AdminActivityType.adminManagement, // Default type
+        description: details ?? action,
+        details: {'action': action, 'targetType': targetType, 'targetId': targetId},
+        timestamp: DateTime.now(),
         ipAddress: ipAddress,
         userAgent: userAgent,
-        createdAt: DateTime.now(),
       );
 
       await _firestore

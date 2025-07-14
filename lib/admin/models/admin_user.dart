@@ -1,401 +1,298 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum AdminRole {
+  superAdmin,
+  systemAdmin,
+  admin,
+  moderator,
+  support,
+}
+
+enum AdminPermission {
+  // User Management
+  viewUsers,
+  createUsers,
+  editUsers,
+  deleteUsers,
+  viewCustomers,
+  editCustomers,
+  
+  // Business Management
+  viewBusinesses,
+  createBusinesses,
+  editBusinesses,
+  deleteBusinesses,
+  approveBusinesses,
+  
+  // Order Management
+  viewOrders,
+  editOrders,
+  deleteOrders,
+  
+  // System Management
+  viewAnalytics,
+  manageSystemSettings,
+  viewActivityLogs,
+  manageAdminUsers,
+  manageAdmins,
+  manageSystem,
+  viewAuditLogs,
+  
+  // Content Management
+  moderateContent,
+  manageCategories,
+  manageProducts,
+  
+  // Reports
+  viewReports,
+}
+
+extension AdminRoleExtension on AdminRole {
+  String get displayName {
+    switch (this) {
+      case AdminRole.superAdmin:
+        return 'Super Admin';
+      case AdminRole.systemAdmin:
+        return 'System Admin';
+      case AdminRole.admin:
+        return 'Admin';
+      case AdminRole.moderator:
+        return 'Moderator';
+      case AdminRole.support:
+        return 'Support';
+    }
+  }
+
+  String get value {
+    return toString().split('.').last;
+  }
+}
+
+extension AdminPermissionExtension on AdminPermission {
+  String get displayName {
+    switch (this) {
+      case AdminPermission.viewUsers:
+        return 'View Users';
+      case AdminPermission.createUsers:
+        return 'Create Users';
+      case AdminPermission.editUsers:
+        return 'Edit Users';
+      case AdminPermission.deleteUsers:
+        return 'Delete Users';
+      case AdminPermission.viewCustomers:
+        return 'View Customers';
+      case AdminPermission.editCustomers:
+        return 'Edit Customers';
+      case AdminPermission.viewBusinesses:
+        return 'View Businesses';
+      case AdminPermission.createBusinesses:
+        return 'Create Businesses';
+      case AdminPermission.editBusinesses:
+        return 'Edit Businesses';
+      case AdminPermission.deleteBusinesses:
+        return 'Delete Businesses';
+      case AdminPermission.approveBusinesses:
+        return 'Approve Businesses';
+      case AdminPermission.viewOrders:
+        return 'View Orders';
+      case AdminPermission.editOrders:
+        return 'Edit Orders';
+      case AdminPermission.deleteOrders:
+        return 'Delete Orders';
+      case AdminPermission.viewAnalytics:
+        return 'View Analytics';
+      case AdminPermission.manageSystemSettings:
+        return 'Manage System Settings';
+      case AdminPermission.viewActivityLogs:
+        return 'View Activity Logs';
+      case AdminPermission.manageAdminUsers:
+        return 'Manage Admin Users';
+      case AdminPermission.manageAdmins:
+        return 'Manage Admins';
+      case AdminPermission.manageSystem:
+        return 'Manage System';
+      case AdminPermission.viewAuditLogs:
+        return 'View Audit Logs';
+      case AdminPermission.moderateContent:
+        return 'Moderate Content';
+      case AdminPermission.manageCategories:
+        return 'Manage Categories';
+      case AdminPermission.manageProducts:
+        return 'Manage Products';
+      case AdminPermission.viewReports:
+        return 'View Reports';
+    }
+  }
+
+  String get value {
+    return toString().split('.').last;
+  }
+}
+
 class AdminUser {
-  final String adminId;
-  final String username;
+  final String id;
   final String email;
-  final String fullName;
-  final String? avatarUrl;
+  final String name;
   final AdminRole role;
   final List<AdminPermission> permissions;
-  final bool isActive;
-  final bool isSuperAdmin;
-  final DateTime lastLoginAt;
   final DateTime createdAt;
-  final DateTime updatedAt;
-  final String? lastLoginIp;
-  final String? sessionToken;
+  final DateTime? lastLoginAt;
+  final bool isActive;
+  final String? avatarUrl;
 
   AdminUser({
-    required this.adminId,
-    required this.username,
+    required this.id,
     required this.email,
-    required this.fullName,
-    this.avatarUrl,
+    required this.name,
     required this.role,
     required this.permissions,
-    required this.isActive,
-    required this.isSuperAdmin,
-    required this.lastLoginAt,
     required this.createdAt,
-    required this.updatedAt,
-    this.lastLoginIp,
-    this.sessionToken,
+    this.lastLoginAt,
+    required this.isActive,
+    this.avatarUrl,
   });
 
-  factory AdminUser.fromJson(Map<String, dynamic> data, {String? id}) {
+  // Getters for compatibility with admin pages
+  String get displayName => name;
+  String get username => email.split('@').first;
+  String get fullName => name;
+  String get adminId => id;
+  String get initials {
+    final nameParts = name.split(' ');
+    if (nameParts.length >= 2) {
+      return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : 'A';
+  }
+  bool get isSuperAdmin => role == AdminRole.superAdmin;
+
+  factory AdminUser.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
     return AdminUser(
-      adminId: id ?? data['adminId'] ?? '',
-      username: data['username'] ?? '',
+      id: doc.id,
       email: data['email'] ?? '',
-      fullName: data['fullName'] ?? '',
-      avatarUrl: data['avatarUrl'],
-      role: AdminRole.fromString(data['role'] ?? 'moderator'),
-      permissions: (data['permissions'] as List<dynamic>? ?? [])
-          .map((perm) => AdminPermission.fromString(perm))
-          .toList(),
+      name: data['name'] ?? '',
+      role: AdminRole.values.firstWhere(
+        (role) => role.toString().split('.').last == data['role'],
+        orElse: () => AdminRole.support,
+      ),
+      permissions: (data['permissions'] as List<dynamic>?)
+          ?.map((permission) => AdminPermission.values.firstWhere(
+                (perm) => perm.toString().split('.').last == permission,
+                orElse: () => AdminPermission.viewUsers,
+              ))
+          .toList() ?? [],
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      lastLoginAt: data['lastLoginAt'] != null
+          ? (data['lastLoginAt'] as Timestamp).toDate()
+          : null,
       isActive: data['isActive'] ?? true,
-      isSuperAdmin: data['isSuperAdmin'] ?? false,
-      lastLoginAt: _parseDateTime(data['lastLoginAt']),
-      createdAt: _parseDateTime(data['createdAt']),
-      updatedAt: _parseDateTime(data['updatedAt']),
-      lastLoginIp: data['lastLoginIp'],
-      sessionToken: data['sessionToken'],
+      avatarUrl: data['avatarUrl'],
     );
   }
 
-  static DateTime _parseDateTime(dynamic value) {
-    if (value == null) return DateTime.now();
-    
-    if (value is Timestamp) {
-      return value.toDate();
-    } else if (value is String) {
-      return DateTime.parse(value);
-    } else if (value is DateTime) {
-      return value;
-    }
-    
-    return DateTime.now();
+  factory AdminUser.fromJson(Map<String, dynamic> json) {
+    return AdminUser(
+      id: json['id'] ?? '',
+      email: json['email'] ?? '',
+      name: json['name'] ?? '',
+      role: AdminRole.values.firstWhere(
+        (role) => role.toString().split('.').last == json['role'],
+        orElse: () => AdminRole.support,
+      ),
+      permissions: (json['permissions'] as List<dynamic>?)
+          ?.map((permission) => AdminPermission.values.firstWhere(
+                (perm) => perm.toString().split('.').last == permission,
+                orElse: () => AdminPermission.viewUsers,
+              ))
+          .toList() ?? [],
+      createdAt: DateTime.parse(json['createdAt']),
+      lastLoginAt: json['lastLoginAt'] != null
+          ? DateTime.parse(json['lastLoginAt'])
+          : null,
+      isActive: json['isActive'] ?? true,
+      avatarUrl: json['avatarUrl'],
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'email': email,
+      'name': name,
+      'role': role.toString().split('.').last,
+      'permissions': permissions
+          .map((permission) => permission.toString().split('.').last)
+          .toList(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'lastLoginAt': lastLoginAt != null ? Timestamp.fromDate(lastLoginAt!) : null,
+      'isActive': isActive,
+      'avatarUrl': avatarUrl,
+    };
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'adminId': adminId,
-      'username': username,
+      'id': id,
       'email': email,
-      'fullName': fullName,
-      'avatarUrl': avatarUrl,
-      'role': role.value,
-      'permissions': permissions.map((p) => p.value).toList(),
-      'isActive': isActive,
-      'isSuperAdmin': isSuperAdmin,
-      'lastLoginAt': lastLoginAt.toIso8601String(),
+      'name': name,
+      'role': role.toString().split('.').last,
+      'permissions': permissions
+          .map((permission) => permission.toString().split('.').last)
+          .toList(),
       'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'lastLoginIp': lastLoginIp,
-      'sessionToken': sessionToken,
+      'lastLoginAt': lastLoginAt?.toIso8601String(),
+      'isActive': isActive,
+      'avatarUrl': avatarUrl,
     };
   }
 
   AdminUser copyWith({
-    String? adminId,
-    String? username,
+    String? id,
     String? email,
-    String? fullName,
-    String? avatarUrl,
+    String? name,
     AdminRole? role,
     List<AdminPermission>? permissions,
-    bool? isActive,
-    bool? isSuperAdmin,
-    DateTime? lastLoginAt,
     DateTime? createdAt,
-    DateTime? updatedAt,
-    String? lastLoginIp,
-    String? sessionToken,
+    DateTime? lastLoginAt,
+    bool? isActive,
+    String? avatarUrl,
   }) {
     return AdminUser(
-      adminId: adminId ?? this.adminId,
-      username: username ?? this.username,
+      id: id ?? this.id,
       email: email ?? this.email,
-      fullName: fullName ?? this.fullName,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
+      name: name ?? this.name,
       role: role ?? this.role,
       permissions: permissions ?? this.permissions,
-      isActive: isActive ?? this.isActive,
-      isSuperAdmin: isSuperAdmin ?? this.isSuperAdmin,
-      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      lastLoginIp: lastLoginIp ?? this.lastLoginIp,
-      sessionToken: sessionToken ?? this.sessionToken,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      isActive: isActive ?? this.isActive,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
     );
   }
 
-  // Helper methods
   bool hasPermission(AdminPermission permission) {
-    if (isSuperAdmin) return true;
     return permissions.contains(permission);
   }
 
   bool hasAnyPermission(List<AdminPermission> requiredPermissions) {
-    if (isSuperAdmin) return true;
-    return requiredPermissions.any((perm) => permissions.contains(perm));
+    return requiredPermissions.any((permission) => hasPermission(permission));
   }
 
   bool hasAllPermissions(List<AdminPermission> requiredPermissions) {
-    if (isSuperAdmin) return true;
-    return requiredPermissions.every((perm) => permissions.contains(perm));
+    return requiredPermissions.every((permission) => hasPermission(permission));
   }
-
-  String get displayName => fullName.isNotEmpty ? fullName : username;
-  String get initials => fullName.split(' ').take(2).map((n) => n.isNotEmpty ? n[0] : '').join('').toUpperCase();
 
   @override
   String toString() {
-    return 'AdminUser(adminId: $adminId, username: $username, role: $role, isActive: $isActive)';
+    return 'AdminUser(id: $id, email: $email, name: $name, role: $role)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is AdminUser && other.adminId == adminId;
+    return other is AdminUser && other.id == id;
   }
 
   @override
-  int get hashCode => adminId.hashCode;
-}
-
-enum AdminRole {
-  superAdmin('super_admin', 'Süper Yönetici', 'Tam sistem kontrolü'),
-  admin('admin', 'Yönetici', 'Genel yönetim yetkileri'),
-  moderator('moderator', 'Moderatör', 'İçerik moderasyonu'),
-  support('support', 'Destek', 'Müşteri desteği');
-
-  const AdminRole(this.value, this.displayName, this.description);
-
-  final String value;
-  final String displayName;
-  final String description;
-
-  static AdminRole fromString(String value) {
-    return AdminRole.values.firstWhere(
-      (role) => role.value == value,
-      orElse: () => AdminRole.moderator,
-    );
-  }
-}
-
-enum AdminPermission {
-  // Business Management
-  viewBusinesses('view_businesses', 'İşletmeleri Görüntüle'),
-  editBusinesses('edit_businesses', 'İşletmeleri Düzenle'),
-  deleteBusinesses('delete_businesses', 'İşletmeleri Sil'),
-  suspendBusinesses('suspend_businesses', 'İşletmeleri Askıya Al'),
-  approveBusinesses('approve_businesses', 'İşletmeleri Onayla'),
-
-  // Customer Management
-  viewCustomers('view_customers', 'Müşterileri Görüntüle'),
-  editCustomers('edit_customers', 'Müşterileri Düzenle'),
-  deleteCustomers('delete_customers', 'Müşterileri Sil'),
-  banCustomers('ban_customers', 'Müşterileri Yasakla'),
-
-  // Content Management
-  moderateContent('moderate_content', 'İçerik Modere Et'),
-  deleteContent('delete_content', 'İçerik Sil'),
-  editContent('edit_content', 'İçerik Düzenle'),
-  approveContent('approve_content', 'İçerik Onayla'),
-
-  // System Management
-  viewAnalytics('view_analytics', 'Analitikleri Görüntüle'),
-  manageSystem('manage_system', 'Sistem Yönetimi'),
-  viewLogs('view_logs', 'Logları Görüntüle'),
-  manageAdmins('manage_admins', 'Yönetici Yönetimi'),
-
-  // Reports & Monitoring
-  viewReports('view_reports', 'Raporları Görüntüle'),
-  manageReports('manage_reports', 'Rapor Yönetimi'),
-  viewAuditLogs('view_audit_logs', 'Denetim Logları'),
-
-  // Settings & Configuration
-  manageSettings('manage_settings', 'Ayarları Yönet'),
-  manageCategories('manage_categories', 'Kategori Yönetimi'),
-  manageTags('manage_tags', 'Etiket Yönetimi');
-
-  const AdminPermission(this.value, this.displayName);
-
-  final String value;
-  final String displayName;
-
-  static AdminPermission fromString(String value) {
-    return AdminPermission.values.firstWhere(
-      (perm) => perm.value == value,
-      orElse: () => AdminPermission.viewBusinesses,
-    );
-  }
-}
-
-// Admin Activity Log
-class AdminActivityLog {
-  final String logId;
-  final String adminId;
-  final String adminUsername;
-  final String action;
-  final String targetType;
-  final String targetId;
-  final String? details;
-  final String? ipAddress;
-  final String? userAgent;
-  final DateTime createdAt;
-
-  AdminActivityLog({
-    required this.logId,
-    required this.adminId,
-    required this.adminUsername,
-    required this.action,
-    required this.targetType,
-    required this.targetId,
-    this.details,
-    this.ipAddress,
-    this.userAgent,
-    required this.createdAt,
-  });
-
-  factory AdminActivityLog.fromJson(Map<String, dynamic> data, {String? id}) {
-    return AdminActivityLog(
-      logId: id ?? data['logId'] ?? '',
-      adminId: data['adminId'] ?? '',
-      adminUsername: data['adminUsername'] ?? '',
-      action: data['action'] ?? '',
-      targetType: data['targetType'] ?? '',
-      targetId: data['targetId'] ?? '',
-      details: data['details'],
-      ipAddress: data['ipAddress'],
-      userAgent: data['userAgent'],
-      createdAt: data['createdAt'] != null
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'logId': logId,
-      'adminId': adminId,
-      'adminUsername': adminUsername,
-      'action': action,
-      'targetType': targetType,
-      'targetId': targetId,
-      'details': details,
-      'ipAddress': ipAddress,
-      'userAgent': userAgent,
-      'createdAt': createdAt.toIso8601String(),
-    };
-  }
-
-  @override
-  String toString() {
-    return 'AdminActivityLog(adminId: $adminId, action: $action, targetType: $targetType, createdAt: $createdAt)';
-  }
-}
-
-// Admin Session
-class AdminSession {
-  final String sessionId;
-  final String adminId;
-  final String sessionToken;
-  final DateTime expiresAt;
-  final String ipAddress;
-  final String userAgent;
-  final bool isActive;
-  final DateTime createdAt;
-
-  AdminSession({
-    required this.sessionId,
-    required this.adminId,
-    required this.sessionToken,
-    required this.expiresAt,
-    required this.ipAddress,
-    required this.userAgent,
-    required this.isActive,
-    required this.createdAt,
-  });
-
-  factory AdminSession.fromJson(Map<String, dynamic> data, {String? id}) {
-    return AdminSession(
-      sessionId: id ?? data['sessionId'] ?? '',
-      adminId: data['adminId'] ?? '',
-      sessionToken: data['sessionToken'] ?? '',
-      expiresAt: data['expiresAt'] != null
-          ? DateTime.parse(data['expiresAt'] as String)
-          : DateTime.now().add(const Duration(hours: 24)),
-      ipAddress: data['ipAddress'] ?? '',
-      userAgent: data['userAgent'] ?? '',
-      isActive: data['isActive'] ?? true,
-      createdAt: data['createdAt'] != null
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'sessionId': sessionId,
-      'adminId': adminId,
-      'sessionToken': sessionToken,
-      'expiresAt': expiresAt.toIso8601String(),
-      'ipAddress': ipAddress,
-      'userAgent': userAgent,
-      'isActive': isActive,
-      'createdAt': createdAt.toIso8601String(),
-    };
-  }
-
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
-  bool get isValid => isActive && !isExpired;
-
-  @override
-  String toString() {
-    return 'AdminSession(sessionId: $sessionId, adminId: $adminId, isActive: $isActive, expiresAt: $expiresAt)';
-  }
-}
-
-// Default admin user for initial setup
-class AdminDefaults {
-  static AdminUser createSuperAdmin({
-    required String adminId,
-    required String username,
-    required String email,
-    required String fullName,
-  }) {
-    return AdminUser(
-      adminId: adminId,
-      username: username,
-      email: email,
-      fullName: fullName,
-      role: AdminRole.superAdmin,
-      permissions: AdminPermission.values.toList(),
-      isActive: true,
-      isSuperAdmin: true,
-      lastLoginAt: DateTime.now(),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-  }
-
-  static AdminUser createModerator({
-    required String adminId,
-    required String username,
-    required String email,
-    required String fullName,
-  }) {
-    return AdminUser(
-      adminId: adminId,
-      username: username,
-      email: email,
-      fullName: fullName,
-      role: AdminRole.moderator,
-      permissions: [
-        AdminPermission.viewBusinesses,
-        AdminPermission.viewCustomers,
-        AdminPermission.moderateContent,
-        AdminPermission.viewReports,
-        AdminPermission.viewAnalytics,
-      ],
-      isActive: true,
-      isSuperAdmin: false,
-      lastLoginAt: DateTime.now(),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-  }
+  int get hashCode => id.hashCode;
 } 

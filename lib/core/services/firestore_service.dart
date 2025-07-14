@@ -56,28 +56,28 @@ class FirestoreService {
 
   Future<String> saveUser(app_user.User user) async {
     try {
-      final data = user.toJson();
+      final data = user.toFirestore();
       data['updatedAt'] = FieldValue.serverTimestamp();
 
-      if (user.uid.isEmpty) {
+      if (user.id.isEmpty) {
         // New user
         data['createdAt'] = FieldValue.serverTimestamp();
         final docRef = await _usersRef.add(data);
         return docRef.id;
       } else {
         // Update existing user
-        await _usersRef.doc(user.uid).set(data, SetOptions(merge: true));
-        return user.uid;
+        await _usersRef.doc(user.id).set(data, SetOptions(merge: true));
+        return user.id;
       }
     } catch (e) {
       throw Exception('Kullanıcı kaydedilirken bir hata oluştu: $e');
     }
   }
 
-  Future<void> updateUserData(String uid, Map<String, dynamic> data) async {
+  Future<void> updateUserData(String id, Map<String, dynamic> data) async {
     try {
       data['updatedAt'] = FieldValue.serverTimestamp();
-      await _usersRef.doc(uid).update(data);
+      await _usersRef.doc(id).update(data);
     } catch (e) {
       throw Exception('Kullanıcı bilgileri güncellenirken bir hata oluştu: $e');
     }
@@ -125,7 +125,7 @@ class FirestoreService {
       final data = business.toJson();
       data['updatedAt'] = FieldValue.serverTimestamp();
 
-      if (business.businessId.isEmpty) {
+      if (business.id.isEmpty) {
         // New business
         data['createdAt'] = FieldValue.serverTimestamp();
         final docRef = await _businessesRef.add(data);
@@ -149,8 +149,8 @@ class FirestoreService {
         return docRef.id;
       } else {
         // Update existing business
-        await _businessesRef.doc(business.businessId).update(data);
-        return business.businessId;
+        await _businessesRef.doc(business.id).update(data);
+        return business.id;
       }
     } catch (e) {
       throw Exception('İşletme kaydedilirken bir hata oluştu: $e');
@@ -199,6 +199,81 @@ class FirestoreService {
       ]);
     } catch (e) {
       throw Exception('İşletme silinirken bir hata oluştu: $e');
+    }
+  }
+
+  // Business Orders
+  Future<List<app_order.Order>> getBusinessOrders(
+    String businessId, {
+    int limit = 10,
+    String? status,
+  }) async {
+    try {
+      Query query = _ordersRef
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      if (status != null) {
+        query = query.where('status', isEqualTo: status);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs
+          .map((doc) => app_order.Order.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
+          .toList();
+    } catch (e) {
+      throw Exception('İşletme siparişleri alınırken bir hata oluştu: $e');
+    }
+  }
+
+  // Business Categories
+  Future<List<Category>> getBusinessCategories(String businessId) async {
+    try {
+      final snapshot = await _categoriesRef
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('sortOrder')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Category.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
+          .toList();
+    } catch (e) {
+      throw Exception('İşletme kategorileri alınırken bir hata oluştu: $e');
+    }
+  }
+
+  // Business Products
+  Future<List<Product>> getBusinessProducts(
+    String businessId, {
+    int limit = 10,
+    String? categoryId,
+  }) async {
+    try {
+      Query query = _productsRef
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      if (categoryId != null) {
+        query = query.where('categoryId', isEqualTo: categoryId);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs
+          .map((doc) => Product.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
+          .toList();
+    } catch (e) {
+      throw Exception('İşletme ürünleri alınırken bir hata oluştu: $e');
     }
   }
 

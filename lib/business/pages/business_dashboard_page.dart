@@ -1,31 +1,29 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../services/admin_service.dart';
-import '../models/admin_user.dart';
+import '../services/business_service.dart';
+import '../models/business_user.dart';
 import '../../../presentation/widgets/shared/loading_indicator.dart';
 import '../../../presentation/widgets/shared/error_message.dart';
 import '../../../presentation/widgets/shared/empty_state.dart';
-import '../../business/pages/business_management_page.dart';
+import 'business_management_page.dart';
 import 'customer_management_page.dart';
 import 'system_settings_page.dart';
 import 'analytics_page.dart';
-import 'admin_management_page.dart';
 import 'activity_logs_page.dart';
-import '../../business/services/business_service.dart';
 
-class AdminDashboardPage extends StatefulWidget {
-  const AdminDashboardPage({super.key});
+class BusinessDashboardPage extends StatefulWidget {
+  const BusinessDashboardPage({super.key});
 
   @override
-  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+  State<BusinessDashboardPage> createState() => _BusinessDashboardPageState();
 }
 
-class _AdminDashboardPageState extends State<AdminDashboardPage>
+class _BusinessDashboardPageState extends State<BusinessDashboardPage>
     with TickerProviderStateMixin {
-  final AdminService _adminService = AdminService();
+  final BusinessService _businessService = BusinessService();
 
-  AdminUser? _currentAdmin;
+  BusinessUser? _currentBusiness;
   bool _isLoading = true;
   String? _errorMessage;
   int _selectedIndex = 0;
@@ -36,7 +34,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 6, vsync: this);
-    _loadAdminData();
+    _loadBusinessData();
   }
 
   @override
@@ -45,28 +43,28 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
     super.dispose();
   }
 
-  Future<void> _loadAdminData() async {
+  Future<void> _loadBusinessData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final admin = _adminService.currentAdmin;
-      if (admin == null) {
-        // Admin girişi yapılmamış, login sayfasına yönlendir
+      final business = _businessService.currentBusiness;
+      if (business == null) {
+        // Business girişi yapılmamış, login sayfasına yönlendir
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/admin/login');
+          Navigator.pushReplacementNamed(context, '/business/login');
         }
         return;
       }
 
       setState(() {
-        _currentAdmin = admin;
+        _currentBusiness = business;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Admin verileri yüklenirken hata: $e';
+        _errorMessage = 'Business verileri yüklenirken hata: $e';
       });
     } finally {
       setState(() {
@@ -77,9 +75,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 
   Future<void> _handleLogout() async {
     try {
-      await _adminService.signOut();
+      await _businessService.signOut();
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/admin/login');
+        Navigator.pushReplacementNamed(context, '/business/login');
       }
     } catch (e) {
       if (mounted) {
@@ -101,7 +99,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       );
     }
 
-    if (_currentAdmin == null) {
+    if (_currentBusiness == null) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Sistem Yönetimi'),
@@ -109,7 +107,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           foregroundColor: AppColors.white,
         ),
         body: Center(
-          child: ErrorMessage(message: _errorMessage ?? 'Admin bulunamadı'),
+          child: ErrorMessage(message: _errorMessage ?? 'Business bulunamadı'),
         ),
       );
     }
@@ -150,7 +148,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
                 ),
               ),
               Text(
-                'Hoş geldin, ${_currentAdmin!.displayName}',
+                'Hoş geldin, ${_currentBusiness!.displayName}',
                 style: AppTypography.caption.copyWith(
                   color: AppColors.white.withOpacity(0.8),
                 ),
@@ -165,7 +163,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           icon: CircleAvatar(
             backgroundColor: AppColors.white.withOpacity(0.2),
             child: Text(
-              _currentAdmin!.initials,
+              _currentBusiness!.initials,
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.white,
                 fontWeight: FontWeight.w600,
@@ -247,7 +245,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
                   radius: 30,
                   backgroundColor: AppColors.error,
                   child: Text(
-                    _currentAdmin!.initials,
+                    _currentBusiness!.initials,
                     style: AppTypography.h4.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
@@ -256,7 +254,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  _currentAdmin!.displayName,
+                  _currentBusiness!.displayName,
                   style: AppTypography.h6.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -273,7 +271,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    _currentAdmin!.role.displayName,
+                    _currentBusiness!.role.displayName,
                     style: AppTypography.caption.copyWith(
                       color: AppColors.error,
                       fontWeight: FontWeight.w600,
@@ -295,49 +293,49 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
                   isSelected: _selectedIndex == 0,
                   onTap: () => _setSelectedIndex(0),
                 ),
-                _buildMenuItem(
-                  icon: Icons.business,
-                  title: 'İşletme Yönetimi',
-                  isSelected: _selectedIndex == 1,
-                  onTap: () => _setSelectedIndex(1),
-                  hasPermission: _currentAdmin!.hasPermission(AdminPermission.viewBusinesses),
-                ),
-                _buildMenuItem(
-                  icon: Icons.people,
-                  title: 'Müşteri Yönetimi',
-                  isSelected: _selectedIndex == 2,
-                  onTap: () => _setSelectedIndex(2),
-                  hasPermission: _currentAdmin!.hasPermission(AdminPermission.viewCustomers),
-                ),
-                _buildMenuItem(
-                  icon: Icons.admin_panel_settings,
-                  title: 'Admin Yönetimi',
-                  isSelected: _selectedIndex == 3,
-                  onTap: () => _setSelectedIndex(3),
-                  hasPermission: _currentAdmin!.hasPermission(AdminPermission.manageAdmins),
-                ),
-                _buildMenuItem(
-                  icon: Icons.analytics,
-                  title: 'Analitikler',
-                  isSelected: _selectedIndex == 4,
-                  onTap: () => _setSelectedIndex(4),
-                  hasPermission: _currentAdmin!.hasPermission(AdminPermission.viewAnalytics),
-                ),
-                _buildMenuItem(
-                  icon: Icons.settings,
-                  title: 'Sistem Ayarları',
-                  isSelected: _selectedIndex == 5,
-                  onTap: () => _setSelectedIndex(5),
-                  hasPermission: _currentAdmin!.hasPermission(AdminPermission.manageSystem),
-                ),
-                const Divider(height: 32),
-                _buildMenuItem(
-                  icon: Icons.history,
-                  title: 'Aktivite Logları',
-                  isSelected: _selectedIndex == 6,
-                  onTap: () => _setSelectedIndex(6),
-                  hasPermission: _currentAdmin!.hasPermission(AdminPermission.viewAuditLogs),
-                ),
+                                  _buildMenuItem(
+                    icon: Icons.business,
+                    title: 'İşletme Yönetimi',
+                    isSelected: _selectedIndex == 1,
+                    onTap: () => _setSelectedIndex(1),
+                    hasPermission: _currentBusiness!.hasPermission(BusinessPermission.viewBusinessInfo),
+                  ),
+                                  _buildMenuItem(
+                    icon: Icons.people,
+                    title: 'Müşteri Yönetimi',
+                    isSelected: _selectedIndex == 2,
+                    onTap: () => _setSelectedIndex(2),
+                    hasPermission: _currentBusiness!.hasPermission(BusinessPermission.viewOrders),
+                  ),
+                                  _buildMenuItem(
+                    icon: Icons.admin_panel_settings,
+                    title: 'Admin Yönetimi',
+                    isSelected: _selectedIndex == 3,
+                    onTap: () => _setSelectedIndex(3),
+                    hasPermission: _currentBusiness!.hasPermission(BusinessPermission.manageStaff),
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.analytics,
+                    title: 'Analitikler',
+                    isSelected: _selectedIndex == 4,
+                    onTap: () => _setSelectedIndex(4),
+                    hasPermission: _currentBusiness!.hasPermission(BusinessPermission.viewAnalytics),
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.settings,
+                    title: 'Sistem Ayarları',
+                    isSelected: _selectedIndex == 5,
+                    onTap: () => _setSelectedIndex(5),
+                    hasPermission: _currentBusiness!.hasPermission(BusinessPermission.manageSettings),
+                  ),
+                  const Divider(height: 32),
+                  _buildMenuItem(
+                    icon: Icons.history,
+                    title: 'Aktivite Logları',
+                    isSelected: _selectedIndex == 6,
+                    onTap: () => _setSelectedIndex(6),
+                    hasPermission: _currentBusiness!.hasPermission(BusinessPermission.viewReports),
+                  ),
               ],
             ),
           ),
@@ -387,7 +385,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
         _buildOverviewTab(),
         const BusinessManagementPage(),
         const CustomerManagementPage(),
-        const AdminManagementPage(),
+        const BusinessManagementPage(),
         const AnalyticsPage(),
         const SystemSettingsPage(),
         const ActivityLogsPage(),
@@ -577,28 +575,28 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
               spacing: 12,
               runSpacing: 12,
               children: [
-                if (_currentAdmin!.hasPermission(AdminPermission.manageAdmins))
+                if (_currentBusiness!.hasPermission(BusinessPermission.manageStaff))
                   _buildQuickActionButton(
                     title: 'Yeni Admin Ekle',
                     icon: Icons.person_add,
-                    color: AppColors.error,
+                    color: AppColors.primary,
                     onTap: () => _setSelectedIndex(3),
                   ),
-                if (_currentAdmin!.hasPermission(AdminPermission.viewBusinesses))
+                if (_currentBusiness!.hasPermission(BusinessPermission.viewBusinessInfo))
                   _buildQuickActionButton(
                     title: 'İşletme Onayla',
-                    icon: Icons.approval,
+                    icon: Icons.check_circle,
                     color: AppColors.success,
                     onTap: () => _setSelectedIndex(1),
                   ),
-                if (_currentAdmin!.hasPermission(AdminPermission.viewAnalytics))
+                if (_currentBusiness!.hasPermission(BusinessPermission.viewAnalytics))
                   _buildQuickActionButton(
                     title: 'Rapor Oluştur',
                     icon: Icons.assessment,
-                    color: AppColors.primary,
+                    color: AppColors.secondary,
                     onTap: () => _setSelectedIndex(4),
                   ),
-                if (_currentAdmin!.hasPermission(AdminPermission.manageSystem))
+                if (_currentBusiness!.hasPermission(BusinessPermission.manageSettings))
                   _buildQuickActionButton(
                     title: 'Sistem Ayarları',
                     icon: Icons.settings,

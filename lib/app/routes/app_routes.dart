@@ -16,13 +16,13 @@ import '../../presentation/pages/business/business_home_page.dart';
 import '../../data/models/category.dart' as app_category;
 import '../../data/models/business.dart';
 import '../../admin/admin.dart';
-import '../../presentation/pages/admin/responsive_admin_dashboard.dart';
-import '../../presentation/pages/admin/category_management_page.dart';
-import '../../presentation/pages/admin/product_management_page.dart';
-import '../../presentation/pages/admin/business_info_page.dart';
-import '../../presentation/pages/admin/menu_settings_page.dart';
-import '../../presentation/pages/admin/discount_management_page.dart';
-import '../../presentation/pages/admin/orders_page.dart';
+import '../../business/pages/business_dashboard_page.dart';
+import '../../presentation/pages/business/category_management_page.dart';
+import '../../presentation/pages/business/product_management_page.dart';
+import '../../presentation/pages/business/business_profile_page.dart';
+import '../../presentation/pages/business/menu_settings_page.dart';
+import '../../presentation/pages/business/discount_management_page.dart';
+import '../../presentation/pages/business/order_management_page.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -43,16 +43,15 @@ class AppRoutes {
   static const String search = '/search';
   static const String businessHome = '/business/home';
 
-  // Admin routes
-  static const String admin = '/admin';
-  static const String adminDashboard = '/admin/dashboard';
-  static const String adminCategories = '/admin/categories';
-  static const String adminProducts = '/admin/products';
-  static const String adminBusinessInfo = '/admin/business-info';
-  static const String adminMenuSettings = '/admin/menu-settings';
-  static const String adminDiscounts = '/admin/discounts';
-  static const String adminOrders = '/admin/orders';
-  static const String responsiveAdmin = '/admin/responsive';
+  // Business management routes
+  static const String businessDashboard = '/business/dashboard';
+  static const String businessCategories = '/business/categories';
+  static const String businessProducts = '/business/products';
+  static const String businessProfile = '/business/profile';
+  static const String businessMenuSettings = '/business/menu-settings';
+  static const String businessDiscounts = '/business/discounts';
+  static const String businessOrders = '/business/orders';
+  static const String businessQRManagement = '/business/qr-codes';
 
   // Route map
   static Map<String, WidgetBuilder> get routes => {
@@ -69,15 +68,14 @@ class AppRoutes {
     businessDetail: (context) => const BusinessDetailRouterPage(),
     search: (context) => const SearchRouterPage(),
     businessHome: (context) => const BusinessHomeRouterPage(),
-    admin: (context) => const ResponsiveAdminRouterPage(),
-    adminDashboard: (context) => const ResponsiveAdminRouterPage(),
-    adminCategories: (context) => const ResponsiveAdminRouterPage(),
-    adminProducts: (context) => const ResponsiveAdminRouterPage(),
-    adminBusinessInfo: (context) => const ResponsiveAdminRouterPage(),
-    adminMenuSettings: (context) => const ResponsiveAdminRouterPage(),
-    adminDiscounts: (context) => const ResponsiveAdminRouterPage(),
-    adminOrders: (context) => const ResponsiveAdminRouterPage(),
-    responsiveAdmin: (context) => const ResponsiveAdminRouterPage(),
+    businessDashboard: (context) => const BusinessDashboardRouterPage(),
+    businessCategories: (context) => const BusinessDashboardRouterPage(),
+    businessProducts: (context) => const BusinessDashboardRouterPage(),
+    businessProfile: (context) => const BusinessDashboardRouterPage(),
+    businessMenuSettings: (context) => const BusinessDashboardRouterPage(),
+    businessDiscounts: (context) => const BusinessDashboardRouterPage(),
+    businessOrders: (context) => const BusinessDashboardRouterPage(),
+    businessQRManagement: (context) => const BusinessDashboardRouterPage(),
   };
 
   // Custom route generator for dynamic URLs
@@ -189,21 +187,12 @@ class CustomerOrdersRouterPage extends StatelessWidget {
   }
 }
 
-class ResponsiveAdminRouterPage extends StatelessWidget {
-  const ResponsiveAdminRouterPage({super.key});
+class BusinessDashboardRouterPage extends StatelessWidget {
+  const BusinessDashboardRouterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final businessId = args?['businessId'] as String?;
-
-    // businessId yoksa router'a yönlendir
-    if (businessId == null || businessId.isEmpty) {
-      return const RouterPage();
-    }
-
-    return ResponsiveAdminDashboard(businessId: businessId);
+    return const BusinessDashboardPage();
   }
 }
 

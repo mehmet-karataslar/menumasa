@@ -199,7 +199,7 @@ class BusinessHeader extends StatelessWidget {
           ),
 
         // Call button
-        if (business.contactInfo.phone.isNotEmpty)
+        if (business.contactInfo.phone?.isNotEmpty == true)
           _buildActionButton(
             icon: Icons.phone,
             label: 'Ara',
@@ -207,7 +207,7 @@ class BusinessHeader extends StatelessWidget {
           ),
 
         // Location button
-        if (business.address.street.isNotEmpty)
+        if (business.address.street?.isNotEmpty == true)
           _buildActionButton(
             icon: Icons.location_on,
             label: 'Konum',
@@ -229,14 +229,14 @@ class BusinessHeader extends StatelessWidget {
           ),
 
         // Call button
-        if (business.contactInfo.phone.isNotEmpty)
+        if (business.contactInfo.phone?.isNotEmpty == true)
           _buildCompactActionButton(
             icon: Icons.phone,
             onPressed: onCallPressed ?? () => _defaultCallAction(),
           ),
 
         // Location button
-        if (business.address.street.isNotEmpty)
+        if (business.address.street?.isNotEmpty == true)
           _buildCompactActionButton(
             icon: Icons.location_on,
             onPressed: onLocationPressed ?? () => _defaultLocationAction(),
@@ -309,7 +309,7 @@ class BusinessHeader extends StatelessWidget {
   void _defaultLocationAction() {
     // Harita uygulamasında konum açılacak
     // await launch('https://maps.google.com/?q=${business.address.toString()}');
-    print('Location: ${business.address.toString()}');
+    print('Location: ${business.address.street?.isNotEmpty == true ? business.address.street! : 'Adres bilgisi yok'}');
   }
 
   Widget _buildCartButton() {

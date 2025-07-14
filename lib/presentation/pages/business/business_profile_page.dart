@@ -9,16 +9,16 @@ import '../../../data/models/business.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 
-class BusinessInfoPage extends StatefulWidget {
+class BusinessProfilePage extends StatefulWidget {
   final String businessId;
 
-  const BusinessInfoPage({super.key, required this.businessId});
+  const BusinessProfilePage({super.key, required this.businessId});
 
   @override
-  State<BusinessInfoPage> createState() => _BusinessInfoPageState();
+  State<BusinessProfilePage> createState() => _BusinessProfilePageState();
 }
 
-class _BusinessInfoPageState extends State<BusinessInfoPage> {
+class _BusinessProfilePageState extends State<BusinessProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
 
@@ -117,18 +117,16 @@ class _BusinessInfoPageState extends State<BusinessInfoPage> {
     _streetController.text = business.address.street;
     _cityController.text = business.address.city;
     _districtController.text = business.address.district;
-    _postalCodeController.text = business.address.postalCode;
-    _phoneController.text = business.contactInfo.phone;
-    _emailController.text = business.contactInfo.email;
+    _postalCodeController.text = business.address.postalCode ?? '';
+    _phoneController.text = business.contactInfo.phone ?? '';
+    _emailController.text = business.contactInfo.email ?? '';
     _websiteController.text = business.contactInfo.website ?? '';
     
-    final socialMedia = business.contactInfo.socialMedia;
-    if (socialMedia != null) {
-      _instagramController.text = socialMedia.instagram ?? '';
-      _facebookController.text = socialMedia.facebook ?? '';
-      _twitterController.text = socialMedia.twitter ?? '';
-      _youtubeController.text = socialMedia.youtube ?? '';
-    }
+    // Handle social media links
+    _instagramController.text = business.contactInfo.instagram ?? '';
+    _facebookController.text = business.contactInfo.facebook ?? '';
+    _twitterController.text = business.contactInfo.twitter ?? '';
+    _youtubeController.text = ''; // YouTube not in ContactInfo, add if needed
   }
 
   Future<void> _pickImage() async {
@@ -303,12 +301,9 @@ class _BusinessInfoPageState extends State<BusinessInfoPage> {
           phone: _phoneController.text.trim(),
           email: _emailController.text.trim(),
           website: _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
-          socialMedia: SocialMedia(
-            instagram: _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
-            facebook: _facebookController.text.trim().isEmpty ? null : _facebookController.text.trim(),
-            twitter: _twitterController.text.trim().isEmpty ? null : _twitterController.text.trim(),
-            youtube: _youtubeController.text.trim().isEmpty ? null : _youtubeController.text.trim(),
-          ),
+          instagram: _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
+          facebook: _facebookController.text.trim().isEmpty ? null : _facebookController.text.trim(),
+          twitter: _twitterController.text.trim().isEmpty ? null : _twitterController.text.trim(),
         ),
         updatedAt: DateTime.now(),
       );

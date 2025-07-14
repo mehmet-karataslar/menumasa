@@ -11,16 +11,16 @@ import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
 
-class OrdersPage extends StatefulWidget {
+class OrderManagementPage extends StatefulWidget {
   final String businessId;
 
-  const OrdersPage({Key? key, required this.businessId}) : super(key: key);
+  const OrderManagementPage({Key? key, required this.businessId}) : super(key: key);
 
   @override
-  State<OrdersPage> createState() => _OrdersPageState();
+  State<OrderManagementPage> createState() => _OrderManagementPageState();
 }
 
-class _OrdersPageState extends State<OrdersPage> with TickerProviderStateMixin {
+class _OrderManagementPageState extends State<OrderManagementPage> with TickerProviderStateMixin {
   final OrderService _orderService = OrderService();
   final DataService _dataService = DataService();
 
