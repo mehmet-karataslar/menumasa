@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/url_service.dart';
 import '../../../data/models/user.dart';
 import 'login_page.dart';
 import 'business_register_page.dart';
@@ -17,12 +18,18 @@ class RouterPage extends StatefulWidget {
 
 class _RouterPageState extends State<RouterPage> {
   final AuthService _authService = AuthService();
+  final UrlService _urlService = UrlService();
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _checkAuthenticationState();
+    
+    // URL güncelle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+    });
   }
 
   Future<void> _checkAuthenticationState() async {
@@ -34,6 +41,7 @@ class _RouterPageState extends State<RouterPage> {
         if (userData != null && mounted) {
           // Navigate based on user type
           if (userData.userType == UserType.customer) {
+            _urlService.updateCustomerUrl(userData.id, 'home');
             Navigator.pushReplacementNamed(
               context,
               '/customer/home',
@@ -41,12 +49,14 @@ class _RouterPageState extends State<RouterPage> {
             );
             return;
           } else if (userData.userType == UserType.business) {
+            _urlService.updateUrl('/business/dashboard', customTitle: 'İşletme Paneli | MasaMenu');
             Navigator.pushReplacementNamed(
               context,
               '/business/dashboard',
             );
             return;
           } else if (userData.userType == UserType.admin) {
+            _urlService.updateUrl('/admin/dashboard', customTitle: 'Admin Paneli | MasaMenu');
             Navigator.pushReplacementNamed(
               context,
               '/admin/dashboard',
@@ -58,6 +68,7 @@ class _RouterPageState extends State<RouterPage> {
       }
     } catch (e) {
       // Continue to show router page if there's an error
+      print('Auth check error: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -67,328 +78,414 @@ class _RouterPageState extends State<RouterPage> {
     }
   }
 
+  Future<void> _handleLogout() async {
+    try {
+      await _authService.signOut();
+      if (mounted) {
+        _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+        // Reload the router page to show welcome screen
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Çıkış yapıldı'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Çıkış hatası: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primary,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Yükleniyor...',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    return _buildRouterPage();
+    return _buildWelcomePage();
   }
 
-  Widget _buildRouterPage() {
+  Widget _buildWelcomePage() {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.black.withOpacity(0.2),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.restaurant_menu,
-                  size: 64,
-                  color: AppColors.white,
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Başlık
-              Text(
-                'Masa Menü',
-                style: AppTypography.h1.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Text(
-                'Dijital Menü Çözümü',
-                style: AppTypography.bodyLarge.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-
-              const SizedBox(height: 48),
-
-              // Müşteri girişi butonu
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const LoginPage(userType: 'customer'),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.person, color: AppColors.white),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Müşteri Girişi',
-                        style: AppTypography.buttonLarge.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // İşletme girişi butonu
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BusinessLoginPage(),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary, width: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.business, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'İşletme Girişi',
-                        style: AppTypography.buttonLarge.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Admin bölümü
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD32F2F).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFD32F2F).withOpacity(0.3),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.admin_panel_settings,
-                          color: Color(0xFFD32F2F),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Sistem Yönetimi',
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: const Color(0xFFD32F2F),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Admin girişi butonu
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/admin/login');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD32F2F),
-                          foregroundColor: AppColors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.admin_panel_settings,
-                              color: AppColors.white,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Admin Girişi',
-                              style: AppTypography.bodyMedium.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Admin kayıt linki
-                    InkWell(
-                      onTap: () {
-                        // Admin kayıt sayfasına yönlendir
-                        Navigator.pushNamed(context, '/admin/register');
-                      },
-                      child: Text(
-                        'Admin Kayıt Ol',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: const Color(0xFFD32F2F),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Kayıt ol linkleri
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.greyLighter,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'Hesabınız yok mu?',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Müşteri kayıt linki
-                    InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const RegisterPage(userType: 'customer'),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Müşteri Kayıt Ol',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Text(
-                      'veya',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textLight,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // İşletme kayıt linki
-                    InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const BusinessRegisterPage(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'İşletme Kayıt Ol',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Bilgi metni
-              Text(
-                'Dijital menü sistemi ile işletmenizi büyütün',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textLight,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              // Header
+              _buildHeader(),
+              
+              const SizedBox(height: 60),
+              
+              // Main action buttons
+              _buildMainActions(),
+              
+              const SizedBox(height: 40),
+              
+              // Feature highlights
+              _buildFeatureHighlights(),
+              
+              const SizedBox(height: 40),
+              
+              // Footer
+              _buildFooter(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        // Logo
+        Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.restaurant_menu,
+            size: 64,
+            color: AppColors.white,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Title
+        Text(
+          'MasaMenu',
+          style: AppTypography.h1.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: 32,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          'Dijital Menü Çözümü',
+          style: AppTypography.bodyLarge.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 18,
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        Text(
+          'QR kod ile kolay menü erişimi, sipariş yönetimi ve müşteri deneyimi',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textLight,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainActions() {
+    return Column(
+      children: [
+        // Customer access button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              _urlService.updateUrl('/login', customTitle: 'Müşteri Girişi | MasaMenu');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LoginPage(userType: 'customer'),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+            ),
+            icon: const Icon(Icons.person, size: 24),
+            label: Text(
+              'Müşteri Girişi',
+              style: AppTypography.buttonLarge.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Business access button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              _urlService.updateUrl('/business/login', customTitle: 'İşletme Girişi | MasaMenu');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BusinessLoginPage(),
+                ),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary, width: 2),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.business, size: 24),
+            label: Text(
+              'İşletme Girişi',
+              style: AppTypography.buttonLarge.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Quick registration links
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () {
+                _urlService.updateUrl('/register', customTitle: 'Müşteri Kaydı | MasaMenu');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RegisterPage(userType: 'customer'),
+                  ),
+                );
+              },
+              child: Text(
+                'Müşteri Kaydı',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            Text(
+              ' | ',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textLight,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                _urlService.updateUrl('/business-register', customTitle: 'İşletme Kaydı | MasaMenu');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BusinessRegisterPage(),
+                  ),
+                );
+              },
+              child: Text(
+                'İşletme Kaydı',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureHighlights() {
+    return Column(
+      children: [
+        Text(
+          'Özellikler',
+          style: AppTypography.h3.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        Row(
+          children: [
+            Expanded(
+              child: _buildFeatureCard(
+                icon: Icons.qr_code,
+                title: 'QR Menü',
+                description: 'QR kod ile hızlı menü erişimi',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildFeatureCard(
+                icon: Icons.shopping_cart,
+                title: 'Sipariş Yönetimi',
+                description: 'Kolay sipariş alma sistemi',
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 16),
+        
+        Row(
+          children: [
+            Expanded(
+              child: _buildFeatureCard(
+                icon: Icons.analytics,
+                title: 'Analitik',
+                description: 'Satış raporları ve istatistikler',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildFeatureCard(
+                icon: Icons.mobile_friendly,
+                title: 'Mobil Uyumlu',
+                description: 'Tüm cihazlarda çalışır',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureCard({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 32,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: AppTypography.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Column(
+      children: [
+        Divider(
+          color: AppColors.grey.withOpacity(0.3),
+          thickness: 1,
+        ),
+        
+        const SizedBox(height: 16),
+        
+        Text(
+          '© 2024 MasaMenu. Tüm hakları saklıdır.',
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textLight,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        
+        const SizedBox(height: 8),
+        
+        Text(
+          'Dijital menü çözümünüz',
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textLight,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

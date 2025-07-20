@@ -18,6 +18,7 @@ import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
 import 'qr_management_page.dart';
 import '../../../core/services/url_service.dart';
+import '../../../core/services/auth_service.dart';
 
 class BusinessHomePage extends StatefulWidget {
   final String businessId;
@@ -37,6 +38,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     with TickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
   final UrlService _urlService = UrlService();
+  final AuthService _authService = AuthService();
 
   Business? _business;
   List<app_order.Order> _recentOrders = [];
@@ -123,6 +125,55 @@ class _BusinessHomePageState extends State<BusinessHomePage>
       currentTab,
       businessName: businessName,
     );
+  }
+
+  Future<void> _handleLogout() async {
+    // Logout confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Çıkış Yap'),
+        content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.error,
+            ),
+            child: const Text('Çıkış Yap'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      try {
+        await _authService.signOut();
+        if (mounted) {
+          _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+          Navigator.pushReplacementNamed(context, '/');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Çıkış yapıldı'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Çıkış hatası: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -440,7 +491,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                 navigateToTab('ayarlar'); // Use new navigation method
                 break;
               case 'logout':
-                Navigator.pushReplacementNamed(context, '/');
+                _handleLogout();
                 break;
             }
           },

@@ -134,8 +134,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     try {
       await _authService.signOut();
       if (mounted) {
-        _urlService.updateUrl('/login', customTitle: 'Giriş | MasaMenu');
-        Navigator.pushReplacementNamed(context, '/login');
+        _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+        Navigator.pushReplacementNamed(context, '/');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Çıkış yapıldı'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
