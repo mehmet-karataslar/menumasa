@@ -3,7 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/url_service.dart';
-import '../../../data/models/user.dart';
+import '../../../data/models/user.dart' hide UserType;
 import '../../../core/enums/user_type.dart';
 import 'login_page.dart';
 import 'business_register_page.dart';
@@ -240,11 +240,18 @@ class _RouterPageState extends State<RouterPage> {
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               final userData = await _authService.getCurrentUserData();
+                              print('Router - User data: ${userData?.toJson()}'); // Debug log
+                              print('Router - User type: ${userData?.userType}'); // Debug log
+                              
                               if (userData?.userType == UserType.business) {
                                 Navigator.pushNamed(context, '/business/dashboard');
                               } else if (userData?.userType == UserType.customer) {
                                 Navigator.pushNamed(context, '/customer/home', 
                                   arguments: {'userId': userData!.id});
+                              } else {
+                                print('Router - Unknown user type: ${userData?.userType}');
+                                // Fallback: Go to appropriate login
+                                Navigator.pushNamed(context, '/login');
                               }
                             },
                             icon: const Icon(Icons.dashboard, size: 18),

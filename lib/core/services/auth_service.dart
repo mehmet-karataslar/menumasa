@@ -135,37 +135,36 @@ class AuthService {
         print('Creating business user with userType: business'); // Debug log
 
         // Create business user record in users collection with business type
-        final businessUserData = {
-          'id': credential.user!.uid,
-          'email': email,
-          'name': businessName,
-          'phone': phone,
-          'userType': 'business', // Explicitly set as string
-          'isActive': true,
-          'isEmailVerified': false,
-          'createdAt': DateTime.now().toIso8601String(),
-          'lastLoginAt': DateTime.now().toIso8601String(),
-          'businessData': app_user.BusinessData(
-             role: app_user.BusinessRole.fromString('owner'),
-             permissions: [
-               app_user.BusinessPermission.manageStaff,
-               app_user.BusinessPermission.addProducts,
-               app_user.BusinessPermission.editProducts,
-               app_user.BusinessPermission.deleteProducts,
-               app_user.BusinessPermission.editOrders,
-               app_user.BusinessPermission.viewOrders,
-               app_user.BusinessPermission.manageSettings,
-               app_user.BusinessPermission.viewAnalytics,
-             ],
-             businessIds: [businessId],
-             stats: BusinessStats.empty(),
-             settings: BusinessSettings.defaultRestaurant(),
-           ).toJson(),
-        };
+        final newUser = app_user.User.business(
+          id: credential.user!.uid,
+          email: email,
+          name: businessName,
+          phone: phone,
+          createdAt: DateTime.now(),
+          isActive: true,
+          isEmailVerified: false,
+          lastLoginAt: DateTime.now(),
+          businessData: app_user.BusinessData(
+            role: app_user.BusinessRole.owner,
+            permissions: [
+              app_user.BusinessPermission.manageStaff,
+              app_user.BusinessPermission.addProducts,
+              app_user.BusinessPermission.editProducts,
+              app_user.BusinessPermission.deleteProducts,
+              app_user.BusinessPermission.editOrders,
+              app_user.BusinessPermission.viewOrders,
+              app_user.BusinessPermission.manageSettings,
+              app_user.BusinessPermission.viewAnalytics,
+            ],
+            businessIds: [businessId],
+            stats: BusinessStats.empty(),
+            settings: BusinessSettings.defaultRestaurant(),
+          ),
+        );
 
-        print('Business user data: $businessUserData'); // Debug log
+        print('Business user data: ${newUser.toJson()}'); // Debug log
 
-        await _firestore.collection('users').doc(credential.user!.uid).set(businessUserData);
+        await _firestore.collection('users').doc(credential.user!.uid).set(newUser.toJson());
 
         // Also create detailed business_users record for BusinessService
         await _firestore.collection('business_users').doc(credential.user!.uid).set({
@@ -197,32 +196,7 @@ class AuthService {
           'requirePasswordChange': false,
         });
 
-        return app_user.User.business(
-          id: credential.user!.uid,
-          email: email,
-          name: businessName,
-          phone: phone,
-          createdAt: DateTime.now(),
-          isActive: true,
-          isEmailVerified: false,
-          lastLoginAt: DateTime.now(),
-          businessData: app_user.BusinessData(
-            role: app_user.BusinessRole.owner,
-            permissions: [
-              app_user.BusinessPermission.manageStaff,
-              app_user.BusinessPermission.addProducts,
-              app_user.BusinessPermission.editProducts,
-              app_user.BusinessPermission.deleteProducts,
-              app_user.BusinessPermission.editOrders,
-              app_user.BusinessPermission.viewOrders,
-              app_user.BusinessPermission.manageSettings,
-              app_user.BusinessPermission.viewAnalytics,
-            ],
-            businessIds: [businessId],
-            stats: BusinessStats.empty(),
-            settings: BusinessSettings.defaultRestaurant(),
-          ),
-        );
+        return newUser;
       }
       return null;
     } on FirebaseAuthException catch (e) {

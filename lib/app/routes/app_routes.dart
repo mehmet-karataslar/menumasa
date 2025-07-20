@@ -328,9 +328,13 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
 
     try {
       final user = _authService.currentUser;
+      print('BusinessDashboard - Current user: ${user?.uid}'); // Debug log
+      
       if (user != null) {
         // Get user data to check if it's a business user
         final userData = await _authService.getCurrentUserData();
+        print('BusinessDashboard - User data: ${userData?.toJson()}'); // Debug log
+        print('BusinessDashboard - User type: ${userData?.userType}'); // Debug log
         
         if (userData != null && userData.userType == UserType.business) {
           // Get business ID from business_users collection
@@ -339,22 +343,27 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
               .doc(user.uid)
               .get();
           
+          print('BusinessDashboard - Business user doc exists: ${businessUserDoc.exists}'); // Debug log
+          
           if (businessUserDoc.exists) {
             final businessData = businessUserDoc.data()!;
+            print('BusinessDashboard - Business data: $businessData'); // Debug log
             setState(() {
               _businessId = businessData['businessId'] ?? user.uid;
               _isLoading = false;
             });
           } else {
             // Fallback: use user ID as business ID
+            print('BusinessDashboard - Using fallback business ID: ${user.uid}'); // Debug log
             setState(() {
               _businessId = user.uid;
               _isLoading = false;
             });
           }
         } else {
+          print('BusinessDashboard - User is not business type: ${userData?.userType}'); // Debug log
           setState(() {
-            _error = 'Bu kullanıcı işletme hesabı değil';
+            _error = 'Bu kullanıcı işletme hesabı değil. User type: ${userData?.userType}';
             _isLoading = false;
           });
         }
@@ -365,6 +374,7 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
         });
       }
     } catch (e) {
+      print('BusinessDashboard - Error: $e'); // Debug log
       setState(() {
         _error = 'Business bilgileri yüklenirken hata: $e';
         _isLoading = false;
