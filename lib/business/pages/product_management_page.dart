@@ -1552,30 +1552,12 @@ class _ProductManagementPageState extends State<ProductManagementPage>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Galeri'),
-              subtitle: const Text('Örnek resimlerden seç'),
-              onTap: () {
-                Navigator.pop(context);
-                _showSampleImagesDialog(context, onImageSelected);
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text('Kamera'),
               subtitle: const Text('Yeni fotoğraf çek'),
               onTap: () {
                 Navigator.pop(context);
                 _pickImageFromCamera(onImageSelected);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.folder),
-              title: const Text('Dosya Seç'),
-              subtitle: const Text('Bilgisayardan dosya seç'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImageFromFile(onImageSelected);
               },
             ),
           ],
@@ -2197,135 +2179,5 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         );
       }
     }
-  }
-
-  List<category_model.Category> _createSampleCategories() {
-    return [
-      category_model.Category(
-        categoryId: 'cat-1',
-        businessId: widget.businessId,
-        name: 'Çorbalar',
-        description: 'Sıcak ve lezzetli çorba çeşitleri',
-        sortOrder: 0,
-        isActive: true,
-        timeRules: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      category_model.Category(
-        categoryId: 'cat-2',
-        businessId: widget.businessId,
-        name: 'Ana Yemekler',
-        description: 'Geleneksel Türk yemekleri',
-        sortOrder: 1,
-        isActive: true,
-        timeRules: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      category_model.Category(
-        categoryId: 'cat-3',
-        businessId: widget.businessId,
-        name: 'Tatlılar',
-        description: 'Ev yapımı tatlılar',
-        sortOrder: 2,
-        isActive: true,
-        timeRules: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    ];
-  }
-
-  List<Product> _createSampleProducts() {
-    return [
-      Product(
-        productId: 'prod-1',
-        businessId: widget.businessId,
-        categoryId: 'cat-1',
-        name: 'Mercimek Çorbası',
-        description: 'Geleneksel mercimek çorbası',
-        detailedDescription: 'Geleneksel mercimek çorbası, sıcak servis edilir',
-        price: 15.00,
-        currentPrice: 15.00,
-        currency: 'TL',
-        images: [
-          ProductImage(
-            url: 'https://picsum.photos/400/300?random=1',
-            alt: 'Mercimek Çorbası',
-            isPrimary: true,
-          ),
-        ],
-        nutritionInfo: NutritionInfo(
-          calories: 120.0,
-          protein: 6.0,
-          carbs: 20.0,
-          fat: 2.0,
-          fiber: 4.0,
-          sugar: 3.0,
-          sodium: 580.0,
-        ),
-        allergens: [],
-        tags: ['hot', 'healthy'],
-        isActive: true,
-        isAvailable: true,
-        sortOrder: 0,
-        timeRules: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      Product(
-        productId: 'prod-2',
-        businessId: widget.businessId,
-        categoryId: 'cat-2',
-        name: 'Adana Kebap',
-        description: 'Acılı kıyma kebabı',
-        detailedDescription: 'Acılı kıyma kebabı, ızgara servis edilir',
-        price: 45.00,
-        currentPrice: 40.50, // 10% discount
-        currency: 'TL',
-        images: [
-          ProductImage(
-            url: 'https://picsum.photos/400/300?random=2',
-            alt: 'Adana Kebap',
-            isPrimary: true,
-          ),
-        ],
-        allergens: [],
-        tags: ['spicy', 'popular'],
-        isActive: true,
-        isAvailable: true,
-        sortOrder: 0,
-        timeRules: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      Product(
-        productId: 'prod-3',
-        businessId: widget.businessId,
-        categoryId: 'cat-3',
-        name: 'Baklava',
-        description: 'Antep fıstıklı baklava',
-        detailedDescription: 'Antep fıstıklı baklava, ev yapımı',
-        price: 25.00,
-        currentPrice: 25.00,
-        currency: 'TL',
-        images: [
-          ProductImage(
-            url: 'https://picsum.photos/400/300?random=3',
-            alt: 'Baklava',
-            isPrimary: true,
-          ),
-        ],
-        allergens: ['nuts', 'gluten'],
-        tags: ['sweet', 'traditional'],
-        isActive: true,
-        isAvailable: false,
-        sortOrder: 0,
-        timeRules: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    ];
   }
 }
