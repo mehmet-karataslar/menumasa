@@ -4,6 +4,7 @@ import 'pages/business_dashboard_page.dart';
 import 'pages/business_management_page.dart';
 import 'pages/customer_management_page.dart';
 import 'pages/analytics_page.dart';
+import 'pages/stock_management_page.dart';
 import 'pages/system_settings_page.dart';
 import 'pages/activity_logs_page.dart';
 
@@ -13,6 +14,7 @@ class BusinessRoutes {
   static const String management = '/business/management';
   static const String customers = '/business/customers';
   static const String analytics = '/business/analytics';
+  static const String stock = '/business/stock';
   static const String settings = '/business/settings';
   static const String logs = '/business/logs';
 
@@ -23,6 +25,7 @@ class BusinessRoutes {
       management: (context) => const BusinessManagementPage(),
       customers: (context) => const CustomerManagementPage(),
       analytics: (context) => const AnalyticsPage(),
+      stock: (context) => const StockManagementPage(),
       settings: (context) => const SystemSettingsPage(),
       logs: (context) => const ActivityLogsPage(),
     };
@@ -50,6 +53,10 @@ class BusinessRoutes {
         return MaterialPageRoute(
           builder: (context) => const AnalyticsPage(),
         );
+      case '/business/stock':
+        return MaterialPageRoute(
+          builder: (context) => const StockManagementPage(),
+        );
       case '/business/settings':
         return MaterialPageRoute(
           builder: (context) => const SystemSettingsPage(),
@@ -59,9 +66,7 @@ class BusinessRoutes {
           builder: (context) => const ActivityLogsPage(),
         );
       default:
-        return MaterialPageRoute(
-          builder: (context) => const BusinessLoginPage(),
-        );
+        return null;
     }
   }
 } 

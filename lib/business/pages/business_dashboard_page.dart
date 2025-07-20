@@ -10,6 +10,7 @@ import 'business_management_page.dart';
 import 'customer_management_page.dart';
 import 'system_settings_page.dart';
 import 'analytics_page.dart';
+import 'stock_management_page.dart';
 import 'activity_logs_page.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
@@ -33,7 +34,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
     _loadBusinessData();
   }
 
@@ -322,18 +323,25 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
                     hasPermission: _currentBusiness!.hasPermission(BusinessPermission.viewAnalytics),
                   ),
                   _buildMenuItem(
-                    icon: Icons.settings,
-                    title: 'Sistem Ayarları',
+                    icon: Icons.inventory,
+                    title: 'Stok Yönetimi',
                     isSelected: _selectedIndex == 5,
                     onTap: () => _setSelectedIndex(5),
+                    hasPermission: _currentBusiness!.hasPermission(BusinessPermission.manageProducts),
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.settings,
+                    title: 'Sistem Ayarları',
+                    isSelected: _selectedIndex == 6,
+                    onTap: () => _setSelectedIndex(6),
                     hasPermission: _currentBusiness!.hasPermission(BusinessPermission.manageSettings),
                   ),
                   const Divider(height: 32),
                   _buildMenuItem(
                     icon: Icons.history,
                     title: 'Aktivite Logları',
-                    isSelected: _selectedIndex == 6,
-                    onTap: () => _setSelectedIndex(6),
+                    isSelected: _selectedIndex == 7,
+                    onTap: () => _setSelectedIndex(7),
                     hasPermission: _currentBusiness!.hasPermission(BusinessPermission.viewReports),
                   ),
               ],
@@ -387,6 +395,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
         const CustomerManagementPage(),
         const BusinessManagementPage(),
         const AnalyticsPage(),
+        const StockManagementPage(),
         const SystemSettingsPage(),
         const ActivityLogsPage(),
       ],
@@ -434,7 +443,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
 
   Widget _buildStatsGrid() {
     return GridView.count(
-      crossAxisCount: 4,
+      crossAxisCount: 5,
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
       shrinkWrap: true,
@@ -463,11 +472,18 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
           onTap: () => _setSelectedIndex(3),
         ),
         _buildStatCard(
+          title: 'Stok Durumu',
+          value: '0',
+          icon: Icons.inventory,
+          color: AppColors.info,
+          onTap: () => _setSelectedIndex(5),
+        ),
+        _buildStatCard(
           title: 'Bugünkü Giriş',
           value: '0',
           icon: Icons.login,
           color: AppColors.warning,
-          onTap: () => _setSelectedIndex(6),
+          onTap: () => _setSelectedIndex(7),
         ),
       ],
     );
@@ -540,7 +556,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _setSelectedIndex(6),
+                  onPressed: () => _setSelectedIndex(7),
                   child: const Text('Tümünü Gör'),
                 ),
               ],
@@ -596,12 +612,19 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
                     color: AppColors.secondary,
                     onTap: () => _setSelectedIndex(4),
                   ),
+                if (_currentBusiness!.hasPermission(BusinessPermission.manageProducts))
+                  _buildQuickActionButton(
+                    title: 'Stok Yönetimi',
+                    icon: Icons.inventory,
+                    color: AppColors.info,
+                    onTap: () => _setSelectedIndex(5),
+                  ),
                 if (_currentBusiness!.hasPermission(BusinessPermission.manageSettings))
                   _buildQuickActionButton(
                     title: 'Sistem Ayarları',
                     icon: Icons.settings,
                     color: AppColors.warning,
-                    onTap: () => _setSelectedIndex(5),
+                    onTap: () => _setSelectedIndex(6),
                   ),
               ],
             ),

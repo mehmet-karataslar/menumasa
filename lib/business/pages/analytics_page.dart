@@ -804,7 +804,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with TickerProviderStateM
                 child: _buildAnalyticsCard(
                   'Sipariş Doğruluğu',
                   '%${_analytics!.performanceAnalytics.orderAccuracy.toStringAsFixed(1)}',
-                  Icons.accuracy,
+                  Icons.check_circle,
                   AppColors.secondary,
                 ),
               ),

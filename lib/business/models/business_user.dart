@@ -308,6 +308,7 @@ enum BusinessPermission {
   addProducts('add_products', 'Ürün Ekle'),
   editProducts('edit_products', 'Ürün Düzenle'),
   deleteProducts('delete_products', 'Ürün Sil'),
+  manageProducts('manage_products', 'Ürün Yönetimi'),
   manageCategories('manage_categories', 'Kategori Yönetimi'),
 
   // Order Management

@@ -16,6 +16,9 @@ class FirestoreService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Public getter for Firestore instance
+  FirebaseFirestore get firestore => _firestore;
+
   // Collection references
   CollectionReference get _usersRef => _firestore.collection('users');
   CollectionReference get _businessesRef => _firestore.collection('businesses');

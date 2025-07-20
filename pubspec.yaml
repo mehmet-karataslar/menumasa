@@ -69,9 +69,6 @@ dependencies:
   # Date & Time
   table_calendar: ^3.0.9
 
-  # Charts & Analytics
-  fl_chart: ^0.66.2
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

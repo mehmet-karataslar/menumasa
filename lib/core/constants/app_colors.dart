@@ -28,6 +28,7 @@ class AppColors {
 
   // Border ve UI Renkleri
   static const Color borderColor = Color(0xFFE0E0E0);
+  static const Color borderLight = Color(0xFFE8E8E8);
 
   // Semantic Renkler
   static const Color success = Color(0xFF27AE60);

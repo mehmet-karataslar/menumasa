@@ -150,7 +150,8 @@ class UserRepositoryImpl implements UserRepository {
         query = query.orderBy('createdAt', descending: true);
       }
       
-      query = query.limit(size).offset(page * size);
+      query = query.limit(size);
+      // Note: Firestore doesn't support offset. For proper pagination, use startAfterDocument
       
       final snapshot = await query.get();
       return snapshot.docs
@@ -620,9 +621,7 @@ class UserRepositoryImpl implements UserRepository {
       
       query = query.orderBy('createdAt', descending: true);
       
-      if (offset != null) {
-        query = query.offset(offset);
-      }
+      // Note: Firestore doesn't support offset. Use limit only for pagination
       
       if (limit != null) {
         query = query.limit(limit);
