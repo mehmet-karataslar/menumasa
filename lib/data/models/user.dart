@@ -1157,6 +1157,9 @@ class CustomerFavorite {
   final double totalSpent;
   final DateTime? addedDate;
 
+  // Getter for backward compatibility
+  String get productId => businessId;
+
   CustomerFavorite({
     required this.id,
     required this.businessId,

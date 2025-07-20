@@ -13,6 +13,9 @@ class Category {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  // Getter for id to match expected interface
+  String get id => categoryId;
+
   Category({
     required this.categoryId,
     required this.businessId,

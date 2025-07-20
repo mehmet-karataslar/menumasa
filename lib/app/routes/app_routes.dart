@@ -13,7 +13,6 @@ import '../../customer/pages/customer_profile_page.dart';
 import '../../customer/pages/cart_page.dart';
 import '../../customer/pages/business_detail_page.dart';
 import '../../customer/pages/search_page.dart';
-import '../../business/pages/business_home_page.dart';
 import '../../business/pages/business_dashboard_page.dart';
 import '../../business/models/category.dart' as app_category;
 import '../../business/models/business.dart';
@@ -520,7 +519,7 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
       );
     }
     
-    return ResponsiveAdminDashboard(businessId: _businessId!);
+    return BusinessDashboard(businessId: _businessId!);
   }
 }
 
@@ -650,6 +649,6 @@ class _BusinessHomeRouterPageState extends State<BusinessHomeRouterPage> {
     }
     // Business home route should redirect to business dashboard
     // Check if user is authenticated business user
-    return ResponsiveAdminDashboard(businessId: _businessId!);
+    return BusinessDashboard(businessId: _businessId!);
   }
 }

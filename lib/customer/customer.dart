@@ -12,7 +12,6 @@ export 'models/customer_preferences.dart';
 export 'services/customer_service.dart';
 
 // Pages
-export 'pages/customer_home_page.dart';
 export 'pages/business_detail_page.dart';
 export 'pages/menu_page.dart';
 export 'pages/cart_page.dart';

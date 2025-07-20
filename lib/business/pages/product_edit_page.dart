@@ -8,9 +8,9 @@ import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../business/models/product.dart';
-import '../../../business/models/category.dart' as category_model;
-import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../models/category.dart' as category_model;
+import '../services/business_firestore_service.dart';
 
 class ProductEditPage extends StatefulWidget {
   final String businessId;
@@ -32,7 +32,7 @@ class ProductEditPage extends StatefulWidget {
 
 class _ProductEditPageState extends State<ProductEditPage>
     with TickerProviderStateMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final ImagePicker _imagePicker = ImagePicker();
   final PageController _pageController = PageController();
@@ -1101,10 +1101,12 @@ class _ProductEditPageState extends State<ProductEditPage>
       // Upload new images
       if (_selectedImages.isNotEmpty) {
         for (int i = 0; i < _selectedImages.length; i++) {
+          final fileName = _storageService.generateFileName('product_image_$i.jpg');
           final imageUrl = await _storageService.uploadProductImage(
-            _selectedImages[i],
-            widget.businessId,
-            widget.product?.productId ?? 'new_${DateTime.now().millisecondsSinceEpoch}',
+            businessId: widget.businessId,
+            productId: widget.product?.productId ?? 'new_${DateTime.now().millisecondsSinceEpoch}',
+            imageFile: _selectedImages[i],
+            fileName: fileName,
           );
           allImageUrls.add(imageUrl);
         }
@@ -1143,7 +1145,7 @@ class _ProductEditPageState extends State<ProductEditPage>
           updatedAt: DateTime.now(),
         );
 
-        await _firestoreService.saveProduct(newProduct);
+        await _businessFirestoreService.saveProduct(newProduct);
       } else {
         // Update existing product
         final updatedProduct = widget.product!.copyWith(
@@ -1168,7 +1170,7 @@ class _ProductEditPageState extends State<ProductEditPage>
           updatedAt: DateTime.now(),
         );
 
-        await _firestoreService.saveProduct(updatedProduct);
+        await _businessFirestoreService.saveProduct(updatedProduct);
       }
 
       if (mounted) {

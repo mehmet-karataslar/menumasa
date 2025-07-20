@@ -4,7 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 
-import '../../../core/services/firestore_service.dart';
+import '../services/business_firestore_service.dart';
 import '../../../business/models/discount.dart';
 import '../../../business/models/category.dart';
 import '../../../business/models/product.dart';
@@ -21,7 +21,7 @@ class DiscountManagementPage extends StatefulWidget {
 }
 
 class _DiscountManagementPageState extends State<DiscountManagementPage> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
 
   List<Discount> _discounts = [];
   List<Category> _categories = [];
@@ -39,9 +39,9 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
       setState(() => _isLoading = true);
 
       final futures = await Future.wait([
-        _firestoreService.getDiscountsByBusinessId(widget.businessId),
-        _firestoreService.getBusinessCategories(widget.businessId),
-        _firestoreService.getBusinessProducts(widget.businessId, limit: 100),
+        _businessFirestoreService.getDiscountsByBusinessId(widget.businessId),
+        _businessFirestoreService.getBusinessCategories(widget.businessId),
+        _businessFirestoreService.getBusinessProducts(widget.businessId, limit: 100),
       ]);
 
       setState(() {
@@ -390,7 +390,7 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
 
   Future<void> _saveDiscount(Discount discount) async {
     try {
-      await _firestoreService.saveDiscount(discount);
+      await _businessFirestoreService.saveDiscount(discount);
       await _loadData();
 
       if (mounted) {
@@ -437,7 +437,7 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
 
     if (confirm == true) {
       try {
-        await _firestoreService.deleteDiscount(discount.discountId);
+        await _businessFirestoreService.deleteDiscount(discount.discountId);
         await _loadData();
 
         if (mounted) {

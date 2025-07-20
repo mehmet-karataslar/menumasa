@@ -18,7 +18,7 @@ import 'customer/pages/product_detail_page.dart';
 import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_typography.dart';
-import 'core/services/firestore_service.dart';
+import 'core/services/core_firestore_service.dart';
 import 'admin/admin.dart';
 import 'core/services/data_service.dart';
 import 'app/routes/app_routes.dart';
@@ -47,8 +47,8 @@ void main() async {
   // Firebase will work without App Check in development
 
   // Initialize Firestore database
-  final firestoreService = FirestoreService();
-  await firestoreService.initializeDatabase();
+  final coreFirestoreService = CoreFirestoreService();
+  await coreFirestoreService.initializeDatabase();
 
   // Initialize Admin Module
   await AdminModule.initialize();
@@ -245,7 +245,7 @@ class AdminDashboardRouterPage extends StatelessWidget {
       return const NotFoundPage();
     }
 
-    return ResponsiveAdminDashboard(businessId: businessId);
+            return BusinessDashboard(businessId: businessId);
   }
 }
 

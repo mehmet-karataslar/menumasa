@@ -16,8 +16,8 @@ import '../../core/mixins/url_mixin.dart';
 import '../models/product.dart';
 import '../models/category.dart' as category_model;
 import '../models/discount.dart';
-import '../../core/services/firestore_service.dart';
 import '../../core/services/storage_service.dart';
+import '../services/business_firestore_service.dart';
 import 'product_edit_page.dart';
 
 class ProductManagementPage extends StatefulWidget {
@@ -32,7 +32,7 @@ class ProductManagementPage extends StatefulWidget {
 
 class _ProductManagementPageState extends State<ProductManagementPage>
     with TickerProviderStateMixin, UrlMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
@@ -89,9 +89,9 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     try {
       // Load products, categories and discounts in parallel
       final futures = await Future.wait([
-        _firestoreService.getBusinessProducts(widget.businessId, limit: 100),
-        _firestoreService.getBusinessCategories(widget.businessId),
-        _firestoreService.getDiscounts(businessId: widget.businessId),
+        _businessFirestoreService.getBusinessProducts(widget.businessId, limit: 100),
+        _businessFirestoreService.getBusinessCategories(widget.businessId),
+        _businessFirestoreService.getDiscounts(businessId: widget.businessId),
       ]);
 
       setState(() {
@@ -1484,7 +1484,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         updatedAt: DateTime.now(),
       );
 
-      await _firestoreService.saveDiscount(discount);
+      await _businessFirestoreService.saveDiscount(discount);
       await _loadData(); // Reload data to refresh UI
 
       if (mounted) {
@@ -2027,7 +2027,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
           updatedAt: DateTime.now(),
         );
 
-        await _firestoreService.saveProduct(newProduct);
+        await _businessFirestoreService.saveProduct(newProduct);
 
         if (mounted) {
           setState(() {
@@ -2065,7 +2065,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
           updatedAt: DateTime.now(),
         );
 
-        await _firestoreService.saveProduct(updatedProduct);
+        await _businessFirestoreService.saveProduct(updatedProduct);
 
         if (mounted) {
           final index = _products.indexWhere(
@@ -2104,7 +2104,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         updatedAt: DateTime.now(),
       );
 
-      await _firestoreService.saveProduct(updatedProduct);
+      await _businessFirestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
         (p) => p.productId == product.productId,
@@ -2142,7 +2142,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         updatedAt: DateTime.now(),
       );
 
-      await _firestoreService.saveProduct(updatedProduct);
+      await _businessFirestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
         (p) => p.productId == product.productId,
@@ -2203,7 +2203,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
 
   Future<void> _deleteProduct(Product product) async {
     try {
-      await _firestoreService.deleteProduct(product.productId);
+      await _businessFirestoreService.deleteProduct(product.productId);
 
       setState(() {
         _products.removeWhere((p) => p.productId == product.productId);

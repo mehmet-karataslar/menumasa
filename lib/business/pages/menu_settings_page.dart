@@ -8,7 +8,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../business/models/business.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
-import '../../../core/services/firestore_service.dart';
+import '../services/business_firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../business/models/business_user.dart';
 
@@ -23,7 +23,7 @@ class MenuSettingsPage extends StatefulWidget {
 }
 
 class _MenuSettingsPageState extends State<MenuSettingsPage> {
-  final _firestoreService = FirestoreService();
+  final _businessFirestoreService = BusinessFirestoreService();
 
   // State
   bool _isLoading = true;
@@ -55,7 +55,7 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
         _hasError = false;
       });
 
-      _business = await _firestoreService.getBusiness(widget.businessId);
+      _business = await _businessFirestoreService.getBusiness(widget.businessId);
 
       if (_business != null) {
         _originalSettings = _business!.menuSettings;
@@ -86,7 +86,7 @@ class _MenuSettingsPageState extends State<MenuSettingsPage> {
         updatedAt: DateTime.now(),
       );
 
-      await _firestoreService.saveBusiness(updatedBusiness);
+      await _businessFirestoreService.saveBusiness(updatedBusiness);
 
       _originalSettings = _currentSettings;
 

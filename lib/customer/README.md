@@ -16,8 +16,7 @@ lib/customer/
 │   ├── customer_preferences.dart  # Müşteri tercihleri
 │   └── customer_stats.dart       # Müşteri istatistikleri
 ├── pages/                        # Sayfa widget'ları
-│   ├── customer_home_page.dart   # Ana sayfa
-│   ├── customer_dashboard_page.dart # Dashboard
+│   ├── customer_dashboard_page.dart   # Ana dashboard (unified & modernized)
 │   ├── business_detail_page.dart # İşletme detay sayfası
 │   ├── menu_page.dart            # Menü sayfası
 │   ├── cart_page.dart            # Sepet sayfası
@@ -76,7 +75,7 @@ import 'package:masamenu/customer/customer.dart';
 import 'package:masamenu/customer/customer_routes.dart';
 
 // Rota tanımları
-CustomerRoutes.home          // '/customer/home'
+CustomerRoutes.dashboard     // '/customer/dashboard'
 CustomerRoutes.menu          // '/customer/menu'
 CustomerRoutes.cart          // '/customer/cart'
 CustomerRoutes.orders        // '/customer/orders'

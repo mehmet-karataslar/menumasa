@@ -80,8 +80,7 @@ class UrlService extends UrlServiceBase {
     '/admin/logs': 'Aktivite Logları | MasaMenu',
     
     // Customer routes
-    '/customer/home': 'Müşteri Ana Sayfa | MasaMenu',
-    '/customer/dashboard': 'Müşteri Paneli | MasaMenu',
+    '/customer/dashboard': 'Müşteri Dashboard | MasaMenu',
     '/customer/orders': 'Siparişlerim | MasaMenu',
     '/search': 'İşletme Ara | MasaMenu',
   };

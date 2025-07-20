@@ -4,22 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
 
+/// Bildirim servisi - tüm bildirim işlemlerini yönetir
 class NotificationService {
+  // Singleton pattern
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
-  // Notification listeners
+  // Bildirim dinleyicileri için haritalar
   final Map<String, StreamSubscription<QuerySnapshot>?> _notificationStreams = {};
   final Map<String, List<Function(List<NotificationModel>)>> _notificationListeners = {};
 
   // =============================================================================
-  // NOTIFICATION LISTENER MANAGEMENT
+  // BİLDİRİM DİNLEYİCİ YÖNETİMİ
   // =============================================================================
 
-  /// İşletme için bildirim listener'ı ekle
+  /// İşletme için bildirim dinleyicisi ekle
   void addNotificationListener(String businessId, Function(List<NotificationModel>) listener) {
     if (!_notificationListeners.containsKey(businessId)) {
       _notificationListeners[businessId] = [];
@@ -28,7 +30,7 @@ class NotificationService {
     _notificationListeners[businessId]!.add(listener);
   }
 
-  /// Bildirim listener'ını kaldır
+  /// Bildirim dinleyicisini kaldır
   void removeNotificationListener(String businessId, Function(List<NotificationModel>) listener) {
     _notificationListeners[businessId]?.remove(listener);
     if (_notificationListeners[businessId]?.isEmpty == true) {
@@ -38,7 +40,7 @@ class NotificationService {
     }
   }
 
-  /// İşletme için bildirim stream'ini başlat
+  /// İşletme için bildirim akışını başlat
   void _startNotificationStream(String businessId) {
     _notificationStreams[businessId] = _firestore
         .collection('notifications')
@@ -57,12 +59,12 @@ class NotificationService {
             _notifyListeners(businessId, notifications);
           },
           onError: (error) {
-            print('Notification stream error for business $businessId: $error');
+            print('İşletme $businessId için bildirim akışı hatası: $error');
           },
         );
   }
 
-  /// Bildirim listener'larını bilgilendir
+  /// Bildirim dinleyicilerini bilgilendir
   void _notifyListeners(String businessId, List<NotificationModel> notifications) {
     final listeners = _notificationListeners[businessId];
     if (listeners != null) {
@@ -70,14 +72,14 @@ class NotificationService {
         try {
           listener(notifications);
         } catch (e) {
-          print('Error calling notification listener: $e');
+          print('Bildirim dinleyicisini çağırma hatası: $e');
         }
       }
     }
   }
 
   // =============================================================================
-  // NOTIFICATION OPERATIONS
+  // BİLDİRİM İŞLEMLERİ
   // =============================================================================
 
   /// Yeni sipariş bildirimi oluştur
@@ -94,7 +96,7 @@ class NotificationService {
         businessId: businessId,
         type: NotificationType.newOrder,
         title: 'Yeni Sipariş',
-        message: 'Masa ${tableNumber} - ${customerName}\nToplam: ${totalAmount.toStringAsFixed(2)} ₺',
+        message: 'Masa $tableNumber - $customerName\nToplam: ${totalAmount.toStringAsFixed(2)} ₺',
         data: {
           'orderId': orderId,
           'customerName': customerName,
@@ -107,10 +109,9 @@ class NotificationService {
 
       await _firestore.collection('notifications').add(notification.toJson());
       
-      // Haptic feedback için sistemde kayıt
-      print('Order notification created: $orderId');
+      print('Sipariş bildirimi oluşturuldu: $orderId');
     } catch (e) {
-      print('Error creating order notification: $e');
+      print('Sipariş bildirimi oluşturma hatası: $e');
     }
   }
 
@@ -144,7 +145,7 @@ class NotificationService {
 
       await _firestore.collection('notifications').add(notification.toJson());
     } catch (e) {
-      print('Error creating order status notification: $e');
+      print('Sipariş durum bildirimi oluşturma hatası: $e');
     }
   }
 
@@ -156,7 +157,7 @@ class NotificationService {
         'readAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Error marking notification as read: $e');
+      print('Bildirimi okundu işaretleme hatası: $e');
     }
   }
 
@@ -179,7 +180,7 @@ class NotificationService {
 
       await batch.commit();
     } catch (e) {
-      print('Error marking all notifications as read: $e');
+      print('Tüm bildirimleri okundu işaretleme hatası: $e');
     }
   }
 
@@ -194,7 +195,7 @@ class NotificationService {
 
       return snapshot.docs.length;
     } catch (e) {
-      print('Error getting unread notification count: $e');
+      print('Okunmamış bildirim sayısı alma hatası: $e');
       return 0;
     }
   }
@@ -214,16 +215,124 @@ class NotificationService {
         return NotificationModel.fromJson(data, id: doc.id);
       }).toList();
     } catch (e) {
-      print('Error getting notifications: $e');
+      print('Bildirimleri alma hatası: $e');
       return [];
     }
   }
 
   // =============================================================================
-  // IN-APP NOTIFICATION DISPLAY
+  // GENEL BİLDİRİM GÖNDERİMİ
   // =============================================================================
 
-  /// App içi bildirim göster
+  /// Genel bildirim gönder
+  Future<void> sendNotification({
+    required String businessId,
+    required String recipientId,
+    required String title,
+    required String message,
+    required NotificationType type,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final notification = {
+        'businessId': businessId,
+        'recipientId': recipientId,
+        'title': title,
+        'message': message,
+        'type': type.value,
+        'data': data ?? {},
+        'read': false,
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+
+      await _firestore.collection('notifications').add(notification);
+    } catch (e) {
+      print('Bildirim gönderme hatası: $e');
+    }
+  }
+
+  // =============================================================================
+  // SİPARİŞ BİLDİRİM METODLARİ
+  // =============================================================================
+
+  /// Genel sipariş bildirimi gönder
+  Future<void> sendOrderNotification({
+    required String businessId,
+    required String customerId,
+    required String title,
+    required String message,
+    String? orderId,
+  }) async {
+    await sendNotification(
+      businessId: businessId,
+      recipientId: customerId,
+      title: title,
+      message: message,
+      type: NotificationType.orderUpdate,
+      data: orderId != null ? {'orderId': orderId} : null,
+    );
+  }
+
+  /// Sipariş onay bildirimi
+  Future<void> sendOrderConfirmationNotification(String customerId, String orderId) async {
+    await sendOrderNotification(
+      businessId: 'business',
+      customerId: customerId,
+      title: 'Sipariş Onaylandı',
+      message: 'Siparişiniz onaylandı ve hazırlanıyor.',
+      orderId: orderId,
+    );
+  }
+
+  /// Sipariş hazırlanıyor bildirimi
+  Future<void> sendOrderPreparingNotification(String customerId, String orderId) async {
+    await sendOrderNotification(
+      businessId: 'business',
+      customerId: customerId,
+      title: 'Sipariş Hazırlanıyor',
+      message: 'Siparişiniz hazırlanıyor.',
+      orderId: orderId,
+    );
+  }
+
+  /// Sipariş hazır bildirimi
+  Future<void> sendOrderReadyNotification(String customerId, String orderId) async {
+    await sendOrderNotification(
+      businessId: 'business',
+      customerId: customerId,
+      title: 'Sipariş Hazır',
+      message: 'Siparişiniz hazır. Teslim alabilirsiniz.',
+      orderId: orderId,
+    );
+  }
+
+  /// Sipariş teslim edildi bildirimi
+  Future<void> sendOrderDeliveredNotification(String customerId, String orderId) async {
+    await sendOrderNotification(
+      businessId: 'business',
+      customerId: customerId,
+      title: 'Sipariş Teslim Edildi',
+      message: 'Siparişiniz teslim edildi.',
+      orderId: orderId,
+    );
+  }
+
+  /// Sipariş iptal bildirimi
+  Future<void> sendOrderCancelledNotification(String customerId, String orderId) async {
+    await sendOrderNotification(
+      businessId: 'business',
+      customerId: customerId,
+      title: 'Sipariş İptal Edildi',
+      message: 'Siparişiniz iptal edildi.',
+      orderId: orderId,
+    );
+  }
+
+  // =============================================================================
+  // UYGULAMA İÇİ BİLDİRİM GÖSTERME
+  // =============================================================================
+
+  /// Uygulama içi bildirim göster
   void showInAppNotification(
     BuildContext context,
     NotificationModel notification, {
@@ -259,7 +368,7 @@ class NotificationService {
 
     overlay.insert(overlayEntry);
 
-    // Auto remove after 4 seconds
+    // 4 saniye sonra otomatik kaldır
     Timer(const Duration(seconds: 4), () {
       if (overlayEntry.mounted) {
         overlayEntry.remove();
@@ -267,7 +376,7 @@ class NotificationService {
     });
   }
 
-  /// Tüm listener'ları temizle
+  /// Tüm dinleyicileri temizle
   void dispose() {
     for (final stream in _notificationStreams.values) {
       stream?.cancel();
@@ -278,9 +387,10 @@ class NotificationService {
 }
 
 // =============================================================================
-// NOTIFICATION MODEL
+// BİLDİRİM MODELİ
 // =============================================================================
 
+/// Bildirim veri modeli
 class NotificationModel {
   final String id;
   final String businessId;
@@ -304,11 +414,12 @@ class NotificationModel {
     this.readAt,
   });
 
+  /// JSON'dan NotificationModel oluştur
   factory NotificationModel.fromJson(Map<String, dynamic> json, {String? id}) {
     return NotificationModel(
       id: id ?? json['id'] ?? '',
       businessId: json['businessId'] ?? '',
-      type: NotificationType.fromString(json['type'] ?? 'order'),
+      type: NotificationType.fromString(json['type'] ?? 'order_update'),
       title: json['title'] ?? '',
       message: json['message'] ?? '',
       data: Map<String, dynamic>.from(json['data'] ?? {}),
@@ -324,6 +435,7 @@ class NotificationModel {
     );
   }
 
+  /// NotificationModel'i JSON'a çevir
   Map<String, dynamic> toJson() {
     return {
       'businessId': businessId,
@@ -338,6 +450,11 @@ class NotificationModel {
   }
 }
 
+// =============================================================================
+// BİLDİRİM TİPLERİ
+// =============================================================================
+
+/// Bildirim türleri enum'u
 enum NotificationType {
   newOrder('new_order', 'Yeni Sipariş'),
   orderUpdate('order_update', 'Sipariş Güncellendi'),
@@ -348,18 +465,20 @@ enum NotificationType {
   final String value;
   final String displayName;
 
+  /// String değerden NotificationType oluştur
   static NotificationType fromString(String value) {
     return NotificationType.values.firstWhere(
       (type) => type.value == value,
-      orElse: () => NotificationType.newOrder,
+      orElse: () => NotificationType.orderUpdate,
     );
   }
 }
 
 // =============================================================================
-// IN-APP NOTIFICATION WIDGET
+// UYGULAMA İÇİ BİLDİRİM WİDGET'I
 // =============================================================================
 
+/// Uygulama içi bildirim gösterme widget'ı
 class InAppNotificationWidget extends StatefulWidget {
   final NotificationModel notification;
   final VoidCallback onTap;
@@ -430,7 +549,7 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.black.withOpacity(0.1),
+                    color: AppColors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -445,7 +564,7 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        // Icon
+                        // İkon
                         Container(
                           width: 40,
                           height: 40,
@@ -462,7 +581,7 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
                         
                         const SizedBox(width: 12),
                         
-                        // Content
+                        // İçerik
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,7 +608,7 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
                           ),
                         ),
                         
-                        // Dismiss button
+                        // Kapatma butonu
                         IconButton(
                           onPressed: widget.onDismiss,
                           icon: const Icon(
@@ -510,6 +629,7 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
     );
   }
 
+  /// Bildirim tipine göre renk al
   Color _getTypeColor(NotificationType type) {
     switch (type) {
       case NotificationType.newOrder:
@@ -521,6 +641,7 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
     }
   }
 
+  /// Bildirim tipine göre ikon al
   IconData _getTypeIcon(NotificationType type) {
     switch (type) {
       case NotificationType.newOrder:

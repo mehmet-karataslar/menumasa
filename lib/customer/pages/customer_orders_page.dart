@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:masamenu/customer/services/customer_service.dart';
 import '../../data/models/order.dart' as app_order;
 import '../../business/models/business.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/services/firestore_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
+import '../services/customer_firestore_service.dart';
 
 class CustomerOrdersPage extends StatefulWidget {
   final String? businessId;
@@ -27,7 +28,8 @@ class CustomerOrdersPage extends StatefulWidget {
 
 class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     with TickerProviderStateMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final CustomerService _customerService = CustomerService();
+  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
 
   List<app_order.Order> _orders = [];
   Map<String, Business> _businessCache = {};
@@ -83,16 +85,16 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
       
       if (widget.customerId != null) {
         // Load orders by customer ID
-        orders = await _firestoreService.getOrdersByCustomer(widget.customerId!);
+        orders = await _customerFirestoreService.getOrdersByCustomer(widget.customerId!);
       } else if (widget.businessId != null && widget.customerPhone != null) {
         // Load orders by business and phone
-        orders = await _firestoreService.getOrdersByBusinessAndPhone(
+        orders = await _customerFirestoreService.getOrdersByBusinessAndPhone(
           widget.businessId!,
           widget.customerPhone!,
         );
       } else if (widget.businessId != null) {
         // Load orders by business only
-        orders = await _firestoreService.getOrdersByBusiness(widget.businessId!);
+        orders = await _customerFirestoreService.getOrdersByBusiness(widget.businessId!);
       } else {
         orders = [];
       }
@@ -102,7 +104,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
       for (final businessId in businessIds) {
         if (!_businessCache.containsKey(businessId)) {
           try {
-            final business = await _firestoreService.getBusiness(businessId);
+            final business = await _customerFirestoreService.getBusiness(businessId);
             if (business != null) {
               _businessCache[businessId] = business;
             }
@@ -943,6 +945,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     switch (status) {
       case app_order.OrderStatus.pending:
         return AppColors.warning;
+      case app_order.OrderStatus.confirmed:
+        return AppColors.info;
+      case app_order.OrderStatus.preparing:
+        return AppColors.warning;
+      case app_order.OrderStatus.ready:
+        return AppColors.success;
+      case app_order.OrderStatus.delivered:
+        return AppColors.success;
       case app_order.OrderStatus.inProgress:
         return AppColors.info;
       case app_order.OrderStatus.completed:
@@ -956,6 +966,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     switch (status) {
       case app_order.OrderStatus.pending:
         return Icons.schedule_rounded;
+      case app_order.OrderStatus.confirmed:
+        return Icons.check_rounded;
+      case app_order.OrderStatus.preparing:
+        return Icons.restaurant_rounded;
+      case app_order.OrderStatus.ready:
+        return Icons.done_all_rounded;
+      case app_order.OrderStatus.delivered:
+        return Icons.delivery_dining_rounded;
       case app_order.OrderStatus.inProgress:
         return Icons.restaurant_rounded;
       case app_order.OrderStatus.completed:
@@ -969,6 +987,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     switch (status) {
       case app_order.OrderStatus.pending:
         return 'Bekliyor';
+      case app_order.OrderStatus.confirmed:
+        return 'Onaylandı';
+      case app_order.OrderStatus.preparing:
+        return 'Hazırlanıyor';
+      case app_order.OrderStatus.ready:
+        return 'Hazır';
+      case app_order.OrderStatus.delivered:
+        return 'Teslim Edildi';
       case app_order.OrderStatus.inProgress:
         return 'Hazırlanıyor';
       case app_order.OrderStatus.completed:

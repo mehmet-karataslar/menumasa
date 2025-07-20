@@ -9,7 +9,8 @@ import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/utils/time_rule_utils.dart';
 
-import '../../core/services/firestore_service.dart';
+import '../services/customer_firestore_service.dart';
+import '../../business/services/business_firestore_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
 import '../widgets/business_header.dart';
@@ -51,7 +52,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   List<Discount> _discounts = [];
 
   // Services
-  final _firestoreService = FirestoreService();
+  final _customerFirestoreService = CustomerFirestoreService();
+  final _businessFirestoreService = BusinessFirestoreService();
   final _cartService = CartService();
   final _urlService = UrlService();
 
@@ -130,14 +132,14 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         _hasError = false;
       });
 
-      _business = await _firestoreService.getBusiness(widget.businessId);
+      _business = await _customerFirestoreService.getBusiness(widget.businessId);
       if (_business == null) {
         throw Exception('İşletme bulunamadı: ID=${widget.businessId}');
       }
 
-      _categories = await _firestoreService.getBusinessCategories(widget.businessId);
-      _products = await _firestoreService.getBusinessProducts(widget.businessId, limit: 100);
-      _discounts = await _firestoreService.getDiscountsByBusinessId(widget.businessId);
+      _categories = await _businessFirestoreService.getBusinessCategories(widget.businessId);
+      _products = await _businessFirestoreService.getBusinessProducts(widget.businessId, limit: 100);
+      _discounts = await _businessFirestoreService.getDiscountsByBusinessId(widget.businessId);
 
       _filterProducts();
 
@@ -403,48 +405,48 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     return Hero(
       tag: 'cart_fab',
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        child: FloatingActionButton.extended(
-          onPressed: _onCartPressed,
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.white,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: FloatingActionButton.extended(
+        onPressed: _onCartPressed,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
           elevation: 12,
-          icon: Stack(
+        icon: Stack(
             clipBehavior: Clip.none,
-            children: [
+          children: [
               Icon(Icons.shopping_cart_rounded, size: 24),
-              if (_cartItemCount > 0)
-                Positioned(
+            if (_cartItemCount > 0)
+              Positioned(
                   right: -6,
                   top: -6,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: AppColors.accent,
-                      shape: BoxShape.circle,
+                    shape: BoxShape.circle,
                       border: Border.all(color: AppColors.white, width: 2),
-                    ),
+                  ),
                     constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                    child: Text(
-                      _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
+                  child: Text(
+                    _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
                       style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
+                      color: AppColors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-            ],
-          ),
-          label: Text(
-            'Sepet (${_cartItemCount})',
+              ),
+          ],
+        ),
+        label: Text(
+          'Sepet (${_cartItemCount})',
             style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
+            fontWeight: FontWeight.w600, 
+            fontSize: 16,
           ),
+        ),
           extendedPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         ),
       ),
@@ -473,7 +475,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                 Text(
                   'Menü yükleniyor...',
                   style: AppTypography.bodyLarge.copyWith(
-                    color: AppColors.white,
+              color: AppColors.white,
                   ),
                 ),
               ],
@@ -494,15 +496,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     scrollDirection: Axis.horizontal,
                     itemCount: 5,
                     itemBuilder: (context, index) => Container(
-                      width: 100,
-                      height: 40,
-                      margin: const EdgeInsets.only(right: 12),
+                        width: 100,
+                        height: 40,
+                        margin: const EdgeInsets.only(right: 12),
                       child: Shimmer.fromColors(
                         baseColor: AppColors.greyLight,
                         highlightColor: AppColors.white,
                         child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.white,
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
@@ -517,11 +519,11 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                 Expanded(
                   child: GridView.builder(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 0.75,
-                    ),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.75,
+                        ),
                     itemCount: 6,
                     itemBuilder: (context, index) => Shimmer.fromColors(
                       baseColor: AppColors.greyLight,
@@ -813,9 +815,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
             ),
             child: Icon(
               icon,
-              color: AppColors.white,
-              size: 24,
-            ),
+                  color: AppColors.white,
+                  size: 24,
+                ),
           ),
         ),
       ),
@@ -838,40 +840,40 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Stack(
-              clipBehavior: Clip.none,
-              children: [
+                  clipBehavior: Clip.none,
+                  children: [
                 Center(
                   child: Icon(
                     Icons.shopping_cart_rounded,
-                    color: AppColors.white,
-                    size: 24,
+                      color: AppColors.white,
+                      size: 24,
                   ),
-                ),
-                if (_cartItemCount > 0)
-                  Positioned(
+                    ),
+                    if (_cartItemCount > 0)
+                      Positioned(
                     right: 4,
                     top: 4,
-                    child: Container(
+                        child: Container(
                       padding: EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: AppColors.accent,
-                        shape: BoxShape.circle,
+                            shape: BoxShape.circle,
                         border: Border.all(color: AppColors.white, width: 1),
-                      ),
+                          ),
                       constraints: BoxConstraints(minWidth: 18, minHeight: 18),
-                      child: Text(
-                        _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
+                          child: Text(
+                            _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
                         style: TextStyle(
                           color: AppColors.white,
                           fontSize: 9,
-                          fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ),
-              ],
-            ),
+                  ],
+                ),
           ),
         ),
       ),
@@ -880,7 +882,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   Widget _buildModernSearchBar() {
     return Container(
-      color: AppColors.white,
+                color: AppColors.white,
       padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Container(
         decoration: BoxDecoration(
@@ -891,7 +893,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         child: TextField(
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
-            hintText: 'Ürün ara...',
+                  hintText: 'Ürün ara...',
             prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
@@ -917,7 +919,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     if (_categories.isEmpty) return SizedBox.shrink();
 
     return Container(
-      color: AppColors.white,
+              color: AppColors.white,
       padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1015,8 +1017,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         position: _slideAnimation,
         child: Container(
           color: AppColors.background,
-          child: Center(
-            child: Padding(
+        child: Center(
+          child: Padding(
               padding: EdgeInsets.all(32),
               child: _buildEmptyState(),
             ),
@@ -1028,9 +1030,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     return SlideTransition(
       position: _slideAnimation,
       child: RefreshIndicator(
-        onRefresh: _loadMenuData,
-        color: AppColors.primary,
-        child: Container(
+      onRefresh: _loadMenuData,
+      color: AppColors.primary,
+      child: Container(
           color: AppColors.background,
           child: _buildModernProductGrid(),
         ),
@@ -1117,7 +1119,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     return GridView.builder(
       padding: EdgeInsets.all(16),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+          crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
         childAspectRatio: 0.75,
@@ -1327,7 +1329,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(
         builder: (context) => ProductDetailPage(
-          product: product,
+          product: product, 
           business: _business!,
         ),
       ),

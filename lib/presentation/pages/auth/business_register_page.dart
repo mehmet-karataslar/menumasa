@@ -5,8 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/firestore_service.dart';
 import '../../../business/services/business_service.dart';
+import '../../../business/services/business_firestore_service.dart';
 import '../../../business/models/business_user.dart';
 
 import '../../../business/models/business.dart';
@@ -51,7 +51,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   String? _businessId; // Store the generated business ID
 
   final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final BusinessService _businessService = BusinessService();
 
   @override
@@ -340,10 +340,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       );
 
       // Save business to Firestore with the specific ID
-      await _firestoreService.firestore
-          .collection('businesses')
-          .doc(_businessId!)
-          .set(business.toJson());
+      await _businessFirestoreService.saveBusiness(business);
 
       // Create default categories
       await _createDefaultCategories(_businessId!);
@@ -503,7 +500,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
 
       // Save each category to Firestore
       for (final category in categories) {
-        await _firestoreService.saveCategory(category);
+        await _businessFirestoreService.saveCategory(category);
       }
     } catch (e) {
       print('Error creating default categories: $e');

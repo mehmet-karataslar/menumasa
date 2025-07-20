@@ -29,8 +29,10 @@ class Order {
     this.completedAt,
   });
 
-  // Getter for compatibility
+  // Getters for compatibility
   String get id => orderId;
+  double get total => totalAmount;
+  String get customerId => customerName; // Using customerName as customerId for now
 
   factory Order.fromJson(Map<String, dynamic> data, {String? id}) {
     return Order(
@@ -360,6 +362,10 @@ class OrderItem {
 
 enum OrderStatus {
   pending('pending', 'Bekliyor', 'Yeni sipariş alındı'),
+  confirmed('confirmed', 'Onaylandı', 'Sipariş onaylandı'),
+  preparing('preparing', 'Hazırlanıyor', 'Sipariş hazırlanıyor'),
+  ready('ready', 'Hazır', 'Sipariş hazır'),
+  delivered('delivered', 'Teslim Edildi', 'Sipariş teslim edildi'),
   inProgress('in_progress', 'Hazırlanıyor', 'Sipariş hazırlanıyor'),
   completed('completed', 'Tamamlandı', 'Sipariş tamamlandı'),
   cancelled('cancelled', 'İptal Edildi', 'Sipariş iptal edildi');
@@ -431,6 +437,14 @@ extension OrderExtensions on Order {
     switch (status) {
       case OrderStatus.pending:
         return '#FFA726'; // Orange
+      case OrderStatus.confirmed:
+        return '#42A5F5'; // Blue
+      case OrderStatus.preparing:
+        return '#FFA726'; // Orange
+      case OrderStatus.ready:
+        return '#66BB6A'; // Green
+      case OrderStatus.delivered:
+        return '#66BB6A'; // Green
       case OrderStatus.inProgress:
         return '#42A5F5'; // Blue
       case OrderStatus.completed:

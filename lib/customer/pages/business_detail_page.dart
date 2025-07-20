@@ -8,12 +8,12 @@ import '../../business/models/product.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
-import '../../core/services/firestore_service.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../widgets/business_header.dart';
+import '../services/customer_firestore_service.dart';
 import '../widgets/category_list.dart';
 import '../widgets/product_grid.dart';
 import 'menu_page.dart';
@@ -34,7 +34,7 @@ class BusinessDetailPage extends StatefulWidget {
 
 class _BusinessDetailPageState extends State<BusinessDetailPage>
     with TickerProviderStateMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
   final ScrollController _scrollController = ScrollController();
 
   List<Product> _products = [];
@@ -117,22 +117,15 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
       _fadeAnimationController.forward();
       
       // Load products and categories
-      final productsQuery = await _firestoreService.firestore
-          .collection('products')
-          .where('businessId', isEqualTo: widget.business.id)
-          .get();
-
-      final categoriesQuery = await _firestoreService.firestore
-          .collection('categories')
-          .where('businessId', isEqualTo: widget.business.id)
-          .get();
+      final productsData = await _customerFirestoreService.getBusinessProducts(widget.business.id);
+      final categoriesData = await _customerFirestoreService.getBusinessCategories(widget.business.id);
 
       setState(() {
-        _products = productsQuery.docs
-            .map((doc) => Product.fromJson(doc.data(), id: doc.id))
+        _products = productsData
+            .map((data) => Product.fromJson(data, id: data['id']))
             .toList();
-        _categories = categoriesQuery.docs
-            .map((doc) => category_model.Category.fromJson(doc.data(), id: doc.id))
+        _categories = categoriesData
+            .map((data) => category_model.Category.fromJson(data, id: data['id']))
             .toList();
         _isLoading = false;
       });

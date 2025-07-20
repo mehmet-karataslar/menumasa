@@ -6,10 +6,11 @@ import '../../presentation/widgets/shared/empty_state.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 
-import '../../../core/services/firestore_service.dart';
+
 import '../../../core/services/qr_service.dart';
 import '../models/business.dart';
 import '../models/qr_code.dart';
+import '../services/business_firestore_service.dart';
 
 class QRManagementPage extends StatefulWidget {
   final String businessId;
@@ -23,7 +24,7 @@ class QRManagementPage extends StatefulWidget {
 
 class _QRManagementPageState extends State<QRManagementPage>
     with TickerProviderStateMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final QRService _qrService = QRService();
 
   Business? _business;
@@ -64,7 +65,7 @@ class _QRManagementPageState extends State<QRManagementPage>
 
     try {
       // Load business data
-      final business = await _firestoreService.getBusiness(widget.businessId);
+      final business = await _businessFirestoreService.getBusiness(widget.businessId);
       if (business == null) {
         throw Exception('İşletme bulunamadı');
       }

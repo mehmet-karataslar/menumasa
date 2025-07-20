@@ -7,7 +7,8 @@ import '../models/category.dart';
 import '../models/discount.dart';
 import '../../data/models/order.dart' as app_order;
 import '../../data/models/user.dart' as app_user;
-import '../../core/services/firestore_service.dart';
+import 'business_firestore_service.dart';
+
 
 /// Business analytics service for comprehensive data analysis
 class AnalyticsService {
@@ -15,7 +16,7 @@ class AnalyticsService {
   factory AnalyticsService() => _instance;
   AnalyticsService._internal();
 
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
 
   /// Get comprehensive business analytics for a given period
   Future<BusinessAnalytics> getBusinessAnalytics({
@@ -26,8 +27,8 @@ class AnalyticsService {
     try {
       // Fetch all necessary data
       final orders = await _getOrdersInPeriod(businessId, startDate, endDate);
-      final products = await _firestoreService.getBusinessProducts(businessId);
-      final business = await _firestoreService.getBusiness(businessId);
+      final products = await _businessFirestoreService.getBusinessProducts(businessId);
+      final business = await _businessFirestoreService.getBusiness(businessId);
 
       // Calculate analytics
       final orderAnalytics = _calculateOrderAnalytics(orders, startDate, endDate);
@@ -165,7 +166,7 @@ class AnalyticsService {
   }) async {
     try {
       final orders = await _getOrdersInPeriod(businessId, startDate, endDate);
-      final products = await _firestoreService.getBusinessProducts(businessId);
+      final products = await _businessFirestoreService.getBusinessProducts(businessId);
       
       final productStats = <String, Map<String, dynamic>>{};
 
@@ -318,7 +319,7 @@ class AnalyticsService {
   Future<List<app_order.Order>> _getOrdersInPeriod(String businessId, DateTime start, DateTime end) async {
     try {
       // TODO: Implement Firestore query with date range
-      final orders = await _firestoreService.getBusinessOrders(businessId, limit: 1000);
+      final orders = await _businessFirestoreService.getOrdersByBusiness(businessId);
       return orders.where((order) => 
           order.createdAt.isAfter(start) && order.createdAt.isBefore(end)
       ).toList();

@@ -3,21 +3,18 @@ import '../interfaces/user_repository.dart';
 import '../entities/user_profile.dart';
 import '../entities/user_auth.dart';
 import '../enums/user_type.dart';
-import '../services/firestore_service.dart';
+// Removed core_firestore_service.dart - using FirebaseFirestore.instance directly
 
-/// Firestore implementation of UserRepository
+
+/// Firestore implementation of UserRepository  
 class UserRepositoryImpl implements UserRepository {
-  final FirestoreService _firestoreService;
   final String _collection = 'users';
   final String _authCollection = 'user_auth';
-
-  UserRepositoryImpl({FirestoreService? firestoreService}) 
-      : _firestoreService = firestoreService ?? FirestoreService();
 
   @override
   Future<UserProfile?> getById(String id) async {
     try {
-      final doc = await _firestoreService.firestore
+      final doc = await FirebaseFirestore.instance
           .collection(_collection)
           .doc(id)
           .get();
@@ -37,7 +34,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<List<UserProfile>> getAll() async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_collection)
           .get();
       
@@ -59,13 +56,13 @@ class UserRepositoryImpl implements UserRepository {
       
       if (entity.id.isEmpty) {
         // Create new user
-        final docRef = await _firestoreService.firestore
+        final docRef = await FirebaseFirestore.instance
             .collection(_collection)
             .add(data);
         return docRef.id;
       } else {
         // Update existing user
-        await _firestoreService.firestore
+        await FirebaseFirestore.instance
             .collection(_collection)
             .doc(entity.id)
             .set(data, SetOptions(merge: true));
@@ -80,7 +77,7 @@ class UserRepositoryImpl implements UserRepository {
   Future<void> update(String id, Map<String, dynamic> data) async {
     try {
       data['updatedAt'] = FieldValue.serverTimestamp();
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_collection)
           .doc(id)
           .update(data);
@@ -93,13 +90,13 @@ class UserRepositoryImpl implements UserRepository {
   Future<void> delete(String id) async {
     try {
       // Delete user profile
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_collection)
           .doc(id)
           .delete();
       
       // Delete auth data
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_authCollection)
           .doc(id)
           .delete();
@@ -111,7 +108,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<bool> exists(String id) async {
     try {
-      final doc = await _firestoreService.firestore
+      final doc = await FirebaseFirestore.instance
           .collection(_collection)
           .doc(id)
           .get();
@@ -124,7 +121,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<int> count() async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_collection)
           .count()
           .get();
@@ -142,7 +139,7 @@ class UserRepositoryImpl implements UserRepository {
     bool descending = false,
   }) async {
     try {
-      Query query = _firestoreService.firestore.collection(_collection);
+      Query query = FirebaseFirestore.instance.collection(_collection);
       
       if (sortBy != null) {
         query = query.orderBy(sortBy, descending: descending);
@@ -169,13 +166,13 @@ class UserRepositoryImpl implements UserRepository {
   Future<List<UserProfile>> search(String query) async {
     try {
       // Search by name or email
-      final nameQuery = _firestoreService.firestore
+      final nameQuery = FirebaseFirestore.instance
           .collection(_collection)
           .where('name', isGreaterThanOrEqualTo: query)
           .where('name', isLessThan: query + 'z')
           .limit(20);
       
-      final emailQuery = _firestoreService.firestore
+      final emailQuery = FirebaseFirestore.instance
           .collection(_collection)
           .where('email', isGreaterThanOrEqualTo: query)
           .where('email', isLessThan: query + 'z')
@@ -206,7 +203,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<List<UserProfile>> getByField(String field, dynamic value) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_collection)
           .where(field, isEqualTo: value)
           .get();
@@ -225,20 +222,20 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<List<String>> saveAll(List<UserProfile> entities) async {
     try {
-      final batch = _firestoreService.firestore.batch();
+      final batch = FirebaseFirestore.instance.batch();
       final ids = <String>[];
       
       for (final entity in entities) {
         final data = entity.toFirestore();
         
         if (entity.id.isEmpty) {
-          final docRef = _firestoreService.firestore
+          final docRef = FirebaseFirestore.instance
               .collection(_collection)
               .doc();
           batch.set(docRef, data);
           ids.add(docRef.id);
         } else {
-          final docRef = _firestoreService.firestore
+          final docRef = FirebaseFirestore.instance
               .collection(_collection)
               .doc(entity.id);
           batch.set(docRef, data, SetOptions(merge: true));
@@ -256,13 +253,13 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> deleteAll(List<String> ids) async {
     try {
-      final batch = _firestoreService.firestore.batch();
+      final batch = FirebaseFirestore.instance.batch();
       
       for (final id in ids) {
-        batch.delete(_firestoreService.firestore
+        batch.delete(FirebaseFirestore.instance
             .collection(_collection)
             .doc(id));
-        batch.delete(_firestoreService.firestore
+        batch.delete(FirebaseFirestore.instance
             .collection(_authCollection)
             .doc(id));
       }
@@ -277,9 +274,9 @@ class UserRepositoryImpl implements UserRepository {
   Future<void> clear() async {
     try {
       // This is a dangerous operation - clear all users
-      final batch = _firestoreService.firestore.batch();
+      final batch = FirebaseFirestore.instance.batch();
       
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_collection)
           .get();
       
@@ -298,7 +295,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<UserProfile?> getByEmail(String email) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_collection)
           .where('email', isEqualTo: email)
           .limit(1)
@@ -325,7 +322,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<List<UserProfile>> getActiveUsers() async {
     try {
-      final authSnapshot = await _firestoreService.firestore
+      final authSnapshot = await FirebaseFirestore.instance
           .collection(_authCollection)
           .where('isActive', isEqualTo: true)
           .get();
@@ -338,7 +335,7 @@ class UserRepositoryImpl implements UserRepository {
       // Firestore 'in' query limit is 10, so we need to batch
       for (int i = 0; i < activeUserIds.length; i += 10) {
         final batch = activeUserIds.skip(i).take(10).toList();
-        final snapshot = await _firestoreService.firestore
+        final snapshot = await FirebaseFirestore.instance
             .collection(_collection)
             .where(FieldPath.documentId, whereIn: batch)
             .get();
@@ -358,7 +355,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<List<UserProfile>> getInactiveUsers() async {
     try {
-      final authSnapshot = await _firestoreService.firestore
+      final authSnapshot = await FirebaseFirestore.instance
           .collection(_authCollection)
           .where('isActive', isEqualTo: false)
           .get();
@@ -370,7 +367,7 @@ class UserRepositoryImpl implements UserRepository {
       final users = <UserProfile>[];
       for (int i = 0; i < inactiveUserIds.length; i += 10) {
         final batch = inactiveUserIds.skip(i).take(10).toList();
-        final snapshot = await _firestoreService.firestore
+        final snapshot = await FirebaseFirestore.instance
             .collection(_collection)
             .where(FieldPath.documentId, whereIn: batch)
             .get();
@@ -395,7 +392,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> updateAuth(String userId, UserAuth auth) async {
     try {
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_authCollection)
           .doc(userId)
           .set(auth.toFirestore(), SetOptions(merge: true));
@@ -407,7 +404,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<UserAuth?> getAuthData(String userId) async {
     try {
-      final doc = await _firestoreService.firestore
+      final doc = await FirebaseFirestore.instance
           .collection(_authCollection)
           .doc(userId)
           .get();
@@ -424,7 +421,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> verifyEmail(String userId) async {
     try {
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_authCollection)
           .doc(userId)
           .update({'isEmailVerified': true});
@@ -436,7 +433,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> activateUser(String userId) async {
     try {
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_authCollection)
           .doc(userId)
           .update({'isActive': true});
@@ -448,7 +445,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> deactivateUser(String userId) async {
     try {
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_authCollection)
           .doc(userId)
           .update({
@@ -463,7 +460,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<bool> emailExists(String email) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_collection)
           .where('email', isEqualTo: email)
           .limit(1)
@@ -483,7 +480,7 @@ class UserRepositoryImpl implements UserRepository {
     try {
       final cutoffDate = DateTime.now().subtract(period);
       
-      Query query = _firestoreService.firestore
+      Query query = FirebaseFirestore.instance
           .collection(_collection)
           .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoffDate))
           .orderBy('createdAt', descending: true);
@@ -510,7 +507,7 @@ class UserRepositoryImpl implements UserRepository {
     required DateTime end,
   }) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_collection)
           .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
           .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(end))
@@ -540,19 +537,19 @@ class UserRepositoryImpl implements UserRepository {
       final activeUsers = await getActiveUsers();
       final recentUsers = await getRecentUsers(period: const Duration(days: 30));
       
-      final customerCount = await _firestoreService.firestore
+      final customerCount = await FirebaseFirestore.instance
           .collection(_collection)
           .where('userType', isEqualTo: 'customer')
           .count()
           .get();
       
-      final businessCount = await _firestoreService.firestore
+      final businessCount = await FirebaseFirestore.instance
           .collection(_collection)
           .where('userType', isEqualTo: 'business')
           .count()
           .get();
       
-      final adminCount = await _firestoreService.firestore
+      final adminCount = await FirebaseFirestore.instance
           .collection(_collection)
           .where('userType', isEqualTo: 'admin')
           .count()
@@ -575,7 +572,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> bulkUpdate(Map<String, Map<String, dynamic>> updates) async {
     try {
-      final batch = _firestoreService.firestore.batch();
+      final batch = FirebaseFirestore.instance.batch();
       
       for (final entry in updates.entries) {
         final userId = entry.key;
@@ -583,7 +580,7 @@ class UserRepositoryImpl implements UserRepository {
         data['updatedAt'] = FieldValue.serverTimestamp();
         
         batch.update(
-          _firestoreService.firestore.collection(_collection).doc(userId),
+          FirebaseFirestore.instance.collection(_collection).doc(userId),
           data,
         );
       }
@@ -605,7 +602,7 @@ class UserRepositoryImpl implements UserRepository {
     int? offset,
   }) async {
     try {
-      Query query = _firestoreService.firestore.collection(_collection);
+      Query query = FirebaseFirestore.instance.collection(_collection);
       
       if (userType != null) {
         query = query.where('userType', isEqualTo: userType.value);
@@ -642,7 +639,7 @@ class UserRepositoryImpl implements UserRepository {
         
         for (int i = 0; i < userIds.length; i += 10) {
           final batch = userIds.skip(i).take(10).toList();
-          final authSnapshot = await _firestoreService.firestore
+          final authSnapshot = await FirebaseFirestore.instance
               .collection(_authCollection)
               .where(FieldPath.documentId, whereIn: batch)
               .get();

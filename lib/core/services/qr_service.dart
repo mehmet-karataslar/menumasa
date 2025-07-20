@@ -11,14 +11,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../business/models/business.dart';
 import '../../business/models/qr_code.dart';
 
-import 'firestore_service.dart';
+import '../../business/services/business_firestore_service.dart';
 
 class QRService {
   static final QRService _instance = QRService._internal();
   factory QRService() => _instance;
   QRService._internal();
 
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Base URL for QR codes - updated to actual deployment URL
@@ -409,7 +409,7 @@ class QRService {
   /// Shares business QR code
   Future<void> shareBusinessQR(String businessId) async {
     final url = generateBusinessQRUrl(businessId);
-    final business = await _firestoreService.getBusiness(businessId);
+    final business = await _businessFirestoreService.getBusiness(businessId);
     final businessName = business?.businessName ?? 'İşletme';
     
     await Share.share(
@@ -421,7 +421,7 @@ class QRService {
   /// Shares table QR code
   Future<void> shareTableQR(String businessId, int tableNumber) async {
     final url = generateTableQRUrl(businessId, tableNumber);
-    final business = await _firestoreService.getBusiness(businessId);
+    final business = await _businessFirestoreService.getBusiness(businessId);
     final businessName = business?.businessName ?? 'İşletme';
     
     await Share.share(
@@ -441,7 +441,7 @@ class QRService {
   /// Updates business QR code URL
   Future<void> updateBusinessQRCode(String businessId) async {
     // This method can be used to regenerate QR codes if needed
-    final business = await _firestoreService.getBusiness(businessId);
+    final business = await _businessFirestoreService.getBusiness(businessId);
     if (business != null) {
       await createBusinessQRCode(
         businessId: businessId,

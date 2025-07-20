@@ -5,11 +5,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/mixins/url_mixin.dart';
 import '../../../business/models/business.dart';
+import '../services/business_firestore_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 
@@ -63,7 +63,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
   String? _currentLogoUrl;
   bool _isUploadingImage = false;
 
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
@@ -165,7 +165,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
     });
 
     try {
-      final business = await _firestoreService.getBusiness(widget.businessId);
+      final business = await _businessFirestoreService.getBusiness(widget.businessId);
       if (business != null) {
         setState(() {
           _business = business;
@@ -386,9 +386,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
           _errorMessage = 'Logo yükleniyor...';
         });
         
+        final fileName = _storageService.generateFileName(_selectedImageFile!.name);
         logoUrl = await _storageService.uploadBusinessLogo(
-          _selectedImageFile!,
-          widget.businessId,
+          businessId: widget.businessId,
+          imageFile: kIsWeb ? _selectedImageBytes! : File(_selectedImageFile!.path),
+          fileName: fileName,
         );
       }
 
@@ -430,7 +432,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
       );
 
       // Save to Firestore
-      await _firestoreService.saveBusiness(updatedBusiness);
+      await _businessFirestoreService.saveBusiness(updatedBusiness);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -7,7 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/services/firestore_service.dart';
+import '../services/customer_firestore_service.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
@@ -31,7 +31,7 @@ class CustomerDashboardPage extends StatefulWidget {
 class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     with TickerProviderStateMixin, UrlMixin {
   final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
   final UrlService _urlService = UrlService();
 
   app_user.User? _user;
@@ -129,13 +129,13 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       }
 
       // Müşteri verilerini yükle
-      final customerData = await _firestoreService.getCustomerData(widget.userId);
-      
+      final customerData = await _customerFirestoreService.getCustomerData(widget.userId);
+
       // Kullanıcının siparişlerini yükle
-      final orders = await _firestoreService.getOrdersByCustomer(widget.userId);
+      final orders = await _customerFirestoreService.getOrdersByCustomer(widget.userId);
       
       // Yakındaki işletmeleri yükle
-      final businesses = await _firestoreService.getBusinesses();
+      final businesses = await _customerFirestoreService.getBusinesses();
       
       // Favori işletmeleri yükle
       final favoriteIds = customerData?.favorites.map((f) => f.businessId).toList() ?? [];
@@ -348,22 +348,22 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
             _buildSliverAppBar(),
           ],
-          body: Column(
-            children: [
+      body: Column(
+        children: [
               _buildModernTabBar(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildDashboardTab(),
-                    _buildOrdersTab(),
-                    _buildFavoritesTab(),
-                    _buildProfileTab(),
-                  ],
-                ),
-              ),
-            ],
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDashboardTab(),
+                _buildOrdersTab(),
+                _buildFavoritesTab(),
+                _buildProfileTab(),
+              ],
+            ),
           ),
+        ],
+      ),
         ),
       ),
       floatingActionButton: _buildFloatingActionButton(),
@@ -391,7 +391,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
-                children: [
+        children: [
                   Hero(
                     tag: 'customer_avatar',
                     child: Container(
@@ -404,37 +404,37 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                           colors: [AppColors.secondary, AppColors.secondaryLight],
                         ),
                       ),
-                      child: Icon(
-                        Icons.person,
-                        color: AppColors.white,
+            child: Icon(
+              Icons.person,
+              color: AppColors.white,
                         size: 30,
-                      ),
-                    ),
+            ),
+          ),
                   ),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
+              children: [
+                Text(
                           'Merhaba, ${_user?.name ?? 'Müşteri'}! 👋',
                           style: AppTypography.h5.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                         const SizedBox(height: 4),
-                        Text(
+                Text(
                           'Bugün hangi lezzeti keşfetmek istiyorsun?',
                           style: AppTypography.bodyMedium.copyWith(
                             color: AppColors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+        ],
               ),
             ),
           ),
@@ -488,7 +488,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+      color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -700,8 +700,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
   Widget _buildQuickActions() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
         Text(
           'Hızlı Erişim',
           style: AppTypography.h6.copyWith(
@@ -710,8 +710,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           ),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
+            Row(
+              children: [
             Expanded(
               child: _buildActionCard(
                 title: 'QR Tara',
@@ -724,7 +724,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(
+                Expanded(
               child: _buildActionCard(
                 title: 'İşletme Ara',
                 subtitle: 'Yakınında keşfet',
@@ -795,8 +795,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
               ),
             ],
           ),
-          child: Column(
-            children: [
+                  child: Column(
+                    children: [
               Container(
                 width: 48,
                 height: 48,
@@ -807,26 +807,26 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(height: 12),
-              Text(
+                      Text(
                 title,
                 style: AppTypography.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
                 textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
                 subtitle,
                 style: AppTypography.caption.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+                          color: AppColors.textSecondary,
+                        ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+                      ),
+                    ],
+                  ),
         ),
       ),
     );
@@ -838,11 +838,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Yakındaki İşletmeler',
-              style: AppTypography.h6.copyWith(
-                fontWeight: FontWeight.bold,
+      children: [
+        Text(
+          'Yakındaki İşletmeler',
+          style: AppTypography.h6.copyWith(
+            fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -893,12 +893,12 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
+      child: InkWell(
+        onTap: () {
             _navigateToMenu(business);
           },
           borderRadius: BorderRadius.circular(16),
-          child: Container(
+        child: Container(
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(16),
@@ -910,13 +910,13 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 // İşletme resmi
-                Container(
+              Container(
                   height: 100,
-                  decoration: BoxDecoration(
+                decoration: BoxDecoration(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -951,16 +951,16 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: business.isOpen ? AppColors.success : AppColors.error,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                           child: Text(
                             business.isOpen ? 'Açık' : 'Kapalı',
                             style: AppTypography.caption.copyWith(
                               color: AppColors.white,
                               fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                  ),
+                ),
+              ),
                       ),
                     ],
                   ),
@@ -973,16 +973,16 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          business.businessName,
-                          style: AppTypography.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
+              Text(
+                business.businessName,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary,
-                          ),
+                ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -990,8 +990,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            business.businessType,
-                            style: AppTypography.caption.copyWith(
+                business.businessType,
+                style: AppTypography.caption.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1003,7 +1003,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                             Icon(
                               Icons.location_on_rounded,
                               size: 14,
-                              color: AppColors.textSecondary,
+                  color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: 4),
                             Expanded(
@@ -1014,9 +1014,9 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                ),
+              ),
+            ],
                         ),
                       ],
                     ),
@@ -1136,40 +1136,40 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             const SizedBox(width: 16),
             // Sipariş bilgileri
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Sipariş #${order.orderId.substring(0, 8)}',
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Sipariş #${order.orderId.substring(0, 8)}',
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getOrderStatusColor(order.status),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _getOrderStatusText(order.status),
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                  const SizedBox(height: 8),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getOrderStatusColor(order.status),
+                          borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _getOrderStatusText(order.status),
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+            Text(
                         _formatOrderDate(order.createdAt),
                         style: AppTypography.caption.copyWith(
                           color: AppColors.textSecondary,
@@ -1177,11 +1177,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                       ),
                       Text(
                         '${order.totalAmount.toStringAsFixed(2)} ₺',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
                     ],
                   ),
                 ],
@@ -1222,7 +1222,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             ),
           ),
           const SizedBox(height: 16),
-          Text(
+            Text(
             title,
             style: AppTypography.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
@@ -1233,13 +1233,13 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
             textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
     );
   }
 
@@ -1262,7 +1262,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 final order = _orders[index];
                 return _buildModernOrderCard(order);
               },
-            ),
+      ),
     );
   }
 
@@ -1312,7 +1312,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             _navigateToMenu(business);
           },
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
+      child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
@@ -1348,9 +1348,9 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 const SizedBox(width: 16),
                 // İşletme bilgileri
                 Expanded(
-                  child: Column(
+        child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+          children: [
                       Text(
                         business.businessName,
                         style: AppTypography.bodyLarge.copyWith(
@@ -1504,12 +1504,12 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.person,
-                  color: AppColors.white,
+              child: Icon(
+                Icons.person,
+                color: AppColors.white,
                   size: 50,
-                ),
               ),
+            ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -1530,12 +1530,12 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             Container(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
+              onPressed: () {
                   _navigateToProfile();
-                },
+              },
                 icon: Icon(Icons.edit_rounded),
                 label: Text('Profili Düzenle'),
-                style: ElevatedButton.styleFrom(
+              style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.white,
                   foregroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1576,9 +1576,9 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        children: [
             Text(
               'İstatistiklerim',
               style: AppTypography.h6.copyWith(
@@ -1820,6 +1820,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     switch (status) {
       case app_order.OrderStatus.pending:
         return AppColors.warning;
+      case app_order.OrderStatus.confirmed:
+        return AppColors.info;
+      case app_order.OrderStatus.preparing:
+        return AppColors.warning;
+      case app_order.OrderStatus.ready:
+        return AppColors.success;
+      case app_order.OrderStatus.delivered:
+        return AppColors.success;
       case app_order.OrderStatus.inProgress:
         return AppColors.info;
       case app_order.OrderStatus.completed:
@@ -1833,6 +1841,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     switch (status) {
       case app_order.OrderStatus.pending:
         return Icons.schedule_rounded;
+      case app_order.OrderStatus.confirmed:
+        return Icons.check_rounded;
+      case app_order.OrderStatus.preparing:
+        return Icons.restaurant_rounded;
+      case app_order.OrderStatus.ready:
+        return Icons.done_all_rounded;
+      case app_order.OrderStatus.delivered:
+        return Icons.delivery_dining_rounded;
       case app_order.OrderStatus.inProgress:
         return Icons.restaurant_rounded;
       case app_order.OrderStatus.completed:
@@ -1846,6 +1862,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     switch (status) {
       case app_order.OrderStatus.pending:
         return 'Bekliyor';
+      case app_order.OrderStatus.confirmed:
+        return 'Onaylandı';
+      case app_order.OrderStatus.preparing:
+        return 'Hazırlanıyor';
+      case app_order.OrderStatus.ready:
+        return 'Hazır';
+      case app_order.OrderStatus.delivered:
+        return 'Teslim Edildi';
       case app_order.OrderStatus.inProgress:
         return 'Hazırlanıyor';
       case app_order.OrderStatus.completed:

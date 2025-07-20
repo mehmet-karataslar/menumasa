@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/stock_models.dart';
-import '../../core/services/firestore_service.dart';
+import 'business_firestore_service.dart';
 
 /// Stock management service for inventory control
 class StockService {
@@ -8,7 +8,7 @@ class StockService {
   factory StockService() => _instance;
   StockService._internal();
 
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final String _stockCollection = 'stock_items';
   final String _movementsCollection = 'stock_movements';
   final String _alertsCollection = 'stock_alerts';
@@ -50,7 +50,7 @@ class StockService {
   /// Get all stock items for a business
   Future<List<StockItem>> getBusinessStock(String businessId) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_stockCollection)
           .where('businessId', isEqualTo: businessId)
           .orderBy('productName')
@@ -70,7 +70,7 @@ class StockService {
   /// Get stock item by ID
   Future<StockItem?> getStockItem(String stockId) async {
     try {
-      final doc = await _firestoreService.firestore
+      final doc = await FirebaseFirestore.instance
           .collection(_stockCollection)
           .doc(stockId)
           .get();
@@ -90,7 +90,7 @@ class StockService {
   /// Get stock item by product ID
   Future<StockItem?> getStockByProductId(String businessId, String productId) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_stockCollection)
           .where('businessId', isEqualTo: businessId)
           .where('productId', isEqualTo: productId)
@@ -116,7 +116,7 @@ class StockService {
       final data = stockItem.toFirestore();
       data.remove('stockId'); // Remove ID for auto-generation
       
-      final docRef = await _firestoreService.firestore
+      final docRef = await FirebaseFirestore.instance
           .collection(_stockCollection)
           .add(data);
 
@@ -144,7 +144,7 @@ class StockService {
       final data = stockItem.toFirestore();
       data.remove('stockId');
       
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_stockCollection)
           .doc(stockItem.stockId)
           .update(data);
@@ -269,18 +269,18 @@ class StockService {
       if (stockItem == null) return;
 
       // Delete movements first
-      final movementsSnapshot = await _firestoreService.firestore
+      final movementsSnapshot = await FirebaseFirestore.instance
           .collection(_movementsCollection)
           .where('stockId', isEqualTo: stockId)
           .get();
 
-      final batch = _firestoreService.firestore.batch();
+      final batch = FirebaseFirestore.instance.batch();
       for (final doc in movementsSnapshot.docs) {
         batch.delete(doc.reference);
       }
 
       // Delete alerts
-      final alertsSnapshot = await _firestoreService.firestore
+      final alertsSnapshot = await FirebaseFirestore.instance
           .collection(_alertsCollection)
           .where('stockId', isEqualTo: stockId)
           .get();
@@ -290,7 +290,7 @@ class StockService {
       }
 
       // Delete stock item
-      batch.delete(_firestoreService.firestore.collection(_stockCollection).doc(stockId));
+      batch.delete(FirebaseFirestore.instance.collection(_stockCollection).doc(stockId));
 
       await batch.commit();
       _notifyStockListeners(stockItem.businessId);
@@ -302,7 +302,7 @@ class StockService {
   /// Get stock movements for a stock item
   Future<List<StockMovement>> getStockMovements(String stockId) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_movementsCollection)
           .where('stockId', isEqualTo: stockId)
           .orderBy('timestamp', descending: true)
@@ -365,7 +365,7 @@ class StockService {
   /// Get stock alerts
   Future<List<StockAlert>> getActiveAlerts(String businessId) async {
     try {
-      final snapshot = await _firestoreService.firestore
+      final snapshot = await FirebaseFirestore.instance
           .collection(_alertsCollection)
           .where('businessId', isEqualTo: businessId)
           .where('isResolved', isEqualTo: false)
@@ -419,7 +419,7 @@ class StockService {
   /// Mark alert as read
   Future<void> markAlertAsRead(String alertId) async {
     try {
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_alertsCollection)
           .doc(alertId)
           .update({'isRead': true});
@@ -431,7 +431,7 @@ class StockService {
   /// Mark alert as resolved
   Future<void> markAlertAsResolved(String alertId) async {
     try {
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_alertsCollection)
           .doc(alertId)
           .update({
@@ -496,7 +496,7 @@ class StockService {
         userId: userId,
       );
 
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_movementsCollection)
           .add(movement.toFirestore());
     } catch (e) {
@@ -510,7 +510,7 @@ class StockService {
       if (stockItem == null) return;
 
       // Remove existing alerts for this stock item
-      final existingAlerts = await _firestoreService.firestore
+      final existingAlerts = await FirebaseFirestore.instance
           .collection(_alertsCollection)
           .where('stockId', isEqualTo: stockId)
           .where('isResolved', isEqualTo: false)
@@ -564,7 +564,7 @@ class StockService {
       for (final alert in alerts) {
         final data = alert.toJson();
         data.remove('alertId');
-        await _firestoreService.firestore
+        await FirebaseFirestore.instance
             .collection(_alertsCollection)
             .add(data);
       }
@@ -580,14 +580,14 @@ class StockService {
   /// Bulk stock update
   Future<void> bulkUpdateStock(List<Map<String, dynamic>> updates) async {
     try {
-      final batch = _firestoreService.firestore.batch();
+      final batch = FirebaseFirestore.instance.batch();
       
       for (final update in updates) {
         final stockId = update['stockId'] as String;
         final newQuantity = update['quantity'] as double;
         final movementType = StockMovementType.fromString(update['movementType'] ?? 'adjustment');
         
-        final stockRef = _firestoreService.firestore.collection(_stockCollection).doc(stockId);
+        final stockRef = FirebaseFirestore.instance.collection(_stockCollection).doc(stockId);
         batch.update(stockRef, {
           'currentStock': newQuantity,
           'updatedAt': FieldValue.serverTimestamp(),
@@ -602,7 +602,7 @@ class StockService {
           reason: update['reason'],
         ).toFirestore();
         
-        batch.set(_firestoreService.firestore.collection(_movementsCollection).doc(), movementData);
+        batch.set(FirebaseFirestore.instance.collection(_movementsCollection).doc(), movementData);
       }
       
       await batch.commit();

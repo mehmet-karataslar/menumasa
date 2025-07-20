@@ -14,8 +14,9 @@ import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
 import '../models/category.dart' as category_model;
 import '../models/discount.dart';
-import '../../core/services/firestore_service.dart';
+
 import '../../core/services/storage_service.dart';
+import '../services/business_firestore_service.dart';
 
 class CategoryManagementPage extends StatefulWidget {
   final String businessId;
@@ -29,7 +30,7 @@ class CategoryManagementPage extends StatefulWidget {
 
 class _CategoryManagementPageState extends State<CategoryManagementPage>
     with TickerProviderStateMixin, UrlMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
@@ -85,8 +86,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     try {
       // Load categories and discounts in parallel
       final futures = await Future.wait([
-        _firestoreService.getBusinessCategories(widget.businessId),
-        _firestoreService.getDiscounts(businessId: widget.businessId),
+        _businessFirestoreService.getBusinessCategories(widget.businessId),
+        _businessFirestoreService.getDiscounts(businessId: widget.businessId),
       ]);
 
       setState(() {
@@ -1146,9 +1147,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
       // Upload new image if selected
       if (imageFile != null) {
-        imageUrl = await _storageService.uploadFile(
-          imageFile,
-          'category_images/${widget.businessId}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+        final fileName = 'category_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        imageUrl = await _storageService.uploadCategoryImage(
+          businessId: widget.businessId,
+          categoryId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+          imageFile: imageFile,
+          fileName: fileName,
         );
       }
 
@@ -1167,7 +1171,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
           updatedAt: DateTime.now(),
         );
 
-        final categoryId = await _firestoreService.saveCategory(newCategory);
+        final categoryId = await _businessFirestoreService.saveCategory(newCategory);
         final savedCategory = newCategory.copyWith(categoryId: categoryId);
 
         setState(() {
@@ -1198,7 +1202,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
           updatedAt: DateTime.now(),
         );
 
-        await _firestoreService.saveCategory(updatedCategory);
+        await _businessFirestoreService.saveCategory(updatedCategory);
 
         final index = _categories.indexWhere(
           (c) => c.categoryId == category.categoryId,
@@ -1239,7 +1243,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
         updatedAt: DateTime.now(),
       );
 
-      await _firestoreService.saveCategory(updatedCategory);
+      await _businessFirestoreService.saveCategory(updatedCategory);
 
       final index = _categories.indexWhere(
         (c) => c.categoryId == category.categoryId,
@@ -1345,7 +1349,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
   Future<void> _deleteCategory(category_model.Category category) async {
     try {
-      await _firestoreService.deleteCategory(category.categoryId);
+      await _businessFirestoreService.deleteCategory(category.categoryId);
 
       setState(() {
         _categories.removeWhere((c) => c.categoryId == category.categoryId);
@@ -1398,7 +1402,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     // Save updated sort orders
     try {
       final futures = _categories.map((category) => 
-        _firestoreService.saveCategory(category)
+        _businessFirestoreService.saveCategory(category)
       ).toList();
       
       await Future.wait(futures);

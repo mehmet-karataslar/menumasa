@@ -6,10 +6,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/order_service.dart';
-import '../../core/services/firestore_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
+import '../services/business_firestore_service.dart';
 
 class OrderManagementPage extends StatefulWidget {
   final String businessId;
@@ -21,7 +21,7 @@ class OrderManagementPage extends StatefulWidget {
 }
 
 class _OrderManagementPageState extends State<OrderManagementPage> with TickerProviderStateMixin {
-  final FirestoreService _firestoreService = FirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
 
   List<Order> _orders = [];
   List<Order> _filteredOrders = [];
@@ -50,12 +50,12 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
   @override
   void dispose() {
     _tabController.dispose();
-    _firestoreService.removeOrderListener(widget.businessId, _onOrdersChanged);
+    _businessFirestoreService.stopOrderListener(widget.businessId);
     super.dispose();
   }
 
   void _setupOrderListener() {
-    _firestoreService.addOrderListener(widget.businessId, _onOrdersChanged);
+    _businessFirestoreService.startOrderListener(widget.businessId, _onOrdersChanged);
   }
 
   void _onOrdersChanged(List<Order> orders) {
@@ -89,10 +89,10 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
       });
 
       // Load business info
-      final business = await _firestoreService.getBusiness(widget.businessId);
+      final business = await _businessFirestoreService.getBusiness(widget.businessId);
 
       // Load initial orders
-      final orders = await _firestoreService.getOrders(businessId: widget.businessId);
+      final orders = await _businessFirestoreService.getOrdersByBusiness(widget.businessId);
 
       setState(() {
         _business = business;
@@ -650,6 +650,14 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
     switch (status) {
       case OrderStatus.pending:
         return AppColors.warning;
+      case OrderStatus.confirmed:
+        return AppColors.info;
+      case OrderStatus.preparing:
+        return AppColors.warning;
+      case OrderStatus.ready:
+        return AppColors.success;
+      case OrderStatus.delivered:
+        return AppColors.success;
       case OrderStatus.inProgress:
         return AppColors.info;
       case OrderStatus.completed:
@@ -674,7 +682,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
 
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
     try {
-      await _firestoreService.updateOrderStatus(order.orderId, newStatus);
+      await _businessFirestoreService.updateOrderStatus(order.id, newStatus);
       
       HapticFeedback.lightImpact();
       

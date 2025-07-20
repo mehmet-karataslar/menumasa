@@ -23,7 +23,6 @@ export 'repositories/user_repository_impl.dart';
 
 // Services
 export 'services/permission_service.dart';
-export 'services/firestore_service.dart';
 export 'services/auth_service.dart';
 export 'services/data_service.dart';
 export 'services/cart_service.dart';

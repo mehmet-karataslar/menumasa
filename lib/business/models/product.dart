@@ -23,6 +23,9 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  // Getter for id to match expected interface
+  String get id => productId;
+
   Product({
     required this.productId,
     required this.businessId,

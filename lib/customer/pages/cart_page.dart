@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:masamenu/customer/customer.dart';
 import '../models/cart.dart';
 import '../../business/models/business.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/cart_service.dart';
-import '../../core/services/firestore_service.dart';
 import '../../data/models/order.dart' as app_order;
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
+import '../../core/services/core_firestore_service.dart';
+import '../services/customer_firestore_service.dart';
 
 class CartPage extends StatefulWidget {
   final String businessId;
@@ -23,7 +25,9 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   final CartService _cartService = CartService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final CustomerService _customerService = CustomerService();
+  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CoreFirestoreService _coreFirestoreService = CoreFirestoreService();
 
   Cart? _cart;
   Business? _business;
@@ -98,7 +102,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       await _cartService.initialize();
 
       final cart = await _cartService.getCurrentCart(widget.businessId);
-      final business = await _firestoreService.getBusiness(widget.businessId);
+      final business = await _customerFirestoreService.getBusiness(widget.businessId);
 
       setState(() {
         _cart = cart;
@@ -317,7 +321,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             : null,
       );
 
-      final orderId = await _firestoreService.createOrderWithNotification(order);
+      final orderId = await _coreFirestoreService.createOrderWithNotification(order);
       final savedOrder = order.copyWith(orderId: orderId);
 
       await _cartService.clearCart(widget.businessId);
