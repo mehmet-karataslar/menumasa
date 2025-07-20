@@ -12,6 +12,27 @@ import '../../../core/services/storage_service.dart';
 import '../models/category.dart' as category_model;
 import '../services/business_firestore_service.dart';
 
+// Add new image source enum
+enum ImageSourceType { 
+  url, 
+  file 
+}
+
+// Add new image data class
+class ImageData {
+  final ImageSourceType sourceType;
+  final String? url;
+  final XFile? file;
+  final Uint8List? bytes;
+  
+  const ImageData({
+    required this.sourceType,
+    this.url,
+    this.file,
+    this.bytes,
+  });
+}
+
 class ProductEditPage extends StatefulWidget {
   final String businessId;
   final Product? product;
@@ -53,8 +74,7 @@ class _ProductEditPageState extends State<ProductEditPage>
   NutritionInfo? _nutritionInfo;
 
   // Image handling
-  List<XFile> _selectedImages = [];
-  List<Uint8List> _selectedImageBytes = [];
+  List<ImageData> _selectedImages = [];
   List<String> _existingImageUrls = [];
   bool _isUploadingImages = false;
 
@@ -876,6 +896,7 @@ class _ProductEditPageState extends State<ProductEditPage>
       ),
       itemCount: _selectedImages.length,
       itemBuilder: (context, index) {
+        final imageData = _selectedImages[index];
         return Stack(
           children: [
             Container(
@@ -885,19 +906,29 @@ class _ProductEditPageState extends State<ProductEditPage>
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(7),
-                child: kIsWeb && index < _selectedImageBytes.length
-                    ? Image.memory(
-                        _selectedImageBytes[index],
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Image.file(
-                        File(_selectedImages[index].path),
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
+                child: _buildImageWidget(imageData),
+              ),
+            ),
+            // Source type indicator
+            Positioned(
+              top: 4,
+              left: 4,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: imageData.sourceType == ImageSourceType.url 
+                      ? AppColors.primary 
+                      : AppColors.secondary,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  imageData.sourceType == ImageSourceType.url ? 'URL' : 'Dosya',
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
             Positioned(
@@ -907,9 +938,6 @@ class _ProductEditPageState extends State<ProductEditPage>
                 onTap: () {
                   setState(() {
                     _selectedImages.removeAt(index);
-                    if (index < _selectedImageBytes.length) {
-                      _selectedImageBytes.removeAt(index);
-                    }
                   });
                 },
                 child: Container(
@@ -932,11 +960,70 @@ class _ProductEditPageState extends State<ProductEditPage>
     );
   }
 
+  Widget _buildImageWidget(ImageData imageData) {
+    if (imageData.sourceType == ImageSourceType.url) {
+      return Image.network(
+        imageData.url!,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: AppColors.greyLighter,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error, color: AppColors.error),
+                Text('Yüklenemedi', style: TextStyle(fontSize: 10)),
+              ],
+            ),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: AppColors.greyLighter,
+            child: Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / 
+                      loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      // File source
+      if (kIsWeb && imageData.bytes != null) {
+        return Image.memory(
+          imageData.bytes!,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+        );
+      } else if (imageData.file != null) {
+        return Image.file(
+          File(imageData.file!.path),
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+        );
+      } else {
+        return Container(
+          color: AppColors.greyLighter,
+          child: Icon(Icons.error, color: AppColors.error),
+        );
+      }
+    }
+  }
+
   Widget _buildAddImageButton() {
     return Container(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: _isUploadingImages ? null : _pickImages,
+                              onPressed: _isUploadingImages ? null : _showImageSourceDialog,
         icon: _isUploadingImages 
             ? SizedBox(
                 width: 16,
@@ -996,7 +1083,111 @@ class _ProductEditPageState extends State<ProductEditPage>
     );
   }
 
-  Future<void> _pickImages() async {
+  Future<void> _showImageSourceDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Resim Kaynağı Seçin'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.link),
+              title: Text('URL\'den Ekle'),
+              subtitle: Text('İnternetten resim bağlantısı girin'),
+              onTap: () {
+                Navigator.pop(context);
+                _showUrlInputDialog();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.upload_file),
+              title: Text('Dosya Yükle'),
+              subtitle: Text('Cihazınızdan resim seçin'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImagesFromDevice();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showUrlInputDialog() async {
+    final urlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Resim URL\'si Girin'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: urlController,
+              decoration: InputDecoration(
+                labelText: 'Resim URL\'si',
+                hintText: 'https://example.com/image.jpg',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.url,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'URL\'nin doğrudan resim dosyasına (.jpg, .png, .gif) işaret ettiğinden emin olun.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () {
+              final url = urlController.text.trim();
+              if (url.isNotEmpty && _isValidImageUrl(url)) {
+                Navigator.pop(context);
+                _addImageFromUrl(url);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Geçerli bir resim URL\'si girin')),
+                );
+              }
+            },
+            child: Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isValidImageUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final path = uri.path.toLowerCase();
+      return path.endsWith('.jpg') || 
+             path.endsWith('.jpeg') || 
+             path.endsWith('.png') || 
+             path.endsWith('.gif') || 
+             path.endsWith('.webp');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void _addImageFromUrl(String url) {
+    setState(() {
+      _selectedImages.add(ImageData(
+        sourceType: ImageSourceType.url,
+        url: url,
+      ));
+    });
+  }
+
+  Future<void> _pickImagesFromDevice() async {
     try {
       setState(() {
         _isUploadingImages = true;
@@ -1009,18 +1200,23 @@ class _ProductEditPageState extends State<ProductEditPage>
       );
 
       if (images.isNotEmpty) {
-        List<Uint8List> newImageBytes = [];
+        List<ImageData> newImageData = [];
         
-        if (kIsWeb) {
-          for (final image in images) {
-            final bytes = await image.readAsBytes();
-            newImageBytes.add(bytes);
+        for (final image in images) {
+          Uint8List? bytes;
+          if (kIsWeb) {
+            bytes = await image.readAsBytes();
           }
+          
+          newImageData.add(ImageData(
+            sourceType: ImageSourceType.file,
+            file: image,
+            bytes: bytes,
+          ));
         }
 
         setState(() {
-          _selectedImages.addAll(images);
-          _selectedImageBytes.addAll(newImageBytes);
+          _selectedImages.addAll(newImageData);
         });
       }
     } catch (e) {
@@ -1122,17 +1318,35 @@ class _ProductEditPageState extends State<ProductEditPage>
     try {
       List<String> allImageUrls = List.from(_existingImageUrls);
 
-      // Upload new images
+      // Process new images
       if (_selectedImages.isNotEmpty) {
         for (int i = 0; i < _selectedImages.length; i++) {
-          final fileName = _storageService.generateFileName('product_image_$i.jpg');
-          final imageUrl = await _storageService.uploadProductImage(
-            businessId: widget.businessId,
-            productId: widget.product?.productId ?? 'new_${DateTime.now().millisecondsSinceEpoch}',
-            imageFile: _selectedImages[i],
-            fileName: fileName,
-          );
-          allImageUrls.add(imageUrl);
+          final imageData = _selectedImages[i];
+          
+          if (imageData.sourceType == ImageSourceType.url) {
+            // For URL images, add directly to URLs list
+            allImageUrls.add(imageData.url!);
+          } else {
+            // For file images, upload to storage
+            final fileName = _storageService.generateFileName('product_image_$i.jpg');
+            dynamic imageFile;
+            
+            if (kIsWeb && imageData.bytes != null) {
+              imageFile = imageData.bytes!; // Uint8List for web
+            } else if (imageData.file != null) {
+              imageFile = File(imageData.file!.path); // File for mobile
+            } else {
+              continue; // Skip if no valid data
+            }
+            
+            final imageUrl = await _storageService.uploadProductImage(
+              businessId: widget.businessId,
+              productId: widget.product?.productId ?? 'new_${DateTime.now().millisecondsSinceEpoch}',
+              imageFile: imageFile,
+              fileName: fileName,
+            );
+            allImageUrls.add(imageUrl);
+          }
         }
       }
 
