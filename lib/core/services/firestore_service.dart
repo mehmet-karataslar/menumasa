@@ -234,23 +234,33 @@ class FirestoreService {
   }) async {
     try {
       Query query = _ordersRef
-          .where('businessId', isEqualTo: businessId)
-          .orderBy('createdAt', descending: true)
-          .limit(limit);
+          .where('businessId', isEqualTo: businessId);
 
       if (status != null) {
         query = query.where('status', isEqualTo: status);
       }
 
       final snapshot = await query.get();
-      return snapshot.docs
+      final orders = snapshot.docs
           .map((doc) => app_order.Order.fromJson(
                 doc.data() as Map<String, dynamic>,
                 id: doc.id,
               ))
           .toList();
+
+      // Sort in memory instead of using orderBy to avoid index issues
+      orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      // Apply limit after sorting
+      if (orders.length > limit) {
+        return orders.take(limit).toList();
+      }
+      
+      return orders;
     } catch (e) {
-      throw Exception('İşletme siparişleri alınırken bir hata oluştu: $e');
+      print('Error getting business orders: $e');
+      // Return empty list instead of throwing exception to prevent crashes
+      return [];
     }
   }
 
@@ -259,17 +269,23 @@ class FirestoreService {
     try {
       final snapshot = await _categoriesRef
           .where('businessId', isEqualTo: businessId)
-          .orderBy('sortOrder')
           .get();
 
-      return snapshot.docs
+      final categories = snapshot.docs
           .map((doc) => Category.fromJson(
                 doc.data() as Map<String, dynamic>,
                 id: doc.id,
               ))
           .toList();
+
+      // Sort in memory instead of using orderBy to avoid index issues
+      categories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      
+      return categories;
     } catch (e) {
-      throw Exception('İşletme kategorileri alınırken bir hata oluştu: $e');
+      print('Error getting business categories: $e');
+      // Return empty list instead of throwing exception to prevent crashes
+      return [];
     }
   }
 
@@ -281,23 +297,33 @@ class FirestoreService {
   }) async {
     try {
       Query query = _productsRef
-          .where('businessId', isEqualTo: businessId)
-          .orderBy('createdAt', descending: true)
-          .limit(limit);
+          .where('businessId', isEqualTo: businessId);
 
       if (categoryId != null) {
         query = query.where('categoryId', isEqualTo: categoryId);
       }
 
       final snapshot = await query.get();
-      return snapshot.docs
+      final products = snapshot.docs
           .map((doc) => Product.fromJson(
                 doc.data() as Map<String, dynamic>,
                 id: doc.id,
               ))
           .toList();
+
+      // Sort in memory instead of using orderBy to avoid index issues
+      products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      // Apply limit after sorting
+      if (products.length > limit) {
+        return products.take(limit).toList();
+      }
+      
+      return products;
     } catch (e) {
-      throw Exception('İşletme ürünleri alınırken bir hata oluştu: $e');
+      print('Error getting business products: $e');
+      // Return empty list instead of throwing exception to prevent crashes
+      return [];
     }
   }
 

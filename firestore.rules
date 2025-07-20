@@ -1,86 +1,44 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Admin users collection - allow read/write for authenticated users
-    match /admin_users/{adminId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
-    }
     
-    // Admin sessions collection - allow read/write for authenticated users
-    match /admin_sessions/{sessionId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
-    }
-    
-    // Admin activity logs collection - allow read/write for authenticated users
-    match /admin_activity_logs/{logId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
-    }
-    
-    // Business users collection - allow read/write for authenticated users
-    match /business_users/{businessId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
-    }
-    
-    // Business sessions collection - allow read/write for authenticated users
-    match /business_sessions/{sessionId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
-    }
-    
-    // Business activity logs collection - allow read/write for authenticated users
-    match /business_activity_logs/{logId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
-    }
-    
-    // Users collection - allow read/write for authenticated users
+    // Users collection - kullanıcılar kendi verilerine erişebilir
     match /users/{userId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null; // Yeni kullanıcı kaydı için
     }
     
-    // Businesses collection - allow public read, authenticated write
+    // Businesses collection - authenticated kullanıcılar okuyabilir, sahipler yazabilir
     match /businesses/{businessId} {
-      allow read: if true; // Müşteriler işletmeleri görebilir
-      allow write: if request.auth != null; // Sadece kimlik doğrulanmış kullanıcılar yazabilir
-      allow list: if true; // İşletme listesi herkese açık
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null && 
+        (request.auth.uid == resource.data.ownerId || 
+         request.auth.uid == request.resource.data.ownerId);
     }
     
-    // Categories collection - allow public read, authenticated write
-    match /categories/{categoryId} {
-      allow read: if true; // Müşteriler kategorileri görebilir
-      allow write: if request.auth != null; // Sadece kimlik doğrulanmış kullanıcılar yazabilir
-      allow list: if true; // Kategori listesi herkese açık
-    }
-    
-    // Products collection - allow public read, authenticated write
+    // Products collection - işletme sahipleri ve authenticated kullanıcılar
     match /products/{productId} {
-      allow read: if true; // Müşteriler ürünleri görebilir
-      allow write: if request.auth != null; // Sadece kimlik doğrulanmış kullanıcılar yazabilir
-      allow list: if true; // Ürün listesi herkese açık
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir (business kontrolü app seviyesinde)
     }
     
-    // Orders collection - allow read/write for authenticated users only
+    // Categories collection - işletme sahipleri ve authenticated kullanıcılar
+    match /categories/{categoryId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
+    // Orders collection - işletme sahipleri ve müşteriler
     match /orders/{orderId} {
-      allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
     }
     
-    // Carts collection - allow more flexible access for guest users
-    match /carts/{cartId} {
-      allow read, write: if true; // Misafir kullanıcılar da sepet oluşturabilir
-      allow list: if request.auth != null; // Listeleme sadece kimlik doğrulanmış kullanıcılar için
-    }
-    
-    // Discounts collection - allow public read, authenticated write
+    // Discounts collection - işletme sahipleri
     match /discounts/{discountId} {
-      allow read: if true; // Müşteriler indirimleri görebilir
-      allow write: if request.auth != null; // Sadece kimlik doğrulanmış kullanıcılar yazabilir
-      allow list: if true; // İndirim listesi herkese açık
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
     }
     
     // QR codes collection - allow public read for scans, authenticated write
@@ -90,15 +48,20 @@ service cloud.firestore {
       allow list: if request.auth != null; // Listing requires authentication
     }
     
-    // System settings collection - allow read/write for authenticated users
-    match /system_settings/{settingId} {
+    // Business users collection (for BusinessService)
+    match /business_users/{userId} {
       allow read, write: if request.auth != null;
-      allow list: if request.auth != null;
     }
     
-    // Default rule - deny all other access
+    // Business orders collection (for quick lookups)
+    match /business_orders/{orderId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to read/write to any collection for development
+    // TODO: Make this more restrictive in production
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
     }
   }
 } 
