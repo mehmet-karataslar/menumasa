@@ -20,6 +20,8 @@ import '../../presentation/widgets/shared/empty_state.dart';
 import 'cart_page.dart';
 // CachedNetworkImage removed for Windows compatibility
 import 'package:shimmer/shimmer.dart';
+import 'customer_orders_page.dart';
+import 'product_detail_page.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
@@ -31,7 +33,7 @@ class MenuPage extends StatefulWidget {
 }
 
 class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
-  late TabController _tabController;
+  TabController? _tabController;
   late ScrollController _scrollController;
 
   // State
@@ -67,7 +69,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     _scrollController.dispose();
     _cartService.removeCartListener(_onCartChanged);
     super.dispose();
@@ -118,13 +120,25 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
       // TabController'ı kategorilere göre ayarla
       if (_categories.isNotEmpty) {
+        // Önceki TabController'ı dispose et
+        _tabController?.dispose();
+        
         _tabController = TabController(length: _categories.length, vsync: this);
 
-        _tabController.addListener(() {
-          if (_tabController.indexIsChanging) {
-            _onCategorySelected(_categories[_tabController.index].categoryId);
+        _tabController!.addListener(() {
+          if (_tabController!.indexIsChanging) {
+            _onCategorySelected(_categories[_tabController!.index].categoryId);
           }
         });
+        
+        // İlk kategoriyi seçili yap
+        if (_selectedCategoryId == null && _categories.isNotEmpty) {
+          _selectedCategoryId = _categories.first.categoryId;
+        }
+      } else {
+        // Kategoriler boşsa TabController'ı null yap
+        _tabController?.dispose();
+        _tabController = null;
       }
 
       setState(() {
@@ -237,13 +251,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   void _onOrdersPressed() {
-    Navigator.pushNamed(
+    Navigator.push(
       context,
-      '/customer/orders',
-      arguments: {
-        'businessId': widget.businessId,
-        'customerPhone': null, // Could be set from user preferences
-      },
+      MaterialPageRoute(
+        builder: (context) => CustomerOrdersPage(
+          businessId: widget.businessId,
+          customerPhone: null, // Could be set from user preferences
+          userId: null,
+        ),
+      ),
     );
   }
 
@@ -296,41 +312,49 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCartFAB() {
-    return FloatingActionButton.extended(
-      onPressed: _onCartPressed,
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.white,
-      elevation: 8,
-      icon: Stack(
-        children: [
-          const Icon(Icons.shopping_cart, size: 24),
-          if (_cartItemCount > 0)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: AppColors.error,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text(
-                  _cartItemCount.toString(),
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: FloatingActionButton.extended(
+        onPressed: _onCartPressed,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+        elevation: 8,
+        heroTag: "cart_fab",
+        icon: Stack(
+          children: [
+            const Icon(Icons.shopping_cart, size: 24),
+            if (_cartItemCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.warning,
+                    shape: BoxShape.circle,
                   ),
-                  textAlign: TextAlign.center,
+                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                  child: Text(
+                    _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
-      label: Text(
-        'Sepet (${_cartItemCount})',
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          ],
+        ),
+        label: Text(
+          'Sepet (${_cartItemCount})',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600, 
+            fontSize: 16,
+          ),
+        ),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
     );
   }
@@ -425,187 +449,189 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   Widget _buildMenuContent() {
-    return RefreshIndicator(
-      onRefresh: _loadMenuData,
-      child: NestedScrollView(
-        controller: _scrollController,
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            // Business Header
-            SliverAppBar(
-              expandedHeight: 220,
-              floating: false,
-              pinned: true,
-              elevation: 0,
-              backgroundColor: AppColors.primary,
-              flexibleSpace: FlexibleSpaceBar(
-                background: BusinessHeader(
-                  business: _business!,
-                  onSharePressed: _onSharePressed,
-                  onCallPressed: _onCallPressed,
-                  onLocationPressed: _onLocationPressed,
-                  onCartPressed: null, // Cart button moved to SliverAppBar
-                  cartItemCount: 0, // Not used anymore
-                ),
+    return NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          // Business Header
+          SliverAppBar(
+            expandedHeight: 200,
+            floating: false,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            flexibleSpace: FlexibleSpaceBar(
+              background: BusinessHeader(
+                business: _business!,
+                showBackButton: true,
+                onBackPressed: () => Navigator.pop(context),
               ),
-              actions: [
-                // Search button
-                IconButton(
-                  icon: Icon(
-                    _showSearchBar ? Icons.close : Icons.search,
-                    color: AppColors.white,
-                    size: 22,
-                  ),
-                  onPressed: _toggleSearchBar,
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
+            ),
+            actions: [
+              // Search button
+              IconButton(
+                icon: Icon(
+                  _showSearchBar ? Icons.search_off : Icons.search,
+                  color: AppColors.white,
+                  size: 24,
                 ),
-                // Filter button
-                IconButton(
-                  icon: const Icon(
-                    Icons.filter_list,
-                    color: AppColors.white,
-                    size: 22,
-                  ),
-                  onPressed: _showFilterBottomSheet,
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
+                onPressed: _toggleSearchBar,
+                tooltip: _showSearchBar ? 'Aramayı Kapat' : 'Ara',
+              ),
+              // Filter button
+              IconButton(
+                icon: const Icon(
+                  Icons.tune,
+                  color: AppColors.white,
+                  size: 24,
                 ),
-                // Orders button
-                IconButton(
-                  icon: const Icon(
-                    Icons.receipt_long,
-                    color: AppColors.white,
-                    size: 22,
-                  ),
-                  onPressed: _onOrdersPressed,
-                  tooltip: 'Siparişlerim',
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
+                onPressed: _showFilterBottomSheet,
+                tooltip: 'Filtrele',
+              ),
+              // Orders button
+              IconButton(
+                icon: const Icon(
+                  Icons.receipt_long,
+                  color: AppColors.white,
+                  size: 24,
                 ),
-                // Cart button
-                IconButton(
-                  icon: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const Icon(
-                        Icons.shopping_cart,
-                        color: AppColors.white,
-                        size: 22,
-                      ),
-                      if (_cartItemCount > 0)
-                        Positioned(
-                          right: -4,
-                          top: -4,
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: AppColors.error,
-                              shape: BoxShape.circle,
+                onPressed: _onOrdersPressed,
+                tooltip: 'Siparişlerim',
+              ),
+              // Cart button
+              IconButton(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(
+                      Icons.shopping_cart,
+                      color: AppColors.white,
+                      size: 24,
+                    ),
+                    if (_cartItemCount > 0)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            child: Text(
-                              _cartItemCount > 99
-                                  ? '99+'
-                                  : _cartItemCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                    ],
-                  ),
-                  onPressed: _onCartPressed,
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-
-            // Search Bar (if visible)
-            if (_showSearchBar)
-              SliverToBoxAdapter(
-                child: Container(
-                  color: AppColors.white,
-                  padding: AppDimensions.paddingM,
-                  child: CustomSearchBar(
-                    onSearchChanged: _onSearchChanged,
-                    hintText: 'Ürün ara...',
-                  ),
-                ),
+                onPressed: _onCartPressed,
+                tooltip: 'Sepet',
               ),
+              const SizedBox(width: 8),
+            ],
+          ),
 
-            // Category Tabs
+          // Search Bar (if visible)
+          if (_showSearchBar)
             SliverToBoxAdapter(
               child: Container(
                 color: AppColors.white,
-                child: CategoryList(
-                  categories: _categories,
-                  selectedCategoryId: _selectedCategoryId,
-                  onCategorySelected: _onCategorySelected,
+                padding: const EdgeInsets.all(16),
+                child: CustomSearchBar(
+                  onSearchChanged: _onSearchChanged,
+                  hintText: 'Ürün ara...',
                 ),
               ),
             ),
-          ];
-        },
-        body: _buildProductContent(),
-      ),
+
+          // Category Tabs
+          SliverToBoxAdapter(
+            child: Container(
+              color: AppColors.white,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: CategoryList(
+                categories: _categories,
+                selectedCategoryId: _selectedCategoryId,
+                onCategorySelected: _onCategorySelected,
+                showAll: true,
+              ),
+            ),
+          ),
+        ];
+      },
+      body: _buildProductContent(),
     );
   }
 
   Widget _buildProductContent() {
     if (_filteredProducts.isEmpty) {
-      return EmptyState(
-        icon: Icons.restaurant_menu,
-        title: 'Ürün Bulunamadı',
-        message: _searchQuery.isNotEmpty
-            ? 'Aradığınız kriterlere uygun ürün bulunamadı.'
-            : 'Bu kategoride henüz ürün bulunmamaktadır.',
-        actionText: _searchQuery.isNotEmpty ? 'Aramayı Temizle' : null,
-        onActionPressed: _searchQuery.isNotEmpty
-            ? () {
-                _onSearchChanged('');
-                _toggleSearchBar();
-              }
-            : null,
+      return Container(
+        color: AppColors.menuBackground,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: EmptyState(
+              icon: Icons.restaurant_menu,
+              title: _searchQuery.isNotEmpty 
+                  ? 'Ürün Bulunamadı' 
+                  : 'Henüz Ürün Yok',
+              message: _searchQuery.isNotEmpty
+                  ? 'Aradığınız "${_searchQuery}" için sonuç bulunamadı.\nFarklı bir arama terimi deneyin.'
+                  : _selectedCategoryId != null && _selectedCategoryId != 'all'
+                      ? 'Bu kategoride henüz ürün bulunmamaktadır.'
+                      : 'Bu işletmede henüz ürün bulunmamaktadır.',
+              actionText: _searchQuery.isNotEmpty ? 'Aramayı Temizle' : null,
+              onActionPressed: _searchQuery.isNotEmpty
+                  ? () {
+                      _onSearchChanged('');
+                      if (_showSearchBar) _toggleSearchBar();
+                    }
+                  : null,
+            ),
+          ),
+        ),
       );
     }
 
-    return Container(
-      color: AppColors.menuBackground,
-      child: ProductGrid(
-        products: _filteredProducts,
-        onProductTapped: _onProductTapped,
-        onAddToCart: (product) => _addToCart(product),
-        padding: AppDimensions.paddingM,
+    return RefreshIndicator(
+      onRefresh: _loadMenuData,
+      color: AppColors.primary,
+      child: Container(
+        color: AppColors.menuBackground,
+        child: ProductGrid(
+          products: _filteredProducts,
+          onProductTapped: _onProductTapped,
+          onAddToCart: (product) => _addToCart(product),
+          padding: const EdgeInsets.all(16),
+          crossAxisCount: 2,
+          childAspectRatio: 0.8,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
       ),
     );
   }
 
   void _onProductTapped(Product product) {
-    Navigator.pushNamed(
+    Navigator.push(
       context,
-      '/product-detail',
-      arguments: {'product': product, 'business': _business},
+      MaterialPageRoute(
+        builder: (context) => ProductDetailPage(
+          product: product, 
+          business: _business!,
+        ),
+      ),
     );
   }
 
