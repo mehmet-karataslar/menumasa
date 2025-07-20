@@ -1135,7 +1135,7 @@ class _ProductEditPageState extends State<ProductEditPage>
             ),
             SizedBox(height: 16),
             Text(
-              'URL\'nin doğrudan resim dosyasına (.jpg, .png, .gif) işaret ettiğinden emin olun.',
+              '• Doğrudan resim URL\'si (örn: https://site.com/image.jpg)\n• Google Images bağlantısı\n• Desteklenen formatlar: .jpg, .png, .gif, .webp, .svg',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -1148,12 +1148,23 @@ class _ProductEditPageState extends State<ProductEditPage>
           TextButton(
             onPressed: () {
               final url = urlController.text.trim();
-              if (url.isNotEmpty && _isValidImageUrl(url)) {
-                Navigator.pop(context);
-                _addImageFromUrl(url);
+              if (url.isNotEmpty) {
+                if (_isValidImageUrl(url)) {
+                  Navigator.pop(context);
+                  _addImageFromUrl(url);
+                } else {
+                  // Show preview of extracted URL for debugging
+                  final extractedUrl = _extractImageUrl(url);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('URL desteklenmiyor. Çıkarılan URL: ${extractedUrl.length > 50 ? extractedUrl.substring(0, 50) + "..." : extractedUrl}'),
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+                }
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Geçerli bir resim URL\'si girin')),
+                  SnackBar(content: Text('Lütfen bir URL girin')),
                 );
               }
             },
@@ -1164,25 +1175,53 @@ class _ProductEditPageState extends State<ProductEditPage>
     );
   }
 
+  String _extractImageUrl(String input) {
+    // Google Images URL format: imgurl=ENCODED_URL
+    if (input.contains('imgurl=')) {
+      try {
+        final uri = Uri.parse(input);
+        final imgUrl = uri.queryParameters['imgurl'];
+        if (imgUrl != null && imgUrl.isNotEmpty) {
+          return Uri.decodeComponent(imgUrl);
+        }
+      } catch (e) {
+        // If parsing fails, continue with original input
+      }
+    }
+    
+    // Other image hosting services could be added here
+    // For now, return the original URL if it's not a Google Images link
+    return input;
+  }
+
   bool _isValidImageUrl(String url) {
     try {
-      final uri = Uri.parse(url);
+      // First extract the actual image URL if it's from Google Images or similar
+      final actualUrl = _extractImageUrl(url);
+      final uri = Uri.parse(actualUrl);
       final path = uri.path.toLowerCase();
+      
+      // Check for common image extensions
       return path.endsWith('.jpg') || 
              path.endsWith('.jpeg') || 
              path.endsWith('.png') || 
              path.endsWith('.gif') || 
-             path.endsWith('.webp');
+             path.endsWith('.webp') ||
+             path.endsWith('.bmp') ||
+             path.endsWith('.svg');
     } catch (e) {
       return false;
     }
   }
 
   void _addImageFromUrl(String url) {
+    // Extract the actual image URL (handles Google Images and other formats)
+    final actualImageUrl = _extractImageUrl(url);
+    
     setState(() {
       _selectedImages.add(ImageData(
         sourceType: ImageSourceType.url,
-        url: url,
+        url: actualImageUrl,
       ));
     });
   }
