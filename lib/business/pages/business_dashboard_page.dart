@@ -345,6 +345,7 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
                   : null,
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   item.icon,
@@ -360,6 +361,7 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
                         color: isSelected ? AppColors.primary : AppColors.textSecondary,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

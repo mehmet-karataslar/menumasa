@@ -312,7 +312,7 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
       
       if (user != null) {
         print('🔐 User type: ${user.userType.value}');
-        print('🔐 User UID: ${user.uid}');
+        print('🔐 User ID: ${user.id}');
         
         if (mounted) {
           // Check if user is business type
