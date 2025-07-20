@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../data/models/category.dart';
+import '../../data/models/category.dart' as app_category;
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 
 class CategoryList extends StatelessWidget {
-  final List<Category> categories;
+  final List<app_category.Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
   final bool showAll;
@@ -22,7 +22,7 @@ class CategoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     // Aktif kategorileri filtrele
     final activeCategories = categories
-        .where((cat) => cat.isActiveNow)
+        .where((cat) => cat.isActive)
         .toList();
 
     // "Tümü" seçeneğini ekle
@@ -56,8 +56,8 @@ class CategoryList extends StatelessWidget {
     );
   }
 
-  Category _createAllCategory() {
-    return Category(
+  app_category.Category _createAllCategory() {
+    return app_category.Category(
       categoryId: 'all',
       businessId: '',
       name: 'Tümü',
@@ -72,7 +72,7 @@ class CategoryList extends StatelessWidget {
 }
 
 class CategoryChip extends StatelessWidget {
-  final Category category;
+  final app_category.Category category;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -118,34 +118,23 @@ class CategoryChip extends StatelessWidget {
                 // Category icon (if it's the "All" category)
                 if (category.categoryId == 'all')
                   Icon(
-                    Icons.apps,
+                    Icons.grid_view,
                     size: 16,
-                    color: isSelected ? AppColors.white : AppColors.primary,
+                    color: isSelected
+                        ? AppColors.white
+                        : AppColors.textSecondary,
                   ),
-                
-                if (category.categoryId == 'all')
-                  const SizedBox(width: 4),
+
+                if (category.categoryId == 'all') const SizedBox(width: 6),
 
                 // Category name
                 Text(
                   category.name,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: isSelected ? AppColors.white : AppColors.primary,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: isSelected ? AppColors.white : AppColors.textPrimary,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
-
-                // Active indicator (for time-based categories)
-                if (category.hasTimeRules && category.isActiveNow)
-                  Container(
-                    margin: const EdgeInsets.only(left: 6),
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.white : AppColors.success,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
               ],
             ),
           ),
@@ -155,144 +144,69 @@ class CategoryChip extends StatelessWidget {
   }
 }
 
-/// Utility extension for Category
-extension CategoryListUtils on Category {
-  bool get isActiveNow {
-    if (!isActive) return false;
-    
-    if (timeRules.isEmpty) return true;
-    
-    final now = DateTime.now();
-    final currentTime = TimeOfDay.fromDateTime(now);
-    final currentDay = now.weekday;
-    
-    return timeRules.any((rule) {
-      // Check day
-      if (rule.dayOfWeek != null && rule.dayOfWeek != currentDay) {
-        return false;
-      }
-      
-      // Check time range
-      if (rule.startTime != null && rule.endTime != null) {
-        final startTime = _parseTimeString(rule.startTime!);
-        final endTime = _parseTimeString(rule.endTime!);
-        final startMinutes = startTime.hour * 60 + startTime.minute;
-        final endMinutes = endTime.hour * 60 + endTime.minute;
-        final currentMinutes = currentTime.hour * 60 + currentTime.minute;
-        
-        if (startMinutes <= endMinutes) {
-          // Same day time range
-          return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-        } else {
-          // Overnight time range
-          return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
-        }
-      }
-      
-      return true;
-    });
-  }
-
-  bool get hasTimeRules => timeRules.isNotEmpty;
-
-  DateTime _parseTimeString(String timeString) {
-    // Parse time string like "14:30" to DateTime
-    final parts = timeString.split(':');
-    final now = DateTime.now();
-    return DateTime(
-      now.year,
-      now.month,
-      now.day,
-      int.parse(parts[0]),
-      int.parse(parts[1]),
-    );
-  }
-}
-
-/// Category filter utility
-class CategoryFilter {
-  static List<Category> filterActiveCategories(List<Category> categories) {
-    return categories.where((category) => category.isActiveNow).toList();
-  }
-
-  static List<Category> sortCategories(List<Category> categories) {
-    final sortedList = List<Category>.from(categories);
-    sortedList.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return sortedList;
-  }
-
-  static List<Category> filterAndSort(List<Category> categories) {
-    return sortCategories(filterActiveCategories(categories));
-  }
-}
-
-/// Category grid widget for larger displays
-class CategoryGrid extends StatelessWidget {
-  final List<Category> categories;
+// Vertical category list for better organization
+class VerticalCategoryList extends StatelessWidget {
+  final List<app_category.Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
-  final int crossAxisCount;
 
-  const CategoryGrid({
+  const VerticalCategoryList({
     Key? key,
     required this.categories,
     this.selectedCategoryId,
     required this.onCategorySelected,
-    this.crossAxisCount = 3,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final activeCategories = CategoryFilter.filterAndSort(categories);
-    final displayCategories = [_createAllCategory(), ...activeCategories];
+    final activeCategories = categories
+        .where((cat) => cat.isActive)
+        .toList();
 
-    return GridView.builder(
+    return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: AppDimensions.paddingM,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        childAspectRatio: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: displayCategories.length,
+      itemCount: activeCategories.length,
+      separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final category = displayCategories[index];
-        final isSelected = selectedCategoryId == category.categoryId ||
-            (selectedCategoryId == null && category.categoryId == 'all');
+        final category = activeCategories[index];
+        final isSelected = selectedCategoryId == category.categoryId;
 
-        return CategoryChip(
-          category: category,
-          isSelected: isSelected,
+        return ListTile(
+          title: Text(
+            category.name,
+            style: AppTypography.bodyLarge.copyWith(
+              color: isSelected ? AppColors.primary : AppColors.textPrimary,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+          subtitle: category.description.isNotEmpty
+              ? Text(
+                  category.description,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                )
+              : null,
+          trailing: isSelected
+              ? const Icon(Icons.check_circle, color: AppColors.primary)
+              : null,
           onTap: () => onCategorySelected(category.categoryId),
+          selected: isSelected,
+          selectedTileColor: AppColors.primary.withOpacity(0.1),
         );
       },
     );
   }
-
-  Category _createAllCategory() {
-    return Category(
-      categoryId: 'all',
-      businessId: '',
-      name: 'Tümü',
-      description: 'Tüm ürünler',
-      sortOrder: -1,
-      isActive: true,
-      timeRules: [],
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-  }
 }
 
-/// Animated category selector
-class AnimatedCategorySelector extends StatefulWidget {
-  final List<Category> categories;
+// Expandable category tree for hierarchical categories
+class CategoryTree extends StatefulWidget {
+  final List<app_category.Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
 
-  const AnimatedCategorySelector({
+  const CategoryTree({
     Key? key,
     required this.categories,
     this.selectedCategoryId,
@@ -300,42 +214,120 @@ class AnimatedCategorySelector extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<AnimatedCategorySelector> createState() => _AnimatedCategorySelectorState();
+  State<CategoryTree> createState() => _CategoryTreeState();
 }
 
-class _AnimatedCategorySelectorState extends State<AnimatedCategorySelector>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
+class _CategoryTreeState extends State<CategoryTree> {
+  final Set<String> _expandedCategories = {};
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: CategoryList(
-        categories: widget.categories,
-        selectedCategoryId: widget.selectedCategoryId,
-        onCategorySelected: widget.onCategorySelected,
-      ),
+    final mainCategories =
+        widget.categories
+            .where((cat) => cat.parentCategoryId == null && cat.isActive)
+            .toList()
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: mainCategories.length,
+      itemBuilder: (context, index) {
+        final category = mainCategories[index];
+        final subCategories = widget.categories
+            .where((cat) => cat.parentCategoryId == category.categoryId && cat.isActive)
+            .toList();
+        final hasSubCategories = subCategories.isNotEmpty;
+        final isExpanded = _expandedCategories.contains(category.categoryId);
+        final isSelected = widget.selectedCategoryId == category.categoryId;
+
+        return Column(
+          children: [
+            ListTile(
+              title: Text(
+                category.name,
+                style: AppTypography.bodyLarge.copyWith(
+                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: category.description.isNotEmpty
+                  ? Text(
+                      category.description,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    )
+                  : null,
+              leading: hasSubCategories
+                  ? IconButton(
+                      icon: Icon(
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          if (isExpanded) {
+                            _expandedCategories.remove(category.categoryId);
+                          } else {
+                            _expandedCategories.add(category.categoryId);
+                          }
+                        });
+                      },
+                    )
+                  : null,
+              trailing: isSelected
+                  ? const Icon(Icons.check_circle, color: AppColors.primary)
+                  : null,
+              onTap: () => widget.onCategorySelected(category.categoryId),
+              selected: isSelected,
+              selectedTileColor: AppColors.primary.withOpacity(0.1),
+            ),
+
+            // Sub categories
+            if (hasSubCategories && isExpanded)
+              ...subCategories.map((subCategory) {
+                final isSubSelected =
+                    widget.selectedCategoryId == subCategory.categoryId;
+
+                return Padding(
+                  padding: const EdgeInsets.only(left: 32),
+                  child: ListTile(
+                    title: Text(
+                      subCategory.name,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isSubSelected
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
+                        fontWeight: isSubSelected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: subCategory.description.isNotEmpty
+                        ? Text(
+                            subCategory.description,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          )
+                        : null,
+                    trailing: isSubSelected
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: AppColors.primary,
+                          )
+                        : null,
+                    onTap: () =>
+                        widget.onCategorySelected(subCategory.categoryId),
+                    selected: isSubSelected,
+                    selectedTileColor: AppColors.primary.withOpacity(0.1),
+                  ),
+                );
+              }).toList(),
+          ],
+        );
+      },
     );
   }
-} 
+}

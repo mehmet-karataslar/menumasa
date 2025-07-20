@@ -3,7 +3,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/business.dart';
-import '../../widgets/shared/empty_state.dart';
+
+import '../../presentation/widgets/shared/empty_state.dart';
 import 'business_detail_page.dart';
 
 class CategoryFilterPage extends StatefulWidget {

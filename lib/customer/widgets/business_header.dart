@@ -158,167 +158,62 @@ class BusinessHeader extends StatelessWidget {
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return _buildLogoPlaceholder();
+                  return _buildCompactLogoPlaceholder();
                 },
                 errorBuilder: (context, error, stackTrace) =>
-                    _buildLogoPlaceholder(),
+                    _buildCompactLogoPlaceholder(),
               )
-            : _buildLogoPlaceholder(),
+            : _buildCompactLogoPlaceholder(),
       ),
+    );
+  }
+
+  Widget _buildCompactLogoPlaceholder() {
+    return Container(
+      color: AppColors.white,
+      child: const Icon(Icons.restaurant, size: 30, color: AppColors.primary),
     );
   }
 
   Widget _buildLogoPlaceholder() {
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Icon(
-        Icons.store,
-        color: AppColors.greyLight,
-        size: 30,
+      color: AppColors.white,
+      child: Icon(
+        Icons.restaurant,
+        size: AppDimensions.businessLogoSize * 0.5,
+        color: AppColors.primary,
       ),
     );
   }
 
-  Widget _buildBusinessInfo() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // Business name
-        Text(
-          business.businessName,
-          style: AppTypography.h2.copyWith(
-            color: AppColors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        const SizedBox(height: 4),
-
-        // Business type and rating
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                business.businessType,
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _buildRatingBadge(),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        // Business description
-        if (business.businessDescription.isNotEmpty)
-          Text(
-            business.businessDescription,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.white.withOpacity(0.9),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+        // Share button
+        if (onSharePressed != null)
+          _buildActionButton(
+            icon: Icons.share,
+            label: 'Paylaş',
+            onPressed: onSharePressed!,
           ),
 
-        const SizedBox(height: 8),
+        // Call button
+        if (business.contactInfo.phone?.isNotEmpty == true)
+          _buildActionButton(
+            icon: Icons.phone,
+            label: 'Ara',
+            onPressed: onCallPressed ?? () => _defaultCallAction(),
+          ),
 
-        // Status and location
-        Row(
-          children: [
-            _buildStatusBadge(),
-            const SizedBox(width: 12),
-            Icon(
-              Icons.location_on,
-              color: AppColors.white.withOpacity(0.8),
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                business.businessAddress,
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.white.withOpacity(0.8),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+        // Location button
+        if (business.address.street?.isNotEmpty == true)
+          _buildActionButton(
+            icon: Icons.location_on,
+            label: 'Konum',
+            onPressed: onLocationPressed ?? () => _defaultLocationAction(),
+          ),
       ],
-    );
-  }
-
-  Widget _buildRatingBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.star,
-            color: AppColors.warning,
-            size: 12,
-          ),
-          const SizedBox(width: 2),
-          Text(
-            '4.5',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: business.isOpen ? AppColors.success : AppColors.error,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            business.isOpen ? 'Açık' : 'Kapalı',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -326,99 +221,27 @@ class BusinessHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        // Share button
         if (onSharePressed != null)
           _buildCompactActionButton(
             icon: Icons.share,
-            label: 'Paylaş',
             onPressed: onSharePressed!,
           ),
-        if (onCallPressed != null)
+
+        // Call button
+        if (business.contactInfo.phone?.isNotEmpty == true)
           _buildCompactActionButton(
             icon: Icons.phone,
-            label: 'Ara',
-            onPressed: onCallPressed!,
+            onPressed: onCallPressed ?? () => _defaultCallAction(),
           ),
-        if (onLocationPressed != null)
+
+        // Location button
+        if (business.address.street?.isNotEmpty == true)
           _buildCompactActionButton(
             icon: Icons.location_on,
-            label: 'Konum',
-            onPressed: onLocationPressed!,
+            onPressed: onLocationPressed ?? () => _defaultLocationAction(),
           ),
       ],
-    );
-  }
-
-  Widget _buildCompactActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: AppColors.white,
-                size: 16,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.white,
-                  fontSize: 10,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Container(
-      padding: AppDimensions.paddingHorizontalM,
-      child: Row(
-        children: [
-          if (onSharePressed != null)
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.share,
-                label: 'Paylaş',
-                onPressed: onSharePressed!,
-              ),
-            ),
-          if (onSharePressed != null && onCallPressed != null)
-            const SizedBox(width: 12),
-          if (onCallPressed != null)
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.phone,
-                label: 'Ara',
-                onPressed: onCallPressed!,
-              ),
-            ),
-          if ((onSharePressed != null || onCallPressed != null) && 
-              onLocationPressed != null)
-            const SizedBox(width: 12),
-          if (onLocationPressed != null)
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.location_on,
-                label: 'Konum',
-                onPressed: onLocationPressed!,
-              ),
-            ),
-        ],
-      ),
     );
   }
 
@@ -427,83 +250,300 @@ class BusinessHeader extends StatelessWidget {
     required String label,
     required VoidCallback onPressed,
   }) {
-    return Material(
-      color: AppColors.white.withOpacity(0.2),
+    return InkWell(
+      onTap: onPressed,
       borderRadius: BorderRadius.circular(AppDimensions.radiusM),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusM),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.spacing12,
+          vertical: AppDimensions.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+          border: Border.all(color: AppColors.white.withOpacity(0.3)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.white, size: AppDimensions.iconSizeM),
+            AppSizedBox.h4,
+            Text(
+              label,
+              style: AppTypography.bodySmall.copyWith(
                 color: AppColors.white,
-                size: 20,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Widget _buildCompactActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.white.withOpacity(0.3)),
+        ),
+        child: Icon(icon, color: AppColors.white, size: 20),
+      ),
+    );
+  }
+
+  void _defaultCallAction() {
+    // URL launcher ile telefon araması yapılacak
+    // await launch('tel:${business.contactInfo.phone}');
+    print('Calling: ${business.contactInfo.phone}');
+  }
+
+  void _defaultLocationAction() {
+    // Harita uygulamasında konum açılacak
+    // await launch('https://maps.google.com/?q=${business.address.toString()}');
+    print('Location: ${business.address.street?.isNotEmpty == true ? business.address.street! : 'Adres bilgisi yok'}');
+  }
+
   Widget _buildCartButton() {
-    return Material(
-      color: AppColors.white.withOpacity(0.2),
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: onCartPressed,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                Icons.shopping_cart,
-                color: AppColors.white,
-                size: 24,
-              ),
-              if (cartItemCount > 0)
-                Positioned(
-                  right: -6,
-                  top: -6,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+    return InkWell(
+      onTap: onCartPressed,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(Icons.shopping_cart, color: AppColors.primary, size: 24),
+            if (cartItemCount > 0)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    cartItemCount > 99 ? '99+' : cartItemCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      cartItemCount > 99 ? '99+' : cartItemCount.toString(),
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
   }
-} 
+}
+
+// Animated version with slide-in effects
+class AnimatedBusinessHeader extends StatefulWidget {
+  final Business business;
+  final VoidCallback? onSharePressed;
+  final VoidCallback? onCallPressed;
+  final VoidCallback? onLocationPressed;
+  final VoidCallback? onCartPressed;
+  final int cartItemCount;
+
+  const AnimatedBusinessHeader({
+    Key? key,
+    required this.business,
+    this.onSharePressed,
+    this.onCallPressed,
+    this.onLocationPressed,
+    this.onCartPressed,
+    this.cartItemCount = 0,
+  }) : super(key: key);
+
+  @override
+  State<AnimatedBusinessHeader> createState() => _AnimatedBusinessHeaderState();
+}
+
+class _AnimatedBusinessHeaderState extends State<AnimatedBusinessHeader>
+    with TickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
+      ),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+          ),
+        );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: BusinessHeader(
+              business: widget.business,
+              onSharePressed: widget.onSharePressed,
+              onCallPressed: widget.onCallPressed,
+              onLocationPressed: widget.onLocationPressed,
+              onCartPressed: widget.onCartPressed,
+              cartItemCount: widget.cartItemCount,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Compact version for smaller screens
+class CompactBusinessHeader extends StatelessWidget {
+  final Business business;
+  final VoidCallback? onSharePressed;
+
+  const CompactBusinessHeader({
+    Key? key,
+    required this.business,
+    this.onSharePressed,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppDimensions.paddingM,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: AppColors.primaryGradient,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Logo
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+              border: Border.all(color: AppColors.white, width: 2),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+              child: business.logoUrl != null
+                  ? Image.network(
+                      business.logoUrl!,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return _buildCompactLogoPlaceholder();
+                      },
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildCompactLogoPlaceholder(),
+                    )
+                  : _buildCompactLogoPlaceholder(),
+            ),
+          ),
+
+          AppSizedBox.w16,
+
+          // Business info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  business.businessName,
+                  style: AppTypography.h5.copyWith(color: AppColors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (business.businessDescription.isNotEmpty) ...[
+                  AppSizedBox.h4,
+                  Text(
+                    business.businessDescription,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.white.withOpacity(0.9),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Share button
+          if (onSharePressed != null)
+            IconButton(
+              onPressed: onSharePressed,
+              icon: const Icon(Icons.share, color: AppColors.white),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactLogoPlaceholder() {
+    return Container(
+      color: AppColors.white,
+      child: const Icon(Icons.restaurant, size: 24, color: AppColors.primary),
+    );
+  }
+}
+ 

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-// CachedNetworkImage removed for Windows compatibility
-import '../../widgets/shared/loading_indicator.dart';
-import '../../widgets/shared/error_message.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
-import '../../../core/constants/app_dimensions.dart';
-import '../../../data/models/product.dart';
-import '../../../data/models/business.dart';
-import '../../../core/services/cart_service.dart';
+import 'package:flutter/services.dart';
+import '../../presentation/widgets/shared/loading_indicator.dart';
+import '../../presentation/widgets/shared/error_message.dart';
+import '../../data/models/product.dart';
+import '../../data/models/business.dart';
+import '../../data/models/category.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
+import '../../core/constants/app_dimensions.dart';
+import '../../core/services/data_service.dart';
+import '../../core/services/cart_service.dart';
 import 'cart_page.dart';
 
 class ProductDetailPage extends StatefulWidget {

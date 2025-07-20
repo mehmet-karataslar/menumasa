@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_typography.dart';
+import '../../../core/constants/app_dimensions.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final Map<String, dynamic> currentFilters;
@@ -98,32 +98,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             ),
           ),
 
-          // Action buttons
+          // Apply button
           Container(
             padding: AppDimensions.paddingM,
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.greyLight)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('İptal'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _applyFilters,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                    ),
-                    child: const Text('Uygula'),
-                  ),
-                ),
-              ],
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _applyFilters,
+                child: const Text('Filtreleri Uygula'),
+              ),
             ),
           ),
         ],
@@ -134,12 +117,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: AppTypography.bodyLarge.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      child: Text(title, style: AppTypography.h5),
     );
   }
 
@@ -152,9 +130,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           _filters[key] = value;
         });
       },
-      controlAffinity: ListTileControlAffinity.leading,
       contentPadding: EdgeInsets.zero,
-      activeColor: AppColors.primary,
+      controlAffinity: ListTileControlAffinity.leading,
     );
   }
 
@@ -164,38 +141,24 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
     return Column(
       children: [
+        Row(
+          children: [
+            Text('${minPrice.toInt()} TL'),
+            const Spacer(),
+            Text('${maxPrice.toInt()} TL'),
+          ],
+        ),
         RangeSlider(
           values: RangeValues(minPrice, maxPrice),
           min: 0,
           max: 200,
           divisions: 20,
-          labels: RangeLabels(
-            '${minPrice.toStringAsFixed(0)} ₺',
-            '${maxPrice.toStringAsFixed(0)} ₺',
-          ),
           onChanged: (values) {
             setState(() {
               _filters['minPrice'] = values.start;
               _filters['maxPrice'] = values.end;
             });
           },
-          activeColor: AppColors.primary,
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${minPrice.toStringAsFixed(0)} ₺',
-                style: AppTypography.bodyMedium,
-              ),
-              Text(
-                '${maxPrice.toStringAsFixed(0)} ₺',
-                style: AppTypography.bodyMedium,
-              ),
-            ],
-          ),
         ),
       ],
     );
@@ -211,4 +174,4 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     widget.onFiltersChanged(_filters);
     Navigator.pop(context);
   }
-} 
+}

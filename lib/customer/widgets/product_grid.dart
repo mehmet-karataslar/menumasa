@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../data/models/product.dart';
+import '../../data/models/category.dart';
+import '../../data/models/business.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/cart_service.dart';
 // CachedNetworkImage removed for Windows compatibility
 
 class ProductGrid extends StatelessWidget {
@@ -99,10 +102,11 @@ class ProductCard extends StatelessWidget {
                           ? Image.network(
                               product.primaryImage!.url,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return _buildImagePlaceholder();
-                              },
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return _buildImagePlaceholder();
+                                  },
                               errorBuilder: (context, error, stackTrace) =>
                                   _buildImagePlaceholder(),
                             )
@@ -110,48 +114,28 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
 
+                  // Badges
+                  Positioned(top: 8, left: 8, child: _buildBadges()),
+
                   // Discount badge
                   if (product.hasDiscount)
                     Positioned(
                       top: 8,
-                      left: 8,
+                      right: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 6,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.error,
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.discountColor,
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          '${product.discountPercentage.toStringAsFixed(0)}%',
-                          style: AppTypography.caption.copyWith(
+                          product.formattedDiscountPercentage,
+                          style: AppTypography.bodySmall.copyWith(
                             color: AppColors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // Availability overlay
-                  if (!product.isAvailable)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.black.withOpacity(0.6),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(AppDimensions.radiusM),
-                            topRight: Radius.circular(AppDimensions.radiusM),
-                          ),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Tükendi',
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -171,75 +155,66 @@ class ProductCard extends StatelessWidget {
                     // Product name
                     Text(
                       product.name,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
+                      style: AppTypography.productTitle,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
 
                     const SizedBox(height: 4),
 
                     // Product description
-                    if (product.description.isNotEmpty)
-                      Expanded(
-                        child: Text(
-                          product.description,
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                    Text(
+                      product.description,
+                      style: AppTypography.productDescription,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
 
-                    const SizedBox(height: 8),
+                    const Spacer(),
 
-                    // Price and add to cart
+                    // Price section and add to cart button
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        // Price column
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Current price
                               Text(
-                                product.formattedCurrentPrice,
-                                style: AppTypography.bodyLarge.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
+                                product.formattedPrice,
+                                style: AppTypography.priceRegular.copyWith(
+                                  color: product.hasDiscount
+                                      ? AppColors.discountColor
+                                      : AppColors.priceColor,
                                 ),
                               ),
+
                               // Original price (if discounted)
                               if (product.hasDiscount)
                                 Text(
                                   product.formattedOriginalPrice,
-                                  style: AppTypography.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
+                                  style: AppTypography.priceOriginal,
                                 ),
                             ],
                           ),
                         ),
 
                         // Add to cart button
-                        if (onAddToCart != null && product.isAvailable)
-                          SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: Material(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(18),
-                              child: InkWell(
-                                onTap: onAddToCart,
-                                borderRadius: BorderRadius.circular(18),
-                                child: const Icon(
-                                  Icons.add,
-                                  color: AppColors.white,
-                                  size: 20,
-                                ),
+                        if (onAddToCart != null)
+                          InkWell(
+                            onTap: onAddToCart,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 18,
                               ),
                             ),
                           ),
@@ -257,72 +232,107 @@ class ProductCard extends StatelessWidget {
 
   Widget _buildImagePlaceholder() {
     return Container(
-      width: double.infinity,
-      height: double.infinity,
       color: AppColors.greyExtraLight,
-      child: const Icon(
-        Icons.restaurant,
-        color: AppColors.greyLight,
-        size: 40,
+      child: const Center(
+        child: Icon(Icons.restaurant, size: 48, color: AppColors.greyLight),
+      ),
+    );
+  }
+
+  Widget _buildBadges() {
+    final badges = <Widget>[];
+
+    if (product.isNew) {
+      badges.add(_buildBadge('YENİ', AppColors.success));
+    }
+
+    if (product.isPopular) {
+      badges.add(_buildBadge('POPÜLER', AppColors.warning));
+    }
+
+    if (product.isVegetarian) {
+      badges.add(_buildBadge('V', AppColors.success));
+    }
+
+    if (product.isSpicy) {
+      badges.add(_buildBadge('🌶', AppColors.error));
+    }
+
+    if (badges.isEmpty) return const SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: badges
+          .map(
+            (badge) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: badge,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: AppTypography.bodySmall.copyWith(
+          color: AppColors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
+        ),
       ),
     );
   }
 }
 
-/// List view version of product display
+// List view version for different layouts
 class ProductList extends StatelessWidget {
   final List<Product> products;
   final Function(Product) onProductTapped;
-  final Function(Product)? onAddToCart;
   final EdgeInsets? padding;
 
   const ProductList({
     Key? key,
     required this.products,
     required this.onProductTapped,
-    this.onAddToCart,
     this.padding,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: padding ?? EdgeInsets.zero,
+    return ListView.separated(
+      padding: padding,
       itemCount: products.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final product = products[index];
         return ProductListItem(
           product: product,
           onTap: () => onProductTapped(product),
-          onAddToCart: onAddToCart != null
-              ? () => onAddToCart!(product)
-              : null,
         );
       },
     );
   }
 }
 
-/// List item version of product card
 class ProductListItem extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
-  final VoidCallback? onAddToCart;
 
-  const ProductListItem({
-    Key? key,
-    required this.product,
-    required this.onTap,
-    this.onAddToCart,
-  }) : super(key: key);
+  const ProductListItem({Key? key, required this.product, required this.onTap})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.spacing16,
-        vertical: AppDimensions.spacing8,
-      ),
+      margin: EdgeInsets.zero,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -344,6 +354,10 @@ class ProductListItem extends StatelessWidget {
                       ? Image.network(
                           product.primaryImage!.url,
                           fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return _buildImagePlaceholder();
+                          },
                           errorBuilder: (context, error, stackTrace) =>
                               _buildImagePlaceholder(),
                         )
@@ -358,28 +372,48 @@ class ProductListItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Product name
-                    Text(
-                      product.name,
-                      style: AppTypography.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    // Name and badges
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: AppTypography.productTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (product.hasDiscount)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.discountColor,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              product.formattedDiscountPercentage,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
 
                     const SizedBox(height: 4),
 
-                    // Product description
-                    if (product.description.isNotEmpty)
-                      Text(
-                        product.description,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    // Description
+                    Text(
+                      product.description,
+                      style: AppTypography.productDescription,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
 
                     const SizedBox(height: 8),
 
@@ -387,20 +421,18 @@ class ProductListItem extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          product.formattedCurrentPrice,
-                          style: AppTypography.bodyLarge.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
+                          product.formattedPrice,
+                          style: AppTypography.priceRegular.copyWith(
+                            color: product.hasDiscount
+                                ? AppColors.discountColor
+                                : AppColors.priceColor,
                           ),
                         ),
                         if (product.hasDiscount) ...[
                           const SizedBox(width: 8),
                           Text(
                             product.formattedOriginalPrice,
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                              decoration: TextDecoration.lineThrough,
-                            ),
+                            style: AppTypography.priceOriginal,
                           ),
                         ],
                       ],
@@ -408,26 +440,6 @@ class ProductListItem extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Add to cart button
-              if (onAddToCart != null && product.isAvailable)
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Material(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(20),
-                    child: InkWell(
-                      onTap: onAddToCart,
-                      borderRadius: BorderRadius.circular(20),
-                      child: const Icon(
-                        Icons.add,
-                        color: AppColors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -436,228 +448,12 @@ class ProductListItem extends StatelessWidget {
   }
 
   Widget _buildImagePlaceholder() {
-    return const Icon(
-      Icons.restaurant,
-      color: AppColors.greyLight,
-      size: 30,
+    return Container(
+      color: AppColors.greyExtraLight,
+      child: const Center(
+        child: Icon(Icons.restaurant, size: 32, color: AppColors.greyLight),
+      ),
     );
   }
 }
-
-/// Product card with detailed information
-class DetailedProductCard extends StatelessWidget {
-  final Product product;
-  final VoidCallback onTap;
-  final VoidCallback? onAddToCart;
-
-  const DetailedProductCard({
-    Key? key,
-    required this.product,
-    required this.onTap,
-    this.onAddToCart,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusL),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusL),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product image with badges
-            Expanded(
-              flex: 2,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(AppDimensions.radiusL),
-                        topRight: Radius.circular(AppDimensions.radiusL),
-                      ),
-                      color: AppColors.greyExtraLight,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(AppDimensions.radiusL),
-                        topRight: Radius.circular(AppDimensions.radiusL),
-                      ),
-                      child: product.primaryImage?.url.isNotEmpty == true
-                          ? Image.network(
-                              product.primaryImage!.url,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  _buildImagePlaceholder(),
-                            )
-                          : _buildImagePlaceholder(),
-                    ),
-                  ),
-
-                  // Tags and badges
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    right: 12,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Dietary tags
-                        Wrap(
-                          spacing: 4,
-                          children: [
-                            if (product.tags.contains('vegetarian'))
-                              _buildTag('🌱', AppColors.success),
-                            if (product.tags.contains('vegan'))
-                              _buildTag('🌿', AppColors.success),
-                            if (product.tags.contains('halal'))
-                              _buildTag('🥩', AppColors.info),
-                            if (product.tags.contains('spicy'))
-                              _buildTag('🌶️', AppColors.warning),
-                          ],
-                        ),
-
-                        // Discount badge
-                        if (product.hasDiscount)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.error,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${product.discountPercentage.toStringAsFixed(0)}%',
-                              style: AppTypography.caption.copyWith(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Product details
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name and description
-                    Text(
-                      product.name,
-                      style: AppTypography.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    
-                    if (product.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        product.description,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-
-                    const Spacer(),
-
-                    // Price and action
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              product.formattedCurrentPrice,
-                              style: AppTypography.bodyLarge.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (product.hasDiscount)
-                              Text(
-                                product.formattedOriginalPrice,
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                          ],
-                        ),
-
-                        if (onAddToCart != null && product.isAvailable)
-                          ElevatedButton(
-                            onPressed: onAddToCart,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: AppColors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                            child: const Text('Ekle'),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImagePlaceholder() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: AppColors.greyExtraLight,
-      child: const Icon(
-        Icons.restaurant,
-        color: AppColors.greyLight,
-        size: 50,
-      ),
-    );
-  }
-
-  Widget _buildTag(String emoji, Color backgroundColor) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: backgroundColor.withOpacity(0.9),
-        shape: BoxShape.circle,
-      ),
-      child: Text(
-        emoji,
-        style: const TextStyle(fontSize: 12),
-      ),
-    );
-  }
-} 
+ 

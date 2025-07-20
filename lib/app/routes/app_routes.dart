@@ -6,13 +6,13 @@ import '../../presentation/pages/auth/register_page.dart';
 import '../../presentation/pages/auth/business_register_page.dart';
 import '../../presentation/pages/auth/router_page.dart';
 import '../../business/pages/business_login_page.dart';
-import '../../presentation/pages/customer/menu_page.dart';
-import '../../presentation/pages/customer/product_detail_page.dart';
-import '../../presentation/pages/customer/customer_orders_page.dart';
-import '../../presentation/pages/customer/customer_home_page.dart';
-import '../../presentation/pages/customer/customer_dashboard_page.dart';
-import '../../presentation/pages/customer/business_detail_page.dart';
-import '../../presentation/pages/customer/search_page.dart';
+import '../../customer/pages/menu_page.dart';
+import '../../customer/pages/product_detail_page.dart';
+import '../../customer/pages/customer_orders_page.dart';
+import '../../customer/pages/customer_home_page.dart';
+import '../../customer/pages/customer_dashboard_page.dart';
+import '../../customer/pages/business_detail_page.dart';
+import '../../customer/pages/search_page.dart';
 import '../../business/pages/business_home_page.dart';
 import '../../business/pages/business_dashboard_page.dart';
 import '../../data/models/category.dart' as app_category;
@@ -20,7 +20,6 @@ import '../../data/models/business.dart';
 import '../../admin/admin.dart';
 import '../../admin/admin_routes.dart';
 import '../../core/services/auth_service.dart';
-import '../../business/pages/business_dashboard_page.dart';
 
 class AppRoutes {
   AppRoutes._();

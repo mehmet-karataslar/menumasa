@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
-import '../../../core/services/auth_service.dart';
-import '../../../core/services/firestore_service.dart';
-import '../../../core/services/url_service.dart';
-import '../../../core/mixins/url_mixin.dart';
-import '../../../data/models/user.dart' as app_user;
-import '../../../data/models/business.dart';
-import '../../../data/models/order.dart' as app_order;
-import '../../widgets/shared/loading_indicator.dart';
-import '../../widgets/shared/error_message.dart';
-import '../../widgets/shared/empty_state.dart';
+import 'package:flutter/services.dart';
+import '../../data/models/business.dart';
+import '../../data/models/order.dart' as app_order;
+import '../../data/models/user.dart' as app_user;
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
+import '../../core/constants/app_dimensions.dart';
+import '../../core/services/auth_service.dart';
+import '../../core/services/firestore_service.dart';
+import '../../core/services/url_service.dart';
+import '../../core/mixins/url_mixin.dart';
+import '../../presentation/widgets/shared/loading_indicator.dart';
+import '../../presentation/widgets/shared/error_message.dart';
+import '../../presentation/widgets/shared/empty_state.dart';
+import '../widgets/business_header.dart';
 import 'menu_page.dart';
 
 class CustomerDashboardPage extends StatefulWidget {
