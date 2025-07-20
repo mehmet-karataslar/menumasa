@@ -4,6 +4,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/services/url_service.dart';
+import '../../../core/mixins/url_mixin.dart';
 import '../../../data/models/user.dart' as app_user;
 import '../../../data/models/business.dart';
 import '../../../data/models/order.dart' as app_order;
@@ -22,9 +24,10 @@ class CustomerDashboardPage extends StatefulWidget {
 }
 
 class _CustomerDashboardPageState extends State<CustomerDashboardPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, UrlMixin {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final UrlService _urlService = UrlService();
 
   app_user.User? _user;
   app_user.CustomerData? _customerData;
@@ -36,17 +39,59 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
   late TabController _tabController;
 
+  // Tab route mappings
+  final List<String> _tabRoutes = ['dashboard', 'orders', 'favorites', 'profile'];
+  final List<String> _tabTitles = ['Ana Sayfa', 'Siparişlerim', 'Favorilerim', 'Profil'];
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _loadUserData();
+    
+    // Update URL on page load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateCustomerUrl();
+    });
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      setState(() {
+        _selectedTabIndex = _tabController.index;
+      });
+      _updateCustomerUrl();
+    }
+  }
+
+  void _updateCustomerUrl() {
+    final route = _tabRoutes[_selectedTabIndex];
+    final title = '${_tabTitles[_selectedTabIndex]} | MasaMenu';
+    _urlService.updateCustomerUrl(widget.userId, route, customTitle: title);
+  }
+
+  @override
+  void onUrlChanged(String newPath) {
+    // Handle browser back/forward buttons
+    final segments = newPath.split('/').where((s) => s.isNotEmpty).toList();
+    if (segments.length >= 2 && segments[0] == 'customer') {
+      final page = segments[1];
+      final tabIndex = _tabRoutes.indexOf(page);
+      if (tabIndex != -1 && tabIndex != _selectedTabIndex) {
+        setState(() {
+          _selectedTabIndex = tabIndex;
+          _tabController.index = tabIndex;
+        });
+      }
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -64,15 +109,16 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         });
       }
 
-      // Müşteri verilerini yükle
-      await _loadCustomerData();
+      // Kullanıcının siparişlerini yükle
+      final orders = await _firestoreService.getOrdersByCustomer(widget.userId);
+      
+      // Yakındaki işletmeleri yükle (demo data)
+      final businesses = await _firestoreService.getBusinesses();
 
-      // Siparişleri yükle
-      await _loadOrders();
-
-      // Yakındaki işletmeleri yükle
-      await _loadNearbyBusinesses();
-
+      setState(() {
+        _orders = orders;
+        _nearbyBusinesses = businesses.take(5).toList();
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Veriler yüklenirken hata: $e';
@@ -84,38 +130,22 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     }
   }
 
-  Future<void> _loadCustomerData() async {
+  Future<void> _handleLogout() async {
     try {
-      final customerData = await _firestoreService.getCustomerData(widget.userId);
-      setState(() {
-        _customerData = customerData;
-      });
+      await _authService.signOut();
+      if (mounted) {
+        _urlService.updateUrl('/login', customTitle: 'Giriş | MasaMenu');
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     } catch (e) {
-      print('Müşteri verileri yüklenirken hata: $e');
-    }
-  }
-
-  Future<void> _loadOrders() async {
-    try {
-      // Kullanıcının siparişlerini getir
-      final orders = await _firestoreService.getOrdersByCustomer(widget.userId);
-      setState(() {
-        _orders = orders;
-      });
-    } catch (e) {
-      print('Siparişler yüklenirken hata: $e');
-    }
-  }
-
-  Future<void> _loadNearbyBusinesses() async {
-    try {
-      // Tüm aktif işletmeleri getir (şimdilik)
-      final businesses = await _firestoreService.getBusinesses();
-      setState(() {
-        _nearbyBusinesses = businesses.where((b) => b.isActive).toList();
-      });
-    } catch (e) {
-      print('İşletmeler yüklenirken hata: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Çıkış yapılırken hata: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -127,16 +157,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       );
     }
 
-    if (_user == null) {
+    if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Müşteri Paneli'),
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.success,
           foregroundColor: AppColors.white,
         ),
-        body: Center(
-          child: ErrorMessage(message: _errorMessage ?? 'Kullanıcı bulunamadı'),
-        ),
+        body: Center(child: ErrorMessage(message: _errorMessage!)),
       );
     }
 
@@ -145,17 +173,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       appBar: _buildAppBar(),
       body: Column(
         children: [
-          // Tab bar
           _buildTabBar(),
-          
-          // Tab content
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildOverviewTab(),
+                _buildDashboardTab(),
                 _buildOrdersTab(),
-                _buildBusinessesTab(),
+                _buildFavoritesTab(),
                 _buildProfileTab(),
               ],
             ),
@@ -167,33 +192,78 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.success,
       foregroundColor: AppColors.white,
-      title: Text(
-        'Hoş geldin, ${_user!.name}',
-        style: AppTypography.h4.copyWith(
-          color: AppColors.white,
-          fontWeight: FontWeight.w600,
-        ),
+      title: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppColors.white.withOpacity(0.2),
+            child: Icon(
+              Icons.person,
+              color: AppColors.white,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _user?.name ?? 'Müşteri',
+                  style: AppTypography.h6.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _tabTitles[_selectedTabIndex],
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       actions: [
         IconButton(
+          icon: const Icon(Icons.search),
           onPressed: () {
-            // Bildirimler
+            _urlService.updateUrl('/search', customTitle: 'İşletme Ara | MasaMenu');
+            Navigator.pushNamed(context, '/search');
           },
-          icon: const Icon(Icons.notifications_outlined),
         ),
-        IconButton(
-          onPressed: () async {
-            await _authService.signOut();
-            if (mounted) {
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                '/',
-                (route) => false,
-              );
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          onSelected: (value) {
+            switch (value) {
+              case 'logout':
+                _handleLogout();
+                break;
+              case 'settings':
+                // Navigate to settings
+                break;
             }
           },
-          icon: const Icon(Icons.logout),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'settings',
+              child: ListTile(
+                leading: Icon(Icons.settings),
+                title: Text('Ayarlar'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'logout',
+              child: ListTile(
+                leading: Icon(Icons.logout, color: AppColors.error),
+                title: Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -204,756 +274,86 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       color: AppColors.white,
       child: TabBar(
         controller: _tabController,
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.textLight,
-        indicatorColor: AppColors.primary,
-        tabs: const [
-          Tab(icon: Icon(Icons.dashboard), text: 'Genel Bakış'),
-          Tab(icon: Icon(Icons.receipt_long), text: 'Siparişlerim'),
-          Tab(icon: Icon(Icons.store), text: 'İşletmeler'),
-          Tab(icon: Icon(Icons.person), text: 'Profil'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOverviewTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // İstatistik kartları
-          _buildStatsCards(),
-          
-          const SizedBox(height: 24),
-          
-          // Son siparişler
-          _buildRecentOrders(),
-          
-          const SizedBox(height: 24),
-          
-          // Yakındaki işletmeler
-          _buildNearbyBusinesses(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsCards() {
-    // Müşteri verilerinden istatistikleri al
-    final stats = _customerData?.stats ?? app_user.CustomerStats(
-      totalOrders: 0,
-      totalSpent: 0.0,
-      favoriteBusinessCount: 0,
-      totalVisits: 0,
-      categoryPreferences: {},
-      businessSpending: {},
-    );
-
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            title: 'Toplam Sipariş',
-            value: stats.totalOrders.toString(),
-            icon: Icons.shopping_bag,
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Toplam Harcama',
-            value: '${stats.totalSpent.toStringAsFixed(2)} ₺',
-            icon: Icons.payment,
-            color: AppColors.success,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Favori İşletmeler',
-            value: stats.favoriteBusinessCount.toString(),
-            icon: Icons.favorite,
-            color: AppColors.info,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: AppTypography.h4.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textLight,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentOrders() {
-    final recentOrders = _customerData?.orderHistory.take(3).toList() ?? [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Son Siparişler',
-              style: AppTypography.h5.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                _tabController.animateTo(1);
-              },
-              child: const Text('Tümünü Gör'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (recentOrders.isEmpty)
-          const EmptyState(
-            icon: Icons.receipt_long,
-            title: 'Henüz siparişiniz yok',
-            message: 'İlk siparişinizi vermek için işletmeleri keşfedin',
-          )
-        else
-          ...recentOrders.map((order) => _buildCustomerOrderCard(order)),
-      ],
-    );
-  }
-
-  Widget _buildCustomerOrderCard(app_user.CustomerOrder order) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primary.withOpacity(0.1),
-          child: Icon(
-            Icons.receipt,
-            color: AppColors.primary,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          '${order.businessName}',
-          style: AppTypography.bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(
-          '${order.items.length} ürün • ${order.totalAmount.toStringAsFixed(2)} ₺ • ${_formatDate(order.orderDate)}',
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textLight,
-          ),
-        ),
-        trailing: _buildCustomerOrderStatusChip(order.status),
-        onTap: () {
-          // Sipariş detayı
-        },
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'Bugün';
-    } else if (difference.inDays == 1) {
-      return 'Dün';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
-
-  Widget _buildCustomerOrderStatusChip(String status) {
-    Color color;
-    String text;
-
-    switch (status) {
-      case 'pending':
-        color = AppColors.warning;
-        text = 'Bekliyor';
-        break;
-      case 'confirmed':
-        color = AppColors.info;
-        text = 'Onaylandı';
-        break;
-      case 'preparing':
-        color = AppColors.primary;
-        text = 'Hazırlanıyor';
-        break;
-      case 'ready':
-        color = AppColors.success;
-        text = 'Hazır';
-        break;
-      case 'completed':
-        color = AppColors.success;
-        text = 'Tamamlandı';
-        break;
-      case 'cancelled':
-        color = AppColors.error;
-        text = 'İptal';
-        break;
-      default:
-        color = AppColors.success;
-        text = 'Tamamlandı';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: AppTypography.caption.copyWith(
-          color: color,
+        labelColor: AppColors.success,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorColor: AppColors.success,
+        indicatorWeight: 3,
+        labelStyle: AppTypography.bodyMedium.copyWith(
           fontWeight: FontWeight.w600,
         ),
+        tabs: [
+          Tab(
+            icon: Icon(Icons.dashboard),
+            text: 'Ana Sayfa',
+          ),
+          Tab(
+            icon: Icon(Icons.receipt_long),
+            text: 'Siparişlerim',
+          ),
+          Tab(
+            icon: Icon(Icons.favorite),
+            text: 'Favorilerim',
+          ),
+          Tab(
+            icon: Icon(Icons.person),
+            text: 'Profil',
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildOrderStatusChip(app_order.OrderStatus status) {
-    Color color;
-    String text;
-
-    switch (status) {
-      case app_order.OrderStatus.pending:
-        color = AppColors.warning;
-        text = 'Bekliyor';
-        break;
-      case app_order.OrderStatus.inProgress:
-        color = AppColors.primary;
-        text = 'Hazırlanıyor';
-        break;
-      case app_order.OrderStatus.completed:
-        color = AppColors.success;
-        text = 'Tamamlandı';
-        break;
-      case app_order.OrderStatus.cancelled:
-        color = AppColors.error;
-        text = 'İptal';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: AppTypography.caption.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNearbyBusinesses() {
-    final favorites = _customerData?.favorites ?? [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildDashboardTab() {
+    return RefreshIndicator(
+      onRefresh: _loadUserData,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Favori İşletmeler',
-              style: AppTypography.h5.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                _tabController.animateTo(2);
-              },
-              child: const Text('Tümünü Gör'),
-            ),
+            // Hoş geldin kartı
+            _buildWelcomeCard(),
+            
+            const SizedBox(height: 24),
+            
+            // Yakındaki işletmeler
+            _buildNearbyBusinesses(),
+            
+            const SizedBox(height: 24),
+            
+            // Son siparişler
+            _buildRecentOrders(),
           ],
-        ),
-        const SizedBox(height: 12),
-        if (favorites.isEmpty)
-          const EmptyState(
-            icon: Icons.favorite_border,
-            title: 'Henüz favori işletmeniz yok',
-            message: 'Favori işletmelerinizi ekleyerek hızlı erişim sağlayın',
-          )
-        else
-          SizedBox(
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: favorites.take(5).length,
-              itemBuilder: (context, index) {
-                final favorite = favorites[index];
-                return _buildFavoriteBusinessCard(favorite);
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFavoriteBusinessCard(app_user.CustomerFavorite favorite) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 12),
-      child: Card(
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MenuPage(businessId: favorite.businessId),
-              ),
-            );
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (favorite.businessLogo != null)
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  child: Image.network(
-                    favorite.businessLogo!,
-                    height: 80,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 80,
-                        color: AppColors.greyLighter,
-                        child: const Icon(
-                          Icons.store,
-                          color: AppColors.greyLight,
-                        ),
-                      );
-                    },
-                  ),
-                )
-              else
-                Container(
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.greyLighter,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.store,
-                    color: AppColors.greyLight,
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      favorite.businessName ?? 'İsimsiz İşletme',
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      '${favorite.visitCount} ziyaret • ${favorite.totalSpent.toStringAsFixed(2)} ₺',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textLight,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBusinessCard(Business business) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 12),
-      child: Card(
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MenuPage(businessId: business.id),
-              ),
-            );
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (business.logoUrl != null)
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  child: Image.network(
-                    business.logoUrl!,
-                    height: 80,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 80,
-                        color: AppColors.greyLighter,
-                        child: const Icon(
-                          Icons.store,
-                          color: AppColors.greyLight,
-                        ),
-                      );
-                    },
-                  ),
-                )
-              else
-                Container(
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.greyLighter,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.store,
-                    color: AppColors.greyLight,
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      business.businessName,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      business.businessDescription,
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textLight,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 
   Widget _buildOrdersTab() {
-    final orders = _customerData?.orderHistory ?? [];
-    
-    return orders.isEmpty
-        ? const EmptyState(
-            icon: Icons.receipt_long,
-            title: 'Henüz siparişiniz yok',
-            message: 'İlk siparişinizi vermek için işletmeleri keşfedin',
-          )
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: orders.length,
-            itemBuilder: (context, index) {
-              return _buildCustomerOrderCard(orders[index]);
-            },
-          );
-  }
-
-  Widget _buildBusinessesTab() {
-    final favorites = _customerData?.favorites ?? [];
-    
-    return favorites.isEmpty
-        ? const EmptyState(
-            icon: Icons.favorite_border,
-            title: 'Henüz favori işletmeniz yok',
-            message: 'Favori işletmelerinizi ekleyerek hızlı erişim sağlayın',
-          )
-        : GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.8,
+    return RefreshIndicator(
+      onRefresh: _loadUserData,
+      child: _orders.isEmpty
+          ? const EmptyState(
+              icon: Icons.receipt_long,
+              title: 'Henüz siparişiniz yok',
+              message: 'İlk siparişinizi vermek için bir işletme seçin',
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _orders.length,
+              itemBuilder: (context, index) {
+                final order = _orders[index];
+                return _buildOrderCard(order);
+              },
             ),
-            itemCount: favorites.length,
-            itemBuilder: (context, index) {
-              final favorite = favorites[index];
-              final business = _nearbyBusinesses.firstWhere(
-                (b) => b.id == favorite.businessId,
-                orElse: () => Business(
-                  id: favorite.businessId,
-                  ownerId: '',
-                  businessName: favorite.businessName ?? 'İsimsiz İşletme',
-                  businessDescription: '',
-                  businessType: 'Restoran',
-                  businessAddress: '',
-                  address: Address(
-                    street: '',
-                    city: '',
-                    district: '',
-                    postalCode: '',
-                    coordinates: null,
-                  ),
-                  contactInfo: ContactInfo(
-                    phone: '',
-                    email: '',
-                  ),
-                  menuSettings: MenuSettings.defaultRestaurant(),
-                  settings: BusinessSettings.defaultRestaurant(),
-                  stats: BusinessStats.empty(),
-                  isActive: false,
-                  isOpen: false,
-                  isApproved: false,
-                  status: BusinessStatus.pending,
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                ),
-              );
-              return _buildFavoriteBusinessGridCard(favorite);
-            },
-          );
-  }
-
-  Widget _buildFavoriteBusinessGridCard(app_user.CustomerFavorite favorite) {
-    return Card(
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MenuPage(businessId: favorite.businessId),
-            ),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (favorite.businessLogo != null)
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  child: Image.network(
-                    favorite.businessLogo!,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: AppColors.greyLighter,
-                        child: const Icon(
-                          Icons.store,
-                          color: AppColors.greyLight,
-                          size: 40,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              )
-            else
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.greyLighter,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.store,
-                    color: AppColors.greyLight,
-                    size: 40,
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    favorite.businessName ?? 'İsimsiz İşletme',
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${favorite.visitCount} ziyaret • ${favorite.totalSpent.toStringAsFixed(2)} ₺',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildBusinessGridCard(Business business) {
-    return Card(
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MenuPage(businessId: business.id),
-            ),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (business.logoUrl != null)
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  child: Image.network(
-                    business.logoUrl!,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: AppColors.greyLighter,
-                        child: const Icon(
-                          Icons.store,
-                          color: AppColors.greyLight,
-                          size: 40,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              )
-            else
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.greyLighter,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.store,
-                    color: AppColors.greyLight,
-                    size: 40,
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    business.businessName,
-                    style: AppTypography.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    business.businessDescription,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildFavoritesTab() {
+    return const EmptyState(
+      icon: Icons.favorite,
+      title: 'Henüz favori işletmeniz yok',
+      message: 'Beğendiğiniz işletmeleri favorilerinize ekleyin',
     );
   }
 
@@ -962,19 +362,246 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Profil kartı
+          // Profil bilgileri
           _buildProfileCard(),
           
           const SizedBox(height: 24),
           
           // Ayarlar
-          _buildSettingsSection(),
-          
-          const SizedBox(height: 24),
-          
-          // Hesap işlemleri
-          _buildAccountSection(),
+          _buildSettingsCard(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppColors.success,
+                  child: Icon(
+                    Icons.person,
+                    color: AppColors.white,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hoş geldin, ${_user?.name ?? 'Müşteri'}!',
+                        style: AppTypography.h5.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Bugün hangi lezzeti keşfetmek istiyorsun?',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNearbyBusinesses() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Yakındaki İşletmeler',
+          style: AppTypography.h6.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_nearbyBusinesses.isEmpty)
+          const EmptyState(
+            icon: Icons.business,
+            title: 'Yakında işletme bulunamadı',
+            message: 'Daha sonra tekrar kontrol edin',
+          )
+        else
+          SizedBox(
+            height: 200,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _nearbyBusinesses.length,
+              itemBuilder: (context, index) {
+                final business = _nearbyBusinesses[index];
+                return _buildBusinessCard(business);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildBusinessCard(Business business) {
+    return Card(
+      margin: const EdgeInsets.only(right: 16),
+      child: InkWell(
+        onTap: () {
+          _urlService.updateMenuUrl(
+            business.id,
+            businessName: business.businessName,
+          );
+          Navigator.pushNamed(
+            context,
+            '/menu',
+            arguments: {'businessId': business.id},
+          );
+        },
+        child: Container(
+          width: 160,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.business,
+                    size: 40,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                business.businessName,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                business.businessType,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentOrders() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Son Siparişler',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (_orders.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  _tabController.animateTo(1); // Switch to orders tab
+                },
+                child: const Text('Tümünü Gör'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_orders.isEmpty)
+          const EmptyState(
+            icon: Icons.receipt_long,
+            title: 'Henüz siparişiniz yok',
+            message: 'İlk siparişinizi vermek için bir işletme seçin',
+          )
+        else
+          Column(
+            children: _orders
+                .take(3)
+                .map((order) => _buildOrderCard(order))
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildOrderCard(app_order.Order order) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Sipariş #${order.orderId.substring(0, 8)}',
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getOrderStatusColor(order.status),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _getOrderStatusText(order.status),
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Toplam: ${order.totalAmount.toStringAsFixed(2)} TL',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _formatOrderDate(order.createdAt),
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -987,152 +614,121 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundColor: AppColors.primary,
-              child: Text(
-                _user!.name.isNotEmpty ? _user!.name[0].toUpperCase() : 'U',
-                style: AppTypography.h3.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              backgroundColor: AppColors.success,
+              child: Icon(
+                Icons.person,
+                color: AppColors.white,
+                size: 40,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              _user!.name,
-              style: AppTypography.h4.copyWith(
-                fontWeight: FontWeight.w600,
+              _user?.name ?? 'Müşteri',
+              style: AppTypography.h5.copyWith(
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              _user!.email,
+              _user?.email ?? '',
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textLight,
+                color: AppColors.textSecondary,
               ),
             ),
-            if (_user!.phone != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                _user!.phone!,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textLight,
-                ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // Edit profile
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: AppColors.white,
               ),
-            ],
+              child: const Text('Profili Düzenle'),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSettingsSection() {
+  Widget _buildSettingsCard() {
     return Card(
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.edit, color: AppColors.primary),
-            title: const Text('Profili Düzenle'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            leading: const Icon(Icons.notifications),
+            title: const Text('Bildirimler'),
+            trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // Profil düzenleme
+              // Navigate to notifications settings
             },
           ),
+          const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.lock, color: AppColors.warning),
-            title: const Text('Şifre Değiştir'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            leading: const Icon(Icons.security),
+            title: const Text('Güvenlik'),
+            trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // Şifre değiştirme
+              // Navigate to security settings
             },
           ),
+          const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.notifications, color: AppColors.info),
-            title: const Text('Bildirim Ayarları'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            leading: const Icon(Icons.help),
+            title: const Text('Yardım'),
+            trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // Bildirim ayarları
+              // Navigate to help
             },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.logout, color: AppColors.error),
+            title: const Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
+            onTap: _handleLogout,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAccountSection() {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.help, color: AppColors.info),
-            title: const Text('Yardım & Destek'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              // Yardım
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip, color: AppColors.warning),
-            title: const Text('Gizlilik Politikası'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              // Gizlilik politikası
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.delete, color: AppColors.error),
-            title: const Text('Hesabı Sil'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              _showDeleteAccountDialog();
-            },
-          ),
-        ],
-      ),
-    );
+  Color _getOrderStatusColor(app_order.OrderStatus status) {
+    switch (status) {
+      case app_order.OrderStatus.pending:
+        return AppColors.warning;
+      case app_order.OrderStatus.inProgress:
+        return AppColors.info;
+      case app_order.OrderStatus.completed:
+        return AppColors.success;
+      case app_order.OrderStatus.cancelled:
+        return AppColors.error;
+    }
   }
 
-  void _showDeleteAccountDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hesabı Sil'),
-        content: const Text(
-          'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await _authService.deleteUserAccount();
-                if (mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/',
-                    (route) => false,
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hata: $e'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
-            child: const Text('Hesabı Sil'),
-          ),
-        ],
-      ),
-    );
+  String _getOrderStatusText(app_order.OrderStatus status) {
+    switch (status) {
+      case app_order.OrderStatus.pending:
+        return 'Bekliyor';
+      case app_order.OrderStatus.inProgress:
+        return 'Hazırlanıyor';
+      case app_order.OrderStatus.completed:
+        return 'Tamamlandı';
+      case app_order.OrderStatus.cancelled:
+        return 'İptal Edildi';
+    }
+  }
+
+  String _formatOrderDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'Bugün ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inDays == 1) {
+      return 'Dün ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 } 
