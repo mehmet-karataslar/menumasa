@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
-import '../../../core/services/firestore_service.dart';
-import '../../../business/models/business.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
+import '../../core/services/firestore_service.dart';
+import '../models/business.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
-import '../../../admin/pages/admin_dashboard_page.dart';
+import '../../admin/pages/admin_dashboard_page.dart';
 import 'business_profile_page.dart';
 import 'product_management_page.dart';
 import 'category_management_page.dart';

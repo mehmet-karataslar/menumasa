@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'pages/business_login_page.dart';
 import 'pages/business_dashboard_page.dart';
+import '../app/routes/app_routes.dart';
 import 'pages/business_management_page.dart';
 import 'pages/customer_management_page.dart';
 import 'pages/analytics_page.dart';
@@ -21,7 +22,7 @@ class BusinessRoutes {
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       login: (context) => const BusinessLoginPage(),
-      dashboard: (context) => ResponsiveAdminDashboard(businessId: 'demo'), // TODO: Get from auth
+      dashboard: (context) => const BusinessDashboardRouterPage(),
       management: (context) => const BusinessManagementPage(),
       customers: (context) => const CustomerManagementPage(),
       analytics: (context) => const AnalyticsPage(),
@@ -39,7 +40,7 @@ class BusinessRoutes {
         );
       case '/business/dashboard':
         return MaterialPageRoute(
-          builder: (context) => ResponsiveAdminDashboard(businessId: 'demo'), // TODO: Get from auth
+          builder: (context) => const BusinessDashboardRouterPage(),
         );
       case '/business/management':
         return MaterialPageRoute(

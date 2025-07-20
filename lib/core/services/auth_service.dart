@@ -132,13 +132,15 @@ class AuthService {
         // Update display name in Firebase Auth
         await credential.user!.updateDisplayName(businessName);
 
+        print('Creating business user with userType: business'); // Debug log
+
         // Create business user record in users collection with business type
-        await _firestore.collection('users').doc(credential.user!.uid).set({
+        final businessUserData = {
           'id': credential.user!.uid,
           'email': email,
           'name': businessName,
           'phone': phone,
-          'userType': app_user.UserType.business.name,
+          'userType': 'business', // Explicitly set as string
           'isActive': true,
           'isEmailVerified': false,
           'createdAt': DateTime.now().toIso8601String(),
@@ -159,7 +161,11 @@ class AuthService {
              stats: BusinessStats.empty(),
              settings: BusinessSettings.defaultRestaurant(),
            ).toJson(),
-        });
+        };
+
+        print('Business user data: $businessUserData'); // Debug log
+
+        await _firestore.collection('users').doc(credential.user!.uid).set(businessUserData);
 
         // Also create detailed business_users record for BusinessService
         await _firestore.collection('business_users').doc(credential.user!.uid).set({

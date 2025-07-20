@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../main.dart';
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/auth/register_page.dart';
 import '../../presentation/pages/auth/business_register_page.dart';
@@ -18,7 +17,6 @@ import '../../business/pages/business_dashboard_page.dart';
 import '../../business/models/category.dart' as app_category;
 import '../../business/models/business.dart';
 import '../../admin/admin.dart';
-import '../../admin/admin_routes.dart';
 import '../../core/services/auth_service.dart';
 
 class AppRoutes {
