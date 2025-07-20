@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
-import '../../../core/constants/app_dimensions.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
+import '../../core/constants/app_dimensions.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final Map<String, dynamic> currentFilters;
