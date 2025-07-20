@@ -300,32 +300,45 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
     });
 
     try {
+      print('🔐 Login attempt with email: ${_emailController.text.trim()}');
+      
       // Email ile giriş yapmayı dene
       final user = await _authService.signInWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (user != null && mounted) {
-        // Check if user is business type
-        if (user.userType.value == 'business') {
-          // Başarılı giriş - Business dashboard'a yönlendir
-          Navigator.pushReplacementNamed(context, '/business/dashboard');
-        } else {
-          setState(() {
-            _errorMessage = 'Bu hesap işletme hesabı değil. Lütfen işletme hesabınızla giriş yapın.';
-          });
+      print('🔐 Login result: ${user != null ? 'SUCCESS' : 'NULL_USER'}');
+      
+      if (user != null) {
+        print('🔐 User type: ${user.userType.value}');
+        print('🔐 User UID: ${user.uid}');
+        
+        if (mounted) {
+          // Check if user is business type
+          if (user.userType.value == 'business') {
+            print('🔐 Redirecting to business dashboard...');
+            // Başarılı giriş - Business dashboard'a yönlendir
+            Navigator.pushReplacementNamed(context, '/business/dashboard');
+          } else {
+            print('🔐 User is not business type: ${user.userType.value}');
+            setState(() {
+              _errorMessage = 'Bu hesap işletme hesabı değil. Lütfen işletme hesabınızla giriş yapın.';
+            });
+          }
         }
       } else {
+        print('🔐 User is null after login');
         setState(() {
           _errorMessage = 'Kullanıcı bulunamadı.';
         });
       }
     } catch (e) {
+      print('🔐 Login error: $e');
       setState(() {
         _errorMessage = e.toString().contains('Exception:') 
             ? e.toString().split('Exception: ')[1]
-            : 'Giriş sırasında beklenmeyen bir hata oluştu';
+            : 'Giriş yapılırken bir hata oluştu: $e';
       });
     } finally {
       if (mounted) {

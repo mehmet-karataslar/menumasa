@@ -23,34 +23,46 @@ class AuthService {
     String password,
   ) async {
     try {
+      print('🔥 AuthService: Attempting login with email: $email');
+      
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      print('🔥 AuthService: Firebase auth successful, uid: ${credential.user?.uid}');
+
       if (credential.user != null) {
         // Get user data from Firestore first
+        print('🔥 AuthService: Getting user from Firestore...');
         final user = await _getUserFromFirestore(credential.user!.uid);
         
+        print('🔥 AuthService: User from Firestore: ${user != null ? 'FOUND' : 'NOT_FOUND'}');
         if (user != null) {
+          print('🔥 AuthService: User type: ${user.userType.value}');
+          
           // Update last login time only if user exists
           try {
             await _firestore.collection('users').doc(credential.user!.uid).update({
               'profile.lastLoginAt': FieldValue.serverTimestamp(),
               'updatedAt': FieldValue.serverTimestamp(),
             });
+            print('🔥 AuthService: Last login time updated');
           } catch (e) {
-            print('Failed to update last login time: $e');
+            print('🔥 AuthService: Failed to update last login time: $e');
             // Continue anyway, this is not critical
           }
         }
         
         return user;
       }
+      print('🔥 AuthService: credential.user is null');
       return null;
     } on FirebaseAuthException catch (e) {
+      print('🔥 AuthService: FirebaseAuthException: ${e.code} - ${e.message}');
       throw AuthException(_getErrorMessage(e.code));
     } catch (e) {
+      print('🔥 AuthService: General error: $e');
       throw AuthException('Giriş yapılırken bir hata oluştu: $e');
     }
   }
@@ -279,18 +291,28 @@ class AuthService {
   // Get user from Firestore
   Future<app_user.User?> _getUserFromFirestore(String uid) async {
     try {
+      print('🔥 _getUserFromFirestore: Looking for user with UID: $uid');
+      
       // First check users collection (for customers and admins)
       final userDoc = await _firestore.collection('users').doc(uid).get();
+      print('🔥 _getUserFromFirestore: users collection check - exists: ${userDoc.exists}');
+      
       if (userDoc.exists) {
-        return app_user.User.fromJson(userDoc.data()!, id: uid);
+        final user = app_user.User.fromJson(userDoc.data()!, id: uid);
+        print('🔥 _getUserFromFirestore: Found user in users collection - type: ${user.userType.value}');
+        return user;
       }
 
       // If not found, check business_users collection (for businesses)
       final businessDoc = await _firestore.collection('business_users').doc(uid).get();
+      print('🔥 _getUserFromFirestore: business_users collection check - exists: ${businessDoc.exists}');
+      
       if (businessDoc.exists) {
         final businessData = businessDoc.data()!;
+        print('🔥 _getUserFromFirestore: Found business user - role: ${businessData['role']}, email: ${businessData['email']}');
+        
         // Convert BusinessUser to User for authentication purposes
-        return app_user.User.business(
+        final user = app_user.User.business(
           id: uid,
           email: businessData['email'] ?? '',
           name: businessData['fullName'] ?? '',
@@ -309,13 +331,16 @@ class AuthService {
             settings: BusinessSettings.defaultRestaurant(),
           ),
         );
+        
+        print('🔥 _getUserFromFirestore: Created business user object - type: ${user.userType.value}');
+        return user;
       }
 
       // If user document doesn't exist in either collection, create a default user
-      print('User document not found for UID: $uid, creating default user');
+      print('🔥 _getUserFromFirestore: User document not found for UID: $uid, creating default user');
       return _createDefaultUser(uid);
     } catch (e) {
-      print('Error getting user from Firestore: $e');
+      print('🔥 _getUserFromFirestore: Error getting user from Firestore: $e');
       // Try to create default user as fallback
       return _createDefaultUser(uid);
     }
