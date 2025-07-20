@@ -1,45 +1,84 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-import 'dart:io' if (dart.library.html) 'dart:html';
-// CachedNetworkImage removed for Windows compatibility
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'dart:typed_data';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/services/url_service.dart';
+import '../../../core/mixins/url_mixin.dart';
 import '../../../data/models/product.dart';
-import '../../../data/models/category.dart';
+import '../../../data/models/category.dart' as category_model;
 import '../../../data/models/discount.dart';
-import '../../../core/services/data_service.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../core/services/storage_service.dart';
+import 'product_edit_page.dart';
 
 class ProductManagementPage extends StatefulWidget {
   final String businessId;
 
   const ProductManagementPage({Key? key, required this.businessId})
-    : super(key: key);
+      : super(key: key);
 
   @override
   State<ProductManagementPage> createState() => _ProductManagementPageState();
 }
 
-class _ProductManagementPageState extends State<ProductManagementPage> {
+class _ProductManagementPageState extends State<ProductManagementPage>
+    with TickerProviderStateMixin, UrlMixin {
+  final FirestoreService _firestoreService = FirestoreService();
+  final StorageService _storageService = StorageService();
+  final UrlService _urlService = UrlService();
+  final ImagePicker _imagePicker = ImagePicker();
+
   List<Product> _products = [];
-  List<Category> _categories = [];
+  List<category_model.Category> _categories = [];
   List<Discount> _discounts = [];
   bool _isLoading = true;
   String _searchQuery = '';
   String _selectedCategoryId = '';
   String _viewMode = 'grid'; // 'grid' or 'list'
 
-  final DataService _dataService = DataService();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
     _loadData();
+
+    // Update URL for product management
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _urlService.updateBusinessUrl(widget.businessId, 'urunler');
+    });
+  }
+
+  void _initializeAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -48,23 +87,17 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     });
 
     try {
-      await _dataService.initialize();
-      await _dataService.initializeEmptyDatabase();
-
-      final categories = await _dataService.getCategories(
-        businessId: widget.businessId,
-      );
-      final products = await _dataService.getProducts(
-        businessId: widget.businessId,
-      );
-      final discounts = await _dataService.getDiscountsByBusinessId(
-        widget.businessId,
-      );
+      // Load products, categories and discounts in parallel
+      final futures = await Future.wait([
+        _firestoreService.getBusinessProducts(widget.businessId, limit: 100),
+        _firestoreService.getBusinessCategories(widget.businessId),
+        _firestoreService.getDiscounts(businessId: widget.businessId),
+      ]);
 
       setState(() {
-        _categories = categories;
-        _products = products;
-        _discounts = discounts;
+        _products = futures[0] as List<Product>;
+        _categories = futures[1] as List<category_model.Category>;
+        _discounts = futures[2] as List<Discount>;
         _isLoading = false;
       });
     } catch (e) {
@@ -720,7 +753,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
   String _getCategoryName(String categoryId) {
     final category = _categories.firstWhere(
       (c) => c.categoryId == categoryId,
-      orElse: () => Category(
+      orElse: () => category_model.Category(
         categoryId: '',
         businessId: '',
         name: 'Bilinmeyen',
@@ -777,6 +810,22 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
   }
 
   void _showProductDialog(Product? product) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductEditPage(
+          businessId: widget.businessId,
+          product: product,
+          categories: _categories,
+          onProductSaved: () {
+            _loadData(); // Refresh the product list
+          },
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
+  void _showLegacyProductDialog(Product? product) {
     final isEditing = product != null;
     final nameController = TextEditingController(text: product?.name ?? '');
     final descriptionController = TextEditingController(
@@ -1435,7 +1484,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         updatedAt: DateTime.now(),
       );
 
-      await _dataService.saveDiscount(discount);
+      await _firestoreService.saveDiscount(discount);
       await _loadData(); // Reload data to refresh UI
 
       if (mounted) {
@@ -1673,8 +1722,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
 
   Future<void> _pickImageFromCamera(Function(String) onImageSelected) async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
+      final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.camera,
         maxWidth: 1024,
         maxHeight: 1024,
@@ -1949,7 +1997,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
           updatedAt: DateTime.now(),
         );
 
-        await _dataService.saveProduct(newProduct);
+        await _firestoreService.saveProduct(newProduct);
 
         if (mounted) {
           setState(() {
@@ -1987,7 +2035,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
           updatedAt: DateTime.now(),
         );
 
-        await _dataService.saveProduct(updatedProduct);
+        await _firestoreService.saveProduct(updatedProduct);
 
         if (mounted) {
           final index = _products.indexWhere(
@@ -2026,7 +2074,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         updatedAt: DateTime.now(),
       );
 
-      await _dataService.saveProduct(updatedProduct);
+      await _firestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
         (p) => p.productId == product.productId,
@@ -2064,7 +2112,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         updatedAt: DateTime.now(),
       );
 
-      await _dataService.saveProduct(updatedProduct);
+      await _firestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
         (p) => p.productId == product.productId,
@@ -2125,7 +2173,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
 
   Future<void> _deleteProduct(Product product) async {
     try {
-      await _dataService.deleteProduct(product.productId);
+      await _firestoreService.deleteProduct(product.productId);
 
       setState(() {
         _products.removeWhere((p) => p.productId == product.productId);
@@ -2151,9 +2199,9 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
     }
   }
 
-  List<Category> _createSampleCategories() {
+  List<category_model.Category> _createSampleCategories() {
     return [
-      Category(
+      category_model.Category(
         categoryId: 'cat-1',
         businessId: widget.businessId,
         name: 'Çorbalar',
@@ -2164,7 +2212,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
-      Category(
+      category_model.Category(
         categoryId: 'cat-2',
         businessId: widget.businessId,
         name: 'Ana Yemekler',
@@ -2175,7 +2223,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
-      Category(
+      category_model.Category(
         categoryId: 'cat-3',
         businessId: widget.businessId,
         name: 'Tatlılar',
