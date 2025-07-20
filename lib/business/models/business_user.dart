@@ -245,8 +245,8 @@ class BusinessUser {
     return permissions.contains(permission);
   }
 
-  bool get canManageUsers => hasPermission(BusinessPermission.manageUsers);
-  bool get canManageProducts => hasPermission(BusinessPermission.manageProducts);
+  bool get canManageUsers => hasPermission(BusinessPermission.manageStaff);
+  bool get canManageProducts => hasPermission(BusinessPermission.addProducts) || hasPermission(BusinessPermission.editProducts);
   bool get canViewOrders => hasPermission(BusinessPermission.viewOrders);
   bool get canManageOrders => hasPermission(BusinessPermission.manageOrders);
 
@@ -279,17 +279,7 @@ class BusinessUser {
   int get hashCode => businessId.hashCode;
 }
 
-// Business Exception for error handling
-class BusinessException implements Exception {
-  final String message;
-  final String code;
-  final Map<String, dynamic>? details;
-
-  const BusinessException(this.message, {this.code = 'BUSINESS_ERROR', this.details});
-
-  @override
-  String toString() => 'BusinessException: $message (Code: $code)';
-}
+// BusinessException is defined in business_service.dart
 
 enum BusinessRole {
   owner('owner', 'İşletme Sahibi', 'Tam işletme kontrolü'),

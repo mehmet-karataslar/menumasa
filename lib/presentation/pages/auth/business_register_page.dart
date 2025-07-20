@@ -407,8 +407,10 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         businessPhone: _phoneController.text.trim(),
         role: BusinessRole.owner,
         permissions: [
-          BusinessPermission.manageUsers,
-          BusinessPermission.manageProducts,
+          BusinessPermission.manageStaff,
+          BusinessPermission.addProducts,
+          BusinessPermission.editProducts,
+          BusinessPermission.deleteProducts,
           BusinessPermission.manageOrders,
           BusinessPermission.viewOrders,
           BusinessPermission.manageSettings,

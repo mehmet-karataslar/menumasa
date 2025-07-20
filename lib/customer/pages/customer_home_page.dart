@@ -809,7 +809,7 @@ class _CustomerHomePageState extends State<CustomerHomePage>
                 MaterialPageRoute(
                   builder: (context) => BusinessDetailPage(
                     business: _businesses.firstWhere(
-                      (b) => b.id == (_customerData?.recentBusinessId ?? ''),
+                      (b) => b.id == (_customerData?.recentBusinessIds.isNotEmpty == true ? _customerData!.recentBusinessIds.first : ''),
                       orElse: () => _createDefaultBusiness(),
                     ),
                     customerData: _customerData,
@@ -934,9 +934,9 @@ class _CustomerHomePageState extends State<CustomerHomePage>
         email: '',
         website: '',
       ),
-      menuSettings: MenuSettings.defaultSettings(),
-      settings: BusinessSettings.defaultRestaurant(),
-      stats: BusinessStats.defaultStats(),
+              menuSettings: MenuSettings.defaultRestaurant(),
+        settings: BusinessSettings.defaultRestaurant(),
+        stats: BusinessStats.empty(),
       isActive: true,
       isOpen: false,
       isApproved: false,
