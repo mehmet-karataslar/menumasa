@@ -6,7 +6,6 @@ import '../../core/services/firestore_service.dart';
 import '../models/business.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
-import '../../admin/pages/admin_dashboard_page.dart';
 import 'business_profile_page.dart';
 import 'product_management_page.dart';
 import 'category_management_page.dart';
@@ -14,6 +13,7 @@ import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
+import 'business_home_page.dart';
 
 class ResponsiveAdminDashboard extends StatefulWidget {
   final String businessId;
@@ -120,7 +120,7 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
   Widget _getPageByIndex(int index) {
     switch (index) {
       case 0:
-        return const AdminDashboardPage();
+        return BusinessHomePage(businessId: widget.businessId);
       case 1:
         return BusinessProfilePage(businessId: widget.businessId);
       case 2:
@@ -136,7 +136,7 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
       case 7:
         return DiscountManagementPage(businessId: widget.businessId);
       default:
-        return const AdminDashboardPage();
+        return BusinessHomePage(businessId: widget.businessId);
     }
   }
 
