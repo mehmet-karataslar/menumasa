@@ -44,10 +44,10 @@ class CoreFirestoreService {
     try {
       final doc = await _ordersRef.doc(orderId).get();
       if (doc.exists) {
-        return app_order.Order.fromJson({
-          ...doc.data() as Map<String, dynamic>,
-          'id': doc.id,
-        });
+        return app_order.Order.fromJson(
+          doc.data() as Map<String, dynamic>,
+          id: doc.id,
+        );
       }
       return null;
     } catch (e) {
@@ -98,6 +98,12 @@ class CoreFirestoreService {
   /// Updates order status with optional notification
   Future<void> updateOrderStatus(String orderId, app_order.OrderStatus status) async {
     try {
+      // Check if document exists first
+      final docSnapshot = await _ordersRef.doc(orderId).get();
+      if (!docSnapshot.exists) {
+        throw Exception('Sipariş bulunamadı: $orderId');
+      }
+
       await _ordersRef.doc(orderId).update({
         'status': status.toString(),
         'updatedAt': FieldValue.serverTimestamp(),

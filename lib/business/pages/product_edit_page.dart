@@ -117,8 +117,13 @@ class _ProductEditPageState extends State<ProductEditPage>
       _existingImageUrls = product.images.map((img) => img.url).toList();
     } else {
       // Set defaults for new product
-      if (widget.categories.isNotEmpty) {
-        _selectedCategoryId = widget.categories.first.categoryId;
+      // Only set default category if there are categories and no duplicates
+      final uniqueCategories = <String, category_model.Category>{};
+      for (final category in widget.categories) {
+        uniqueCategories[category.categoryId] = category;
+      }
+      if (uniqueCategories.isNotEmpty) {
+        _selectedCategoryId = uniqueCategories.values.first.categoryId;
       }
       _currentPriceController.text = _priceController.text;
     }
@@ -535,8 +540,21 @@ class _ProductEditPageState extends State<ProductEditPage>
   }
 
   Widget _buildCategoryDropdown() {
+    // Get unique categories to avoid duplicate values
+    final uniqueCategories = <String, category_model.Category>{};
+    for (final category in widget.categories) {
+      uniqueCategories[category.categoryId] = category;
+    }
+    final categoriesList = uniqueCategories.values.toList();
+    
+    // Check if current selected category exists in the list
+    final validSelectedCategoryId = _selectedCategoryId.isNotEmpty && 
+        categoriesList.any((cat) => cat.categoryId == _selectedCategoryId)
+        ? _selectedCategoryId 
+        : null;
+    
     return DropdownButtonFormField<String>(
-      value: _selectedCategoryId.isEmpty ? null : _selectedCategoryId,
+      value: validSelectedCategoryId,
       decoration: InputDecoration(
         labelText: 'Kategori *',
         prefixIcon: const Icon(Icons.category),
@@ -546,7 +564,7 @@ class _ProductEditPageState extends State<ProductEditPage>
         filled: true,
         fillColor: AppColors.white,
       ),
-      items: widget.categories.map((category) {
+      items: categoriesList.map((category) {
         return DropdownMenuItem<String>(
           value: category.categoryId,
           child: Text(category.name),
@@ -558,6 +576,12 @@ class _ProductEditPageState extends State<ProductEditPage>
             _selectedCategoryId = value;
           });
         }
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Kategori seçimi zorunludur';
+        }
+        return null;
       },
     );
   }

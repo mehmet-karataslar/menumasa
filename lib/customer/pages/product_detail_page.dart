@@ -5,6 +5,7 @@ import '../../business/models/business.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/cart_service.dart';
+import '../../core/services/auth_service.dart';
 import 'cart_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -28,6 +29,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   bool _isLoading = false;
   bool _isFavorite = false;
   final CartService _cartService = CartService();
+  final AuthService _authService = AuthService();
 
   // Animation controllers
   late AnimationController _fadeAnimationController;
@@ -1176,21 +1178,27 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 children: [
                   if (isAvailable) ...[
                     Icon(Icons.shopping_cart_rounded, size: 20),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Sepete Ekle - ${_getTotalPrice().toStringAsFixed(2)} ₺',
-                      style: AppTypography.bodyLarge.copyWith(
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 8), // Reduced spacing
+                    Flexible(
+                      child: Text(
+                        'Sepete Ekle - ${_getTotalPrice().toStringAsFixed(2)} ₺',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ] else ...[
                     Icon(Icons.inventory_2_outlined, size: 20),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Geçici Olarak Tükendi',
-                      style: AppTypography.bodyLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textSecondary,
+                    const SizedBox(width: 8), // Reduced spacing
+                    Flexible(
+                      child: Text(
+                        'Geçici Olarak Tükendi',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -1266,7 +1274,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => CartPage(businessId: widget.business.id),
+                    builder: (context) => CartPage(
+                      businessId: widget.business.id,
+                      userId: _authService.currentUser?.uid,
+                    ),
                   ),
                 );
               },

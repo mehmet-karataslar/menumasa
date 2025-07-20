@@ -3,6 +3,7 @@ import '../../customer/models/cart.dart';
 class Order {
   final String orderId;
   final String businessId;
+  final String customerId;
   final String customerName;
   final String? customerPhone;
   final int tableNumber;
@@ -17,6 +18,7 @@ class Order {
   Order({
     required this.orderId,
     required this.businessId,
+    required this.customerId,
     required this.customerName,
     this.customerPhone,
     required this.tableNumber,
@@ -32,12 +34,12 @@ class Order {
   // Getters for compatibility
   String get id => orderId;
   double get total => totalAmount;
-  String get customerId => customerName; // Using customerName as customerId for now
 
   factory Order.fromJson(Map<String, dynamic> data, {String? id}) {
     return Order(
       orderId: id ?? data['orderId'] ?? '',
       businessId: data['businessId'] ?? '',
+      customerId: data['customerId'] ?? data['customerName'] ?? '', // Fallback for old data
       customerName: data['customerName'] ?? '',
       customerPhone: data['customerPhone'],
       tableNumber: data['tableNumber'] ?? 0,
@@ -102,6 +104,7 @@ class Order {
     return {
       'orderId': orderId,
       'businessId': businessId,
+      'customerId': customerId,
       'customerName': customerName,
       'customerPhone': customerPhone,
       'tableNumber': tableNumber,
@@ -118,6 +121,7 @@ class Order {
   Order copyWith({
     String? orderId,
     String? businessId,
+    String? customerId,
     String? customerName,
     String? customerPhone,
     int? tableNumber,
@@ -132,6 +136,7 @@ class Order {
     return Order(
       orderId: orderId ?? this.orderId,
       businessId: businessId ?? this.businessId,
+      customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
       customerPhone: customerPhone ?? this.customerPhone,
       tableNumber: tableNumber ?? this.tableNumber,
@@ -206,6 +211,7 @@ class Order {
   // Create order from cart
   static Order fromCart(
     Cart cart, {
+    required String customerId,
     required String customerName,
     String? customerPhone,
     required int tableNumber,
@@ -229,6 +235,7 @@ class Order {
     return Order(
       orderId: 'order_${DateTime.now().millisecondsSinceEpoch}',
       businessId: cart.businessId,
+      customerId: customerId,
       customerName: customerName,
       customerPhone: customerPhone,
       tableNumber: tableNumber,
@@ -388,6 +395,7 @@ enum OrderStatus {
 class OrderDefaults {
   static Order createDefault({
     required String businessId,
+    String? customerId,
     required String customerName,
     String? customerPhone,
     required int tableNumber,
@@ -398,6 +406,7 @@ class OrderDefaults {
     return Order(
       orderId: 'order_${DateTime.now().millisecondsSinceEpoch}',
       businessId: businessId,
+      customerId: customerId ?? customerName, // Use customerName as fallback
       customerName: customerName,
       customerPhone: customerPhone,
       tableNumber: tableNumber,

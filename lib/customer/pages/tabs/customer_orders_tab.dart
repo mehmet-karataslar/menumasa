@@ -36,6 +36,26 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
   void initState() {
     super.initState();
     _loadOrders();
+    _setupOrderListener();
+  }
+
+  @override
+  void dispose() {
+    _customerFirestoreService.stopCustomerOrderListener(widget.userId);
+    super.dispose();
+  }
+
+  void _setupOrderListener() {
+    _customerFirestoreService.startCustomerOrderListener(widget.userId, _onOrdersChanged);
+  }
+
+  void _onOrdersChanged(List<app_order.Order> orders) {
+    if (mounted) {
+      setState(() {
+        _orders = orders;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadOrders() async {

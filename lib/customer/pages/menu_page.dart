@@ -13,6 +13,7 @@ import '../services/customer_firestore_service.dart';
 import '../../business/services/business_firestore_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
+import '../../core/services/auth_service.dart';
 import '../widgets/business_header.dart';
 import '../widgets/category_list.dart';
 import '../widgets/product_grid.dart';
@@ -56,6 +57,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   final _businessFirestoreService = BusinessFirestoreService();
   final _cartService = CartService();
   final _urlService = UrlService();
+  final _authService = AuthService();
 
   // UI State
   String _searchQuery = '';
@@ -271,7 +273,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CartPage(businessId: widget.businessId),
+        builder: (context) => CartPage(
+          businessId: widget.businessId,
+          userId: _authService.currentUser?.uid,
+        ),
         settings: RouteSettings(
           name: dynamicRoute,
           arguments: {
@@ -1235,6 +1240,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   child: Padding(
                     padding: EdgeInsets.all(12),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -1246,8 +1252,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 4),
-                        if (product.description.isNotEmpty)
+                        if (product.description.isNotEmpty) ...[
+                          SizedBox(height: 4),
                           Text(
                             product.description,
                             style: AppTypography.caption.copyWith(
@@ -1256,7 +1262,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        Spacer(),
+                        ],
+                        SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [

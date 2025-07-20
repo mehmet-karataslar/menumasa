@@ -311,6 +311,7 @@ class OrderService {
   }) async {
     final order = app_order.Order.fromCart(
       cart,
+      customerId: customerName, // Use customerName as fallback for customerId
       customerName: customerName,
       customerPhone: customerPhone,
       tableNumber: tableNumber,

@@ -298,10 +298,10 @@ class BusinessFirestoreService {
           .get();
 
       return snapshot.docs
-          .map((doc) => Category.fromJson({
-                ...doc.data() as Map<String, dynamic>,
-                'id': doc.id,
-              }))
+          .map((doc) => Category.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
           .toList();
     } catch (e) {
       print('Error getting business categories: $e');
@@ -314,10 +314,10 @@ class BusinessFirestoreService {
     try {
       final doc = await _categoriesRef.doc(categoryId).get();
       if (doc.exists) {
-        return Category.fromJson({
-          ...doc.data() as Map<String, dynamic>,
-          'id': doc.id,
-        });
+        return Category.fromJson(
+          doc.data() as Map<String, dynamic>,
+          id: doc.id,
+        );
       }
       return null;
     } catch (e) {
@@ -575,10 +575,10 @@ class BusinessFirestoreService {
           .get();
 
       return snapshot.docs
-          .map((doc) => app_order.Order.fromJson({
-                ...doc.data() as Map<String, dynamic>,
-                'id': doc.id,
-              }))
+          .map((doc) => app_order.Order.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
           .toList();
     } catch (e) {
       print('Error getting orders by business: $e');
@@ -596,10 +596,10 @@ class BusinessFirestoreService {
           .get();
 
       return snapshot.docs
-          .map((doc) => app_order.Order.fromJson({
-                ...doc.data() as Map<String, dynamic>,
-                'id': doc.id,
-              }))
+          .map((doc) => app_order.Order.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
           .toList();
     } catch (e) {
       print('Error getting orders by business and phone: $e');
@@ -610,6 +610,12 @@ class BusinessFirestoreService {
   /// Updates order status
   Future<void> updateOrderStatus(String orderId, app_order.OrderStatus status) async {
     try {
+      // Check if document exists first
+      final docSnapshot = await _ordersRef.doc(orderId).get();
+      if (!docSnapshot.exists) {
+        throw Exception('Sipariş bulunamadı: $orderId');
+      }
+
       await _ordersRef.doc(orderId).update({
         'status': status.toString(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -701,10 +707,10 @@ class BusinessFirestoreService {
 
     _orderStreams[businessId] = stream.listen((snapshot) {
       final orders = snapshot.docs
-          .map((doc) => app_order.Order.fromJson({
-                ...doc.data() as Map<String, dynamic>,
-                'id': doc.id,
-              }))
+          .map((doc) => app_order.Order.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
           .toList();
 
       // Notify all listeners for this business

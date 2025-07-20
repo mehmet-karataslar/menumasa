@@ -834,9 +834,21 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     final priceController = TextEditingController(
       text: product?.price.toString() ?? '',
     );
-    String selectedCategoryId =
-        product?.categoryId ??
-        (_categories.isNotEmpty ? _categories.first.categoryId : '');
+    // Get unique categories for dropdown
+    final uniqueCategories = <String, category_model.Category>{};
+    for (final category in _categories) {
+      uniqueCategories[category.categoryId] = category;
+    }
+    
+    String selectedCategoryId = product?.categoryId ?? '';
+    // Validate selected category exists in unique categories
+    if (selectedCategoryId.isNotEmpty && !uniqueCategories.containsKey(selectedCategoryId)) {
+      selectedCategoryId = '';
+    }
+    // Set default if empty and categories available
+    if (selectedCategoryId.isEmpty && uniqueCategories.isNotEmpty) {
+      selectedCategoryId = uniqueCategories.values.first.categoryId;
+    }
     bool isAvailable = product?.isAvailable ?? true;
     List<String> imageUrls = List.from(
       product?.images.map((img) => img.url) ?? [],
@@ -898,11 +910,11 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedCategoryId,
+                          value: selectedCategoryId.isEmpty ? null : selectedCategoryId,
                           decoration: const InputDecoration(
                             labelText: 'Kategori',
                           ),
-                          items: _categories.map((category) {
+                          items: uniqueCategories.values.map((category) {
                             return DropdownMenuItem(
                               value: category.categoryId,
                               child: Text(category.name),
@@ -914,6 +926,12 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                                 selectedCategoryId = value;
                               });
                             }
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Kategori seçimi zorunludur';
+                            }
+                            return null;
                           },
                         ),
                         const SizedBox(height: 16),

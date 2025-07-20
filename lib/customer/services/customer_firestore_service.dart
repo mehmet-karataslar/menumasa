@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../data/models/order.dart' as app_order;
@@ -144,10 +145,10 @@ class CustomerFirestoreService {
           .get();
 
       return snapshot.docs
-          .map((doc) => app_order.Order.fromJson({
-                ...doc.data() as Map<String, dynamic>,
-                'id': doc.id,
-              }))
+          .map((doc) => app_order.Order.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
           .toList();
     } catch (e) {
       print('Error getting customer orders: $e');
@@ -484,10 +485,10 @@ class CustomerFirestoreService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => app_order.Order.fromJson({
-        ...doc.data() as Map<String, dynamic>,
-        'id': doc.id,
-      })).toList();
+      return snapshot.docs.map((doc) => app_order.Order.fromJson(
+        doc.data() as Map<String, dynamic>,
+        id: doc.id,
+      )).toList();
     } catch (e) {
       print('Error getting orders by business and phone: $e');
       return [];
@@ -502,10 +503,10 @@ class CustomerFirestoreService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => app_order.Order.fromJson({
-        ...doc.data() as Map<String, dynamic>,
-        'id': doc.id,
-      })).toList();
+      return snapshot.docs.map((doc) => app_order.Order.fromJson(
+        doc.data() as Map<String, dynamic>,
+        id: doc.id,
+      )).toList();
     } catch (e) {
       print('Error getting orders by business: $e');
       return [];
@@ -550,5 +551,58 @@ class CustomerFirestoreService {
       print('Error getting business categories: $e');
       return [];
     }
+  }
+
+  // =============================================================================
+  // REAL-TIME ORDER LISTENERS FOR CUSTOMERS
+  // =============================================================================
+
+  final Map<String, StreamSubscription<QuerySnapshot>?> _customerOrderStreams = {};
+  final Map<String, List<Function(List<app_order.Order>)>> _customerOrderListeners = {};
+
+  /// Starts listening to real-time order updates for a customer
+  void startCustomerOrderListener(String customerId, Function(List<app_order.Order>) onOrdersUpdated) {
+    // Cancel existing listener if any
+    stopCustomerOrderListener(customerId);
+
+    final stream = _ordersRef
+        .where('customerId', isEqualTo: customerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+
+    _customerOrderStreams[customerId] = stream.listen((snapshot) {
+      final orders = snapshot.docs
+          .map((doc) => app_order.Order.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
+          .toList();
+
+      // Notify all listeners for this customer
+      final listeners = _customerOrderListeners[customerId] ?? [];
+      for (final listener in listeners) {
+        listener(orders);
+      }
+    });
+
+    // Add this callback to listeners
+    _customerOrderListeners[customerId] = _customerOrderListeners[customerId] ?? [];
+    _customerOrderListeners[customerId]!.add(onOrdersUpdated);
+  }
+
+  /// Stops listening to real-time order updates for a customer
+  void stopCustomerOrderListener(String customerId) {
+    _customerOrderStreams[customerId]?.cancel();
+    _customerOrderStreams.remove(customerId);
+    _customerOrderListeners.remove(customerId);
+  }
+
+  /// Dispose all customer order listeners
+  void disposeCustomerOrderListeners() {
+    for (final stream in _customerOrderStreams.values) {
+      stream?.cancel();
+    }
+    _customerOrderStreams.clear();
+    _customerOrderListeners.clear();
   }
 } 

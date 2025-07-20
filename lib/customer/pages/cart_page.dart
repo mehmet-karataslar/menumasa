@@ -16,8 +16,9 @@ import '../services/customer_firestore_service.dart';
 
 class CartPage extends StatefulWidget {
   final String businessId;
+  final String? userId;
 
-  const CartPage({Key? key, required this.businessId}) : super(key: key);
+  const CartPage({Key? key, required this.businessId, this.userId}) : super(key: key);
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -309,9 +310,11 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
         _isPlacingOrder = true;
       });
 
+      final customerName = _customerNameController.text.trim();
       final order = app_order.Order.fromCart(
         _cart!,
-        customerName: _customerNameController.text.trim(),
+        customerId: widget.userId ?? customerName, // Use userId if available, fallback to customerName
+        customerName: customerName,
         customerPhone: _customerPhoneController.text.trim().isNotEmpty
             ? _customerPhoneController.text.trim()
             : null,
@@ -815,11 +818,12 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Order summary
           _buildOrderSummary(),
           // Order form
-          _buildOrderForm(),
+          Flexible(child: _buildOrderForm()),
         ],
       ),
     );
@@ -892,7 +896,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   Widget _buildOrderForm() {
     return AnimatedContainer(
       duration: Duration(milliseconds: 300),
-      height: _isFormExpanded ? null : 0,
+      height: _isFormExpanded ? 400 : 0, // Fixed max height
       child: _isFormExpanded
           ? Container(
               padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -903,9 +907,11 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               ),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     SizedBox(height: 20),
                     Text(
                       'Sipariş Bilgileri',
@@ -1017,6 +1023,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                       ),
                     ),
                   ],
+                  ),
                 ),
               ),
             )
