@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
+import '../../widgets/shared/empty_state.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/constants/app_dimensions.dart';
 import '../../../data/models/business.dart';
-import '../../../core/services/data_service.dart';
+import '../../../data/models/qr_code.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../core/services/qr_service.dart';
 
 class QRManagementPage extends StatefulWidget {
@@ -20,178 +20,468 @@ class QRManagementPage extends StatefulWidget {
   State<QRManagementPage> createState() => _QRManagementPageState();
 }
 
-class _QRManagementPageState extends State<QRManagementPage> {
-  final DataService _dataService = DataService();
+class _QRManagementPageState extends State<QRManagementPage>
+    with TickerProviderStateMixin {
+  final FirestoreService _firestoreService = FirestoreService();
   final QRService _qrService = QRService();
 
   Business? _business;
+  List<QRCode> _qrCodes = [];
+  QRCode? _businessQR;
+  List<QRCode> _tableQRs = [];
+  Map<String, dynamic> _qrStats = {};
+  
   bool _isLoading = true;
-  int _tableCount = 20;
+  bool _isCreatingQRs = false;
+  String? _errorMessage;
+  
+  late TabController _tabController;
+  int _tableCount = 10;
+  
+  final TextEditingController _tableCountController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadBusinessData();
+    _tabController = TabController(length: 3, vsync: this);
+    _tableCountController.text = _tableCount.toString();
+    _loadData();
   }
 
-  Future<void> _loadBusinessData() async {
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _tableCountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
 
     try {
-      await _dataService.initialize();
-      final business = await _dataService.getBusiness(widget.businessId);
+      // Load business data
+      final business = await _firestoreService.getBusiness(widget.businessId);
+      if (business == null) {
+        throw Exception('İşletme bulunamadı');
+      }
+
+      // Load QR codes
+      final qrCodes = await _qrService.getBusinessQRCodes(widget.businessId);
+      final businessQR = await _qrService.getBusinessQRCode(widget.businessId);
+      final tableQRs = await _qrService.getTableQRCodes(widget.businessId);
+      final qrStats = await _qrService.getBusinessQRStats(widget.businessId);
 
       setState(() {
         _business = business;
-        _isLoading = false;
+        _qrCodes = qrCodes;
+        _businessQR = businessQR;
+        _tableQRs = tableQRs;
+        _qrStats = qrStats;
+        _tableCount = tableQRs.length > 0 ? tableQRs.length : 10;
+        _tableCountController.text = _tableCount.toString();
       });
-
-      // Update QR code URL if not exists
-      if (business != null && business.qrCodeUrl == null) {
-        await _qrService.updateBusinessQRCode(widget.businessId);
-        setState(() {
-          _business = business.copyWith(
-            qrCodeUrl: _qrService.generateBusinessQRUrl(widget.businessId),
-          );
-        });
-      }
     } catch (e) {
+      setState(() {
+        _errorMessage = 'Veriler yüklenirken hata: $e';
+      });
+    } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _createBusinessQR() async {
+    if (_business == null) return;
+
+    setState(() {
+      _isCreatingQRs = true;
+    });
+
+    try {
+      final qrCode = await _qrService.createBusinessQRCode(
+        businessId: widget.businessId,
+        businessName: _business!.businessName,
+      );
+
+      setState(() {
+        _businessQR = qrCode;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('İşletme QR kodu oluşturuldu'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+
+      await _loadData(); // Refresh data
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Veriler yüklenirken hata oluştu: $e'),
+            content: Text('QR kod oluşturulurken hata: $e'),
             backgroundColor: AppColors.error,
           ),
         );
       }
+    } finally {
+      setState(() {
+        _isCreatingQRs = false;
+      });
+    }
+  }
+
+  Future<void> _createTableQRs() async {
+    if (_business == null) return;
+
+    setState(() {
+      _isCreatingQRs = true;
+    });
+
+    try {
+      final tableQRs = await _qrService.createTableQRCodes(
+        businessId: widget.businessId,
+        businessName: _business!.businessName,
+        tableCount: _tableCount,
+        replaceExisting: true,
+      );
+
+      setState(() {
+        _tableQRs = tableQRs;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${tableQRs.length} adet masa QR kodu oluşturuldu'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+
+      await _loadData(); // Refresh data
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Masa QR kodları oluşturulurken hata: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isCreatingQRs = false;
+      });
+    }
+  }
+
+  Future<void> _createAllQRs() async {
+    if (_business == null) return;
+
+    setState(() {
+      _isCreatingQRs = true;
+    });
+
+    try {
+      final package = await _qrService.createBusinessQRPackage(
+        businessId: widget.businessId,
+        businessName: _business!.businessName,
+        tableCount: _tableCount,
+        replaceExisting: true,
+      );
+
+      setState(() {
+        _businessQR = package.businessQR;
+        _tableQRs = package.tableQRs;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${package.totalQRCodes} adet QR kod oluşturuldu'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+
+      await _loadData(); // Refresh data
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('QR kodları oluşturulurken hata: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isCreatingQRs = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        body: Center(child: LoadingIndicator()),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        appBar: _buildAppBar(),
+        body: Center(child: ErrorMessage(message: _errorMessage!)),
+      );
+    }
+
+    if (_business == null) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        appBar: _buildAppBar(),
+        body: const Center(
+          child: EmptyState(
+            icon: Icons.business,
+            title: 'İşletme Bulunamadı',
+            message: 'İşletme bilgileri yüklenemedi',
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.backgroundLight,
       appBar: _buildAppBar(),
-      body: _isLoading ? const LoadingIndicator() : _buildBody(),
+      body: Column(
+        children: [
+          // Statistics overview
+          _buildStatsOverview(),
+          // Tab bar
+          _buildTabBar(),
+          // Tab view
+          Expanded(
+            child: _buildTabView(),
+          ),
+        ],
+      ),
       floatingActionButton: _buildFAB(),
     );
   }
 
-  AppBar _buildAppBar() {
+  PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: Text(
-        'QR Kod Yönetimi',
-        style: AppTypography.h3.copyWith(color: AppColors.white),
-      ),
       backgroundColor: AppColors.primary,
-      elevation: 0,
+      foregroundColor: AppColors.white,
+      title: Row(
+        children: [
+          const Icon(Icons.qr_code, size: 24),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'QR Kod Yönetimi',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (_business != null)
+                  Text(
+                    _business!.businessName,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.help, color: AppColors.white),
+          icon: const Icon(Icons.refresh),
+          onPressed: _loadData,
+        ),
+        IconButton(
+          icon: const Icon(Icons.help),
           onPressed: _showHelpDialog,
         ),
       ],
     );
   }
 
-  Widget _buildBody() {
-    if (_business == null) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error, size: 64, color: AppColors.error),
-            SizedBox(height: 16),
-            Text('İşletme Bulunamadı', style: AppTypography.h4),
-            SizedBox(height: 8),
-            Text(
-              'İşletme bilgileri yüklenemedi.',
-              style: AppTypography.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: AppDimensions.paddingL,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStatsOverview() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          // Business QR Section
-          _buildBusinessQRSection(),
-
-          const SizedBox(height: 24),
-
-          // Table QR Section
-          _buildTableQRSection(),
-
-          const SizedBox(height: 24),
-
-          // QR Settings Section
-          _buildQRSettingsSection(),
-
-          const SizedBox(height: 24),
-
-          // QR Usage Guide
-          _buildUsageGuide(),
+          _buildStatItem(
+            'Toplam QR',
+            (_qrStats['totalQRCodes'] ?? 0).toString(),
+            Icons.qr_code,
+            AppColors.primary,
+          ),
+          _buildStatItem(
+            'Tarama',
+            (_qrStats['totalScans'] ?? 0).toString(),
+            Icons.visibility,
+            AppColors.success,
+          ),
+          _buildStatItem(
+            'Bugün',
+            (_qrStats['todayScans'] ?? 0).toString(),
+            Icons.today,
+            AppColors.info,
+          ),
+          _buildStatItem(
+            'Masa QR',
+            (_qrStats['tableQRCount'] ?? 0).toString(),
+            Icons.table_restaurant,
+            AppColors.warning,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBusinessQRSection() {
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTypography.h6.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      color: AppColors.white,
+      child: TabBar(
+        controller: _tabController,
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorColor: AppColors.primary,
+        indicatorWeight: 3,
+        tabs: const [
+          Tab(
+            icon: Icon(Icons.business),
+            text: 'İşletme QR',
+          ),
+          Tab(
+            icon: Icon(Icons.table_restaurant),
+            text: 'Masa QR Kodları',
+          ),
+          Tab(
+            icon: Icon(Icons.analytics),
+            text: 'İstatistikler',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabView() {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildBusinessQRTab(),
+        _buildTableQRTab(),
+        _buildStatsTab(),
+      ],
+    );
+  }
+
+  Widget _buildBusinessQRTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          if (_businessQR != null)
+            _buildBusinessQRCard()
+          else
+            _buildCreateBusinessQRCard(),
+          const SizedBox(height: 16),
+          _buildBusinessQRActions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessQRCard() {
+    if (_businessQR == null) return const SizedBox.shrink();
+
     return Card(
-      elevation: 2,
+      elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.qr_code, color: AppColors.primary, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('İşletme QR Kodu', style: AppTypography.h4),
-                      Text(
-                        'Genel menü erişimi için',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+            // QR Code display
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.greyLight),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    _business!.businessName,
+                    style: AppTypography.h6.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // QR Code Display - Enhanced with business branding
-            Center(
-              child: _qrService.createBrandedQRWidget(
-                businessId: widget.businessId,
-                businessName: _business?.businessName ?? 'İşletme',
-                size: 200,
-                showBusinessName: true,
-                showTableInfo: false,
+                  const SizedBox(height: 16),
+                  _qrService.createQRWidget(_businessQR!, overrideSize: 200),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Menümüze ulaşmak için QR kodu tarayın',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // QR URL Display
+            const SizedBox(height: 16),
+            // URL display
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -202,7 +492,7 @@ class _QRManagementPageState extends State<QRManagementPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      _qrService.generateBusinessQRUrl(widget.businessId),
+                      _businessQR!.url,
                       style: AppTypography.bodySmall.copyWith(
                         fontFamily: 'monospace',
                       ),
@@ -211,23 +501,18 @@ class _QRManagementPageState extends State<QRManagementPage> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 20),
-                    onPressed: () => _copyToClipboard(
-                      _qrService.generateBusinessQRUrl(widget.businessId),
-                    ),
+                    onPressed: () => _copyToClipboard(_businessQR!.url),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
-
-            // Action Buttons
+            // Action buttons
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        _qrService.shareBusinessQR(widget.businessId),
+                    onPressed: () => _qrService.shareBusinessQR(widget.businessId),
                     icon: const Icon(Icons.share),
                     label: const Text('Paylaş'),
                     style: ElevatedButton.styleFrom(
@@ -239,42 +524,9 @@ class _QRManagementPageState extends State<QRManagementPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _printBusinessQR,
-                    icon: const Icon(Icons.print),
-                    label: const Text('Yazdır'),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Quick Actions
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: () => _qrService.openQRUrl(
-                      _qrService.generateBusinessQRUrl(widget.businessId),
-                    ),
+                    onPressed: () => _qrService.openQRUrl(_businessQR!.url),
                     icon: const Icon(Icons.open_in_new),
                     label: const Text('Test Et'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: () => _copyToClipboard(
-                      _qrService.generateBusinessQRUrl(widget.businessId),
-                    ),
-                    icon: const Icon(Icons.link),
-                    label: const Text('Link'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                    ),
                   ),
                 ),
               ],
@@ -285,503 +537,612 @@ class _QRManagementPageState extends State<QRManagementPage> {
     );
   }
 
-  Widget _buildTableQRSection() {
+  Widget _buildCreateBusinessQRCard() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
+          children: [
+            Icon(
+              Icons.qr_code,
+              size: 64,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'İşletme QR Kodu Oluştur',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Müşterilerinizin menünüze kolayca erişmesi için işletme QR kodu oluşturun',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _isCreatingQRs ? null : _createBusinessQR,
+              icon: _isCreatingQRs 
+                  ? const SizedBox(
+                      width: 20, 
+                      height: 20, 
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add),
+              label: Text(_isCreatingQRs ? 'Oluşturuluyor...' : 'QR Kod Oluştur'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessQRActions() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.table_restaurant,
-                  color: AppColors.success,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Masa QR Kodları', style: AppTypography.h4),
-                      Text(
-                        'Masa bazlı menü erişimi',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            Text(
+              'QR Kod İşlemleri',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.print, color: AppColors.primary),
+              ),
+              title: const Text('QR Kodu Yazdır'),
+              subtitle: const Text('Fiziksel kopyalar için yazdırın'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _businessQR != null ? _printBusinessQR : null,
+            ),
+            const Divider(),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.download, color: AppColors.success),
+              ),
+              title: const Text('QR Kodu İndir'),
+              subtitle: const Text('PNG formatında kaydet'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _businessQR != null ? _downloadBusinessQR : null,
+            ),
+            const Divider(),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.refresh, color: AppColors.warning),
+              ),
+              title: const Text('QR Kodu Yenile'),
+              subtitle: const Text('Mevcut QR kodu güncelle'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _isCreatingQRs ? null : _createBusinessQR,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
+  Widget _buildTableQRTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildTableCountSelector(),
+          const SizedBox(height: 16),
+          if (_tableQRs.isNotEmpty)
+            _buildTableQRGrid()
+          else
+            _buildCreateTableQRsCard(),
+        ],
+      ),
+    );
+  }
 
-            // Table Count Selector
+  Widget _buildTableCountSelector() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Masa Sayısı Ayarı',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
-                Text('Masa Sayısı:', style: AppTypography.bodyMedium),
-                const SizedBox(width: 16),
                 Expanded(
-                  child: Slider(
-                    value: _tableCount.toDouble(),
-                    min: 5,
-                    max: 50,
-                    divisions: 9,
-                    label: _tableCount.toString(),
+                  child: TextFormField(
+                    controller: _tableCountController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: 'Masa Sayısı',
+                      hintText: 'Örn: 20',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.table_restaurant),
+                    ),
                     onChanged: (value) {
-                      setState(() {
-                        _tableCount = value.round();
-                      });
+                      final count = int.tryParse(value);
+                      if (count != null && count > 0 && count <= 100) {
+                        setState(() {
+                          _tableCount = count;
+                        });
+                      }
                     },
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _tableCount.toString(),
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _generateTableQRs,
-                    icon: const Icon(Icons.qr_code_2),
-                    label: const Text('QR Kodları Oluştur'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: AppColors.white,
-                    ),
-                  ),
-                ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _showTableQRPreview,
-                    icon: const Icon(Icons.preview),
-                    label: const Text('Önizleme'),
+                ElevatedButton.icon(
+                  onPressed: _isCreatingQRs ? null : _createTableQRs,
+                  icon: _isCreatingQRs 
+                      ? const SizedBox(
+                          width: 20, 
+                          height: 20, 
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.create),
+                  label: Text(_isCreatingQRs ? 'Oluşturuluyor...' : 'Oluştur'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: AppColors.white,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQRSettingsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.settings, color: AppColors.warning, size: 28),
-                const SizedBox(width: 12),
-                Text('QR Kod Ayarları', style: AppTypography.h4),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // QR Code Style Settings
-            ListTile(
-              leading: const Icon(Icons.palette),
-              title: const Text('QR Kod Stili'),
-              subtitle: const Text('Renk ve görünüm ayarları'),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: _showStyleSettings,
-            ),
-
-            const Divider(),
-
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: const Text('Dil Ayarları'),
-              subtitle: const Text('QR kod yönlendirme dili'),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: _showLanguageSettings,
-            ),
-
-            const Divider(),
-
-            ListTile(
-              leading: const Icon(Icons.analytics),
-              title: const Text('İstatistikler'),
-              subtitle: const Text('QR kod tarama istatistikleri'),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: _showQRStatistics,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUsageGuide() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.help_outline, color: AppColors.info, size: 28),
-                const SizedBox(width: 12),
-                Text('Kullanım Kılavuzu', style: AppTypography.h4),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            _buildGuideStep(
-              '1',
-              'QR Kod Oluşturun',
-              'İşletmeniz için genel QR kodu veya masa bazlı QR kodlar oluşturun.',
-            ),
-
-            _buildGuideStep(
-              '2',
-              'Yazdırın ve Yapıştırın',
-              'QR kodları yazdırıp masalarınıza veya işletmenizde görünür yerlere yapıştırın.',
-            ),
-
-            _buildGuideStep(
-              '3',
-              'Müşteriler Tarasın',
-              'Müşteriler telefon kamerası ile QR kodu tarayarak menünüze erişir.',
-            ),
-
-            _buildGuideStep(
-              '4',
-              'Dijital Menü',
-              'Müşteriler dokunmatik menünüzü görüntüleyebilir ve siparişlerini verebilir.',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGuideStep(String number, String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+            const SizedBox(height: 8),
+            Text(
+              'Not: Mevcut masa QR kodları silinip yeniden oluşturulacaktır.',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableQRGrid() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  title,
-                  style: AppTypography.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
+                  'Masa QR Kodları (${_tableQRs.length})',
+                  style: AppTypography.h6.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                TextButton.icon(
+                  onPressed: _printAllTableQRs,
+                  icon: const Icon(Icons.print),
+                  label: const Text('Tümünü Yazdır'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.8,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: _tableQRs.length,
+              itemBuilder: (context, index) {
+                final qr = _tableQRs[index];
+                final tableNumber = qr.data.tableNumber ?? (index + 1);
+                
+                return Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: _qrService.createQRWidget(qr, overrideSize: 80),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Masa $tableNumber',
+                          style: AppTypography.bodySmall.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            IconButton(
+                              onPressed: () => _qrService.shareTableQR(
+                                widget.businessId,
+                                tableNumber,
+                              ),
+                              icon: const Icon(Icons.share, size: 16),
+                              tooltip: 'Paylaş',
+                            ),
+                            IconButton(
+                              onPressed: () => _copyToClipboard(qr.url),
+                              icon: const Icon(Icons.copy, size: 16),
+                              tooltip: 'Kopyala',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateTableQRsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(
+              Icons.table_restaurant,
+              size: 64,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Masa QR Kodları Oluştur',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Her masa için ayrı QR kodlar oluşturun. Müşteriler hangi masada oturduklarını belirtmek zorunda kalmayacak.',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _isCreatingQRs ? null : _createTableQRs,
+              icon: _isCreatingQRs 
+                  ? const SizedBox(
+                      width: 20, 
+                      height: 20, 
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add),
+              label: Text(_isCreatingQRs ? 'Oluşturuluyor...' : 'Masa QR Kodları Oluştur'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildDetailedStats(),
+          const SizedBox(height: 16),
+          _buildQRCodesList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailedStats() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Detaylı İstatistikler',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    'Toplam Tarama',
+                    (_qrStats['totalScans'] ?? 0).toString(),
+                    Icons.visibility,
+                    AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    'Bu Hafta',
+                    (_qrStats['weeklyScans'] ?? 0).toString(),
+                    Icons.date_range,
+                    AppColors.success,
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    'Bu Ay',
+                    (_qrStats['monthlyScans'] ?? 0).toString(),
+                    Icons.calendar_month,
+                    AppColors.info,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    'QR Kod Sayısı',
+                    (_qrStats['totalQRCodes'] ?? 0).toString(),
+                    Icons.qr_code_2,
+                    AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: AppTypography.h5.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQRCodesList() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tüm QR Kodları',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_qrCodes.isEmpty)
+              const EmptyState(
+                icon: Icons.qr_code,
+                title: 'QR Kod Bulunamadı',
+                message: 'Henüz hiç QR kod oluşturulmamış',
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _qrCodes.length,
+                itemBuilder: (context, index) {
+                  final qr = _qrCodes[index];
+                  return ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: qr.type == QRCodeType.business 
+                            ? AppColors.primary.withOpacity(0.1)
+                            : AppColors.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        qr.type == QRCodeType.business 
+                            ? Icons.business 
+                            : Icons.table_restaurant,
+                        color: qr.type == QRCodeType.business 
+                            ? AppColors.primary 
+                            : AppColors.success,
+                      ),
+                    ),
+                    title: Text(qr.title),
+                    subtitle: Text(
+                      '${qr.stats.totalScans} tarama • ${qr.type.displayName}',
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'share':
+                            _shareQR(qr);
+                            break;
+                          case 'copy':
+                            _copyToClipboard(qr.url);
+                            break;
+                          case 'test':
+                            _qrService.openQRUrl(qr.url);
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: ListTile(
+                            leading: Icon(Icons.share),
+                            title: Text('Paylaş'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'copy',
+                          child: ListTile(
+                            leading: Icon(Icons.copy),
+                            title: Text('Linki Kopyala'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'test',
+                          child: ListTile(
+                            leading: Icon(Icons.open_in_new),
+                            title: Text('Test Et'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildFAB() {
     return FloatingActionButton.extended(
-      onPressed: _generateAllQRs,
+      onPressed: _isCreatingQRs ? null : _createAllQRs,
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
-      icon: const Icon(Icons.qr_code_scanner),
-      label: const Text('Tüm QR Kodları'),
+      icon: _isCreatingQRs 
+          ? const SizedBox(
+              width: 20, 
+              height: 20, 
+              child: CircularProgressIndicator(
+                strokeWidth: 2, 
+                color: AppColors.white,
+              ),
+            )
+          : const Icon(Icons.auto_awesome),
+      label: Text(_isCreatingQRs ? 'Oluşturuluyor...' : 'Tüm QR Kodları'),
     );
   }
 
-  // Action Methods
+  // Action methods
   Future<void> _copyToClipboard(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('QR kod linki kopyalandı'),
+          content: Text('Link kopyalandı'),
           backgroundColor: AppColors.success,
         ),
       );
     }
   }
 
+  void _shareQR(QRCode qr) {
+    if (qr.type == QRCodeType.business) {
+      _qrService.shareBusinessQR(widget.businessId);
+    } else if (qr.type == QRCodeType.table && qr.data.tableNumber != null) {
+      _qrService.shareTableQR(widget.businessId, qr.data.tableNumber!);
+    }
+  }
+
   void _printBusinessQR() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('QR Kod Yazdır'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _qrService.createBusinessQRWidget(
-              businessId: widget.businessId,
-              size: 150,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _business?.businessName ?? 'İşletme',
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Bu QR kodu tarayarak menümüze ulaşabilirsiniz',
-              style: AppTypography.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Kapat'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Yazdırma işlemi başlatıldı'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            child: const Text('Yazdır'),
-          ),
-        ],
+    // Implementation for printing business QR
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('QR kod yazdırma özelliği yakında eklenecek'),
+        backgroundColor: AppColors.info,
       ),
     );
   }
 
-  void _generateTableQRs() {
-    final package = _qrService.createPrintableQRPackage(
-      widget.businessId,
-      tableCount: _tableCount,
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Masa QR Kodları'),
-        content: Text(
-          '${package.totalQRCodes} adet QR kod oluşturuldu.\n\n'
-          '• 1 adet genel QR kod\n'
-          '• $_tableCount adet masa QR kodu\n\n'
-          'Bu QR kodları yazdırmak istiyor musunuz?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showTableQRGrid(package);
-            },
-            child: const Text('Önizleme'),
-          ),
-        ],
+  void _downloadBusinessQR() {
+    // Implementation for downloading business QR
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('QR kod indirme özelliği yakında eklenecek'),
+        backgroundColor: AppColors.info,
       ),
     );
   }
 
-  void _showTableQRPreview() {
-    final package = _qrService.createPrintableQRPackage(
-      widget.businessId,
-      tableCount: _tableCount,
-    );
-    _showTableQRGrid(package);
-  }
-
-  void _showTableQRGrid(QRCodePackage package) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.9,
-          height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Masa QR Kodları', style: AppTypography.h4),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.8,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: package.tableQRs.length,
-                  itemBuilder: (context, index) {
-                    final qrData = package.tableQRs[index];
-                    return Card(
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: _qrService.createBrandedQRWidget(
-                                businessId: widget.businessId,
-                                businessName:
-                                    _business?.businessName ?? 'İşletme',
-                                tableNumber: qrData.tableNumber!,
-                                size: 80,
-                                showBusinessName: false,
-                                showTableInfo: true,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              qrData.displayName,
-                              style: AppTypography.bodySmall.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                IconButton(
-                                  onPressed: () => _qrService.shareTableQR(
-                                    widget.businessId,
-                                    qrData.tableNumber!,
-                                  ),
-                                  icon: const Icon(Icons.share, size: 16),
-                                  tooltip: 'Paylaş',
-                                ),
-                                IconButton(
-                                  onPressed: () =>
-                                      _copyToClipboard(qrData.qrUrl),
-                                  icon: const Icon(Icons.copy, size: 16),
-                                  tooltip: 'Kopyala',
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Masa QR kodları yazdırma işlemi başlatıldı',
-                      ),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                },
-                child: const Text('Tümünü Yazdır'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _generateAllQRs() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tüm QR Kodları Oluştur'),
-        content: const Text(
-          'İşletmeniz için tüm QR kodları (genel + masa kodları) oluşturmak istiyor musunuz?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _generateTableQRs();
-            },
-            child: const Text('Oluştur'),
-          ),
-        ],
+  void _printAllTableQRs() {
+    // Implementation for printing all table QRs
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Toplu QR kod yazdırma özelliği yakında eklenecek'),
+        backgroundColor: AppColors.info,
       ),
     );
   }
@@ -790,13 +1151,23 @@ class _QRManagementPageState extends State<QRManagementPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('QR Kod Yardımı'),
-        content: const Text(
-          'QR kodları müşterilerinizin menünüze kolayca erişmesini sağlar.\n\n'
-          '• Genel QR kod: Tüm menüyü gösterir\n'
-          '• Masa QR kodları: Masa numarası ile menüyü gösterir\n'
-          '• QR kodları yazdırıp masalarınıza yapıştırabilirsiniz\n'
-          '• Müşteriler telefon kamerası ile QR kodu tarayabilir',
+        title: const Text('QR Kod Yönetimi Yardımı'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'QR kodları müşterilerinizin menünüze kolayca erişmesini sağlar.\n',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('• İşletme QR Kodu: Genel menüyü gösterir'),
+              Text('• Masa QR Kodları: Belirli masa numarası ile menüyü gösterir'),
+              Text('• QR kodları yazdırıp masalarınıza yapıştırabilirsiniz'),
+              Text('• Müşteriler telefon kamerası ile QR kodu tarayabilir'),
+              Text('• İstatistikler ile QR kod kullanımını takip edebilirsiniz'),
+            ],
+          ),
         ),
         actions: [
           ElevatedButton(
@@ -804,33 +1175,6 @@ class _QRManagementPageState extends State<QRManagementPage> {
             child: const Text('Anladım'),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showStyleSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('QR kod stil ayarları yakında eklenecek'),
-        backgroundColor: AppColors.info,
-      ),
-    );
-  }
-
-  void _showLanguageSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Dil ayarları yakında eklenecek'),
-        backgroundColor: AppColors.info,
-      ),
-    );
-  }
-
-  void _showQRStatistics() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('QR kod istatistikleri yakında eklenecek'),
-        backgroundColor: AppColors.info,
       ),
     );
   }
