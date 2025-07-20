@@ -74,10 +74,10 @@ class _LoginPageState extends State<LoginPage> with UrlMixin {
       if (user != null && mounted) {
         // Navigate based on user type with URL updates
         if (user.userType.value == 'customer') {
-          _urlService.updateCustomerUrl(user.id, 'home', customTitle: 'Müşteri Ana Sayfa | MasaMenu');
+          _urlService.updateCustomerUrl(user.id, 'dashboard', customTitle: 'Müşteri Paneli | MasaMenu');
           Navigator.pushReplacementNamed(
             context,
-            '/customer/home',
+            '/customer/dashboard',
             arguments: {'userId': user.id},
           );
         } else if (user.userType.value == 'business') {

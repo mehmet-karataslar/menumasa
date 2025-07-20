@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/url_service.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 
@@ -30,6 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _errorMessage;
 
   final AuthService _authService = AuthService();
+  final UrlService _urlService = UrlService();
 
   @override
   void dispose() {
@@ -67,8 +69,9 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (user != null && mounted) {
-        // Kayıt başarılı, müşteri ana sayfasına yönlendir
-        Navigator.pushReplacementNamed(context, '/customer/home', 
+        // Kayıt başarılı, müşteri dashboard'a yönlendir
+        _urlService.updateCustomerUrl(user.id, 'dashboard', customTitle: 'Müşteri Paneli | MasaMenu');
+        Navigator.pushReplacementNamed(context, '/customer/dashboard', 
           arguments: {'userId': user.id});
       }
     } on AuthException catch (e) {

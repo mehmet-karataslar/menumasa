@@ -8,7 +8,6 @@ import '../../business/pages/business_login_page.dart';
 import '../../customer/pages/menu_page.dart';
 import '../../customer/pages/product_detail_page.dart';
 import '../../customer/pages/customer_orders_page.dart';
-import '../../customer/pages/customer_home_page.dart';
 import '../../customer/pages/customer_dashboard_page.dart';
 import '../../customer/pages/customer_profile_page.dart';
 import '../../customer/pages/cart_page.dart';
@@ -42,7 +41,6 @@ class AppRoutes {
   static const String businessRegister = '/business-register';
 
   // Customer route'ları
-  static const String customerHome = '/customer/home';
   static const String customerDashboard = '/customer/dashboard';
   static const String customerOrders = '/customer/orders';
   static const String customerProfile = '/customer/profile';
@@ -78,7 +76,6 @@ class AppRoutes {
     businessRegister: (context) => const BusinessRegisterPage(),
 
     // Customer route'ları
-    customerHome: (context) => const CustomerHomeRouterPage(),
     customerDashboard: (context) => const CustomerDashboardRouterPage(),
     customerOrders: (context) => const CustomerOrdersRouterPage(),
     customerProfile: (context) => const CustomerProfileRouterPage(),
@@ -153,13 +150,7 @@ class AppRoutes {
 
     if (pathSegments.length >= 2) {
       switch (pathSegments[1]) {
-        case 'home':
-          final args = settings.arguments as Map<String, dynamic>?;
-          final userId = args?['userId'] ?? 'guest';
-          return MaterialPageRoute(
-            builder: (context) => CustomerHomePage(userId: userId),
-            settings: settings,
-          );
+
 
         case 'dashboard':
           final args = settings.arguments as Map<String, dynamic>?;
@@ -534,22 +525,7 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
   }
 }
 
-class CustomerHomeRouterPage extends StatelessWidget {
-  const CustomerHomeRouterPage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final userId = args?['userId'] as String?;
-
-    if (userId == null || userId.isEmpty) {
-      return const RouterPage();
-    }
-
-    return CustomerHomePage(userId: userId);
-  }
-}
 
 class CustomerDashboardRouterPage extends StatelessWidget {
   const CustomerDashboardRouterPage({super.key});

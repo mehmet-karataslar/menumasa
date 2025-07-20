@@ -246,7 +246,7 @@ class _RouterPageState extends State<RouterPage> {
                               if (userData?.userType.value == 'business') {
                                 Navigator.pushNamed(context, '/business/dashboard');
                               } else if (userData?.userType.value == 'customer') {
-                                Navigator.pushNamed(context, '/customer/home', 
+                                Navigator.pushNamed(context, '/customer/dashboard', 
                                   arguments: {'userId': userData!.id});
                               } else {
                                 print('Router - Unknown user type: ${userData?.userType}');
