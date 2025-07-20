@@ -11,7 +11,6 @@ import '../../../data/models/category.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
-import 'business_dashboard_page.dart';
 import 'business_profile_page.dart';
 import 'category_management_page.dart';
 import 'product_management_page.dart';
@@ -48,20 +47,28 @@ class _BusinessHomePageState extends State<BusinessHomePage>
   double _totalRevenue = 0.0;
   int _todayOrders = 0;
   double _todayRevenue = 0.0;
+  int _pendingOrders = 0;
 
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     _loadBusinessData();
+    // Set up real-time order updates
+    _setupOrderListener();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _setupOrderListener() {
+    // No need for periodic refresh anymore - using real-time Firestore updates
+    // The order statistics will be updated through the order listener in individual pages
   }
 
   Future<void> _loadBusinessData() async {
@@ -108,6 +115,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
         _totalRevenue = stats['totalRevenue'] ?? 0.0;
         _todayOrders = stats['todayOrders'] ?? 0;
         _todayRevenue = stats['todayRevenue'] ?? 0.0;
+        _pendingOrders = stats['pendingOrders'] ?? 0;
       });
     } catch (e) {
       setState(() {
@@ -130,12 +138,16 @@ class _BusinessHomePageState extends State<BusinessHomePage>
 
       final totalOrders = ordersQuery.docs.length;
       double totalRevenue = 0.0;
+      int pendingOrders = 0;
 
-      // Toplam gelir hesapla
+      // Toplam gelir ve bekleyen siparişleri hesapla
       for (var doc in ordersQuery.docs) {
         final orderData = doc.data();
         if (orderData['status'] == 'completed') {
           totalRevenue += (orderData['totalAmount'] ?? 0.0).toDouble();
+        }
+        if (orderData['status'] == 'pending') {
+          pendingOrders++;
         }
       }
 
@@ -180,6 +192,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
         'totalRevenue': totalRevenue,
         'todayOrders': todayOrders,
         'todayRevenue': todayRevenue,
+        'pendingOrders': pendingOrders,
       };
     } catch (e) {
       print('İstatistik hesaplama hatası: $e');
@@ -198,7 +211,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('İşletme Ana Sayfa'),
+          title: const Text('İşletme Yönetimi'),
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
         ),
@@ -209,7 +222,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     if (_business == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('İşletme Ana Sayfa'),
+          title: const Text('İşletme Yönetimi'),
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
         ),
@@ -226,14 +239,13 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: _buildAppBar(),
-      body: Row(
+      body: Column(
         children: [
-          // Sidebar
-          _buildSidebar(),
-          
-          // Main content
+          // Tab Bar
+          _buildTabBar(),
+          // Tab View
           Expanded(
-            child: _buildMainContent(),
+            child: _buildTabView(),
           ),
         ],
       ),
@@ -260,336 +272,56 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                 child: Image.network(
                   _business!.logoUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.restaurant,
-                      color: AppColors.primary,
-                      size: 24,
-                    );
-                  },
+                  errorBuilder: (context, error, stackTrace) => 
+                    Icon(Icons.business, color: AppColors.primary),
                 ),
               ),
             ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _business?.businessName ?? 'İşletme Adı',
-                style: AppTypography.h5.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w600,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _business?.businessName ?? 'İşletme',
+                  style: AppTypography.h6.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Text(
-                'Hoş geldiniz!',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.white.withOpacity(0.8),
-                ),
-              ),
-            ],
+                if (_pendingOrders > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$_pendingOrders bekleyen sipariş',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications),
-          onPressed: () {
-            // Bildirimler
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () {
-            Navigator.pushNamed(
-              context,
-              '/admin/menu-settings',
-              arguments: {'businessId': widget.businessId},
-            );
-          },
-        ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (value) {
-            switch (value) {
-              case 'profile':
-                Navigator.pushNamed(
-                  context,
-                  '/admin/business-info',
-                  arguments: {'businessId': widget.businessId},
-                );
-                break;
-              case 'qr':
-                Navigator.pushNamed(
-                  context,
-                  '/admin/qr-codes',
-                  arguments: {'businessId': widget.businessId},
-                );
-                break;
-              case 'logout':
-                Navigator.pushReplacementNamed(context, '/');
-                break;
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'profile',
-              child: Row(
-                children: [
-                  Icon(Icons.business, size: 20),
-                  SizedBox(width: 8),
-                  Text('İşletme Profili'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'qr',
-              child: Row(
-                children: [
-                  Icon(Icons.qr_code, size: 20),
-                  SizedBox(width: 8),
-                  Text('QR Kodlar'),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem(
-              value: 'logout',
-              child: Row(
-                children: [
-                  Icon(Icons.logout, size: 20, color: AppColors.error),
-                  SizedBox(width: 8),
-                  Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSidebar() {
-    return Container(
-      width: 280,
-      color: AppColors.white,
-      child: Column(
-        children: [
-          // İşletme bilgileri
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              border: Border(
-                bottom: BorderSide(
-                  color: AppColors.greyLight,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Column(
-              children: [
-                if (_business?.logoUrl != null)
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: AppColors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.shadow.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        _business!.logoUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Icon(
-                              Icons.restaurant,
-                              color: AppColors.primary,
-                              size: 40,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.restaurant,
-                      color: AppColors.primary,
-                      size: 40,
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Text(
-                  _business?.businessName ?? 'İşletme Adı',
-                  style: AppTypography.h6.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _business?.businessType ?? 'Restoran',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textLight,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _business?.isOpen == true 
-                        ? AppColors.success.withOpacity(0.2)
-                        : AppColors.error.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _business?.isOpen == true 
-                            ? Icons.check_circle 
-                            : Icons.cancel,
-                        size: 16,
-                        color: _business?.isOpen == true 
-                            ? AppColors.success 
-                            : AppColors.error,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _business?.isOpen == true ? 'Açık' : 'Kapalı',
-                        style: AppTypography.caption.copyWith(
-                          color: _business?.isOpen == true 
-                              ? AppColors.success 
-                              : AppColors.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Navigation menu
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              children: [
-                _buildMenuItem(
-                  icon: Icons.dashboard,
-                  title: 'Genel Bakış',
-                  isSelected: _tabController.index == 0,
-                  onTap: () => _setSelectedIndex(0),
-                ),
-                _buildMenuItem(
-                  icon: Icons.receipt_long,
-                  title: 'Siparişler',
-                  isSelected: _tabController.index == 1,
-                  onTap: () => _setSelectedIndex(1),
-                  badge: _todayOrders > 0 ? _todayOrders.toString() : null,
-                ),
-                _buildMenuItem(
-                  icon: Icons.restaurant_menu,
-                  title: 'Menü Yönetimi',
-                  isSelected: _tabController.index == 2,
-                  onTap: () => _setSelectedIndex(2),
-                ),
-                _buildMenuItem(
-                  icon: Icons.analytics,
-                  title: 'Analitikler',
-                  isSelected: _tabController.index == 3,
-                  onTap: () => _setSelectedIndex(3),
-                ),
-                const Divider(height: 32),
-                _buildMenuItem(
-                  icon: Icons.category,
-                  title: 'Kategoriler',
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/admin/categories',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-                _buildMenuItem(
-                  icon: Icons.local_offer,
-                  title: 'İndirimler',
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/admin/discounts',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-                _buildMenuItem(
-                  icon: Icons.qr_code,
-                  title: 'QR Kodlar',
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/admin/qr-codes',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-                _buildMenuItem(
-                  icon: Icons.settings,
-                  title: 'Ayarlar',
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/admin/menu-settings',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    bool isSelected = false,
-    String? badge,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Stack(
+        // Notification icon with pending orders badge
+        Stack(
           children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primary : AppColors.textLight,
-              size: 20,
+            IconButton(
+              icon: const Icon(Icons.notifications),
+              onPressed: () {
+                _tabController.animateTo(1); // Jump to orders tab
+              },
             ),
-            if (badge != null)
+            if (_pendingOrders > 0)
               Positioned(
-                right: -8,
-                top: -8,
+                right: 8,
+                top: 8,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -601,7 +333,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                     minHeight: 16,
                   ),
                   child: Text(
-                    badge,
+                    _pendingOrders.toString(),
                     style: AppTypography.caption.copyWith(
                       color: AppColors.white,
                       fontSize: 10,
@@ -613,81 +345,168 @@ class _BusinessHomePageState extends State<BusinessHomePage>
               ),
           ],
         ),
-        title: Text(
-          title,
-          style: AppTypography.bodyMedium.copyWith(
-            color: isSelected ? AppColors.primary : AppColors.textPrimary,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: _loadBusinessData,
         ),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          onSelected: (value) {
+            switch (value) {
+              case 'profile':
+                _tabController.animateTo(6); // Business profile tab
+                break;
+              case 'logout':
+                Navigator.pushReplacementNamed(context, '/');
+                break;
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'profile',
+              child: ListTile(
+                leading: Icon(Icons.business),
+                title: Text('İşletme Profili'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'logout',
+              child: ListTile(
+                leading: Icon(Icons.logout, color: AppColors.error),
+                title: Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ],
         ),
-        tileColor: isSelected ? AppColors.primary.withOpacity(0.1) : null,
-        selected: isSelected,
-      ),
-    );
-  }
-
-  Widget _buildMainContent() {
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildOverviewTab(),
-        _buildOrdersTab(),
-        _buildMenuTab(),
-        _buildAnalyticsTab(),
       ],
     );
   }
 
-  void _setSelectedIndex(int index) {
-    setState(() {
-      _tabController.animateTo(index);
-    });
+  Widget _buildTabBar() {
+    return Container(
+      color: AppColors.white,
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: true,
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorColor: AppColors.primary,
+        indicatorWeight: 3,
+        labelStyle: AppTypography.bodyMedium.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: AppTypography.bodyMedium,
+        tabs: [
+          Tab(
+            icon: Icon(Icons.dashboard),
+            text: 'Genel Bakış',
+          ),
+          Tab(
+            icon: Stack(
+              children: [
+                Icon(Icons.receipt_long),
+                if (_pendingOrders > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            text: 'Siparişler',
+          ),
+          Tab(
+            icon: Icon(Icons.category),
+            text: 'Kategoriler',
+          ),
+          Tab(
+            icon: Icon(Icons.restaurant_menu),
+            text: 'Ürünler',
+          ),
+          Tab(
+            icon: Icon(Icons.local_offer),
+            text: 'İndirimler',
+          ),
+          Tab(
+            icon: Icon(Icons.qr_code),
+            text: 'QR Kodlar',
+          ),
+          Tab(
+            icon: Icon(Icons.settings),
+            text: 'Ayarlar',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabView() {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildOverviewTab(),
+        OrderManagementPage(businessId: widget.businessId),
+        CategoryManagementPage(businessId: widget.businessId),
+        ProductManagementPage(businessId: widget.businessId),
+        DiscountManagementPage(businessId: widget.businessId),
+        QRManagementPage(businessId: widget.businessId),
+        BusinessProfilePage(businessId: widget.businessId),
+      ],
+    );
   }
 
   Widget _buildOverviewTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Başlık
-          Text(
-            'İşletme Genel Bakış',
-            style: AppTypography.h3.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-
           // İstatistik kartları
           _buildStatsGrid(),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // Son siparişler ve popüler ürünler
+          // Son siparişler ve hızlı işlemler
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Son siparişler
               Expanded(
+                flex: 2,
                 child: _buildRecentOrders(),
               ),
-              const SizedBox(width: 24),
-              // Popüler ürünler
+              const SizedBox(width: 16),
+              // Hızlı işlemler
               Expanded(
-                child: _buildPopularProducts(),
+                child: _buildQuickActions(),
               ),
             ],
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // Hızlı işlemler
-          _buildQuickActions(),
+          // Popüler ürünler ve kategoriler
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildPopularProducts(),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildCategoriesOverview(),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -696,39 +515,39 @@ class _BusinessHomePageState extends State<BusinessHomePage>
   Widget _buildStatsGrid() {
     return GridView.count(
       crossAxisCount: 4,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.2,
       children: [
         _buildStatCard(
-          title: 'Toplam Sipariş',
-          value: _totalOrders.toString(),
-          icon: Icons.receipt_long,
+          title: 'Bugünkü Siparişler',
+          value: _todayOrders.toString(),
+          icon: Icons.today,
           color: AppColors.primary,
-          trend: '+${_todayOrders} bugün',
+          subtitle: '${_todayRevenue.toStringAsFixed(2)} TL',
+        ),
+        _buildStatCard(
+          title: 'Bekleyen Siparişler',
+          value: _pendingOrders.toString(),
+          icon: Icons.pending,
+          color: _pendingOrders > 0 ? AppColors.warning : AppColors.success,
+          subtitle: 'Aktif',
+        ),
+        _buildStatCard(
+          title: 'Toplam Ürünler',
+          value: _totalProducts.toString(),
+          icon: Icons.restaurant_menu,
+          color: AppColors.info,
+          subtitle: '$_totalCategories kategori',
         ),
         _buildStatCard(
           title: 'Toplam Gelir',
-          value: '₺${_totalRevenue.toStringAsFixed(2)}',
+          value: '${_totalRevenue.toStringAsFixed(0)} TL',
           icon: Icons.attach_money,
           color: AppColors.success,
-          trend: '+₺${_todayRevenue.toStringAsFixed(2)} bugün',
-        ),
-        _buildStatCard(
-          title: 'Toplam Ürün',
-          value: _totalProducts.toString(),
-          icon: Icons.restaurant_menu,
-          color: AppColors.warning,
-          trend: '${_categories.length} kategori',
-        ),
-        _buildStatCard(
-          title: 'Aktif Kategori',
-          value: _totalCategories.toString(),
-          icon: Icons.category,
-          color: AppColors.info,
-          trend: 'Aktif',
+          subtitle: '$_totalOrders sipariş',
         ),
       ],
     );
@@ -739,53 +558,60 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     required String value,
     required IconData icon,
     required Color color,
-    required String trend,
+    String? subtitle,
   }) {
     return Card(
       elevation: 2,
-      child: Padding(
+      child: Container(
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withOpacity(0.1),
+              color.withOpacity(0.05),
+            ],
+          ),
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 24),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    trend,
-                    style: AppTypography.caption.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+            Icon(
+              icon,
+              color: color,
+              size: 24,
             ),
-            const Spacer(),
+            const SizedBox(height: 8),
             Text(
               value,
-              style: AppTypography.h2.copyWith(
-                color: color,
+              style: AppTypography.h5.copyWith(
                 fontWeight: FontWeight.bold,
+                color: color,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               title,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textLight,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textLight,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),
@@ -795,7 +621,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
   Widget _buildRecentOrders() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -804,17 +630,17 @@ class _BusinessHomePageState extends State<BusinessHomePage>
               children: [
                 Text(
                   'Son Siparişler',
-                  style: AppTypography.h5.copyWith(
-                    fontWeight: FontWeight.w600,
+                  style: AppTypography.h6.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _setSelectedIndex(1),
+                  onPressed: () => _tabController.animateTo(1),
                   child: const Text('Tümünü Gör'),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             if (_recentOrders.isEmpty)
               const EmptyState(
                 icon: Icons.receipt_long,
@@ -822,204 +648,144 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                 message: 'İlk siparişinizi bekliyoruz',
               )
             else
-              Column(
-                children: _recentOrders.map((order) {
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: _getOrderStatusColor(order.status.value).withOpacity(0.1),
-                      child: Icon(
-                        _getOrderStatusIcon(order.status.value),
-                        color: _getOrderStatusColor(order.status.value),
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      'Sipariş #${order.orderId.substring(0, 8)}',
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '₺${order.totalAmount.toStringAsFixed(2)} • ${_getOrderStatusText(order.status.value)}',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                    trailing: Text(
-                      _formatTime(order.createdAt),
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
+              ...(_recentOrders.take(3).map((order) => _buildOrderItem(order))),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPopularProducts() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildOrderItem(app_order.Order order) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _getStatusColor(order.status),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: _getStatusColor(order.status),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Popüler Ürünler',
-                  style: AppTypography.h5.copyWith(
+                  'Masa ${order.tableNumber} - ${order.customerName}',
+                  style: AppTypography.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                TextButton(
-                  onPressed: () => _setSelectedIndex(2),
-                  child: const Text('Tümünü Gör'),
+                Text(
+                  '${order.totalAmount.toStringAsFixed(2)} TL - ${_getStatusText(order.status)}',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            if (_popularProducts.isEmpty)
-              const EmptyState(
-                icon: Icons.restaurant_menu,
-                title: 'Henüz ürün yok',
-                message: 'İlk ürününüzü ekleyin',
-              )
-            else
-              Column(
-                children: _popularProducts.take(5).map((product) {
-                  return ListTile(
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: AppColors.greyLight,
-                      ),
-                      child: product.primaryImage != null && product.primaryImage!.url.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                product.primaryImage!.url,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.restaurant,
-                                    color: AppColors.textLight,
-                                  );
-                                },
-                              ),
-                            )
-                          : const Icon(
-                              Icons.restaurant,
-                              color: AppColors.textLight,
-                            ),
-                    ),
-                    title: Text(
-                      product.name,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '₺${product.price.toStringAsFixed(2)}',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: product.isAvailable 
-                            ? AppColors.success.withOpacity(0.1)
-                            : AppColors.error.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        product.isAvailable ? 'Aktif' : 'Pasif',
-                        style: AppTypography.caption.copyWith(
-                          color: product.isAvailable 
-                              ? AppColors.success 
-                              : AppColors.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-          ],
-        ),
+          ),
+          Text(
+            _formatTime(order.createdAt),
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textLight,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Color _getStatusColor(app_order.OrderStatus status) {
+    switch (status) {
+      case app_order.OrderStatus.pending:
+        return AppColors.warning;
+      case app_order.OrderStatus.inProgress:
+        return AppColors.info;
+      case app_order.OrderStatus.completed:
+        return AppColors.success;
+      case app_order.OrderStatus.cancelled:
+        return AppColors.error;
+    }
+  }
+
+  String _getStatusText(app_order.OrderStatus status) {
+    switch (status) {
+      case app_order.OrderStatus.pending:
+        return 'Bekliyor';
+      case app_order.OrderStatus.inProgress:
+        return 'Hazırlanıyor';
+      case app_order.OrderStatus.completed:
+        return 'Tamamlandı';
+      case app_order.OrderStatus.cancelled:
+        return 'İptal Edildi';
+    }
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}dk';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}s';
+    } else {
+      return '${difference.inDays}g';
+    }
   }
 
   Widget _buildQuickActions() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Hızlı İşlemler',
-              style: AppTypography.h5.copyWith(
-                fontWeight: FontWeight.w600,
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildQuickActionButton(
-                  title: 'Yeni Ürün Ekle',
-                  icon: Icons.add,
-                  color: AppColors.success,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/business/products',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-                _buildQuickActionButton(
-                  title: 'Kategori Ekle',
-                  icon: Icons.category,
-                  color: AppColors.primary,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/business/categories',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-                _buildQuickActionButton(
-                  title: 'QR Kod Oluştur',
-                  icon: Icons.qr_code,
-                  color: AppColors.info,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/business/qr-codes',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-                _buildQuickActionButton(
-                  title: 'İndirim Ekle',
-                  icon: Icons.local_offer,
-                  color: AppColors.warning,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    '/business/discounts',
-                    arguments: {'businessId': widget.businessId},
-                  ),
-                ),
-              ],
+            _buildQuickActionButton(
+              title: 'Yeni Ürün Ekle',
+              icon: Icons.add,
+              color: AppColors.success,
+              onTap: () => _tabController.animateTo(3),
+            ),
+            const SizedBox(height: 8),
+            _buildQuickActionButton(
+              title: 'Kategori Ekle',
+              icon: Icons.category,
+              color: AppColors.primary,
+              onTap: () => _tabController.animateTo(2),
+            ),
+            const SizedBox(height: 8),
+            _buildQuickActionButton(
+              title: 'İndirim Oluştur',
+              icon: Icons.local_offer,
+              color: AppColors.warning,
+              onTap: () => _tabController.animateTo(4),
+            ),
+            const SizedBox(height: 8),
+            _buildQuickActionButton(
+              title: 'QR Kod Oluştur',
+              icon: Icons.qr_code,
+              color: AppColors.info,
+              onTap: () => _tabController.animateTo(5),
             ),
           ],
         ),
@@ -1037,7 +803,8 @@ class _BusinessHomePageState extends State<BusinessHomePage>
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
@@ -1046,10 +813,9 @@ class _BusinessHomePageState extends State<BusinessHomePage>
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Text(
               title,
               style: AppTypography.bodyMedium.copyWith(
@@ -1063,106 +829,209 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     );
   }
 
-  Widget _buildOrdersTab() {
-    return const Center(
-      child: EmptyState(
-        icon: Icons.receipt_long,
-        title: 'Sipariş Yönetimi',
-        message: 'Bu sayfa yakında eklenecek',
+  Widget _buildPopularProducts() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Popüler Ürünler',
+                  style: AppTypography.h6.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _tabController.animateTo(3),
+                  child: const Text('Tümünü Gör'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_popularProducts.isEmpty)
+              const EmptyState(
+                icon: Icons.restaurant_menu,
+                title: 'Henüz ürün yok',
+                message: 'İlk ürününüzü ekleyin',
+              )
+            else
+              ...(_popularProducts.take(5).map((product) => _buildProductItem(product))),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildMenuTab() {
-    return const Center(
-      child: EmptyState(
-        icon: Icons.restaurant_menu,
-        title: 'Menü Yönetimi',
-        message: 'Bu sayfa yakında eklenecek',
+  Widget _buildProductItem(Product product) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          if (product.imageUrl != null)
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: AppColors.greyLight,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  product.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => 
+                    Icon(Icons.restaurant, color: AppColors.textSecondary),
+                ),
+              ),
+            ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.productName,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${product.price.toStringAsFixed(2)} TL',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: product.isAvailable ? AppColors.success : AppColors.error,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              product.isAvailable ? 'Mevcut' : 'Tükendi',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAnalyticsTab() {
-    return const Center(
-      child: EmptyState(
-        icon: Icons.analytics,
-        title: 'Analitikler',
-        message: 'Bu sayfa yakında eklenecek',
+  Widget _buildCategoriesOverview() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Kategoriler',
+                  style: AppTypography.h6.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _tabController.animateTo(2),
+                  child: const Text('Yönet'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_categories.isEmpty)
+              const EmptyState(
+                icon: Icons.category,
+                title: 'Henüz kategori yok',
+                message: 'İlk kategorinizi ekleyin',
+              )
+            else
+              ...(_categories.take(4).map((category) => _buildCategoryItem(category))),
+          ],
+        ),
       ),
     );
   }
 
-  // Helper methods
-  Color _getOrderStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return AppColors.warning;
-      case 'confirmed':
-        return AppColors.info;
-      case 'preparing':
-        return AppColors.primary;
-      case 'ready':
-        return AppColors.success;
-      case 'completed':
-        return AppColors.success;
-      case 'cancelled':
-        return AppColors.error;
-      default:
-        return AppColors.textLight;
-    }
-  }
-
-  IconData _getOrderStatusIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return Icons.schedule;
-      case 'confirmed':
-        return Icons.check_circle;
-      case 'preparing':
-        return Icons.restaurant;
-      case 'ready':
-        return Icons.done;
-      case 'completed':
-        return Icons.done_all;
-      case 'cancelled':
-        return Icons.cancel;
-      default:
-        return Icons.receipt;
-    }
-  }
-
-  String _getOrderStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Bekliyor';
-      case 'confirmed':
-        return 'Onaylandı';
-      case 'preparing':
-        return 'Hazırlanıyor';
-      case 'ready':
-        return 'Hazır';
-      case 'completed':
-        return 'Tamamlandı';
-      case 'cancelled':
-        return 'İptal Edildi';
-      default:
-        return 'Bilinmiyor';
-    }
-  }
-
-  String _formatTime(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inMinutes < 1) {
-      return 'Az önce';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} dk önce';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} saat önce';
-    } else {
-      return '${date.day}/${date.month}';
-    }
+  Widget _buildCategoryItem(Category category) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.category,
+              color: AppColors.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  category.categoryName,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${category.description ?? 'Açıklama yok'}',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: category.isActive ? AppColors.success : AppColors.error,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              category.isActive ? 'Aktif' : 'Pasif',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 } 

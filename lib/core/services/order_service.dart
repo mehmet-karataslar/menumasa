@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import '../../data/models/order.dart';
 import '../../data/models/cart.dart';
 
@@ -8,11 +10,17 @@ class OrderService {
   factory OrderService() => _instance;
   OrderService._internal();
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late SharedPreferences _prefs;
   bool _initialized = false;
 
+  // Collections
+  final String _ordersCollection = 'orders';
+  final String _businessOrdersCollection = 'business_orders';
+
   // Order change listeners
-  final List<Function(List<Order>)> _orderListeners = [];
+  final Map<String, List<Function(List<Order>)>> _orderListeners = {};
+  final Map<String, StreamSubscription<QuerySnapshot>?> _orderStreams = {};
 
   Future<void> initialize() async {
     if (!_initialized) {
@@ -21,57 +29,200 @@ class OrderService {
     }
   }
 
-  // Order listeners
-  void addOrderListener(Function(List<Order>) listener) {
-    _orderListeners.add(listener);
+  // Order listeners for real-time updates
+  void addOrderListener(String businessId, Function(List<Order>) listener) {
+    if (!_orderListeners.containsKey(businessId)) {
+      _orderListeners[businessId] = [];
+      _startOrderStream(businessId);
+    }
+    _orderListeners[businessId]!.add(listener);
   }
 
-  void removeOrderListener(Function(List<Order>) listener) {
-    _orderListeners.remove(listener);
-  }
-
-  void _notifyOrderListeners(String businessId) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    for (final listener in _orderListeners) {
-      listener(orders);
+  void removeOrderListener(String businessId, Function(List<Order>) listener) {
+    _orderListeners[businessId]?.remove(listener);
+    if (_orderListeners[businessId]?.isEmpty == true) {
+      _orderListeners.remove(businessId);
+      _orderStreams[businessId]?.cancel();
+      _orderStreams.remove(businessId);
     }
   }
 
-  // Order CRUD operations
+  void _startOrderStream(String businessId) {
+    _orderStreams[businessId] = _firestore
+        .collection(_ordersCollection)
+        .where('businessId', isEqualTo: businessId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      final orders = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+
+      _notifyOrderListeners(businessId, orders);
+    });
+  }
+
+  void _notifyOrderListeners(String businessId, List<Order> orders) {
+    final listeners = _orderListeners[businessId];
+    if (listeners != null) {
+      for (final listener in listeners) {
+        listener(orders);
+      }
+    }
+  }
+
+  // Order CRUD operations using Firestore
   Future<List<Order>> getAllOrders() async {
-    await initialize();
-    final ordersJson = _prefs.getStringList('orders') ?? [];
-    return ordersJson.map((json) => Order.fromJson(jsonDecode(json))).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Latest first
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      // Fallback to local storage if Firestore fails
+      await initialize();
+      final ordersJson = _prefs.getStringList('orders') ?? [];
+      return ordersJson.map((json) => Order.fromJson(jsonDecode(json))).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
   }
 
   Future<List<Order>> getOrdersByBusinessId(String businessId) async {
-    final orders = await getAllOrders();
-    return orders.where((order) => order.businessId == businessId).toList();
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      // Fallback to local storage
+      final orders = await getAllOrders();
+      return orders.where((order) => order.businessId == businessId).toList();
+    }
   }
 
   Future<List<Order>> getOrdersByCustomerPhone(
     String customerPhone,
     String businessId,
   ) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    return orders
-        .where((order) => order.customerPhone == customerPhone)
-        .toList();
-  }
-
-  Future<Order?> getOrder(String orderId) async {
-    final orders = await getAllOrders();
     try {
-      return orders.firstWhere((order) => order.orderId == orderId);
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .where('customerPhone', isEqualTo: customerPhone)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
     } catch (e) {
-      return null;
+      // Fallback to local storage
+      final orders = await getOrdersByBusinessId(businessId);
+      return orders
+          .where((order) => order.customerPhone == customerPhone)
+          .toList();
     }
   }
 
-  Future<void> saveOrder(Order order) async {
+  Future<Order?> getOrder(String orderId) async {
+    try {
+      final doc = await _firestore
+          .collection(_ordersCollection)
+          .doc(orderId)
+          .get();
+
+      if (doc.exists) {
+        return Order.fromJson(doc.data()!, id: doc.id);
+      }
+      return null;
+    } catch (e) {
+      // Fallback to local storage
+      final orders = await getAllOrders();
+      try {
+        return orders.firstWhere((order) => order.orderId == orderId);
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+
+  Future<String> saveOrder(Order order) async {
+    try {
+      final data = order.toJson();
+      String orderId;
+
+      if (order.orderId.isEmpty || order.orderId.startsWith('order_')) {
+        // New order - create in Firestore
+        data['createdAt'] = FieldValue.serverTimestamp();
+        data['updatedAt'] = FieldValue.serverTimestamp();
+        
+        final docRef = await _firestore
+            .collection(_ordersCollection)
+            .add(data);
+        
+        orderId = docRef.id;
+        
+        // Also save to business orders for quick lookup
+        await _firestore
+            .collection(_businessOrdersCollection)
+            .doc('${order.businessId}_${docRef.id}')
+            .set({
+              'businessId': order.businessId,
+              'orderId': docRef.id,
+              'status': order.status.value,
+              'createdAt': FieldValue.serverTimestamp(),
+              'tableNumber': order.tableNumber,
+              'customerName': order.customerName,
+              'totalAmount': order.totalAmount,
+            });
+      } else {
+        // Update existing order
+        data['updatedAt'] = FieldValue.serverTimestamp();
+        await _firestore
+            .collection(_ordersCollection)
+            .doc(order.orderId)
+            .update(data);
+        
+        // Update business orders index
+        await _firestore
+            .collection(_businessOrdersCollection)
+            .doc('${order.businessId}_${order.orderId}')
+            .update({
+              'status': order.status.value,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+        
+        orderId = order.orderId;
+      }
+
+      // Also save locally as backup
+      await _saveOrderLocally(order.copyWith(orderId: orderId));
+      
+      return orderId;
+    } catch (e) {
+      // Fallback to local storage
+      await initialize();
+      await _saveOrderLocally(order);
+      return order.orderId;
+    }
+  }
+
+  Future<void> _saveOrderLocally(Order order) async {
     await initialize();
-    final orders = await getAllOrders();
+    final orders = await _getLocalOrders();
     final index = orders.indexWhere((o) => o.orderId == order.orderId);
 
     if (index >= 0) {
@@ -82,20 +233,37 @@ class OrderService {
 
     final ordersJson = orders.map((o) => jsonEncode(o.toJson())).toList();
     await _prefs.setStringList('orders', ordersJson);
-    _notifyOrderListeners(order.businessId);
+  }
+
+  Future<List<Order>> _getLocalOrders() async {
+    await initialize();
+    final ordersJson = _prefs.getStringList('orders') ?? [];
+    return ordersJson.map((json) => Order.fromJson(jsonDecode(json))).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   Future<void> deleteOrder(String orderId) async {
-    await initialize();
-    final orders = await getAllOrders();
-    final orderToDelete = orders.where((o) => o.orderId == orderId).firstOrNull;
-    orders.removeWhere((o) => o.orderId == orderId);
-
-    final ordersJson = orders.map((o) => jsonEncode(o.toJson())).toList();
-    await _prefs.setStringList('orders', ordersJson);
-
-    if (orderToDelete != null) {
-      _notifyOrderListeners(orderToDelete.businessId);
+    try {
+      // Get order details first
+      final order = await getOrder(orderId);
+      
+      // Delete from Firestore
+      await _firestore.collection(_ordersCollection).doc(orderId).delete();
+      
+      // Delete from business orders index
+      if (order != null) {
+        await _firestore
+            .collection(_businessOrdersCollection)
+            .doc('${order.businessId}_$orderId')
+            .delete();
+      }
+    } catch (e) {
+      // Fallback to local storage
+      await initialize();
+      final orders = await _getLocalOrders();
+      orders.removeWhere((o) => o.orderId == orderId);
+      final ordersJson = orders.map((o) => jsonEncode(o.toJson())).toList();
+      await _prefs.setStringList('orders', ordersJson);
     }
   }
 
@@ -115,8 +283,8 @@ class OrderService {
       notes: notes,
     );
 
-    await saveOrder(order);
-    return order;
+    final orderId = await saveOrder(order);
+    return order.copyWith(orderId: orderId);
   }
 
   // Order status management
@@ -146,79 +314,175 @@ class OrderService {
 
   // Business order management
   Future<List<Order>> getPendingOrders(String businessId) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    return orders
-        .where((order) => order.status == OrderStatus.pending)
-        .toList();
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .where('status', isEqualTo: OrderStatus.pending.value)
+          .orderBy('createdAt', descending: false) // Oldest first for pending
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      final orders = await getOrdersByBusinessId(businessId);
+      return orders
+          .where((order) => order.status == OrderStatus.pending)
+          .toList();
+    }
   }
 
   Future<List<Order>> getActiveOrders(String businessId) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    return orders.where((order) => order.isActive).toList();
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .where('status', whereIn: [
+            OrderStatus.pending.value,
+            OrderStatus.inProgress.value,
+          ])
+          .orderBy('createdAt', descending: false)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      final orders = await getOrdersByBusinessId(businessId);
+      return orders.where((order) => order.isActive).toList();
+    }
   }
 
   Future<List<Order>> getCompletedOrders(String businessId) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    return orders
-        .where((order) => order.status == OrderStatus.completed)
-        .toList();
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .where('status', isEqualTo: OrderStatus.completed.value)
+          .orderBy('createdAt', descending: true)
+          .limit(50) // Limit for performance
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      final orders = await getOrdersByBusinessId(businessId);
+      return orders
+          .where((order) => order.status == OrderStatus.completed)
+          .toList();
+    }
   }
 
   Future<List<Order>> getTodaysOrders(String businessId) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    final today = DateTime.now();
-    return orders.where((order) {
-      final orderDate = order.createdAt;
-      return orderDate.year == today.year &&
-          orderDate.month == today.month &&
-          orderDate.day == today.day;
-    }).toList();
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      final orders = await getOrdersByBusinessId(businessId);
+      final today = DateTime.now();
+      return orders.where((order) {
+        final orderDate = order.createdAt;
+        return orderDate.year == today.year &&
+            orderDate.month == today.month &&
+            orderDate.day == today.day;
+      }).toList();
+    }
   }
 
   Future<List<Order>> getOrdersByTable(
     String businessId,
     int tableNumber,
   ) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    return orders.where((order) => order.tableNumber == tableNumber).toList();
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .where('tableNumber', isEqualTo: tableNumber)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      final orders = await getOrdersByBusinessId(businessId);
+      return orders.where((order) => order.tableNumber == tableNumber).toList();
+    }
   }
 
   Future<List<Order>> getOrdersByStatus(
     String businessId,
     OrderStatus status,
   ) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    return orders.where((order) => order.status == status).toList();
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('businessId', isEqualTo: businessId)
+          .where('status', isEqualTo: status.value)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      final orders = await getOrdersByBusinessId(businessId);
+      return orders.where((order) => order.status == status).toList();
+    }
   }
 
   // Order statistics
   Future<Map<String, dynamic>> getOrderStatistics(String businessId) async {
-    final orders = await getOrdersByBusinessId(businessId);
-    final todaysOrders = await getTodaysOrders(businessId);
-    final activeOrders = await getActiveOrders(businessId);
-    final completedOrders = await getCompletedOrders(businessId);
+    try {
+      // Get today's orders for real-time stats
+      final todaysOrders = await getTodaysOrders(businessId);
+      final activeOrders = await getActiveOrders(businessId);
+      final pendingOrders = await getPendingOrders(businessId);
+      
+      // Calculate stats
+      final todaysRevenue = todaysOrders
+          .where((order) => order.status == OrderStatus.completed)
+          .fold(0.0, (sum, order) => sum + order.totalAmount);
 
-    final totalRevenue = completedOrders.fold(
-      0.0,
-      (sum, order) => sum + order.totalAmount,
-    );
-    final todaysRevenue = todaysOrders
-        .where((order) => order.status == OrderStatus.completed)
-        .fold(0.0, (sum, order) => sum + order.totalAmount);
+      final averageOrderValue = todaysOrders.isNotEmpty
+          ? todaysRevenue / todaysOrders.length
+          : 0.0;
 
-    final averageOrderValue = completedOrders.isNotEmpty
-        ? totalRevenue / completedOrders.length
-        : 0.0;
-
-    return {
-      'totalOrders': orders.length,
-      'todaysOrders': todaysOrders.length,
-      'activeOrders': activeOrders.length,
-      'completedOrders': completedOrders.length,
-      'totalRevenue': totalRevenue,
-      'todaysRevenue': todaysRevenue,
-      'averageOrderValue': averageOrderValue,
-    };
+      return {
+        'todaysOrders': todaysOrders.length,
+        'activeOrders': activeOrders.length,
+        'pendingOrders': pendingOrders.length,
+        'todaysRevenue': todaysRevenue,
+        'averageOrderValue': averageOrderValue,
+      };
+    } catch (e) {
+      return {
+        'todaysOrders': 0,
+        'activeOrders': 0,
+        'pendingOrders': 0,
+        'todaysRevenue': 0.0,
+        'averageOrderValue': 0.0,
+      };
+    }
   }
 
   // Order filtering and searching
@@ -259,16 +523,59 @@ class OrderService {
     }).toList();
   }
 
+  // Real-time order notifications for businesses
+  Stream<List<Order>> getOrderStream(String businessId) {
+    return _firestore
+        .collection(_ordersCollection)
+        .where('businessId', isEqualTo: businessId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    });
+  }
+
+  // Get pending orders stream for real-time updates
+  Stream<List<Order>> getPendingOrdersStream(String businessId) {
+    return _firestore
+        .collection(_ordersCollection)
+        .where('businessId', isEqualTo: businessId)
+        .where('status', isEqualTo: OrderStatus.pending.value)
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Order.fromJson(data, id: doc.id);
+      }).toList();
+    });
+  }
+
   // Utility methods
   Future<void> clearAllOrders() async {
     await initialize();
     await _prefs.remove('orders');
+    
+    // Note: We don't clear Firestore orders as they should persist
     _orderListeners.clear();
+    for (final stream in _orderStreams.values) {
+      stream?.cancel();
+    }
+    _orderStreams.clear();
   }
 
   Future<void> dispose() async {
     _orderListeners.clear();
+    for (final stream in _orderStreams.values) {
+      stream?.cancel();
+    }
+    _orderStreams.clear();
   }
+
+
 }
 
 // Extension for easier null checking

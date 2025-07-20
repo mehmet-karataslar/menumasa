@@ -272,6 +272,9 @@ class Discount {
     return 'Discount(discountId: $discountId, name: $name, type: $type, value: $value, isActive: $isActive)';
   }
 
+  // Convenience getters for backward compatibility
+  List<String> get applicableCategories => targetCategoryIds;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

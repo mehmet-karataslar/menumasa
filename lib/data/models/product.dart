@@ -257,6 +257,10 @@ class Product {
     return 'Product(productId: $productId, name: $name, price: $price, currentPrice: $currentPrice, isActive: $isActive, isAvailable: $isAvailable)';
   }
 
+  // Convenience getters for backward compatibility
+  String get productName => name;
+  String? get imageUrl => images.isNotEmpty ? images.first.url : null;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

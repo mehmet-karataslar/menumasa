@@ -159,6 +159,9 @@ class Category {
     return 'Category(categoryId: $categoryId, name: $name, businessId: $businessId, sortOrder: $sortOrder, isActive: $isActive)';
   }
 
+  // Convenience getters for backward compatibility
+  String get categoryName => name;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
