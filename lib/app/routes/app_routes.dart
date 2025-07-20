@@ -336,7 +336,7 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
         print('BusinessDashboard - User data: ${userData?.toJson()}'); // Debug log
         print('BusinessDashboard - User type: ${userData?.userType}'); // Debug log
         
-        if (userData != null && userData.userType == UserType.business) {
+        if (userData != null && userData.userType.value == 'business') {
           // Get business ID from business_users collection
           final businessUserDoc = await FirebaseFirestore.instance
               .collection('business_users')

@@ -308,7 +308,7 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
 
       if (user != null && mounted) {
         // Check if user is business type
-        if (user.userType == UserType.business) {
+        if (user.userType.value == 'business') {
           // Başarılı giriş - Business dashboard'a yönlendir
           Navigator.pushReplacementNamed(context, '/business/dashboard');
         } else {

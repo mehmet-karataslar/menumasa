@@ -243,9 +243,9 @@ class _RouterPageState extends State<RouterPage> {
                               print('Router - User data: ${userData?.toJson()}'); // Debug log
                               print('Router - User type: ${userData?.userType}'); // Debug log
                               
-                              if (userData?.userType == UserType.business) {
+                              if (userData?.userType.value == 'business') {
                                 Navigator.pushNamed(context, '/business/dashboard');
-                              } else if (userData?.userType == UserType.customer) {
+                              } else if (userData?.userType.value == 'customer') {
                                 Navigator.pushNamed(context, '/customer/home', 
                                   arguments: {'userId': userData!.id});
                               } else {

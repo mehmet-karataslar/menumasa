@@ -69,7 +69,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       // If logged in, check if it's already a business user
       final userData = await _authService.getCurrentUserData();
       if (userData != null && mounted) {
-        if (userData.userType == UserType.business) {
+        if (userData.userType.value == 'business') {
           // Already a business user, redirect to dashboard
           Navigator.pushReplacementNamed(context, '/business/dashboard');
           return;
