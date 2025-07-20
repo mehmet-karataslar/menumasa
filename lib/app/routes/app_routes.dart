@@ -10,6 +10,8 @@ import '../../customer/pages/product_detail_page.dart';
 import '../../customer/pages/customer_orders_page.dart';
 import '../../customer/pages/customer_home_page.dart';
 import '../../customer/pages/customer_dashboard_page.dart';
+import '../../customer/pages/customer_profile_page.dart';
+import '../../customer/pages/cart_page.dart';
 import '../../customer/pages/business_detail_page.dart';
 import '../../customer/pages/search_page.dart';
 import '../../business/pages/business_home_page.dart';
@@ -43,6 +45,8 @@ class AppRoutes {
   static const String customerHome = '/customer/home';
   static const String customerDashboard = '/customer/dashboard';
   static const String customerOrders = '/customer/orders';
+  static const String customerProfile = '/customer/profile';
+  static const String customerCart = '/customer/cart';
   static const String menu = '/menu';
   static const String productDetail = '/product-detail';
   static const String businessDetail = '/business/detail';
@@ -77,6 +81,8 @@ class AppRoutes {
     customerHome: (context) => const CustomerHomeRouterPage(),
     customerDashboard: (context) => const CustomerDashboardRouterPage(),
     customerOrders: (context) => const CustomerOrdersRouterPage(),
+    customerProfile: (context) => const CustomerProfileRouterPage(),
+    customerCart: (context) => const CustomerCartRouterPage(),
     menu: (context) => const MenuRouterPage(),
     productDetail: (context) => const ProductDetailRouterPage(),
     businessDetail: (context) => const BusinessDetailRouterPage(),
@@ -157,7 +163,7 @@ class AppRoutes {
 
         case 'dashboard':
           final args = settings.arguments as Map<String, dynamic>?;
-          final userId = args?['userId'] ?? 'guest';
+          final userId = args?['userId'] as String? ?? 'guest';
           return MaterialPageRoute(
             builder: (context) => CustomerDashboardPage(userId: userId),
             settings: settings,
@@ -165,11 +171,115 @@ class AppRoutes {
 
         case 'orders':
           final args = settings.arguments as Map<String, dynamic>?;
-          final userId = args?['userId'] ?? 'guest';
+          final businessId = args?['businessId'] as String?;
+          final customerPhone = args?['customerPhone'] as String?;
+          final customerId = args?['customerId'] as String?;
           return MaterialPageRoute(
-            builder: (context) => CustomerOrdersPage(userId: userId, businessId: '',),
+            builder: (context) => CustomerOrdersPage(
+              businessId: businessId,
+              customerPhone: customerPhone,
+              customerId: customerId,
+            ),
             settings: settings,
           );
+
+        case 'profile':
+          final args = settings.arguments as Map<String, dynamic>?;
+          final customerData = args?['customerData'];
+          final userId = args?['userId'] as String?;
+          return MaterialPageRoute(
+            builder: (context) => CustomerProfilePage(
+              customerData: customerData,
+            ),
+            settings: settings,
+          );
+
+        case 'cart':
+          final args = settings.arguments as Map<String, dynamic>?;
+          final businessId = args?['businessId'] as String?;
+          final userId = args?['userId'] as String?;
+          if (businessId == null) return null;
+          return MaterialPageRoute(
+            builder: (context) => CartPage(businessId: businessId),
+            settings: settings,
+          );
+
+        // Handle dynamic routes like /customer/{userId}/business/{businessId}
+        default:
+          if (pathSegments.length >= 4) {
+            final userId = pathSegments[1];
+            final actionType = pathSegments[2];
+            final targetId = pathSegments[3];
+
+            switch (actionType) {
+              case 'business':
+                final args = settings.arguments as Map<String, dynamic>?;
+                final business = args?['business'];
+                final customerData = args?['customerData'];
+                if (business == null) return null;
+                return MaterialPageRoute(
+                  builder: (context) => BusinessDetailPage(
+                    business: business,
+                    customerData: customerData,
+                  ),
+                  settings: settings,
+                );
+
+              case 'menu':
+                final args = settings.arguments as Map<String, dynamic>?;
+                return MaterialPageRoute(
+                  builder: (context) => MenuPage(businessId: targetId),
+                  settings: settings,
+                );
+
+              case 'cart':
+                return MaterialPageRoute(
+                  builder: (context) => CartPage(businessId: targetId),
+                  settings: settings,
+                );
+
+              case 'orders':
+                final args = settings.arguments as Map<String, dynamic>?;
+                return MaterialPageRoute(
+                  builder: (context) => CustomerOrdersPage(
+                    businessId: targetId,
+                    customerId: userId,
+                  ),
+                  settings: settings,
+                );
+            }
+          }
+          
+          // Handle /customer/{userId}/search and /customer/{userId}/profile
+          if (pathSegments.length >= 3) {
+            final userId = pathSegments[1];
+            final actionType = pathSegments[2];
+
+            switch (actionType) {
+              case 'search':
+                final args = settings.arguments as Map<String, dynamic>?;
+                final businesses = args?['businesses'] as List<dynamic>? ?? [];
+                final categories = args?['categories'] as List<dynamic>? ?? [];
+                return MaterialPageRoute(
+                  builder: (context) => SearchPage(
+                    businesses: businesses.cast<Business>(),
+                    categories: categories.cast<app_category.Category>(),
+                  ),
+                  settings: settings,
+                );
+
+              case 'profile':
+                final args = settings.arguments as Map<String, dynamic>?;
+                final customerData = args?['customerData'];
+                return MaterialPageRoute(
+                  builder: (context) => CustomerProfilePage(
+                    customerData: customerData,
+                  ),
+                  settings: settings,
+                );
+            }
+          }
+          break;
       }
     }
 
@@ -296,7 +406,7 @@ class CustomerOrdersRouterPage extends StatelessWidget {
 
     return CustomerOrdersPage(
       businessId: businessId,
-      customerPhone: customerPhone, userId: null,
+      customerPhone: customerPhone,
     );
   }
 }
@@ -455,6 +565,36 @@ class CustomerDashboardRouterPage extends StatelessWidget {
     }
 
     return CustomerDashboardPage(userId: userId);
+  }
+}
+
+class CustomerProfileRouterPage extends StatelessWidget {
+  const CustomerProfileRouterPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final customerData = args?['customerData'];
+
+    return CustomerProfilePage(customerData: customerData);
+  }
+}
+
+class CustomerCartRouterPage extends StatelessWidget {
+  const CustomerCartRouterPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final businessId = args?['businessId'] as String?;
+
+    if (businessId == null || businessId.isEmpty) {
+      return const RouterPage();
+    }
+
+    return CartPage(businessId: businessId);
   }
 }
 

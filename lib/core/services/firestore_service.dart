@@ -1099,4 +1099,43 @@ class FirestoreService {
     _orderStreams.clear();
     _orderListeners.clear();
   }
+
+  // =============================================================================
+  // ADDITIONAL ORDER METHODS
+  // =============================================================================
+
+  /// İşletme ve müşteri telefon numarasına göre siparişleri getir
+  Future<List<app_order.Order>> getOrdersByBusinessAndPhone(String businessId, String customerPhone) async {
+    try {
+      final snapshot = await _ordersRef
+          .where('businessId', isEqualTo: businessId)
+          .where('customerPhone', isEqualTo: customerPhone)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return app_order.Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      throw Exception('İşletme ve telefon numarasına göre siparişler alınırken hata oluştu: $e');
+    }
+  }
+
+  /// İşletmeye göre siparişleri getir
+  Future<List<app_order.Order>> getOrdersByBusiness(String businessId) async {
+    try {
+      final snapshot = await _ordersRef
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return app_order.Order.fromJson(data, id: doc.id);
+      }).toList();
+    } catch (e) {
+      throw Exception('İşletmeye göre siparişler alınırken hata oluştu: $e');
+    }
+  }
 }

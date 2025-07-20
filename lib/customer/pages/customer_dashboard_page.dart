@@ -17,6 +17,7 @@ import '../widgets/business_header.dart';
 import 'menu_page.dart';
 import 'cart_page.dart';
 import 'customer_orders_page.dart';
+import 'business_detail_page.dart'; // Added import for BusinessDetailPage
 
 class CustomerDashboardPage extends StatefulWidget {
   final String userId;
@@ -182,6 +183,141 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     }
   }
 
+  // Navigation methods with dynamic URL updates
+  void _navigateToSearch() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dynamicRoute = '/customer/${widget.userId}/search?t=$timestamp';
+    _urlService.updateUrl(dynamicRoute, customTitle: 'İşletme Ara | MasaMenu');
+    
+    Navigator.pushNamed(
+      context, 
+      '/search',
+      arguments: {
+        'userId': widget.userId,
+        'timestamp': timestamp,
+        'businesses': _nearbyBusinesses,
+        'categories': [], // Will be loaded in search page
+      },
+    );
+  }
+
+  void _navigateToBusinessDetail(Business business) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dynamicRoute = '/customer/${widget.userId}/business/${business.id}?t=$timestamp';
+    _urlService.updateUrl(dynamicRoute, customTitle: '${business.businessName} | MasaMenu');
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BusinessDetailPage(
+          business: business,
+          customerData: _customerData,
+        ),
+        settings: RouteSettings(
+          name: dynamicRoute,
+          arguments: {
+            'business': business,
+            'customerData': _customerData,
+            'userId': widget.userId,
+            'timestamp': timestamp,
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToMenu(Business business) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dynamicRoute = '/customer/${widget.userId}/menu/${business.id}?t=$timestamp';
+    _urlService.updateMenuUrl(business.id, businessName: business.businessName);
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MenuPage(businessId: business.id),
+        settings: RouteSettings(
+          name: dynamicRoute,
+          arguments: {
+            'businessId': business.id,
+            'business': business,
+            'userId': widget.userId,
+            'timestamp': timestamp,
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToCart(String businessId) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dynamicRoute = '/customer/${widget.userId}/cart/$businessId?t=$timestamp';
+    _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetim | MasaMenu');
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartPage(businessId: businessId),
+        settings: RouteSettings(
+          name: dynamicRoute,
+          arguments: {
+            'businessId': businessId,
+            'userId': widget.userId,
+            'timestamp': timestamp,
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToOrders({String? businessId}) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dynamicRoute = businessId != null 
+        ? '/customer/${widget.userId}/orders/$businessId?t=$timestamp'
+        : '/customer/${widget.userId}/orders?t=$timestamp';
+    _urlService.updateCustomerUrl(widget.userId, 'orders', customTitle: 'Siparişlerim | MasaMenu');
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CustomerOrdersPage(
+          businessId: businessId,
+          customerId: widget.userId,
+        ),
+        settings: RouteSettings(
+          name: dynamicRoute,
+          arguments: {
+            'businessId': businessId,
+            'customerId': widget.userId,
+            'userId': widget.userId,
+            'timestamp': timestamp,
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToProfile() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dynamicRoute = '/customer/${widget.userId}/profile?t=$timestamp';
+    _urlService.updateCustomerUrl(widget.userId, 'profile', customTitle: 'Profilim | MasaMenu');
+    
+    Navigator.pushNamed(
+      context,
+      '/customer/profile',
+      arguments: {
+        'customerData': _customerData,
+        'userId': widget.userId,
+        'timestamp': timestamp,
+      },
+    );
+  }
+
+  // Update existing navigation calls to use new methods
+  void _updateNavigationCalls() {
+    // This method contains all the existing navigation updates
+    // Replace all direct Navigator.pushNamed calls with our dynamic methods
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -306,8 +442,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         IconButton(
           icon: Icon(Icons.search_rounded, size: 28),
           onPressed: () {
-            _urlService.updateUrl('/search', customTitle: 'İşletme Ara | MasaMenu');
-            Navigator.pushNamed(context, '/search');
+            _navigateToSearch();
           },
         ),
         PopupMenuButton<String>(
@@ -407,8 +542,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     
     return FloatingActionButton.extended(
       onPressed: () {
-        _urlService.updateUrl('/search', customTitle: 'İşletme Ara | MasaMenu');
-        Navigator.pushNamed(context, '/search');
+        _navigateToSearch();
       },
       backgroundColor: AppColors.accent,
       foregroundColor: AppColors.white,
@@ -595,8 +729,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 icon: Icons.search_rounded,
                 color: AppColors.info,
                 onTap: () {
-                  _urlService.updateUrl('/search', customTitle: 'İşletme Ara | MasaMenu');
-                  Navigator.pushNamed(context, '/search');
+                  _navigateToSearch();
                 },
               ),
             ),
@@ -612,7 +745,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 icon: Icons.history_rounded,
                 color: AppColors.warning,
                 onTap: () {
-                  _tabController.animateTo(1);
+                  _navigateToOrders();
                 },
               ),
             ),
@@ -713,8 +846,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             ),
             TextButton.icon(
               onPressed: () {
-                _urlService.updateUrl('/search', customTitle: 'İşletme Ara | MasaMenu');
-                Navigator.pushNamed(context, '/search');
+                _navigateToSearch();
               },
               icon: Icon(Icons.arrow_forward_rounded, size: 16),
               label: Text('Tümünü Gör'),
@@ -761,15 +893,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            _urlService.updateMenuUrl(
-              business.id,
-              businessName: business.businessName,
-            );
-            Navigator.pushNamed(
-              context,
-              '/menu',
-              arguments: {'businessId': business.id},
-            );
+            _navigateToMenu(business);
           },
           borderRadius: BorderRadius.circular(16),
           child: Container(
@@ -944,7 +1068,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             if (_orders.isNotEmpty)
               TextButton.icon(
                 onPressed: () {
-                  _tabController.animateTo(1);
+                  _navigateToOrders();
                 },
                 icon: Icon(Icons.arrow_forward_rounded, size: 16),
                 label: Text('Tümünü Gör'),
@@ -1183,15 +1307,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            _urlService.updateMenuUrl(
-              business.id,
-              businessName: business.businessName,
-            );
-            Navigator.pushNamed(
-              context,
-              '/menu',
-              arguments: {'businessId': business.id},
-            );
+            _navigateToMenu(business);
           },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
@@ -1413,7 +1529,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // Edit profile
+                  _navigateToProfile();
                 },
                 icon: Icon(Icons.edit_rounded),
                 label: Text('Profili Düzenle'),
@@ -1573,7 +1689,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         'subtitle': 'Geçmiş siparişlerinizi inceleyin',
         'color': AppColors.info,
         'action': () {
-          _tabController.animateTo(1);
+          _navigateToOrders();
         },
       },
       {

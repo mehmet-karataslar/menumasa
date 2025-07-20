@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../business/models/business.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
-// CachedNetworkImage removed for Windows compatibility
 
-class BusinessHeader extends StatelessWidget {
+class BusinessHeader extends StatefulWidget {
   final Business business;
   final VoidCallback? onSharePressed;
   final VoidCallback? onCallPressed;
   final VoidCallback? onLocationPressed;
   final VoidCallback? onCartPressed;
   final int cartItemCount;
+  final bool isCompact;
 
   const BusinessHeader({
     Key? key,
@@ -21,226 +22,508 @@ class BusinessHeader extends StatelessWidget {
     this.onLocationPressed,
     this.onCartPressed,
     this.cartItemCount = 0,
+    this.isCompact = false,
   }) : super(key: key);
 
   @override
+  State<BusinessHeader> createState() => _BusinessHeaderState();
+}
+
+class _BusinessHeaderState extends State<BusinessHeader>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late AnimationController _pulseController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.4, 1.0, curve: Curves.elasticOut),
+    ));
+
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _animationController.forward();
+    _pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 220, // Fixed height to match SliverAppBar expandedHeight
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: AppColors.primaryGradient,
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Content
-          Positioned.fill(
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Business logo - smaller size
-                    _buildCompactBusinessLogo(),
-
-                    const SizedBox(height: 8),
-
-                    // Business name - smaller font
-                    Text(
-                      business.businessName,
-                      style: AppTypography.h3.copyWith(
-                        color: AppColors.white,
-                        fontSize: 18,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Container(
+          height: widget.isCompact ? 180 : 320,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primary,
+                AppColors.primaryDark,
+                AppColors.secondary.withOpacity(0.8),
+              ],
+            ),
+          ),
+          child: Stack(
+            children: [
+              // Background pattern
+              _buildBackgroundPattern(),
+              
+              // Main content
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: widget.isCompact
+                          ? _buildCompactLayout()
+                          : _buildFullLayout(),
                     ),
-
-                    const SizedBox(height: 4),
-
-                    // Business description - smaller font
-                    if (business.businessDescription.isNotEmpty)
-                      Text(
-                        business.businessDescription,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.white.withOpacity(0.9),
-                          fontSize: 12,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    // Action buttons - compact version
-                    _buildCompactActionButtons(),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          // Cart button - positioned at top right
-          if (onCartPressed != null)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: SafeArea(child: _buildCartButton()),
-            ),
-        ],
-      ),
+              // Action buttons overlay
+              _buildActionButtons(),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildBusinessLogo() {
-    return Container(
-      width: AppDimensions.businessLogoSize,
-      height: AppDimensions.businessLogoSize,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(
-          AppDimensions.businessLogoBorderRadius,
+  Widget _buildBackgroundPattern() {
+    return Positioned.fill(
+      child: Opacity(
+        opacity: 0.1,
+        child: CustomPaint(
+          painter: HexagonPatternPainter(),
         ),
-        border: Border.all(color: AppColors.white, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(
-          AppDimensions.businessLogoBorderRadius,
-        ),
-        child: business.logoUrl != null
-            ? Image.network(
-                business.logoUrl!,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return _buildLogoPlaceholder();
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildLogoPlaceholder(),
-              )
-            : _buildLogoPlaceholder(),
       ),
     );
   }
 
-  Widget _buildCompactBusinessLogo() {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.3),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: business.logoUrl != null
-            ? Image.network(
-                business.logoUrl!,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return _buildCompactLogoPlaceholder();
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildCompactLogoPlaceholder(),
-              )
-            : _buildCompactLogoPlaceholder(),
-      ),
-    );
-  }
-
-  Widget _buildCompactLogoPlaceholder() {
-    return Container(
-      color: AppColors.white,
-      child: const Icon(Icons.restaurant, size: 30, color: AppColors.primary),
-    );
-  }
-
-  Widget _buildLogoPlaceholder() {
-    return Container(
-      color: AppColors.white,
-      child: Icon(
-        Icons.restaurant,
-        size: AppDimensions.businessLogoSize * 0.5,
-        color: AppColors.primary,
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
+  Widget _buildCompactLayout() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // Share button
-        if (onSharePressed != null)
-          _buildActionButton(
-            icon: Icons.share,
-            label: 'Paylaş',
-            onPressed: onSharePressed!,
+        // Business logo
+        ScaleTransition(
+          scale: _scaleAnimation,
+          child: _buildModernBusinessLogo(size: 60),
+        ),
+        
+        const SizedBox(width: 16),
+        
+        // Business info
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                widget.business.businessName,
+                style: AppTypography.h5.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              
+              const SizedBox(height: 4),
+              
+              _buildStatusIndicator(),
+              
+              const SizedBox(height: 8),
+              
+              _buildQuickInfo(),
+            ],
           ),
-
-        // Call button
-        if (business.contactInfo.phone?.isNotEmpty == true)
-          _buildActionButton(
-            icon: Icons.phone,
-            label: 'Ara',
-            onPressed: onCallPressed ?? () => _defaultCallAction(),
-          ),
-
-        // Location button
-        if (business.address.street?.isNotEmpty == true)
-          _buildActionButton(
-            icon: Icons.location_on,
-            label: 'Konum',
-            onPressed: onLocationPressed ?? () => _defaultLocationAction(),
-          ),
+        ),
       ],
     );
   }
 
-  Widget _buildCompactActionButtons() {
+  Widget _buildFullLayout() {
+    return Column(
+      children: [
+        // Header section
+        Expanded(
+          flex: 3,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Business logo with pulse animation
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: _buildModernBusinessLogo(),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // Business name with gradient text
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: [AppColors.white, AppColors.white.withOpacity(0.8)],
+                ).createShader(bounds),
+                child: Text(
+                  widget.business.businessName,
+                  style: AppTypography.h3.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Business type badge
+              _buildBusinessTypeBadge(),
+
+              const SizedBox(height: 12),
+
+              // Status indicator
+              _buildStatusIndicator(),
+            ],
+          ),
+        ),
+
+        // Info section
+        Expanded(
+          flex: 2,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildDetailedInfo(),
+                const SizedBox(height: 16),
+                _buildQuickActions(),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernBusinessLogo({double size = 100}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            AppColors.white.withOpacity(0.3),
+            AppColors.white.withOpacity(0.1),
+          ],
+        ),
+        border: Border.all(
+          color: AppColors.white.withOpacity(0.4),
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: widget.business.logoUrl != null && widget.business.logoUrl!.isNotEmpty
+            ? Image.network(
+                widget.business.logoUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => _buildLogoPlaceholder(size),
+              )
+            : _buildLogoPlaceholder(size),
+      ),
+    );
+  }
+
+  Widget _buildLogoPlaceholder(double size) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.white.withOpacity(0.3),
+            AppColors.white.withOpacity(0.1),
+          ],
+        ),
+      ),
+      child: Icon(
+        Icons.store_rounded,
+        size: size * 0.5,
+        color: AppColors.white,
+      ),
+    );
+  }
+
+  Widget _buildBusinessTypeBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.white.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        widget.business.businessType,
+        style: AppTypography.bodyMedium.copyWith(
+          color: AppColors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: widget.business.isOpen 
+            ? AppColors.success.withOpacity(0.2)
+            : AppColors.error.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: widget.business.isOpen 
+              ? AppColors.success.withOpacity(0.5)
+              : AppColors.error.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: widget.business.isOpen ? AppColors.success : AppColors.error,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            widget.business.isOpen ? 'Açık' : 'Kapalı',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickInfo() {
+    return Row(
+      children: [
+        _buildInfoChip(
+          icon: Icons.star_rounded,
+          text: '4.8',
+          color: AppColors.warning,
+        ),
+        const SizedBox(width: 8),
+        _buildInfoChip(
+          icon: Icons.access_time_rounded,
+          text: '25 dk',
+          color: AppColors.info,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoChip({
+    required IconData icon,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppColors.white),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailedInfo() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildInfoItem(
+            icon: Icons.location_on_rounded,
+            title: 'Adres',
+            value: widget.business.businessAddress,
+          ),
+        ),
+        Container(
+          width: 1,
+          height: 40,
+          color: AppColors.white.withOpacity(0.3),
+        ),
+        Expanded(
+          child: _buildInfoItem(
+            icon: Icons.phone_rounded,
+            title: 'Telefon',
+                         value: widget.business.contactInfo.phone ?? 'Belirtilmemiş',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: AppColors.white, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          style: AppTypography.caption.copyWith(
+            color: AppColors.white.withOpacity(0.7),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: AppTypography.caption.copyWith(
+            color: AppColors.white,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // Share button
-        if (onSharePressed != null)
-          _buildCompactActionButton(
-            icon: Icons.share,
-            onPressed: onSharePressed!,
-          ),
-
-        // Call button
-        if (business.contactInfo.phone?.isNotEmpty == true)
-          _buildCompactActionButton(
-            icon: Icons.phone,
-            onPressed: onCallPressed ?? () => _defaultCallAction(),
-          ),
-
-        // Location button
-        if (business.address.street?.isNotEmpty == true)
-          _buildCompactActionButton(
-            icon: Icons.location_on,
-            onPressed: onLocationPressed ?? () => _defaultLocationAction(),
-          ),
+        _buildActionButton(
+          icon: Icons.phone_rounded,
+          label: 'Ara',
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            widget.onCallPressed?.call();
+          },
+        ),
+        _buildActionButton(
+          icon: Icons.location_on_rounded,
+          label: 'Konum',
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            widget.onLocationPressed?.call();
+          },
+        ),
+        _buildActionButton(
+          icon: Icons.share_rounded,
+          label: 'Paylaş',
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            widget.onSharePressed?.call();
+          },
+        ),
       ],
     );
   }
@@ -248,31 +531,30 @@ class BusinessHeader extends StatelessWidget {
   Widget _buildActionButton({
     required IconData icon,
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusM),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.spacing12,
-          vertical: AppDimensions.spacing8,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusM),
-          border: Border.all(color: AppColors.white.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.white.withOpacity(0.3),
+            width: 1,
+          ),
         ),
-        child: Column(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.white, size: AppDimensions.iconSizeM),
-            AppSizedBox.h4,
+            Icon(icon, color: AppColors.white, size: 16),
+            const SizedBox(width: 4),
             Text(
               label,
-              style: AppTypography.bodySmall.copyWith(
+              style: AppTypography.caption.copyWith(
                 color: AppColors.white,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -281,269 +563,144 @@ class BusinessHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactActionButton({
+  Widget _buildActionButtons() {
+    return Positioned(
+      top: 0,
+      right: 0,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _buildFloatingActionButton(
+                icon: Icons.favorite_border_rounded,
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  // TODO: Add to favorites
+                },
+              ),
+              const SizedBox(width: 12),
+              _buildCartButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton({
     required IconData icon,
     required VoidCallback onPressed,
   }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.white.withOpacity(0.3)),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.white.withOpacity(0.3),
+          width: 1,
         ),
-        child: Icon(icon, color: AppColors.white, size: 20),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, color: AppColors.white),
+        iconSize: 20,
       ),
     );
-  }
-
-  void _defaultCallAction() {
-    // URL launcher ile telefon araması yapılacak
-    // await launch('tel:${business.contactInfo.phone}');
-    print('Calling: ${business.contactInfo.phone}');
-  }
-
-  void _defaultLocationAction() {
-    // Harita uygulamasında konum açılacak
-    // await launch('https://maps.google.com/?q=${business.address.toString()}');
-    print('Location: ${business.address.street?.isNotEmpty == true ? business.address.street! : 'Adres bilgisi yok'}');
   }
 
   Widget _buildCartButton() {
-    return InkWell(
-      onTap: onCartPressed,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.white.withOpacity(0.3),
+              width: 1,
             ),
-          ],
+          ),
+          child: IconButton(
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              widget.onCartPressed?.call();
+            },
+            icon: const Icon(Icons.shopping_cart_rounded, color: AppColors.white),
+            iconSize: 20,
+          ),
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(Icons.shopping_cart, color: AppColors.primary, size: 24),
-            if (cartItemCount > 0)
-              Positioned(
-                right: -4,
-                top: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Text(
-                    cartItemCount > 99 ? '99+' : cartItemCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+        
+        if (widget.cartItemCount > 0)
+          Positioned(
+            right: 6,
+            top: 6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.accent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.white, width: 1),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Animated version with slide-in effects
-class AnimatedBusinessHeader extends StatefulWidget {
-  final Business business;
-  final VoidCallback? onSharePressed;
-  final VoidCallback? onCallPressed;
-  final VoidCallback? onLocationPressed;
-  final VoidCallback? onCartPressed;
-  final int cartItemCount;
-
-  const AnimatedBusinessHeader({
-    Key? key,
-    required this.business,
-    this.onSharePressed,
-    this.onCallPressed,
-    this.onLocationPressed,
-    this.onCartPressed,
-    this.cartItemCount = 0,
-  }) : super(key: key);
-
-  @override
-  State<AnimatedBusinessHeader> createState() => _AnimatedBusinessHeaderState();
-}
-
-class _AnimatedBusinessHeaderState extends State<AnimatedBusinessHeader>
-    with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
-      ),
-    );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
-          ),
-        );
-
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: BusinessHeader(
-              business: widget.business,
-              onSharePressed: widget.onSharePressed,
-              onCallPressed: widget.onCallPressed,
-              onLocationPressed: widget.onLocationPressed,
-              onCartPressed: widget.onCartPressed,
-              cartItemCount: widget.cartItemCount,
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-// Compact version for smaller screens
-class CompactBusinessHeader extends StatelessWidget {
-  final Business business;
-  final VoidCallback? onSharePressed;
-
-  const CompactBusinessHeader({
-    Key? key,
-    required this.business,
-    this.onSharePressed,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: AppDimensions.paddingM,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: AppColors.primaryGradient,
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Logo
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusM),
-              border: Border.all(color: AppColors.white, width: 2),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusM),
-              child: business.logoUrl != null
-                  ? Image.network(
-                      business.logoUrl!,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return _buildCompactLogoPlaceholder();
-                      },
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildCompactLogoPlaceholder(),
-                    )
-                  : _buildCompactLogoPlaceholder(),
-            ),
-          ),
-
-          AppSizedBox.w16,
-
-          // Business info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  business.businessName,
-                  style: AppTypography.h5.copyWith(color: AppColors.white),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Text(
+                widget.cartItemCount > 99 ? '99+' : widget.cartItemCount.toString(),
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
                 ),
-                if (business.businessDescription.isNotEmpty) ...[
-                  AppSizedBox.h4,
-                  Text(
-                    business.businessDescription,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.white.withOpacity(0.9),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-
-          // Share button
-          if (onSharePressed != null)
-            IconButton(
-              onPressed: onSharePressed,
-              icon: const Icon(Icons.share, color: AppColors.white),
-            ),
-        ],
-      ),
+      ],
     );
   }
+}
 
-  Widget _buildCompactLogoPlaceholder() {
-    return Container(
-      color: AppColors.white,
-      child: const Icon(Icons.restaurant, size: 24, color: AppColors.primary),
-    );
+// Custom painter for hexagon pattern
+class HexagonPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.white.withOpacity(0.1)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    const double hexRadius = 30.0;
+    const double hexHeight = hexRadius * 2;
+    const double hexWidth = hexRadius * 1.732;
+
+    for (double x = 0; x < size.width + hexWidth; x += hexWidth * 0.75) {
+      for (double y = 0; y < size.height + hexHeight; y += hexHeight) {
+        final offsetY = (x / (hexWidth * 0.75)).round() % 2 == 1 ? hexHeight / 2 : 0;
+        _drawHexagon(canvas, paint, Offset(x, y + offsetY), hexRadius);
+      }
+    }
   }
+
+  void _drawHexagon(Canvas canvas, Paint paint, Offset center, double radius) {
+    final path = Path();
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * 60.0) * (3.14159 / 180.0);
+      final x = center.dx + radius * (angle == 0 ? 1 : (angle == 3.14159 ? -1 : 0));
+      final y = center.dy + radius * (angle == 1.5708 ? 1 : (angle == 4.7124 ? -1 : 0));
+      
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
  
