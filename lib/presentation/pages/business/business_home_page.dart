@@ -19,6 +19,8 @@ import 'discount_management_page.dart';
 import 'qr_management_page.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/notification_service.dart';
+import '../../widgets/business/notification_dialog.dart';
 
 class BusinessHomePage extends StatefulWidget {
   final String businessId;
@@ -39,6 +41,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
   final FirestoreService _firestoreService = FirestoreService();
   final UrlService _urlService = UrlService();
   final AuthService _authService = AuthService();
+  final NotificationService _notificationService = NotificationService();
 
   Business? _business;
   List<app_order.Order> _recentOrders = [];
@@ -56,6 +59,10 @@ class _BusinessHomePageState extends State<BusinessHomePage>
   int _todayOrders = 0;
   double _todayRevenue = 0.0;
   int _pendingOrders = 0;
+  
+  // Notifications
+  List<NotificationModel> _notifications = [];
+  int _unreadNotificationCount = 0;
 
   late TabController _tabController;
 
@@ -93,6 +100,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     
     _loadBusinessData();
     _setupOrderListener();
+    _setupNotificationListener();
   }
 
   void _setInitialTab() {
@@ -172,20 +180,71 @@ class _BusinessHomePageState extends State<BusinessHomePage>
             ),
           );
         }
-      }
-    }
+             }
+     }
+   }
+
+  void _showNotificationsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => NotificationDialog(
+        businessId: widget.businessId,
+        notifications: _notifications,
+        onNotificationTap: (notification) {
+          Navigator.of(context).pop();
+          _notificationService.markAsRead(notification.id);
+          
+          // Navigate based on notification type
+          if (notification.type == NotificationType.newOrder) {
+            navigateToTab('siparisler');
+          }
+        },
+        onMarkAllRead: () {
+          _notificationService.markAllAsRead(widget.businessId);
+        },
+      ),
+    );
   }
 
   @override
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
+    _notificationService.removeNotificationListener(widget.businessId, _onNotificationsChanged);
     super.dispose();
   }
 
   void _setupOrderListener() {
     // No need for periodic refresh anymore - using real-time Firestore updates
     // The order statistics will be updated through the order listener in individual pages
+  }
+
+  void _setupNotificationListener() {
+    _notificationService.addNotificationListener(widget.businessId, _onNotificationsChanged);
+  }
+
+  void _onNotificationsChanged(List<NotificationModel> notifications) {
+    if (mounted) {
+      setState(() {
+        _notifications = notifications;
+        _unreadNotificationCount = notifications.length;
+      });
+
+      // Show in-app notification for new orders
+      if (notifications.isNotEmpty) {
+        final latestNotification = notifications.first;
+        if (latestNotification.type == NotificationType.newOrder) {
+          _notificationService.showInAppNotification(
+            context,
+            latestNotification,
+            onTap: () {
+              navigateToTab('siparisler');
+              _notificationService.markAsRead(latestNotification.id);
+            },
+          );
+        }
+      }
+    }
   }
 
   Future<void> _loadBusinessData() async {
@@ -443,16 +502,16 @@ class _BusinessHomePageState extends State<BusinessHomePage>
         ],
       ),
       actions: [
-        // Notification icon with pending orders badge
+        // Notification icon with badge
         Stack(
           children: [
             IconButton(
               icon: const Icon(Icons.notifications),
               onPressed: () {
-                navigateToTab('siparisler'); // Use new navigation method
+                _showNotificationsDialog();
               },
             ),
-            if (_pendingOrders > 0)
+            if (_unreadNotificationCount > 0)
               Positioned(
                 right: 8,
                 top: 8,
@@ -467,7 +526,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                     minHeight: 16,
                   ),
                   child: Text(
-                    _pendingOrders.toString(),
+                    _unreadNotificationCount.toString(),
                     style: AppTypography.caption.copyWith(
                       color: AppColors.white,
                       fontSize: 10,

@@ -4,8 +4,7 @@ import '../../../data/models/business.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
-import '../../../core/services/order_service.dart';
-import '../../../core/services/data_service.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
@@ -25,8 +24,7 @@ class CustomerOrdersPage extends StatefulWidget {
 }
 
 class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
-  final OrderService _orderService = OrderService();
-  final DataService _dataService = DataService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   List<Order> _orders = [];
   Business? _business;
@@ -56,21 +54,18 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage> {
         _isLoading = true;
       });
 
-      await _orderService.initialize();
-      await _dataService.initialize();
-
-      final business = await _dataService.getBusiness(widget.businessId);
+      final business = await _firestoreService.getBusiness(widget.businessId);
       List<Order> orders = [];
 
+      // Load orders for business
+      final allOrders = await _firestoreService.getOrders(businessId: widget.businessId);
+      
       if (widget.customerPhone != null) {
-        // Load orders for specific customer
-        orders = await _orderService.getOrdersByCustomerPhone(
-          widget.customerPhone!,
-          widget.businessId,
-        );
+        // Filter orders for specific customer
+        orders = allOrders.where((order) => order.customerPhone == widget.customerPhone).toList();
       } else {
         // Load all orders for business (fallback)
-        orders = await _orderService.getOrdersByBusinessId(widget.businessId);
+        orders = allOrders;
       }
 
       // Sort orders by date (newest first)

@@ -7,6 +7,8 @@ import '../../data/models/category.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../data/models/discount.dart';
 import '../../data/models/order.dart' as app_order;
+import 'dart:async';
+import 'notification_service.dart';
 
 
 class FirestoreService {
@@ -26,6 +28,10 @@ class FirestoreService {
   CollectionReference get _categoriesRef => _firestore.collection('categories');
   CollectionReference get _ordersRef => _firestore.collection('orders');
   CollectionReference get _discountsRef => _firestore.collection('discounts');
+
+  // Real-time order listeners
+  final Map<String, StreamSubscription<QuerySnapshot>?> _orderStreams = {};
+  final Map<String, List<Function(List<app_order.Order>)>> _orderListeners = {};
 
   // Initialize database with collections if they don't exist
   Future<void> initializeDatabase() async {
@@ -936,5 +942,161 @@ class FirestoreService {
     } catch (e) {
       throw Exception('Müşteri verileri alınırken bir hata oluştu: $e');
     }
+  }
+
+  // =============================================================================
+  // REAL-TIME ORDER OPERATIONS
+  // =============================================================================
+
+  /// Gerçek zamanlı sipariş takibi için listener ekle
+  void addOrderListener(String businessId, Function(List<app_order.Order>) listener) {
+    if (!_orderListeners.containsKey(businessId)) {
+      _orderListeners[businessId] = [];
+      _startOrderStream(businessId);
+    }
+    _orderListeners[businessId]!.add(listener);
+  }
+
+  /// Sipariş listener'ını kaldır
+  void removeOrderListener(String businessId, Function(List<app_order.Order>) listener) {
+    _orderListeners[businessId]?.remove(listener);
+    if (_orderListeners[businessId]?.isEmpty == true) {
+      _orderListeners.remove(businessId);
+      _orderStreams[businessId]?.cancel();
+      _orderStreams.remove(businessId);
+    }
+  }
+
+  /// İşletme için sipariş stream'ini başlat
+  void _startOrderStream(String businessId) {
+    _orderStreams[businessId] = _ordersRef
+        .where('businessId', isEqualTo: businessId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            final orders = snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return app_order.Order.fromJson(data, id: doc.id);
+            }).toList();
+
+            _notifyOrderListeners(businessId, orders);
+          },
+          onError: (error) {
+            print('Order stream error for business $businessId: $error');
+          },
+        );
+  }
+
+  /// Sipariş listener'larını bilgilendir
+  void _notifyOrderListeners(String businessId, List<app_order.Order> orders) {
+    final listeners = _orderListeners[businessId];
+    if (listeners != null) {
+      for (final listener in listeners) {
+        try {
+          listener(orders);
+        } catch (e) {
+          print('Error calling order listener: $e');
+        }
+      }
+    }
+  }
+
+  /// Sipariş durumunu güncelle (gerçek zamanlı)
+  Future<void> updateOrderStatus(String orderId, app_order.OrderStatus status) async {
+    try {
+      // Önce sipariş bilgilerini al
+      final orderDoc = await _ordersRef.doc(orderId).get();
+      if (!orderDoc.exists) {
+        throw Exception('Sipariş bulunamadı');
+      }
+
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final order = app_order.Order.fromJson(orderData, id: orderId);
+
+      // Sipariş durumunu güncelle
+      await _ordersRef.doc(orderId).update({
+        'status': status.value,
+        'updatedAt': FieldValue.serverTimestamp(),
+        if (status == app_order.OrderStatus.completed)
+          'completedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Durum değişiklik bildirimi gönder
+      await NotificationService().createOrderStatusNotification(
+        businessId: order.businessId,
+        orderId: orderId,
+        status: status.displayName,
+        customerName: order.customerName,
+        tableNumber: order.tableNumber,
+      );
+    } catch (e) {
+      throw Exception('Sipariş durumu güncellenirken hata oluştu: $e');
+    }
+  }
+
+  /// Yeni sipariş oluştur ve gerçek zamanlı bildirimleri tetikle
+  Future<String> createOrderWithNotification(app_order.Order order) async {
+    try {
+      final data = order.toJson();
+      data['createdAt'] = FieldValue.serverTimestamp();
+      data['updatedAt'] = FieldValue.serverTimestamp();
+      
+      final docRef = await _ordersRef.add(data);
+      
+      // NotificationService ile sipariş bildirimi gönder
+      await NotificationService().createOrderNotification(
+        businessId: order.businessId,
+        orderId: docRef.id,
+        customerName: order.customerName,
+        tableNumber: order.tableNumber,
+        totalAmount: order.totalAmount,
+      );
+      
+      return docRef.id;
+    } catch (e) {
+      throw Exception('Sipariş oluşturulurken hata oluştu: $e');
+    }
+  }
+
+
+
+  /// Günlük sipariş istatistikleri al
+  Future<Map<String, int>> getDailyOrderStats(String businessId) async {
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final snapshot = await _ordersRef
+          .where('businessId', isEqualTo: businessId)
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('createdAt', isLessThan: Timestamp.fromDate(endOfDay))
+          .get();
+
+      final orders = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return app_order.Order.fromJson(data, id: doc.id);
+      }).toList();
+
+      return {
+        'total': orders.length,
+        'pending': orders.where((o) => o.status == app_order.OrderStatus.pending).length,
+        'inProgress': orders.where((o) => o.status == app_order.OrderStatus.inProgress).length,
+        'completed': orders.where((o) => o.status == app_order.OrderStatus.completed).length,
+        'cancelled': orders.where((o) => o.status == app_order.OrderStatus.cancelled).length,
+      };
+    } catch (e) {
+      throw Exception('Günlük istatistikler alınırken hata oluştu: $e');
+    }
+  }
+
+  /// Tüm aktif listener'ları temizle (dispose için)
+  void disposeOrderListeners() {
+    for (final stream in _orderStreams.values) {
+      stream?.cancel();
+    }
+    _orderStreams.clear();
+    _orderListeners.clear();
   }
 }

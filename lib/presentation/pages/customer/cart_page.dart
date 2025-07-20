@@ -6,8 +6,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/services/cart_service.dart';
-import '../../../core/services/order_service.dart';
-import '../../../core/services/data_service.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../data/models/order.dart' as app_order;
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
@@ -23,8 +23,7 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   final CartService _cartService = CartService();
-  final OrderService _orderService = OrderService();
-  final DataService _dataService = DataService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   Cart? _cart;
   Business? _business;
@@ -70,10 +69,10 @@ class _CartPageState extends State<CartPage> {
       });
 
       await _cartService.initialize();
-      await _dataService.initialize();
+
 
       final cart = await _cartService.getCurrentCart(widget.businessId);
-      final business = await _dataService.getBusiness(widget.businessId);
+      final business = await _firestoreService.getBusiness(widget.businessId);
 
       setState(() {
         _cart = cart;
@@ -266,7 +265,8 @@ class _CartPageState extends State<CartPage> {
         _isPlacingOrder = true;
       });
 
-      final order = await _orderService.createOrderFromCart(
+      // Sepetten sipariş oluştur
+      final order = app_order.Order.fromCart(
         _cart!,
         customerName: _customerNameController.text.trim(),
         customerPhone: _customerPhoneController.text.trim().isNotEmpty
@@ -277,6 +277,10 @@ class _CartPageState extends State<CartPage> {
             ? _notesController.text.trim()
             : null,
       );
+
+      // Siparişi Firebase'e kaydet ve bildirim gönder
+      final orderId = await _firestoreService.createOrderWithNotification(order);
+      final savedOrder = order.copyWith(orderId: orderId);
 
       // Clear cart after successful order
       await _cartService.clearCart(widget.businessId);
@@ -298,9 +302,9 @@ class _CartPageState extends State<CartPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Sipariş No: ${order.orderId}'),
-                Text('Masa: ${order.formattedTableNumber}'),
-                Text('Toplam: ${order.formattedTotalAmount}'),
+                Text('Sipariş No: ${savedOrder.orderId}'),
+                Text('Masa: Masa ${savedOrder.tableNumber}'),
+                Text('Toplam: ${savedOrder.totalAmount.toStringAsFixed(2)} ₺'),
                 const SizedBox(height: 16),
                 const Text(
                   'Siparişiniz işletmeye iletildi. Hazırlanmaya başlanacak.',

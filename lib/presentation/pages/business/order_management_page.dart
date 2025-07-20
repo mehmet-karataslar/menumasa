@@ -21,7 +21,6 @@ class OrderManagementPage extends StatefulWidget {
 }
 
 class _OrderManagementPageState extends State<OrderManagementPage> with TickerProviderStateMixin {
-  final OrderService _orderService = OrderService();
   final FirestoreService _firestoreService = FirestoreService();
 
   List<Order> _orders = [];
@@ -51,12 +50,12 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
   @override
   void dispose() {
     _tabController.dispose();
-    _orderService.removeOrderListener(widget.businessId, _onOrdersChanged);
+    _firestoreService.removeOrderListener(widget.businessId, _onOrdersChanged);
     super.dispose();
   }
 
   void _setupOrderListener() {
-    _orderService.addOrderListener(widget.businessId, _onOrdersChanged);
+    _firestoreService.addOrderListener(widget.businessId, _onOrdersChanged);
   }
 
   void _onOrdersChanged(List<Order> orders) {
@@ -89,13 +88,11 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
         _isLoading = true;
       });
 
-      await _orderService.initialize();
-
       // Load business info
       final business = await _firestoreService.getBusiness(widget.businessId);
 
       // Load initial orders
-      final orders = await _orderService.getOrdersByBusinessId(widget.businessId);
+      final orders = await _firestoreService.getOrders(businessId: widget.businessId);
 
       setState(() {
         _business = business;
@@ -677,7 +674,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
 
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
     try {
-      await _orderService.updateOrderStatus(order.orderId, newStatus);
+      await _firestoreService.updateOrderStatus(order.orderId, newStatus);
       
       HapticFeedback.lightImpact();
       
