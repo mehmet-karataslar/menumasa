@@ -12,11 +12,18 @@ export 'models/customer_preferences.dart';
 export 'services/customer_service.dart';
 
 // Pages
+export 'pages/customer_dashboard_page.dart';
 export 'pages/business_detail_page.dart';
 export 'pages/menu_page.dart';
 export 'pages/cart_page.dart';
 export 'pages/customer_orders_page.dart';
 export 'pages/search_page.dart';
+
+// Tab Pages
+export 'pages/tabs/customer_home_tab.dart';
+export 'pages/tabs/customer_orders_tab.dart';
+export 'pages/tabs/customer_favorites_tab.dart';
+export 'pages/tabs/customer_profile_tab.dart';
 
 // Widgets
 export 'widgets/business_header.dart';

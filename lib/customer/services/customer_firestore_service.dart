@@ -210,6 +210,52 @@ class CustomerFirestoreService {
     }
   }
 
+  /// Add business to favorites
+  Future<void> addToFavorites(String userId, String businessId) async {
+    try {
+      final doc = await _usersRef.doc(userId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final customerData = data['customerData'] as Map<String, dynamic>? ?? {};
+        final favorites = List<Map<String, dynamic>>.from(customerData['favorites'] ?? []);
+        
+        // Check if already exists
+        final exists = favorites.any((f) => f['businessId'] == businessId);
+        if (!exists) {
+          favorites.add({
+            'businessId': businessId,
+            'addedAt': FieldValue.serverTimestamp(),
+          });
+          
+          customerData['favorites'] = favorites;
+          await updateCustomerData(userId, customerData);
+        }
+      }
+    } catch (e) {
+      throw Exception('Favori eklenirken hata oluştu: $e');
+    }
+  }
+
+  /// Remove business from favorites  
+  Future<void> removeFromFavorites(String userId, String businessId) async {
+    try {
+      final doc = await _usersRef.doc(userId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final customerData = data['customerData'] as Map<String, dynamic>? ?? {};
+        final favorites = List<Map<String, dynamic>>.from(customerData['favorites'] ?? []);
+        
+        // Remove business from favorites
+        favorites.removeWhere((f) => f['businessId'] == businessId);
+        
+        customerData['favorites'] = favorites;
+        await updateCustomerData(userId, customerData);
+      }
+    } catch (e) {
+      throw Exception('Favori kaldırılırken hata oluştu: $e');
+    }
+  }
+
   // =============================================================================
   // CUSTOMER VISITS OPERATIONS
   // =============================================================================
