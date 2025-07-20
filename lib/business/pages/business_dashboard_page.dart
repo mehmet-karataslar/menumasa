@@ -142,10 +142,7 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    // Mobil cihazlarda normal admin dashboard kullan
-    if (!kIsWeb || MediaQuery.of(context).size.width < 768) {
-      return const AdminDashboardPage();
-    }
+
 
     if (_isLoading) {
       return const Scaffold(

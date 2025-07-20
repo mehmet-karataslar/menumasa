@@ -459,44 +459,17 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                 child: Image.network(
                   _business!.logoUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => 
-                    Icon(Icons.business, color: AppColors.primary),
                 ),
               ),
             ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _business?.businessName ?? 'İşletme',
-                  style: AppTypography.h6.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  _tabTitles[_tabController.index],
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.white.withOpacity(0.8),
-                  ),
-                ),
-                if (_pendingOrders > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '$_pendingOrders bekleyen sipariş',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-              ],
+            child: Text(
+              _business?.businessName ?? 'İşletme',
+              style: AppTypography.h6.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -821,10 +794,12 @@ class _BusinessHomePageState extends State<BusinessHomePage>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Son Siparişler',
-                  style: AppTypography.h6.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Son Siparişler',
+                    style: AppTypography.h6.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 TextButton(
