@@ -19,12 +19,6 @@ import '../../data/models/business.dart';
 import '../../admin/admin.dart';
 import '../../admin/admin_routes.dart';
 import '../../business/pages/business_dashboard_page.dart';
-import '../../presentation/pages/business/category_management_page.dart';
-import '../../presentation/pages/business/product_management_page.dart';
-import '../../presentation/pages/business/business_profile_page.dart';
-import '../../presentation/pages/business/menu_settings_page.dart';
-import '../../presentation/pages/business/discount_management_page.dart';
-import '../../presentation/pages/business/order_management_page.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -46,15 +40,20 @@ class AppRoutes {
   static const String search = '/search';
   static const String businessHome = '/business/home';
 
-  // Business management routes
+  // Business management routes with tab support
   static const String businessDashboard = '/business/dashboard';
-  static const String businessCategories = '/business/categories';
-  static const String businessProducts = '/business/products';
-  static const String businessProfile = '/business/profile';
-  static const String businessMenuSettings = '/business/menu-settings';
-  static const String businessDiscounts = '/business/discounts';
-  static const String businessOrders = '/business/orders';
-  static const String businessQRManagement = '/business/qr-codes';
+  static const String businessManagement = '/business';
+
+  // Valid business tabs
+  static const List<String> validBusinessTabs = [
+    'genel-bakis',
+    'siparisler',
+    'kategoriler',
+    'urunler',
+    'indirimler',
+    'qr-kodlar',
+    'ayarlar',
+  ];
 
   // Route map
   static Map<String, WidgetBuilder> get routes => {
@@ -73,13 +72,6 @@ class AppRoutes {
     search: (context) => const SearchRouterPage(),
     businessHome: (context) => const BusinessHomeRouterPage(),
     businessDashboard: (context) => const BusinessDashboardRouterPage(),
-    businessCategories: (context) => const BusinessDashboardRouterPage(),
-    businessProducts: (context) => const BusinessDashboardRouterPage(),
-    businessProfile: (context) => const BusinessDashboardRouterPage(),
-    businessMenuSettings: (context) => const BusinessDashboardRouterPage(),
-    businessDiscounts: (context) => const BusinessDashboardRouterPage(),
-    businessOrders: (context) => const BusinessDashboardRouterPage(),
-    businessQRManagement: (context) => const BusinessDashboardRouterPage(),
   };
 
   // Custom route generator for dynamic URLs
@@ -117,6 +109,36 @@ class AppRoutes {
 
       return MaterialPageRoute(
         builder: (context) => MenuPage(businessId: businessId),
+        settings: settings,
+      );
+    }
+
+    // Handle business management URLs: /business/businessId/tab
+    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'business') {
+      final businessId = uri.pathSegments[1];
+      
+      // Check if there's a tab specified
+      String? tab;
+      if (uri.pathSegments.length >= 3) {
+        final potentialTab = uri.pathSegments[2];
+        if (validBusinessTabs.contains(potentialTab)) {
+          tab = potentialTab;
+        }
+      }
+
+      return MaterialPageRoute(
+        builder: (context) => BusinessHomePage(
+          businessId: businessId,
+          initialTab: tab ?? 'genel-bakis', // Default to overview
+        ),
+        settings: settings,
+      );
+    }
+
+    // Handle legacy business dashboard route
+    if (settings.name == businessDashboard) {
+      return MaterialPageRoute(
+        builder: (context) => const BusinessDashboardRouterPage(),
         settings: settings,
       );
     }

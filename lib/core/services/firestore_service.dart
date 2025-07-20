@@ -110,6 +110,25 @@ class FirestoreService {
     }
   }
 
+  /// Gets businesses by owner ID
+  Future<List<Business>> getBusinessesByOwnerId(String ownerId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('businesses')
+          .where('ownerId', isEqualTo: ownerId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Business.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error getting businesses by owner ID: $e');
+      return [];
+    }
+  }
+
+  /// Gets a single business
   Future<Business?> getBusiness(String businessId) async {
     try {
       final doc = await _businessesRef.doc(businessId).get();

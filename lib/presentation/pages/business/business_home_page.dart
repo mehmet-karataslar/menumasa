@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/constants/app_dimensions.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../data/models/business.dart';
 import '../../../data/models/order.dart' as app_order;
@@ -18,11 +17,17 @@ import 'order_management_page.dart';
 import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
 import 'qr_management_page.dart';
+import 'dart:html' as html;
 
 class BusinessHomePage extends StatefulWidget {
   final String businessId;
+  final String? initialTab; // Add support for initial tab
 
-  const BusinessHomePage({Key? key, required this.businessId}) : super(key: key);
+  const BusinessHomePage({
+    Key? key, 
+    required this.businessId,
+    this.initialTab,
+  }) : super(key: key);
 
   @override
   State<BusinessHomePage> createState() => _BusinessHomePageState();
@@ -51,17 +56,76 @@ class _BusinessHomePageState extends State<BusinessHomePage>
 
   late TabController _tabController;
 
+  // Tab names for URL routing
+  final List<String> _tabRoutes = [
+    'genel-bakis',
+    'siparisler', 
+    'kategoriler',
+    'urunler',
+    'indirimler',
+    'qr-kodlar',
+    'ayarlar',
+  ];
+
+  final List<String> _tabTitles = [
+    'Genel Bakış',
+    'Siparişler',
+    'Kategoriler', 
+    'Ürünler',
+    'İndirimler',
+    'QR Kodlar',
+    'Ayarlar',
+  ];
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 7, vsync: this);
+    
+    // Set initial tab based on URL
+    _setInitialTab();
+    
+    // Listen to tab changes for URL updates
+    _tabController.addListener(_onTabChanged);
+    
     _loadBusinessData();
-    // Set up real-time order updates
     _setupOrderListener();
+  }
+
+  void _setInitialTab() {
+    if (widget.initialTab != null) {
+      final tabIndex = _tabRoutes.indexOf(widget.initialTab!);
+      if (tabIndex != -1) {
+        _tabController.index = tabIndex;
+      }
+    }
+    
+    // Update URL on first load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateUrl();
+    });
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      _updateUrl();
+    }
+  }
+
+  void _updateUrl() {
+    final currentRoute = _tabRoutes[_tabController.index];
+    final newUrl = '/business/${widget.businessId}/$currentRoute';
+    
+    // Update browser URL without reloading the page
+    html.window.history.pushState(null, _tabTitles[_tabController.index], newUrl);
+    
+    // Update page title
+    html.document.title = '${_business?.businessName ?? "İşletme"} - ${_tabTitles[_tabController.index]} | MasaMenu';
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -117,6 +181,9 @@ class _BusinessHomePageState extends State<BusinessHomePage>
         _todayRevenue = stats['todayRevenue'] ?? 0.0;
         _pendingOrders = stats['pendingOrders'] ?? 0;
       });
+
+      // Update page title with business name
+      html.document.title = '${business.businessName} - ${_tabTitles[_tabController.index]} | MasaMenu';
     } catch (e) {
       setState(() {
         _errorMessage = 'Veriler yüklenirken hata: $e';
@@ -197,6 +264,14 @@ class _BusinessHomePageState extends State<BusinessHomePage>
     } catch (e) {
       print('İstatistik hesaplama hatası: $e');
       return {};
+    }
+  }
+
+  // Navigate to specific tab programmatically
+  void navigateToTab(String tabRoute) {
+    final tabIndex = _tabRoutes.indexOf(tabRoute);
+    if (tabIndex != -1) {
+      _tabController.animateTo(tabIndex);
     }
   }
 
@@ -288,6 +363,12 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                Text(
+                  _tabTitles[_tabController.index],
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.white.withOpacity(0.8),
+                  ),
+                ),
                 if (_pendingOrders > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -315,7 +396,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
             IconButton(
               icon: const Icon(Icons.notifications),
               onPressed: () {
-                _tabController.animateTo(1); // Jump to orders tab
+                navigateToTab('siparisler'); // Use new navigation method
               },
             ),
             if (_pendingOrders > 0)
@@ -354,7 +435,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
           onSelected: (value) {
             switch (value) {
               case 'profile':
-                _tabController.animateTo(6); // Business profile tab
+                navigateToTab('ayarlar'); // Use new navigation method
                 break;
               case 'logout':
                 Navigator.pushReplacementNamed(context, '/');
@@ -635,7 +716,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _tabController.animateTo(1),
+                  onPressed: () => navigateToTab('siparisler'),
                   child: const Text('Tümünü Gör'),
                 ),
               ],
@@ -764,28 +845,28 @@ class _BusinessHomePageState extends State<BusinessHomePage>
               title: 'Yeni Ürün Ekle',
               icon: Icons.add,
               color: AppColors.success,
-              onTap: () => _tabController.animateTo(3),
+              onTap: () => navigateToTab('urunler'),
             ),
             const SizedBox(height: 8),
             _buildQuickActionButton(
               title: 'Kategori Ekle',
               icon: Icons.category,
               color: AppColors.primary,
-              onTap: () => _tabController.animateTo(2),
+              onTap: () => navigateToTab('kategoriler'),
             ),
             const SizedBox(height: 8),
             _buildQuickActionButton(
               title: 'İndirim Oluştur',
               icon: Icons.local_offer,
               color: AppColors.warning,
-              onTap: () => _tabController.animateTo(4),
+              onTap: () => navigateToTab('indirimler'),
             ),
             const SizedBox(height: 8),
             _buildQuickActionButton(
               title: 'QR Kod Oluştur',
               icon: Icons.qr_code,
               color: AppColors.info,
-              onTap: () => _tabController.animateTo(5),
+              onTap: () => navigateToTab('qr-kodlar'),
             ),
           ],
         ),
@@ -846,7 +927,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _tabController.animateTo(3),
+                  onPressed: () => navigateToTab('urunler'),
                   child: const Text('Tümünü Gör'),
                 ),
               ],
@@ -951,7 +1032,7 @@ class _BusinessHomePageState extends State<BusinessHomePage>
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _tabController.animateTo(2),
+                  onPressed: () => navigateToTab('kategoriler'),
                   child: const Text('Yönet'),
                 ),
               ],
