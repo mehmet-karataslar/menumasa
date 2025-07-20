@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
 import '../services/analytics_service.dart';
 import '../models/analytics_models.dart';
 import '../services/business_service.dart';
-import '../../../presentation/widgets/shared/loading_indicator.dart';
-import '../../../presentation/widgets/shared/error_message.dart';
+import '../../presentation/widgets/shared/loading_indicator.dart';
+import '../../presentation/widgets/shared/error_message.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});

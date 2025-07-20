@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
-import '../../../presentation/widgets/shared/empty_state.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
+import '../../presentation/widgets/shared/empty_state.dart';
 
 class SystemSettingsPage extends StatelessWidget {
   const SystemSettingsPage({super.key});

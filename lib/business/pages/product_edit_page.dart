@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import '../../widgets/shared/loading_indicator.dart';
+import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../data/models/product.dart';

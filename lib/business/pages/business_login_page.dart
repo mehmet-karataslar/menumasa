@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../core/constants/app_colors.dart';
 import '../services/business_service.dart';
-import '../../../core/constants/app_typography.dart';
+import '../../core/constants/app_typography.dart';
 
-import '../../../presentation/widgets/shared/error_message.dart';
+import '../../presentation/widgets/shared/error_message.dart';
 
 class BusinessLoginPage extends StatefulWidget {
   const BusinessLoginPage({super.key});

@@ -21,7 +21,7 @@ class BusinessRoutes {
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       login: (context) => const BusinessLoginPage(),
-      dashboard: (context) => const BusinessDashboardPage(),
+      dashboard: (context) => ResponsiveAdminDashboard(businessId: 'demo'), // TODO: Get from auth
       management: (context) => const BusinessManagementPage(),
       customers: (context) => const CustomerManagementPage(),
       analytics: (context) => const AnalyticsPage(),
@@ -39,7 +39,7 @@ class BusinessRoutes {
         );
       case '/business/dashboard':
         return MaterialPageRoute(
-          builder: (context) => const BusinessDashboardPage(),
+          builder: (context) => ResponsiveAdminDashboard(businessId: 'demo'), // TODO: Get from auth
         );
       case '/business/management':
         return MaterialPageRoute(

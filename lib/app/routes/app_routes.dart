@@ -13,11 +13,13 @@ import '../../presentation/pages/customer/customer_home_page.dart';
 import '../../presentation/pages/customer/customer_dashboard_page.dart';
 import '../../presentation/pages/customer/business_detail_page.dart';
 import '../../presentation/pages/customer/search_page.dart';
-import '../../presentation/pages/business/business_home_page.dart';
+import '../../business/pages/business_home_page.dart';
+import '../../business/pages/business_dashboard_page.dart';
 import '../../data/models/category.dart' as app_category;
 import '../../data/models/business.dart';
 import '../../admin/admin.dart';
 import '../../admin/admin_routes.dart';
+import '../../core/services/auth_service.dart';
 import '../../business/pages/business_dashboard_page.dart';
 
 class AppRoutes {
@@ -213,12 +215,40 @@ class CustomerOrdersRouterPage extends StatelessWidget {
   }
 }
 
-class BusinessDashboardRouterPage extends StatelessWidget {
+class BusinessDashboardRouterPage extends StatefulWidget {
   const BusinessDashboardRouterPage({super.key});
 
   @override
+  State<BusinessDashboardRouterPage> createState() => _BusinessDashboardRouterPageState();
+}
+
+class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPage> {
+  final AuthService _authService = AuthService();
+  String? _businessId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusinessId();
+  }
+
+  Future<void> _loadBusinessId() async {
+    final user = _authService.currentUser;
+    if (user != null) {
+      setState(() {
+        _businessId = user.uid; // Use user uid as business ID
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const BusinessDashboardPage();
+    if (_businessId == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return ResponsiveAdminDashboard(businessId: _businessId!);
   }
 }
 
@@ -298,13 +328,41 @@ class SearchRouterPage extends StatelessWidget {
   }
 }
 
-class BusinessHomeRouterPage extends StatelessWidget {
+class BusinessHomeRouterPage extends StatefulWidget {
   const BusinessHomeRouterPage({super.key});
 
   @override
+  State<BusinessHomeRouterPage> createState() => _BusinessHomeRouterPageState();
+}
+
+class _BusinessHomeRouterPageState extends State<BusinessHomeRouterPage> {
+  final AuthService _authService = AuthService();
+  String? _businessId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusinessId();
+  }
+
+  Future<void> _loadBusinessId() async {
+    final user = _authService.currentUser;
+    if (user != null) {
+      setState(() {
+        _businessId = user.uid; // Use user uid as business ID
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_businessId == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     // Business home route should redirect to business dashboard
     // Check if user is authenticated business user
-    return const BusinessDashboardPage();
+    return ResponsiveAdminDashboard(businessId: _businessId!);
   }
 }

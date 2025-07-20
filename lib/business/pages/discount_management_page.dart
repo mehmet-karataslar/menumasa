@@ -7,7 +7,7 @@ import '../../../core/services/data_service.dart';
 import '../../../data/models/discount.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/product.dart';
-import '../../widgets/shared/loading_indicator.dart';
+import '../../presentation/widgets/shared/loading_indicator.dart';
 
 class DiscountManagementPage extends StatefulWidget {
   final String businessId;

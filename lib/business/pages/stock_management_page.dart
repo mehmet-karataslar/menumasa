@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
 import '../services/stock_service.dart';
 import '../services/business_service.dart';
 import '../models/stock_models.dart';
-import '../../../presentation/widgets/shared/loading_indicator.dart';
-import '../../../presentation/widgets/shared/error_message.dart';
-import '../../../presentation/widgets/shared/empty_state.dart';
+import '../../presentation/widgets/shared/loading_indicator.dart';
+import '../../presentation/widgets/shared/error_message.dart';
+import '../../presentation/widgets/shared/empty_state.dart';
 
 class StockManagementPage extends StatefulWidget {
   const StockManagementPage({super.key});
