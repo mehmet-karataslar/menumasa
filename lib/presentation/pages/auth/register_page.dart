@@ -67,14 +67,9 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (user != null && mounted) {
-        // Kayıt başarılı, kullanıcı tipine göre yönlendir
-        if (widget.userType == 'customer') {
-          // Müşteri kayıt sonrası - müşteri sayfasına yönlendir
-          Navigator.pushReplacementNamed(context, '/menu');
-        } else {
-          // İşletme kayıt sonrası - işletme kayıt sayfasına yönlendir
-          Navigator.pushReplacementNamed(context, '/business-register');
-        }
+        // Kayıt başarılı, müşteri ana sayfasına yönlendir
+        Navigator.pushReplacementNamed(context, '/customer/home', 
+          arguments: {'userId': user.id});
       }
     } on AuthException catch (e) {
       setState(() {

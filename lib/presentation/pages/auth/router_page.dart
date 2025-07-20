@@ -4,6 +4,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/url_service.dart';
 import '../../../data/models/user.dart';
+import '../../../core/enums/user_type.dart';
 import 'login_page.dart';
 import 'business_register_page.dart';
 import 'register_page.dart';
@@ -35,36 +36,14 @@ class _RouterPageState extends State<RouterPage> {
   Future<void> _checkAuthenticationState() async {
     try {
       final currentUser = _authService.currentUser;
+      
+
+      
+      // Sadece auth durumunu kontrol et, otomatik yönlendirme yapma
       if (currentUser != null) {
-        // User is already authenticated, get user data
-        final userData = await _authService.getCurrentUserData();
-        if (userData != null && mounted) {
-          // Navigate based on user type
-          if (userData.userType == UserType.customer) {
-            _urlService.updateCustomerUrl(userData.id, 'home');
-            Navigator.pushReplacementNamed(
-              context,
-              '/customer/home',
-              arguments: {'userId': userData.id},
-            );
-            return;
-          } else if (userData.userType == UserType.business) {
-            _urlService.updateUrl('/business/dashboard', customTitle: 'İşletme Paneli | MasaMenu');
-            Navigator.pushReplacementNamed(
-              context,
-              '/business/dashboard',
-            );
-            return;
-          } else if (userData.userType == UserType.admin) {
-            _urlService.updateUrl('/admin/dashboard', customTitle: 'Admin Paneli | MasaMenu');
-            Navigator.pushReplacementNamed(
-              context,
-              '/admin/dashboard',
-              arguments: {'adminId': userData.id},
-            );
-            return;
-          }
-        }
+        print('User authenticated: ${currentUser.uid}');
+        // User authenticated but don't auto-redirect
+        // Let them choose what to do from the main page
       }
     } catch (e) {
       // Continue to show router page if there's an error
@@ -233,6 +212,71 @@ class _RouterPageState extends State<RouterPage> {
   Widget _buildMainActions() {
     return Column(
       children: [
+        // Check if user is authenticated and show logout option
+        FutureBuilder<bool>(
+          future: _checkIfUserAuthenticated(),
+          builder: (context, snapshot) {
+            if (snapshot.data == true) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.greyLighter,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Oturum açık',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final userData = await _authService.getCurrentUserData();
+                              if (userData?.userType == UserType.business) {
+                                Navigator.pushNamed(context, '/business/dashboard');
+                              } else if (userData?.userType == UserType.customer) {
+                                Navigator.pushNamed(context, '/customer/home', 
+                                  arguments: {'userId': userData!.id});
+                              }
+                            },
+                            icon: const Icon(Icons.dashboard, size: 18),
+                            label: const Text('Panel'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _handleLogout,
+                            icon: const Icon(Icons.logout, size: 18),
+                            label: const Text('Çıkış'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              side: BorderSide(color: AppColors.error),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+
         // Customer access button
         SizedBox(
           width: double.infinity,
@@ -319,16 +363,13 @@ class _RouterPageState extends State<RouterPage> {
                 'Müşteri Kaydı',
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.primary,
-                  decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            Text(
-              ' | ',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textLight,
-              ),
-            ),
+            
+            const Text(' | '),
+            
             TextButton(
               onPressed: () {
                 _urlService.updateUrl('/business-register', customTitle: 'İşletme Kaydı | MasaMenu');
@@ -343,7 +384,7 @@ class _RouterPageState extends State<RouterPage> {
                 'İşletme Kaydı',
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.primary,
-                  decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -351,6 +392,11 @@ class _RouterPageState extends State<RouterPage> {
         ),
       ],
     );
+  }
+
+  Future<bool> _checkIfUserAuthenticated() async {
+    final currentUser = _authService.currentUser;
+    return currentUser != null;
   }
 
   Widget _buildFeatureHighlights() {
@@ -489,3 +535,4 @@ class _RouterPageState extends State<RouterPage> {
     );
   }
 }
+

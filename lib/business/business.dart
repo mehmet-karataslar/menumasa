@@ -22,9 +22,7 @@ export 'pages/system_settings_page.dart';
 export 'pages/activity_logs_page.dart';
 export 'pages/stock_management_page.dart';
 
-// Routes
-import 'business_routes.dart';
-export 'business_routes.dart';
+// Routes are now managed centrally in AppRoutes
 
 // Business Module sınıfı
 class BusinessModule {
@@ -33,7 +31,5 @@ class BusinessModule {
     print('Business Module initialized');
   }
 
-  static Map<String, dynamic> getRoutes() {
-    return BusinessRoutes.getRoutes();
-  }
+
 } 

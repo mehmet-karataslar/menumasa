@@ -26,8 +26,7 @@ export 'widgets/product_grid.dart';
 export 'widgets/search_bar.dart';
 export 'widgets/filter_bottom_sheet.dart';
 
-// Routes
-export 'customer_routes.dart';
+
 
 // Customer Module Configuration
 class CustomerModule {

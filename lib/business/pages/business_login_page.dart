@@ -268,7 +268,7 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
         TextButton(
           onPressed: () {
             // Business kayıt sayfasına yönlendir
-            Navigator.pushNamed(context, '/business/register');
+            Navigator.pushNamed(context, '/business-register');
           },
           child: Text(
             'Business Hesabı Oluştur',
@@ -300,6 +300,7 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
     });
 
     try {
+      // Email ile giriş yapmayı dene
       final user = await _authService.signInWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
@@ -315,6 +316,10 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
             _errorMessage = 'Bu hesap işletme hesabı değil. Lütfen işletme hesabınızla giriş yapın.';
           });
         }
+      } else {
+        setState(() {
+          _errorMessage = 'Kullanıcı bulunamadı.';
+        });
       }
     } catch (e) {
       setState(() {

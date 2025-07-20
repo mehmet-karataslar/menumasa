@@ -11,6 +11,7 @@ import '../../../business/models/business_user.dart';
 
 import '../../../business/models/business.dart';
 import '../../../business/models/category.dart';
+import '../../../core/enums/user_type.dart';
 
 import '../../../presentation/widgets/shared/error_message.dart';
 
@@ -65,9 +66,16 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       // If not logged in, show registration form directly
       // Don't redirect to login page
     } else {
-      // If logged in, pre-fill email field with user's email
+      // If logged in, check if it's already a business user
       final userData = await _authService.getCurrentUserData();
       if (userData != null && mounted) {
+        if (userData.userType == UserType.business) {
+          // Already a business user, redirect to dashboard
+          Navigator.pushReplacementNamed(context, '/business/dashboard');
+          return;
+        }
+        
+        // Pre-fill email field with user's email for non-business users
         setState(() {
           _emailController.text = userData.email;
           _phoneController.text = userData.phone ?? '';
@@ -245,23 +253,33 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   Future<void> _handleBusinessRegister() async {
     if (_formKey.currentState?.validate() != true) return;
 
-    final currentUser = _authService.currentUser;
-    if (currentUser == null) {
-      // If user is not logged in, create account first
-      await _createUserAccount();
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      final currentUser = _authService.currentUser;
+      if (currentUser == null) {
+        // If user is not logged in, create account first
+        await _createUserAccount();
+        // After user account creation, check again
+        final newCurrentUser = _authService.currentUser;
+        if (newCurrentUser == null) {
+          setState(() {
+            _errorMessage = 'Kullanıcı hesabı oluşturulamadı';
+          });
+          return;
+        }
+      }
+
       // Ensure businessId is set
       if (_businessId == null) {
         _businessId = FirebaseFirestore.instance.collection('businesses').doc().id;
       }
+
+      // Get current user (should exist now)
+      final user = _authService.currentUser!;
 
       // Get trimmed values
       final businessName = _businessNameController.text.trim();
@@ -277,7 +295,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       // Create business model
       final business = Business(
         id: _businessId!,
-        ownerId: currentUser.uid,
+        ownerId: user.uid,
         businessName: businessName,
         businessDescription: businessDescription,
         businessType: 'Restoran',
@@ -384,8 +402,9 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       );
 
       if (businessUser != null) {
-        // Now proceed with business registration
-        await _handleBusinessRegister();
+        // User account created successfully, 
+        // business registration will continue in _handleBusinessRegister
+        print('Business user account created successfully');
       }
     } catch (e) {
       setState(() {
@@ -427,11 +446,16 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         isOwner: true,
       );
 
-      // Save BusinessUser to Firestore
-      await FirebaseFirestore.instance
-          .collection('business_users')
-          .doc(businessId)
-          .set(businessUser.toJson());
+      // Save BusinessUser to Firestore using Firebase Auth user's UID as document ID
+      final currentUser = _authService.currentUser;
+      if (currentUser != null) {
+        await FirebaseFirestore.instance
+            .collection('business_users')
+            .doc(currentUser.uid)
+            .set(businessUser.toJson());
+      } else {
+        throw Exception('Kullanıcı oturum açmamış');
+      }
 
     } catch (e) {
       throw Exception('İşletme kullanıcısı oluşturulurken hata: $e');
