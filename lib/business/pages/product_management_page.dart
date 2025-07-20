@@ -1632,16 +1632,18 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     BuildContext context,
     Function(String) onImageSelected,
   ) {
-    final sampleImages = [
-      {'label': '🍕 Pizza', 'url': 'https://picsum.photos/400/300?random=1'},
-      {'label': '🍔 Burger', 'url': 'https://picsum.photos/400/300?random=2'},
-      {'label': '🥗 Salata', 'url': 'https://picsum.photos/400/300?random=3'},
-      {'label': '🍝 Makarna', 'url': 'https://picsum.photos/400/300?random=4'},
-      {'label': '🍰 Tatlı', 'url': 'https://picsum.photos/400/300?random=5'},
-      {'label': '☕ İçecek', 'url': 'https://picsum.photos/400/300?random=6'},
-      {'label': '🥘 Yemek', 'url': 'https://picsum.photos/400/300?random=7'},
-      {'label': '🍲 Çorba', 'url': 'https://picsum.photos/400/300?random=8'},
-    ];
+    final storageService = StorageService();
+    final predefinedImages = storageService.getPredefinedProductImages();
+    
+    final List<Map<String, String>> sampleImages = [];
+    predefinedImages.forEach((category, urls) {
+      for (int i = 0; i < urls.length; i++) {
+        sampleImages.add({
+          'label': '$category ${i + 1}',
+          'url': urls[i],
+        });
+      }
+    });
 
     showDialog(
       context: context,
@@ -1748,17 +1750,63 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
 
-        if (file.bytes != null) {
-          // Web için base64 formatında veya blob URL oluştur
-          final bytes = file.bytes!;
-          // Burada dosyayı upload etmek veya base64 olarak kullanmak gerekiyor
-          // Şimdilik mock URL olarak kullanıyoruz
-          final mockUrl =
-              'data:image/${file.extension};base64,${bytes.toString()}';
-          onImageSelected(mockUrl);
-        } else if (file.path != null) {
-          // Mobil için file path'i kullan
-          onImageSelected(file.path!);
+        try {
+          // Show loading
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const AlertDialog(
+              content: Row(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 16),
+                  Text('Resim yükleniyor...'),
+                ],
+              ),
+            ),
+          );
+
+          final storageService = StorageService();
+          String uploadedUrl;
+
+          if (file.bytes != null) {
+            // Web platform
+            final fileName = storageService.generateFileName(file.name);
+            uploadedUrl = await storageService.uploadProductImage(
+              businessId: widget.businessId,
+              productId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+              imageFile: file.bytes!,
+              fileName: fileName,
+            );
+          } else if (file.path != null) {
+            // Mobile platform
+            final fileName = storageService.generateFileName(file.name);
+            uploadedUrl = await storageService.uploadProductImage(
+              businessId: widget.businessId,
+              productId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+              imageFile: File(file.path!),
+              fileName: fileName,
+            );
+          } else {
+            throw Exception('Dosya verisi bulunamadı');
+          }
+
+          // Close loading dialog
+          if (mounted) Navigator.of(context).pop();
+          
+          onImageSelected(uploadedUrl);
+        } catch (e) {
+          // Close loading dialog
+          if (mounted) Navigator.of(context).pop();
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Resim yüklenirken hata: $e'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
         }
 
         if (mounted) {

@@ -1,264 +1,333 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 
 class StorageService {
+  static final StorageService _instance = StorageService._internal();
+  factory StorageService() => _instance;
+  StorageService._internal();
+
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Platform-aware dosya yükleme
-  Future<String> uploadFile(dynamic file, String fileName) async {
+  // =============================================================================
+  // PRODUCT IMAGE OPERATIONS
+  // =============================================================================
+
+  /// Uploads a product image to Firebase Storage
+  Future<String> uploadProductImage({
+    required String businessId,
+    required String productId,
+    required dynamic imageFile, // File for mobile, Uint8List for web
+    required String fileName,
+  }) async {
     try {
-      final ref = _storage.ref().child(fileName);
+      final ref = _storage
+          .ref()
+          .child('businesses')
+          .child(businessId)
+          .child('products')
+          .child(productId)
+          .child(fileName);
+
       UploadTask uploadTask;
-
+      
       if (kIsWeb) {
-        // Web için
-        if (file is XFile) {
-          final bytes = await file.readAsBytes();
-          uploadTask = ref.putData(bytes);
-        } else if (file is Uint8List) {
-          uploadTask = ref.putData(file);
-        } else {
-          throw Exception('Web platformunda desteklenmeyen dosya türü');
-        }
+        // Web platform - use putData with Uint8List
+        uploadTask = ref.putData(imageFile as Uint8List);
       } else {
-        // Mobil/Desktop için
-        if (file is File) {
-          uploadTask = ref.putFile(file);
-        } else if (file is XFile) {
-          final fileData = File(file.path);
-          uploadTask = ref.putFile(fileData);
-        } else {
-          throw Exception('Desteklenmeyen dosya türü');
-        }
+        // Mobile platform - use putFile with File
+        uploadTask = ref.putFile(imageFile as File);
       }
 
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
+      
       return downloadUrl;
     } catch (e) {
-      throw Exception('Dosya yüklenirken hata: $e');
+      throw Exception('Ürün resmi yüklenirken hata oluştu: $e');
     }
   }
 
-  /// Bytes'dan dosya yükleme (web için)
-  Future<String> uploadBytes(Uint8List bytes, String fileName) async {
+  /// Deletes a product image from Firebase Storage
+  Future<void> deleteProductImage(String imageUrl) async {
     try {
-      final ref = _storage.ref().child(fileName);
-      final uploadTask = ref.putData(bytes);
+      final ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+    } catch (e) {
+      print('Error deleting product image: $e');
+      // Don't throw error for image deletion failures
+    }
+  }
+
+  /// Uploads multiple product images
+  Future<List<String>> uploadMultipleProductImages({
+    required String businessId,
+    required String productId,
+    required List<dynamic> imageFiles,
+  }) async {
+    final List<String> uploadedUrls = [];
+    
+    for (int i = 0; i < imageFiles.length; i++) {
+      final fileName = 'image_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+      try {
+        final url = await uploadProductImage(
+          businessId: businessId,
+          productId: productId,
+          imageFile: imageFiles[i],
+          fileName: fileName,
+        );
+        uploadedUrls.add(url);
+      } catch (e) {
+        print('Error uploading image $i: $e');
+        // Continue with other images even if one fails
+      }
+    }
+    
+    return uploadedUrls;
+  }
+
+  // =============================================================================
+  // BUSINESS IMAGE OPERATIONS
+  // =============================================================================
+
+  /// Uploads a business logo to Firebase Storage
+  Future<String> uploadBusinessLogo({
+    required String businessId,
+    required dynamic imageFile,
+    required String fileName,
+  }) async {
+    try {
+      final ref = _storage
+          .ref()
+          .child('businesses')
+          .child(businessId)
+          .child('logo')
+          .child(fileName);
+
+      UploadTask uploadTask;
+      
+      if (kIsWeb) {
+        uploadTask = ref.putData(imageFile as Uint8List);
+      } else {
+        uploadTask = ref.putFile(imageFile as File);
+      }
+
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
+      
       return downloadUrl;
     } catch (e) {
-      throw Exception('Dosya yüklenirken hata: $e');
+      throw Exception('İşletme logosu yüklenirken hata oluştu: $e');
     }
   }
 
-  /// XFile'dan dosya yükleme
-  Future<String> uploadXFile(XFile file, String fileName) async {
-    try {
-      if (kIsWeb) {
-        final bytes = await file.readAsBytes();
-        return await uploadBytes(bytes, fileName);
-      } else {
-        final fileData = File(file.path);
-        return await uploadFile(fileData, fileName);
+  /// Uploads business gallery images
+  Future<List<String>> uploadBusinessGallery({
+    required String businessId,
+    required List<dynamic> imageFiles,
+  }) async {
+    final List<String> uploadedUrls = [];
+    
+    for (int i = 0; i < imageFiles.length; i++) {
+      final fileName = 'gallery_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+      try {
+        final ref = _storage
+            .ref()
+            .child('businesses')
+            .child(businessId)
+            .child('gallery')
+            .child(fileName);
+
+        UploadTask uploadTask;
+        
+        if (kIsWeb) {
+          uploadTask = ref.putData(imageFiles[i] as Uint8List);
+        } else {
+          uploadTask = ref.putFile(imageFiles[i] as File);
+        }
+
+        final snapshot = await uploadTask;
+        final downloadUrl = await snapshot.ref.getDownloadURL();
+        uploadedUrls.add(downloadUrl);
+      } catch (e) {
+        print('Error uploading gallery image $i: $e');
       }
-    } catch (e) {
-      throw Exception('Dosya yüklenirken hata: $e');
     }
+    
+    return uploadedUrls;
   }
 
-  /// İşletme logosu yükleme
-  Future<String> uploadBusinessLogo(dynamic file, String businessId) async {
-    try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'business_logos/${businessId}_$timestamp.jpg';
-      return await uploadFile(file, fileName);
-    } catch (e) {
-      throw Exception('Logo yüklenirken hata: $e');
-    }
-  }
+  // =============================================================================
+  // CATEGORY IMAGE OPERATIONS
+  // =============================================================================
 
-  /// Ürün resmi yükleme
-  Future<String> uploadProductImage(dynamic file, String businessId, String productId) async {
+  /// Uploads a category image to Firebase Storage
+  Future<String> uploadCategoryImage({
+    required String businessId,
+    required String categoryId,
+    required dynamic imageFile,
+    required String fileName,
+  }) async {
     try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'product_images/$businessId/${productId}_$timestamp.jpg';
-      return await uploadFile(file, fileName);
-    } catch (e) {
-      throw Exception('Ürün resmi yüklenirken hata: $e');
-    }
-  }
+      final ref = _storage
+          .ref()
+          .child('businesses')
+          .child(businessId)
+          .child('categories')
+          .child(categoryId)
+          .child(fileName);
 
-  /// QR kod resmi yükleme
-  Future<String> uploadQRCode(dynamic file, String businessId, String qrId) async {
-    try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'qr_codes/$businessId/${qrId}_$timestamp.png';
-      return await uploadFile(file, fileName);
-    } catch (e) {
-      throw Exception('QR kod yüklenirken hata: $e');
-    }
-  }
-
-  /// Dosya silme
-  Future<void> deleteFile(String fileName) async {
-    try {
-      final ref = _storage.ref().child(fileName);
-      await ref.delete();
-    } catch (e) {
-      throw Exception('Dosya silinirken hata: $e');
-    }
-  }
-
-  /// URL'den dosya silme
-  Future<void> deleteFileFromUrl(String url) async {
-    try {
-      final ref = _storage.refFromURL(url);
-      await ref.delete();
-    } catch (e) {
-      throw Exception('Dosya silinirken hata: $e');
-    }
-  }
-
-  /// Dosya boyutu kontrolü (web için bytes, mobil için file)
-  bool isValidFileSize(dynamic file, {int maxSizeInMB = 5}) {
-    try {
-      int sizeInBytes;
+      UploadTask uploadTask;
       
       if (kIsWeb) {
-        if (file is Uint8List) {
-          sizeInBytes = file.length;
-        } else {
-          return false;
-        }
+        uploadTask = ref.putData(imageFile as Uint8List);
       } else {
-        if (file is File) {
-          sizeInBytes = file.lengthSync();
-        } else {
-          return false;
-        }
+        uploadTask = ref.putFile(imageFile as File);
       }
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
       
-      final sizeInMB = sizeInBytes / (1024 * 1024);
-      return sizeInMB <= maxSizeInMB;
+      return downloadUrl;
     } catch (e) {
-      return false;
+      throw Exception('Kategori resmi yüklenirken hata oluştu: $e');
     }
   }
 
-  /// Dosya türü kontrolü
+  // =============================================================================
+  // USER PROFILE IMAGE OPERATIONS
+  // =============================================================================
+
+  /// Uploads a user avatar to Firebase Storage
+  Future<String> uploadUserAvatar({
+    required String userId,
+    required dynamic imageFile,
+    required String fileName,
+  }) async {
+    try {
+      final ref = _storage
+          .ref()
+          .child('users')
+          .child(userId)
+          .child('avatar')
+          .child(fileName);
+
+      UploadTask uploadTask;
+      
+      if (kIsWeb) {
+        uploadTask = ref.putData(imageFile as Uint8List);
+      } else {
+        uploadTask = ref.putFile(imageFile as File);
+      }
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Kullanıcı avatarı yüklenirken hata oluştu: $e');
+    }
+  }
+
+  // =============================================================================
+  // GENERAL OPERATIONS
+  // =============================================================================
+
+  /// Deletes an image from Firebase Storage using its URL
+  Future<void> deleteImage(String imageUrl) async {
+    try {
+      final ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+    } catch (e) {
+      print('Error deleting image: $e');
+      // Don't throw error for image deletion failures
+    }
+  }
+
+  /// Deletes multiple images from Firebase Storage
+  Future<void> deleteMultipleImages(List<String> imageUrls) async {
+    for (final url in imageUrls) {
+      await deleteImage(url);
+    }
+  }
+
+  /// Gets download progress for upload tasks
+  Stream<double> getUploadProgress(UploadTask uploadTask) {
+    return uploadTask.snapshotEvents.map((snapshot) {
+      return snapshot.bytesTransferred / snapshot.totalBytes;
+    });
+  }
+
+  /// Validates file size (max 5MB)
+  bool isValidFileSize(int fileSizeInBytes) {
+    const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+    return fileSizeInBytes <= maxSizeInBytes;
+  }
+
+  /// Validates file type for images
   bool isValidImageType(String fileName) {
-    final extension = fileName.split('.').last.toLowerCase();
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension);
+    final allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    final extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+    return allowedExtensions.contains(extension);
   }
 
-  /// XFile için dosya türü kontrolü
-  bool isValidImageTypeFromXFile(XFile file) {
-    return isValidImageType(file.name);
-  }
-
-  /// Güvenli dosya adı oluşturma
-  String generateSafeFileName(String originalName) {
+  /// Generates a unique file name
+  String generateFileName(String originalFileName) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final extension = originalName.split('.').last.toLowerCase();
-    final baseName = originalName.split('.').first.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-    return '${timestamp}_${baseName}.$extension';
+    final extension = originalFileName.substring(originalFileName.lastIndexOf('.'));
+    return 'img_${timestamp}$extension';
   }
 
-  /// Dosya yükleme durumu tracking
-  Stream<TaskSnapshot> uploadFileWithProgress(dynamic file, String fileName) {
-    try {
-      final ref = _storage.ref().child(fileName);
-      UploadTask uploadTask;
+  // =============================================================================
+  // PREDEFINED CATEGORY IMAGES
+  // =============================================================================
 
-      if (kIsWeb) {
-        if (file is XFile) {
-          // Web için async işlemi handle et
-          return _uploadXFileWeb(file, ref);
-        } else if (file is Uint8List) {
-          uploadTask = ref.putData(file);
-        } else {
-          throw Exception('Web platformunda desteklenmeyen dosya türü');
-        }
-      } else {
-        if (file is File) {
-          uploadTask = ref.putFile(file);
-        } else if (file is XFile) {
-          final fileData = File(file.path);
-          uploadTask = ref.putFile(fileData);
-        } else {
-          throw Exception('Desteklenmeyen dosya türü');
-        }
-      }
-
-      return uploadTask.snapshotEvents;
-    } catch (e) {
-      throw Exception('Dosya yükleme başlatılırken hata: $e');
-    }
+  /// Returns predefined category images for common food categories
+  Map<String, String> getPredefinedCategoryImages() {
+    return {
+      'Ana Yemekler': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fmain-dishes.jpg?alt=media',
+      'Başlangıçlar': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fappetizers.jpg?alt=media',
+      'Çorbalar': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fsoups.jpg?alt=media',
+      'Salatalar': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fsalads.jpg?alt=media',
+      'Tatlılar': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fdesserts.jpg?alt=media',
+      'İçecekler': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fdrinks.jpg?alt=media',
+      'Pizza': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fpizza.jpg?alt=media',
+      'Burger': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fburger.jpg?alt=media',
+      'Makarna': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fpasta.jpg?alt=media',
+      'Sushi': 'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fcategories%2Fsushi.jpg?alt=media',
+    };
   }
 
-  /// Web için XFile yükleme helper metodu
-  Stream<TaskSnapshot> _uploadXFileWeb(XFile file, Reference ref) async* {
-    try {
-      final bytes = await file.readAsBytes();
-      final uploadTask = ref.putData(bytes);
-      yield* uploadTask.snapshotEvents;
-    } catch (e) {
-      throw Exception('Web dosya yükleme hatası: $e');
-    }
-  }
-
-
-
-  /// İşletme klasörü oluşturma
-  Future<void> createBusinessFolder(String businessId) async {
-    try {
-      // Firebase Storage'da boş bir .placeholder dosyası oluştur
-      final ref = _storage.ref().child('businesses/$businessId/.placeholder');
-      await ref.putString('');
-    } catch (e) {
-      print('İşletme klasörü oluşturulurken hata: $e');
-    }
-  }
-
-  /// İşletme dosyalarını silme
-  Future<void> deleteBusinessFiles(String businessId) async {
-    try {
-      final ref = _storage.ref().child('businesses/$businessId');
-      final listResult = await ref.listAll();
-      
-      // Tüm dosyaları sil
-      for (final item in listResult.items) {
-        await item.delete();
-      }
-      
-      // Alt klasörleri sil
-      for (final prefix in listResult.prefixes) {
-        await _deleteFolder(prefix);
-      }
-    } catch (e) {
-      print('İşletme dosyaları silinirken hata: $e');
-    }
-  }
-
-  /// Klasör silme helper
-  Future<void> _deleteFolder(Reference folderRef) async {
-    try {
-      final listResult = await folderRef.listAll();
-      
-      for (final item in listResult.items) {
-        await item.delete();
-      }
-      
-      for (final prefix in listResult.prefixes) {
-        await _deleteFolder(prefix);
-      }
-    } catch (e) {
-      print('Klasör silinirken hata: $e');
-    }
+  /// Returns predefined product images for common food items
+  Map<String, List<String>> getPredefinedProductImages() {
+    return {
+      'Pizza': [
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fpizza1.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fpizza2.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fpizza3.jpg?alt=media',
+      ],
+      'Burger': [
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fburger1.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fburger2.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fburger3.jpg?alt=media',
+      ],
+      'Salata': [
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fsalad1.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fsalad2.jpg?alt=media',
+      ],
+      'Makarna': [
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fpasta1.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fpasta2.jpg?alt=media',
+      ],
+      'Tatlı': [
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fdessert1.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fdessert2.jpg?alt=media',
+      ],
+      'İçecek': [
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fdrink1.jpg?alt=media',
+        'https://firebasestorage.googleapis.com/v0/b/masamenu-app.appspot.com/o/predefined%2Fproducts%2Fdrink2.jpg?alt=media',
+      ],
+    };
   }
 }

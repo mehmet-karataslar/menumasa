@@ -611,6 +611,68 @@ class FirestoreService {
     await batch.commit();
   }
 
+  // Advanced discount operations for compatibility with DataService
+  Future<List<Discount>> getDiscountsByBusinessId(String businessId) async {
+    try {
+      final snapshot = await _discountsRef
+          .where('businessId', isEqualTo: businessId)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => Discount.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'discountId': doc.id,
+              }))
+          .toList();
+    } catch (e) {
+      print('Error getting discounts by business ID: $e');
+      return [];
+    }
+  }
+
+  Future<List<Discount>> getActiveDiscounts(String businessId) async {
+    try {
+      final discounts = await getDiscountsByBusinessId(businessId);
+      return discounts.where((d) => d.isCurrentlyActive).toList();
+    } catch (e) {
+      print('Error getting active discounts: $e');
+      return [];
+    }
+  }
+
+  Future<List<Discount>> getDiscountsForProduct(
+    String businessId,
+    String productId,
+    String categoryId,
+  ) async {
+    try {
+      final discounts = await getActiveDiscounts(businessId);
+      return discounts
+          .where((d) => d.appliesToProduct(productId, categoryId))
+          .toList();
+    } catch (e) {
+      print('Error getting discounts for product: $e');
+      return [];
+    }
+  }
+
+  Future<void> incrementDiscountUsage(String discountId) async {
+    try {
+      final doc = await _discountsRef.doc(discountId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final currentUsage = data['usageCount'] ?? 0;
+        
+        await _discountsRef.doc(discountId).update({
+          'usageCount': currentUsage + 1,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      print('Error incrementing discount usage: $e');
+    }
+  }
+
   // Order Operations
   Future<List<app_order.Order>> getOrders({
     String? businessId,

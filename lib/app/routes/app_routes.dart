@@ -356,7 +356,6 @@ class MenuRouterPage extends StatelessWidget {
     if (businessId == null || businessId.isEmpty) {
       return const RouterPage();
     }
-
     return MenuPage(businessId: businessId);
   }
 }

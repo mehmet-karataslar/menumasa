@@ -42,7 +42,7 @@ class Order {
       items: (data['items'] as List<dynamic>? ?? [])
           .map((item) => OrderItem.fromJson(item))
           .toList(),
-      totalAmount: (data['totalAmount'] ?? 0.0).toDouble(),
+      totalAmount: _parsePrice(data['totalAmount']),
       status: OrderStatus.fromString(data['status'] ?? 'pending'),
       notes: data['notes'],
       createdAt: _parseDateTime(data['createdAt']),
@@ -51,6 +51,24 @@ class Order {
           ? _parseDateTime(data['completedAt'])
           : null,
     );
+  }
+
+  static double _parsePrice(dynamic value) {
+    if (value == null) return 0.0;
+    
+    if (value is num) {
+      return value.toDouble();
+    } else if (value is String) {
+      final parsed = double.tryParse(value);
+      if (parsed != null) {
+        return parsed;
+      } else {
+        print('Warning: Could not parse price value "$value" as double, using 0.0');
+        return 0.0;
+      }
+    }
+    
+    return 0.0;
   }
 
   static DateTime _parseDateTime(dynamic value) {
@@ -260,11 +278,29 @@ class OrderItem {
       orderItemId: data['orderItemId'] ?? '',
       productId: data['productId'] ?? '',
       productName: data['productName'] ?? '',
-      productPrice: (data['productPrice'] ?? 0.0).toDouble(),
+      productPrice: _parsePriceStatic(data['productPrice']),
       productImage: data['productImage'],
       quantity: data['quantity'] ?? 1,
       notes: data['notes'],
     );
+  }
+
+  static double _parsePriceStatic(dynamic value) {
+    if (value == null) return 0.0;
+    
+    if (value is num) {
+      return value.toDouble();
+    } else if (value is String) {
+      final parsed = double.tryParse(value);
+      if (parsed != null) {
+        return parsed;
+      } else {
+        print('Warning: Could not parse price value "$value" as double, using 0.0');
+        return 0.0;
+      }
+    }
+    
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {

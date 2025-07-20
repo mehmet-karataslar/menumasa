@@ -8,7 +8,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/utils/time_rule_utils.dart';
-import '../../core/services/data_service.dart';
+
+import '../../core/services/firestore_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
 import '../widgets/business_header.dart';
@@ -50,7 +51,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   List<Discount> _discounts = [];
 
   // Services
-  final _dataService = DataService();
+  final _firestoreService = FirestoreService();
   final _cartService = CartService();
   final _urlService = UrlService();
 
@@ -129,18 +130,14 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         _hasError = false;
       });
 
-      _business = await _dataService.getBusiness(widget.businessId);
+      _business = await _firestoreService.getBusiness(widget.businessId);
       if (_business == null) {
-        throw Exception('İşletme bulunamadı');
+        throw Exception('İşletme bulunamadı: ID=${widget.businessId}');
       }
 
-      _categories = await _dataService.getCategories(
-        businessId: widget.businessId,
-      );
-      _products = await _dataService.getProducts(businessId: widget.businessId);
-      _discounts = await _dataService.getDiscountsByBusinessId(
-        widget.businessId,
-      );
+      _categories = await _firestoreService.getBusinessCategories(widget.businessId);
+      _products = await _firestoreService.getBusinessProducts(widget.businessId, limit: 100);
+      _discounts = await _firestoreService.getDiscountsByBusinessId(widget.businessId);
 
       _filterProducts();
 

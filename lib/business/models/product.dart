@@ -53,8 +53,8 @@ class Product {
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       detailedDescription: data['detailedDescription'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-      currentPrice: (data['currentPrice'] ?? 0.0).toDouble(),
+      price: _parsePrice(data['price']),
+      currentPrice: _parsePrice(data['currentPrice']),
       currency: data['currency'] ?? 'TL',
       images: (data['images'] as List<dynamic>? ?? [])
           .map((image) => ProductImage.fromMap(image))
@@ -73,6 +73,25 @@ class Product {
       createdAt: _parseDateTime(data['createdAt']),
       updatedAt: _parseDateTime(data['updatedAt']),
     );
+  }
+
+  static double _parsePrice(dynamic value) {
+    if (value == null) return 0.0;
+    
+    if (value is num) {
+      return value.toDouble();
+    } else if (value is String) {
+      // Try to parse string as number, return 0.0 if it fails
+      final parsed = double.tryParse(value);
+      if (parsed != null) {
+        return parsed;
+      } else {
+        print('Warning: Could not parse price value "$value" as double, using 0.0');
+        return 0.0;
+      }
+    }
+    
+    return 0.0;
   }
 
   static DateTime _parseDateTime(dynamic value) {
@@ -337,14 +356,32 @@ class NutritionInfo {
 
   factory NutritionInfo.fromMap(Map<String, dynamic> map) {
     return NutritionInfo(
-      calories: map['calories']?.toDouble(),
-      protein: map['protein']?.toDouble(),
-      carbs: map['carbs']?.toDouble(),
-      fat: map['fat']?.toDouble(),
-      fiber: map['fiber']?.toDouble(),
-      sugar: map['sugar']?.toDouble(),
-      sodium: map['sodium']?.toDouble(),
+      calories: _parseNutritionValue(map['calories']),
+      protein: _parseNutritionValue(map['protein']),
+      carbs: _parseNutritionValue(map['carbs']),
+      fat: _parseNutritionValue(map['fat']),
+      fiber: _parseNutritionValue(map['fiber']),
+      sugar: _parseNutritionValue(map['sugar']),
+      sodium: _parseNutritionValue(map['sodium']),
     );
+  }
+
+  static double? _parseNutritionValue(dynamic value) {
+    if (value == null) return null;
+    
+    if (value is num) {
+      return value.toDouble();
+    } else if (value is String) {
+      final parsed = double.tryParse(value);
+      if (parsed != null) {
+        return parsed;
+      } else {
+        print('Warning: Could not parse nutrition value "$value" as double, using null');
+        return null;
+      }
+    }
+    
+    return null;
   }
 
   Map<String, dynamic> toMap() {

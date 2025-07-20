@@ -231,6 +231,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     final dynamicRoute = '/customer/${widget.userId}/menu/${business.id}?t=$timestamp';
     _urlService.updateMenuUrl(business.id, businessName: business.businessName);
     
+
+    
     Navigator.push(
       context,
       MaterialPageRoute(

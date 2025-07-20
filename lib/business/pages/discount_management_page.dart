@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
-import '../../../core/services/data_service.dart';
+
+import '../../../core/services/firestore_service.dart';
 import '../../../business/models/discount.dart';
 import '../../../business/models/category.dart';
 import '../../../business/models/product.dart';
@@ -20,7 +21,7 @@ class DiscountManagementPage extends StatefulWidget {
 }
 
 class _DiscountManagementPageState extends State<DiscountManagementPage> {
-  final DataService _dataService = DataService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   List<Discount> _discounts = [];
   List<Category> _categories = [];
@@ -38,9 +39,9 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
       setState(() => _isLoading = true);
 
       final futures = await Future.wait([
-        _dataService.getDiscountsByBusinessId(widget.businessId),
-        _dataService.getCategories(businessId: widget.businessId),
-        _dataService.getProducts(businessId: widget.businessId),
+        _firestoreService.getDiscountsByBusinessId(widget.businessId),
+        _firestoreService.getBusinessCategories(widget.businessId),
+        _firestoreService.getBusinessProducts(widget.businessId, limit: 100),
       ]);
 
       setState(() {
@@ -389,7 +390,7 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
 
   Future<void> _saveDiscount(Discount discount) async {
     try {
-      await _dataService.saveDiscount(discount);
+      await _firestoreService.saveDiscount(discount);
       await _loadData();
 
       if (mounted) {
@@ -436,7 +437,7 @@ class _DiscountManagementPageState extends State<DiscountManagementPage> {
 
     if (confirm == true) {
       try {
-        await _dataService.deleteDiscount(discount.discountId);
+        await _firestoreService.deleteDiscount(discount.discountId);
         await _loadData();
 
         if (mounted) {
