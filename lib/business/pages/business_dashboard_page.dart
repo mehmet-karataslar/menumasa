@@ -10,6 +10,7 @@ import '../../../presentation/pages/business/business_home_page.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/firestore_service.dart';
 import 'dart:html' as html;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
   const BusinessDashboardPage({super.key});
@@ -39,66 +40,78 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     });
 
     try {
-      // Get current user
-      final currentUser = _authService.currentUser;
-      if (currentUser == null) {
+      // Get current Firebase Auth user
+      final firebaseUser = _authService.currentUser;
+      if (firebaseUser == null) {
         // User not authenticated, redirect to login
         Navigator.pushReplacementNamed(context, '/business/login');
         return;
       }
 
-      // Check if user has business data
-      if (currentUser.businessData?.businessIds.isNotEmpty == true) {
-        final businessId = currentUser.businessData!.businessIds.first;
-        
-        // Get current URL to extract tab if any
-        final currentUrl = html.window.location.href;
-        final uri = Uri.parse(currentUrl);
-        
-        String? initialTab;
-        if (uri.pathSegments.length >= 3 && uri.pathSegments[0] == 'business') {
-          final potentialTab = uri.pathSegments[2];
-          final validTabs = [
-            'genel-bakis', 'siparisler', 'kategoriler', 
-            'urunler', 'indirimler', 'qr-kodlar', 'ayarlar'
-          ];
-          if (validTabs.contains(potentialTab)) {
-            initialTab = potentialTab;
+      // Try to load user data from Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        if (userData != null && userData['businessData']?['businessIds'] != null) {
+          final businessIds = List<String>.from(userData['businessData']['businessIds']);
+          if (businessIds.isNotEmpty) {
+            final businessId = businessIds.first;
+            
+            // Get current URL to extract tab if any
+            final currentUrl = html.window.location.href;
+            final uri = Uri.parse(currentUrl);
+            
+            String? initialTab;
+            if (uri.pathSegments.length >= 3 && uri.pathSegments[0] == 'business') {
+              final potentialTab = uri.pathSegments[2];
+              final validTabs = [
+                'genel-bakis', 'siparisler', 'kategoriler', 
+                'urunler', 'indirimler', 'qr-kodlar', 'ayarlar'
+              ];
+              if (validTabs.contains(potentialTab)) {
+                initialTab = potentialTab;
+              }
+            }
+
+            // Navigate to business home page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BusinessHomePage(
+                  businessId: businessId,
+                  initialTab: initialTab,
+                ),
+              ),
+            );
+            return;
           }
         }
+      }
 
+      // If user doesn't have business data, try to find businesses by owner ID
+      final businesses = await _firestoreService.getBusinessesByOwnerId(firebaseUser.uid);
+      
+      if (businesses.isNotEmpty) {
+        final businessId = businesses.first.id;
+        
         // Navigate to business home page
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => BusinessHomePage(
               businessId: businessId,
-              initialTab: initialTab,
             ),
           ),
         );
       } else {
-        // User doesn't have business data, try to load from Firestore
-        final businesses = await _firestoreService.getBusinessesByOwnerId(currentUser.id);
-        
-        if (businesses.isNotEmpty) {
-          final businessId = businesses.first.id;
-          
-          // Navigate to business home page
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BusinessHomePage(
-                businessId: businessId,
-              ),
-            ),
-          );
-        } else {
-          // No business found, redirect to business registration
-          setState(() {
-            _errorMessage = 'Henüz kayıtlı bir işletmeniz bulunmamaktadır.';
-          });
-        }
+        // No business found, redirect to business registration
+        setState(() {
+          _errorMessage = 'Henüz kayıtlı bir işletmeniz bulunmamaktadır.';
+        });
       }
     } catch (e) {
       setState(() {
