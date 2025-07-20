@@ -25,6 +25,34 @@ class BusinessService {
   BusinessSession? get currentSession => _currentSession;
   bool get isLoggedIn => _currentBusiness != null && _currentSession?.isValid == true;
 
+  /// Set current business (for session management)
+  void setCurrentBusiness(BusinessUser? business) {
+    _currentBusiness = business;
+  }
+
+  /// Load business user by Firebase UID
+  Future<BusinessUser?> loadBusinessByUID(String uid) async {
+    try {
+      final businessQuery = await _firestore
+          .collection(_businessCollection)
+          .where('uid', isEqualTo: uid)
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (businessQuery.docs.isNotEmpty) {
+        final businessData = businessQuery.docs.first.data();
+        final business = BusinessUser.fromJson(businessData, id: businessQuery.docs.first.id);
+        _currentBusiness = business;
+        return business;
+      }
+      
+      return null;
+    } catch (e) {
+      throw BusinessException('İşletme bilgileri alınırken hata: $e');
+    }
+  }
+
   /// Business girişi
   Future<BusinessUser?> signInWithCredentials({
     required String username,

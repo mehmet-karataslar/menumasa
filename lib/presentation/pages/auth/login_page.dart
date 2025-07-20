@@ -60,8 +60,7 @@ class _LoginPageState extends State<LoginPage> {
         } else if (user.userType == UserType.business) {
           Navigator.pushReplacementNamed(
             context,
-            '/business/home',
-            arguments: {'businessId': user.id},
+            '/business/dashboard',
           );
         } else if (user.userType == UserType.admin) {
           Navigator.pushReplacementNamed(

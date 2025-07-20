@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:math';
 import '../../data/models/business.dart';
 
 class BusinessUser {
   final String businessId;
+  final String? uid; // Firebase Auth UID
   final String username;
   final String email;
   final String fullName;
@@ -30,6 +33,7 @@ class BusinessUser {
 
   BusinessUser({
     required this.businessId,
+    this.uid,
     required this.username,
     required this.email,
     required this.fullName,
@@ -55,11 +59,12 @@ class BusinessUser {
   factory BusinessUser.fromJson(Map<String, dynamic> data, {String? id}) {
     return BusinessUser(
       businessId: id ?? data['businessId'] ?? '',
+      uid: data['uid'],
       username: data['username'] ?? '',
       email: data['email'] ?? '',
       fullName: data['fullName'] ?? '',
       avatarUrl: data['avatarUrl'],
-      role: BusinessRole.fromString(data['role'] ?? 'staff'),
+      role: BusinessRole.fromString(data['role'] ?? 'owner'),
       permissions: (data['permissions'] as List<dynamic>? ?? [])
           .map((perm) => BusinessPermission.fromString(perm))
           .toList(),
@@ -97,6 +102,7 @@ class BusinessUser {
   Map<String, dynamic> toJson() {
     return {
       'businessId': businessId,
+      'uid': uid,
       'username': username,
       'email': email,
       'fullName': fullName,
@@ -170,7 +176,8 @@ class BusinessUser {
 
   // Password utility methods
   static String _generateSalt() {
-    final bytes = List<int>.generate(32, (i) => DateTime.now().millisecondsSinceEpoch + i);
+    final random = Random.secure();
+    final bytes = Uint8List.fromList(List<int>.generate(32, (i) => random.nextInt(256)));
     return base64Encode(bytes);
   }
 
@@ -182,6 +189,7 @@ class BusinessUser {
 
   static BusinessUser createWithPassword({
     required String businessId,
+    String? uid,
     required String username,
     required String email,
     required String fullName,
@@ -200,6 +208,7 @@ class BusinessUser {
 
     return BusinessUser(
       businessId: businessId,
+      uid: uid,
       username: username,
       email: email,
       fullName: fullName,

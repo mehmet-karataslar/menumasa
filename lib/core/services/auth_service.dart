@@ -1,6 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/user.dart' as app_user;
+import '../../data/models/business.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -106,6 +107,125 @@ class AuthService {
     }
   }
 
+  // Register business user with email and password
+  Future<app_user.User?> createBusinessUserWithEmailAndPassword(
+    String email,
+    String password,
+    String businessName,
+    String? phone,
+    String businessId,
+  ) async {
+    try {
+      // First check if email already exists
+      final emailCheck = await _auth.fetchSignInMethodsForEmail(email);
+      if (emailCheck.isNotEmpty) {
+        throw AuthException('Bu e-posta adresi zaten kullanılıyor');
+      }
+
+      // Create user in Firebase Auth
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user != null) {
+        // Update display name in Firebase Auth
+        await credential.user!.updateDisplayName(businessName);
+
+        // Create business user record in users collection with business type
+        await _firestore.collection('users').doc(credential.user!.uid).set({
+          'id': credential.user!.uid,
+          'email': email,
+          'name': businessName,
+          'phone': phone,
+          'userType': app_user.UserType.business.name,
+          'isActive': true,
+          'isEmailVerified': false,
+          'createdAt': DateTime.now().toIso8601String(),
+          'lastLoginAt': DateTime.now().toIso8601String(),
+          'businessData': app_user.BusinessData(
+             role: app_user.BusinessRole.fromString('owner'),
+             permissions: [
+               app_user.BusinessPermission.manageStaff,
+               app_user.BusinessPermission.addProducts,
+               app_user.BusinessPermission.editProducts,
+               app_user.BusinessPermission.deleteProducts,
+               app_user.BusinessPermission.editOrders,
+               app_user.BusinessPermission.viewOrders,
+               app_user.BusinessPermission.manageSettings,
+               app_user.BusinessPermission.viewAnalytics,
+             ],
+             businessIds: [businessId],
+             stats: BusinessStats.empty(),
+             settings: BusinessSettings.defaultRestaurant(),
+           ).toJson(),
+        });
+
+        // Also create detailed business_users record for BusinessService
+        await _firestore.collection('business_users').doc(credential.user!.uid).set({
+          'businessId': businessId,
+          'uid': credential.user!.uid,
+          'username': email.split('@').first.toLowerCase(),
+          'email': email,
+          'fullName': businessName,
+          'role': 'owner',
+          'permissions': [
+            'manage_staff',
+            'add_products',
+            'edit_products',
+            'delete_products',
+            'edit_orders',
+            'view_orders',
+            'manage_settings',
+            'view_analytics',
+          ],
+          'isActive': true,
+          'isOwner': true,
+          'lastLoginAt': DateTime.now().toIso8601String(),
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+          'businessName': businessName,
+          'businessPhone': phone,
+          'passwordHash': '', // Not used for Firebase Auth users
+          'passwordSalt': '', // Not used for Firebase Auth users
+          'requirePasswordChange': false,
+        });
+
+        return app_user.User.business(
+          id: credential.user!.uid,
+          email: email,
+          name: businessName,
+          phone: phone,
+          createdAt: DateTime.now(),
+          isActive: true,
+          isEmailVerified: false,
+          lastLoginAt: DateTime.now(),
+          businessData: app_user.BusinessData(
+            role: app_user.BusinessRole.owner,
+            permissions: [
+              app_user.BusinessPermission.manageStaff,
+              app_user.BusinessPermission.addProducts,
+              app_user.BusinessPermission.editProducts,
+              app_user.BusinessPermission.deleteProducts,
+              app_user.BusinessPermission.editOrders,
+              app_user.BusinessPermission.viewOrders,
+              app_user.BusinessPermission.manageSettings,
+              app_user.BusinessPermission.viewAnalytics,
+            ],
+            businessIds: [businessId],
+            stats: BusinessStats.empty(),
+            settings: BusinessSettings.defaultRestaurant(),
+          ),
+        );
+      }
+      return null;
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_getErrorMessage(e.code));
+    } catch (e) {
+      throw AuthException('İşletme hesabı oluşturulurken bir hata oluştu: $e');
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     await _auth.signOut();
@@ -179,11 +299,39 @@ class AuthService {
   // Get user from Firestore
   Future<app_user.User?> _getUserFromFirestore(String uid) async {
     try {
-      final doc = await _firestore.collection('users').doc(uid).get();
-      if (doc.exists) {
-        return app_user.User.fromJson(doc.data()!, id: uid);
+      // First check users collection (for customers and admins)
+      final userDoc = await _firestore.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        return app_user.User.fromJson(userDoc.data()!, id: uid);
       }
-      // If user document doesn't exist, create a default user
+
+      // If not found, check business_users collection (for businesses)
+      final businessDoc = await _firestore.collection('business_users').doc(uid).get();
+      if (businessDoc.exists) {
+        final businessData = businessDoc.data()!;
+        // Convert BusinessUser to User for authentication purposes
+        return app_user.User.business(
+          id: uid,
+          email: businessData['email'] ?? '',
+          name: businessData['fullName'] ?? '',
+          phone: businessData['businessPhone'],
+          createdAt: _parseTimestamp(businessData['createdAt']) ?? DateTime.now(),
+          isActive: businessData['isActive'] ?? true,
+          isEmailVerified: false, // Business users don't use email verification
+          lastLoginAt: _parseTimestamp(businessData['lastLoginAt']) ?? DateTime.now(),
+          businessData: app_user.BusinessData(
+            role: app_user.BusinessRole.fromString(businessData['role'] ?? 'owner'),
+            permissions: (businessData['permissions'] as List<dynamic>? ?? [])
+                .map((perm) => app_user.BusinessPermission.fromString(perm))
+                .toList(),
+            businessIds: [businessData['businessId'] ?? uid],
+            stats: BusinessStats.empty(),
+            settings: BusinessSettings.defaultRestaurant(),
+          ),
+        );
+      }
+
+      // If user document doesn't exist in either collection, create a default user
       print('User document not found for UID: $uid, creating default user');
       return _createDefaultUser(uid);
     } catch (e) {
@@ -191,6 +339,14 @@ class AuthService {
       // Try to create default user as fallback
       return _createDefaultUser(uid);
     }
+  }
+
+  // Helper method to parse Firestore timestamp
+  DateTime? _parseTimestamp(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   // Create default user when document doesn't exist

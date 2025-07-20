@@ -5,6 +5,7 @@ import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/pages/auth/register_page.dart';
 import '../../presentation/pages/auth/business_register_page.dart';
 import '../../presentation/pages/auth/router_page.dart';
+import '../../business/pages/business_login_page.dart';
 import '../../presentation/pages/customer/menu_page.dart';
 import '../../presentation/pages/customer/product_detail_page.dart';
 import '../../presentation/pages/customer/customer_orders_page.dart';
@@ -32,6 +33,7 @@ class AppRoutes {
   static const String splash = '/';
   static const String welcome = '/welcome';
   static const String login = '/login';
+  static const String businessLogin = '/business/login';
   static const String register = '/register';
   static const String businessRegister = '/business-register';
   static const String router = '/router';
@@ -57,8 +59,9 @@ class AppRoutes {
   // Route map
   static Map<String, WidgetBuilder> get routes => {
     '/': (context) => const RouterPage(),
-    login: (context) => const LoginPage(userType: 'business'),
-    register: (context) => const RegisterPage(userType: 'business'),
+    login: (context) => const LoginPage(userType: 'customer'),
+    businessLogin: (context) => const BusinessLoginPage(),
+    register: (context) => const RegisterPage(userType: 'customer'),
     businessRegister: (context) => const BusinessRegisterPage(),
     router: (context) => const RouterPage(),
     menu: (context) => const MenuRouterPage(),
@@ -278,14 +281,8 @@ class BusinessHomeRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final businessId = args?['businessId'] as String?;
-
-    if (businessId == null || businessId.isEmpty) {
-      return const RouterPage();
-    }
-
-    return BusinessHomePage(businessId: businessId);
+    // Business home route should redirect to business dashboard
+    // Check if user is authenticated business user
+    return const BusinessDashboardPage();
   }
 }

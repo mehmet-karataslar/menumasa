@@ -70,13 +70,34 @@ class Product {
       timeRules: (data['timeRules'] as List<dynamic>? ?? [])
           .map((rule) => TimeRule.fromMap(rule))
           .toList(),
-      createdAt: data['createdAt'] != null
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: data['updatedAt'] != null
-          ? DateTime.parse(data['updatedAt'] as String)
-          : DateTime.now(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString() == 'Timestamp') {
+      return (value as dynamic).toDate();
+    }
+    
+    // Handle String
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    
+    // Handle DateTime (already parsed)
+    if (value is DateTime) {
+      return value;
+    }
+    
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {

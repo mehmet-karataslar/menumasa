@@ -12,6 +12,7 @@ import 'system_settings_page.dart';
 import 'analytics_page.dart';
 import 'stock_management_page.dart';
 import 'activity_logs_page.dart';
+import '../../../core/services/auth_service.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
   const BusinessDashboardPage({super.key});
@@ -51,13 +52,28 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
     });
 
     try {
-      final business = _businessService.currentBusiness;
+      // Check if there's a current business from BusinessService
+      var business = _businessService.currentBusiness;
+      
       if (business == null) {
-        // Business girişi yapılmamış, login sayfasına yönlendir
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/business/login');
+        // Try to get current user from Firebase Auth
+        final authService = AuthService();
+        final currentUser = authService.currentUser;
+        
+        if (currentUser == null) {
+          // No authenticated user, redirect to login
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/business/login');
+          }
+          return;
         }
-        return;
+        
+        // Try to load business user by Firebase UID
+        business = await _businessService.loadBusinessByUID(currentUser.uid);
+        
+        if (business == null) {
+          throw Exception('İşletme bulunamadı');
+        }
       }
 
       setState(() {
@@ -65,7 +81,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage>
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Business verileri yüklenirken hata: $e';
+        _errorMessage = 'Veriler yüklenirken hata: $e';
       });
     } finally {
       setState(() {

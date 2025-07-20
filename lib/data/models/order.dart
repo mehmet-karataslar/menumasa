@@ -45,16 +45,37 @@ class Order {
       totalAmount: (data['totalAmount'] ?? 0.0).toDouble(),
       status: OrderStatus.fromString(data['status'] ?? 'pending'),
       notes: data['notes'],
-      createdAt: data['createdAt'] != null
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: data['updatedAt'] != null
-          ? DateTime.parse(data['updatedAt'] as String)
-          : DateTime.now(),
-      completedAt: data['completedAt'] != null
-          ? DateTime.parse(data['completedAt'] as String)
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
+      completedAt: data['completedAt'] != null 
+          ? _parseDateTime(data['completedAt'])
           : null,
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString() == 'Timestamp') {
+      return (value as dynamic).toDate();
+    }
+    
+    // Handle String
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    
+    // Handle DateTime (already parsed)
+    if (value is DateTime) {
+      return value;
+    }
+    
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {

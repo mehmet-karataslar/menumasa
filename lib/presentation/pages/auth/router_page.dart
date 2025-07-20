@@ -1,15 +1,89 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../data/models/user.dart';
 import 'login_page.dart';
 import 'business_register_page.dart';
 import 'register_page.dart';
+import '../../../business/pages/business_login_page.dart';
 
-class RouterPage extends StatelessWidget {
+class RouterPage extends StatefulWidget {
   const RouterPage({super.key});
 
   @override
+  State<RouterPage> createState() => _RouterPageState();
+}
+
+class _RouterPageState extends State<RouterPage> {
+  final AuthService _authService = AuthService();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthenticationState();
+  }
+
+  Future<void> _checkAuthenticationState() async {
+    try {
+      final currentUser = _authService.currentUser;
+      if (currentUser != null) {
+        // User is already authenticated, get user data
+        final userData = await _authService.getCurrentUserData();
+        if (userData != null && mounted) {
+          // Navigate based on user type
+          if (userData.userType == UserType.customer) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/customer/home',
+              arguments: {'userId': userData.id},
+            );
+            return;
+          } else if (userData.userType == UserType.business) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/business/dashboard',
+            );
+            return;
+          } else if (userData.userType == UserType.admin) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/admin/dashboard',
+              arguments: {'adminId': userData.id},
+            );
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      // Continue to show router page if there's an error
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+
+    return _buildRouterPage();
+  }
+
+  Widget _buildRouterPage() {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -110,8 +184,7 @@ class RouterPage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const LoginPage(userType: 'business'),
+                        builder: (context) => const BusinessLoginPage(),
                       ),
                     );
                   },
