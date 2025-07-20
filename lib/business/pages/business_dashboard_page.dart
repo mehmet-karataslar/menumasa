@@ -95,9 +95,10 @@ class _ResponsiveAdminDashboardState extends State<ResponsiveAdminDashboard> {
           _business = business;
         });
       } else {
-        setState(() {
-          _errorMessage = 'İşletme bulunamadı';
-        });
+        // Business bulunamadı - business kayıt sayfasına yönlendir
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/business-register');
+        }
       }
     } catch (e) {
       setState(() {

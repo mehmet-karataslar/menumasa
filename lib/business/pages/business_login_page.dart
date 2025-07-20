@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
-import '../services/business_service.dart';
 import '../../core/constants/app_typography.dart';
-
+import '../../core/services/auth_service.dart';
+import '../../core/enums/user_type.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 
 class BusinessLoginPage extends StatefulWidget {
@@ -15,10 +15,10 @@ class BusinessLoginPage extends StatefulWidget {
 
 class _BusinessLoginPageState extends State<BusinessLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController(); // email kullanıyoruz artık
   final _passwordController = TextEditingController();
   
-  final BusinessService _businessService = BusinessService();
+  final AuthService _authService = AuthService();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -26,7 +26,7 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -131,11 +131,11 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
         children: [
           // Kullanıcı adı
           TextFormField(
-            controller: _usernameController,
+            controller: _emailController,
             decoration: InputDecoration(
-              labelText: 'Kullanıcı Adı',
-              hintText: 'Kullanıcı adınızı girin',
-              prefixIcon: const Icon(Icons.person),
+              labelText: 'E-posta',
+              hintText: 'E-posta adresinizi girin',
+              prefixIcon: const Icon(Icons.email),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -158,7 +158,7 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Kullanıcı adı gerekli';
+                return 'E-posta gerekli';
               }
               return null;
             },
@@ -300,22 +300,27 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
     });
 
     try {
-      final business = await _businessService.signInWithCredentials(
-        username: _usernameController.text.trim(),
-        password: _passwordController.text,
+      final user = await _authService.signInWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
 
-      if (business != null && mounted) {
-        // Başarılı giriş - Business dashboard'a yönlendir
-        Navigator.pushReplacementNamed(context, '/business/dashboard');
+      if (user != null && mounted) {
+        // Check if user is business type
+        if (user.userType == UserType.business) {
+          // Başarılı giriş - Business dashboard'a yönlendir
+          Navigator.pushReplacementNamed(context, '/business/dashboard');
+        } else {
+          setState(() {
+            _errorMessage = 'Bu hesap işletme hesabı değil. Lütfen işletme hesabınızla giriş yapın.';
+          });
+        }
       }
-    } on BusinessException catch (e) {
-      setState(() {
-        _errorMessage = e.message;
-      });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Giriş sırasında beklenmeyen bir hata oluştu';
+        _errorMessage = e.toString().contains('Exception:') 
+            ? e.toString().split('Exception: ')[1]
+            : 'Giriş sırasında beklenmeyen bir hata oluştu';
       });
     } finally {
       if (mounted) {
