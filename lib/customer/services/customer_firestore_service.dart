@@ -447,15 +447,24 @@ class CustomerFirestoreService {
       final data = order.toJson();
       data['updatedAt'] = FieldValue.serverTimestamp();
 
-      if (order.id.isEmpty) {
-        // New order
+      // Check if this is a new order (empty ID or temporary ID starting with 'order_')
+      if (order.id.isEmpty || order.id.startsWith('order_')) {
+        // New order - create a new document
         data['createdAt'] = FieldValue.serverTimestamp();
         final docRef = await _ordersRef.add(data);
         return docRef.id;
       } else {
-        // Update existing order
-        await _ordersRef.doc(order.id).update(data);
-        return order.id;
+        // Update existing order - check if document exists first
+        final docSnapshot = await _ordersRef.doc(order.id).get();
+        if (docSnapshot.exists) {
+          await _ordersRef.doc(order.id).update(data);
+          return order.id;
+        } else {
+          // Document doesn't exist, create new one
+          data['createdAt'] = FieldValue.serverTimestamp();
+          final docRef = await _ordersRef.add(data);
+          return docRef.id;
+        }
       }
     } catch (e) {
       throw Exception('Sipariş kaydedilirken hata oluştu: $e');

@@ -402,34 +402,33 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCartFAB() {
-    return Hero(
-      tag: 'cart_fab',
-      child: Container(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: FloatingActionButton.extended(
+        heroTag: 'cart_fab', // Set a custom heroTag to avoid conflicts
         onPressed: _onCartPressed,
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
-          elevation: 12,
+        elevation: 12,
         icon: Stack(
-            clipBehavior: Clip.none,
+          clipBehavior: Clip.none,
           children: [
-              Icon(Icons.shopping_cart_rounded, size: 24),
+            Icon(Icons.shopping_cart_rounded, size: 24),
             if (_cartItemCount > 0)
               Positioned(
-                  right: -6,
-                  top: -6,
+                right: -6,
+                top: -6,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
                     shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.white, width: 2),
+                    border: Border.all(color: AppColors.white, width: 2),
                   ),
-                    constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                  constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
                   child: Text(
                     _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
-                      style: TextStyle(
+                    style: TextStyle(
                       color: AppColors.white,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -442,13 +441,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         ),
         label: Text(
           'Sepet (${_cartItemCount})',
-            style: TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600, 
             fontSize: 16,
           ),
         ),
-          extendedPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        ),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       ),
     );
   }
@@ -672,14 +670,18 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       ),
       child: Stack(
         children: [
-          // Background pattern
+          // Background pattern (removed missing asset)
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.1,
-              child: Image.asset(
-                'assets/patterns/restaurant_pattern.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => SizedBox(),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary.withOpacity(0.03),
+                    AppColors.secondary.withOpacity(0.05),
+                  ],
+                ),
               ),
             ),
           ),

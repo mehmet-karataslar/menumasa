@@ -192,23 +192,54 @@ class OrderService {
               'totalAmount': order.totalAmount,
             });
       } else {
-        // Update existing order
-        data['updatedAt'] = FieldValue.serverTimestamp();
-        await _firestore
+        // Update existing order - check if document exists first
+        final docSnapshot = await _firestore
             .collection(_ordersCollection)
             .doc(order.orderId)
-            .update(data);
-        
-        // Update business orders index
-        await _firestore
-            .collection(_businessOrdersCollection)
-            .doc('${order.businessId}_${order.orderId}')
-            .update({
-              'status': order.status.value,
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
-        
-        orderId = order.orderId;
+            .get();
+            
+        if (docSnapshot.exists) {
+          data['updatedAt'] = FieldValue.serverTimestamp();
+          await _firestore
+              .collection(_ordersCollection)
+              .doc(order.orderId)
+              .update(data);
+          
+          // Update business orders index
+          await _firestore
+              .collection(_businessOrdersCollection)
+              .doc('${order.businessId}_${order.orderId}')
+              .update({
+                'status': order.status.value,
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
+          
+          orderId = order.orderId;
+        } else {
+          // Document doesn't exist, create new one
+          data['createdAt'] = FieldValue.serverTimestamp();
+          data['updatedAt'] = FieldValue.serverTimestamp();
+          
+          final docRef = await _firestore
+              .collection(_ordersCollection)
+              .add(data);
+          
+          orderId = docRef.id;
+          
+          // Also save to business orders for quick lookup
+          await _firestore
+              .collection(_businessOrdersCollection)
+              .doc('${order.businessId}_${docRef.id}')
+              .set({
+                'businessId': order.businessId,
+                'orderId': docRef.id,
+                'status': order.status.value,
+                'createdAt': FieldValue.serverTimestamp(),
+                'tableNumber': order.tableNumber,
+                'customerName': order.customerName,
+                'totalAmount': order.totalAmount,
+              });
+        }
       }
 
       // Also save locally as backup
