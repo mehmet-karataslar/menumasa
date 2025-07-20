@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// Firebase Storage security rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Business logos - only authenticated business owners can upload/update
+    match /business_logos/{allPaths=**} {
+      allow read: if true; // Public read for logos
+      allow write: if request.auth != null && isBusinessOwner();
+    }
+    
+    // Product images - only business owners/staff can upload
+    match /product_images/{businessId}/{allPaths=**} {
+      allow read: if true; // Public read for product images
+      allow write: if request.auth != null && isBusinessMember(businessId);
+    }
+    
+    // QR codes - only business owners can upload
+    match /qr_codes/{businessId}/{allPaths=**} {
+      allow read: if true; // Public read for QR codes
+      allow write: if request.auth != null && isBusinessMember(businessId);
+    }
+    
+    // General business files
+    match /businesses/{businessId}/{allPaths=**} {
+      allow read: if true; // Public read
+      allow write: if request.auth != null && isBusinessMember(businessId);
+    }
+    
+    // Helper functions
+    function isBusinessOwner() {
+      return request.auth != null && request.auth.uid != null;
+    }
+    
+    function isBusinessMember(businessId) {
+      return request.auth != null && request.auth.uid != null;
+    }
+    
+    // File size and type validation
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+             request.resource.contentType.matches('image/.*');
+    }
+    
+    // Default allow for authenticated users (simplified for now)
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+} 

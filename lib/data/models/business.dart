@@ -583,6 +583,7 @@ class MenuSettings {
   final bool showNutritionInfo;
   final bool showBadges;
   final bool showAvailability;
+  final Map<String, String>? workingHours;
 
   MenuSettings({
     this.showPrices = true,
@@ -610,6 +611,7 @@ class MenuSettings {
     this.showNutritionInfo = false,
     this.showBadges = true,
     this.showAvailability = true,
+    this.workingHours,
   });
 
   factory MenuSettings.defaultRestaurant() {
@@ -712,6 +714,7 @@ class MenuSettings {
       showNutritionInfo: map['showNutritionInfo'] ?? false,
       showBadges: map['showBadges'] ?? true,
       showAvailability: map['showAvailability'] ?? true,
+      workingHours: map['workingHours'] != null ? Map<String, String>.from(map['workingHours']) : null,
     );
   }
 
@@ -742,6 +745,7 @@ class MenuSettings {
       'showNutritionInfo': showNutritionInfo,
       'showBadges': showBadges,
       'showAvailability': showAvailability,
+      'workingHours': workingHours,
     };
   }
 
@@ -771,6 +775,7 @@ class MenuSettings {
     bool? showNutritionInfo,
     bool? showBadges,
     bool? showAvailability,
+    Map<String, String>? workingHours,
   }) {
     return MenuSettings(
       showPrices: showPrices ?? this.showPrices,
@@ -798,6 +803,7 @@ class MenuSettings {
       showNutritionInfo: showNutritionInfo ?? this.showNutritionInfo,
       showBadges: showBadges ?? this.showBadges,
       showAvailability: showAvailability ?? this.showAvailability,
+      workingHours: workingHours ?? this.workingHours,
     );
   }
 }

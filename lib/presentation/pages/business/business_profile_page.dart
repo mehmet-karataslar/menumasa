@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/url_service.dart';
+import '../../../core/mixins/url_mixin.dart';
 import '../../../data/models/business.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
@@ -18,13 +22,15 @@ class BusinessProfilePage extends StatefulWidget {
   State<BusinessProfilePage> createState() => _BusinessProfilePageState();
 }
 
-class _BusinessProfilePageState extends State<BusinessProfilePage> {
+class _BusinessProfilePageState extends State<BusinessProfilePage> 
+    with TickerProviderStateMixin, UrlMixin {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
 
   // Business Info Controllers
   final _businessNameController = TextEditingController();
   final _businessDescriptionController = TextEditingController();
+  final _businessTypeController = TextEditingController();
 
   // Address Controllers
   final _streetController = TextEditingController();
@@ -41,31 +47,95 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   final _instagramController = TextEditingController();
   final _facebookController = TextEditingController();
   final _twitterController = TextEditingController();
-  final _youtubeController = TextEditingController();
+
+  // Working Hours Controllers
+  final Map<String, TextEditingController> _openHoursControllers = {};
+  final Map<String, TextEditingController> _closeHoursControllers = {};
 
   bool _isLoading = false;
   bool _isSaving = false;
   String? _errorMessage;
   int _currentStep = 0;
-  File? _selectedImage;
+  
+  // Platform-aware image handling
+  XFile? _selectedImageFile;
+  Uint8List? _selectedImageBytes;
   String? _currentLogoUrl;
+  bool _isUploadingImage = false;
 
   final FirestoreService _firestoreService = FirestoreService();
   final StorageService _storageService = StorageService();
+  final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
 
   Business? _business;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  // Business types
+  final List<String> _businessTypes = [
+    'Restoran',
+    'Kafe',
+    'Fast Food',
+    'Pizzacı',
+    'Pastane',
+    'Bar',
+    'Dondurma',
+    'Diğer',
+  ];
+
+  // Days of week for working hours
+  final List<String> _daysOfWeek = [
+    'Pazartesi',
+    'Salı',
+    'Çarşamba',
+    'Perşembe',
+    'Cuma',
+    'Cumartesi',
+    'Pazar',
+  ];
 
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
+    _initializeWorkingHours();
     _loadBusinessData();
+    
+    // Update URL for business profile
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _urlService.updateBusinessUrl(widget.businessId, 'ayarlar');
+    });
+  }
+
+  void _initializeAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    _animationController.forward();
+  }
+
+  void _initializeWorkingHours() {
+    for (String day in _daysOfWeek) {
+      _openHoursControllers[day] = TextEditingController(text: '09:00');
+      _closeHoursControllers[day] = TextEditingController(text: '22:00');
+    }
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     _businessNameController.dispose();
     _businessDescriptionController.dispose();
+    _businessTypeController.dispose();
     _streetController.dispose();
     _cityController.dispose();
     _districtController.dispose();
@@ -76,7 +146,14 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     _instagramController.dispose();
     _facebookController.dispose();
     _twitterController.dispose();
-    _youtubeController.dispose();
+    
+    for (var controller in _openHoursControllers.values) {
+      controller.dispose();
+    }
+    for (var controller in _closeHoursControllers.values) {
+      controller.dispose();
+    }
+    
     _pageController.dispose();
     super.dispose();
   }
@@ -114,19 +191,32 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   void _populateFields(Business business) {
     _businessNameController.text = business.businessName;
     _businessDescriptionController.text = business.businessDescription;
+    _businessTypeController.text = business.businessType;
+    
     _streetController.text = business.address.street;
     _cityController.text = business.address.city;
     _districtController.text = business.address.district;
     _postalCodeController.text = business.address.postalCode ?? '';
+    
     _phoneController.text = business.contactInfo.phone ?? '';
     _emailController.text = business.contactInfo.email ?? '';
     _websiteController.text = business.contactInfo.website ?? '';
-    
-    // Handle social media links
     _instagramController.text = business.contactInfo.instagram ?? '';
     _facebookController.text = business.contactInfo.facebook ?? '';
     _twitterController.text = business.contactInfo.twitter ?? '';
-    _youtubeController.text = ''; // YouTube not in ContactInfo, add if needed
+
+    // Load working hours if available
+    if (business.menuSettings.workingHours != null) {
+      for (var entry in business.menuSettings.workingHours!.entries) {
+        if (_openHoursControllers.containsKey(entry.key)) {
+          final hours = entry.value.split('-');
+          if (hours.length == 2) {
+            _openHoursControllers[entry.key]!.text = hours[0].trim();
+            _closeHoursControllers[entry.key]!.text = hours[1].trim();
+          }
+        }
+      }
+    }
   }
 
   Future<void> _pickImage() async {
@@ -140,18 +230,32 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
       if (image != null) {
         setState(() {
-          _selectedImage = File(image.path);
+          _selectedImageFile = image;
+          _isUploadingImage = true;
+        });
+
+        // Web için bytes'ı da al
+        if (kIsWeb) {
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _selectedImageBytes = bytes;
+          });
+        }
+
+        setState(() {
+          _isUploadingImage = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'Resim seçilirken hata: $e';
+        _isUploadingImage = false;
       });
     }
   }
 
   Future<void> _nextStep() async {
-    if (_currentStep < 3) {
+    if (_currentStep < 4) {
       if (_validateCurrentStep()) {
         setState(() {
           _currentStep++;
@@ -179,21 +283,27 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   }
 
   bool _validateCurrentStep() {
+    setState(() {
+      _errorMessage = null;
+    });
+
     switch (_currentStep) {
       case 0:
-        return _validateBusinessInfo();
+        return _validateBasicInfo();
       case 1:
-        return _validateAddress();
+        return _validateAddressInfo();
       case 2:
         return _validateContactInfo();
       case 3:
         return true; // Social media is optional
+      case 4:
+        return true; // Working hours is optional
       default:
-        return false;
+        return true;
     }
   }
 
-  bool _validateBusinessInfo() {
+  bool _validateBasicInfo() {
     if (_businessNameController.text.trim().isEmpty) {
       setState(() {
         _errorMessage = 'İşletme adı gerekli';
@@ -206,13 +316,16 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       });
       return false;
     }
-    setState(() {
-      _errorMessage = null;
-    });
+    if (_businessTypeController.text.trim().isEmpty) {
+      setState(() {
+        _errorMessage = 'İşletme türü seçiniz';
+      });
+      return false;
+    }
     return true;
   }
 
-  bool _validateAddress() {
+  bool _validateAddressInfo() {
     if (_streetController.text.trim().isEmpty) {
       setState(() {
         _errorMessage = 'Adres gerekli';
@@ -231,15 +344,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       });
       return false;
     }
-    if (_postalCodeController.text.trim().isEmpty) {
-      setState(() {
-        _errorMessage = 'Posta kodu gerekli';
-      });
-      return false;
-    }
-    setState(() {
-      _errorMessage = null;
-    });
     return true;
   }
 
@@ -262,9 +366,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       });
       return false;
     }
-    setState(() {
-      _errorMessage = null;
-    });
     return true;
   }
 
@@ -280,15 +381,32 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       String? logoUrl = _currentLogoUrl;
 
       // Upload new logo if selected
-      if (_selectedImage != null) {
-        final fileName = 'business_logos/${widget.businessId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        logoUrl = await _storageService.uploadFile(_selectedImage!, fileName);
+      if (_selectedImageFile != null) {
+        setState(() {
+          _errorMessage = 'Logo yükleniyor...';
+        });
+        
+        logoUrl = await _storageService.uploadBusinessLogo(
+          _selectedImageFile!,
+          widget.businessId,
+        );
+      }
+
+      // Prepare working hours
+      Map<String, String> workingHours = {};
+      for (String day in _daysOfWeek) {
+        final openTime = _openHoursControllers[day]!.text.trim();
+        final closeTime = _closeHoursControllers[day]!.text.trim();
+        if (openTime.isNotEmpty && closeTime.isNotEmpty) {
+          workingHours[day] = '$openTime - $closeTime';
+        }
       }
 
       // Create updated business
       final updatedBusiness = _business!.copyWith(
         businessName: _businessNameController.text.trim(),
         businessDescription: _businessDescriptionController.text.trim(),
+        businessType: _businessTypeController.text.trim(),
         logoUrl: logoUrl,
         address: Address(
           street: _streetController.text.trim(),
@@ -304,6 +422,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           instagram: _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
           facebook: _facebookController.text.trim().isEmpty ? null : _facebookController.text.trim(),
           twitter: _twitterController.text.trim().isEmpty ? null : _twitterController.text.trim(),
+        ),
+        menuSettings: _business!.menuSettings.copyWith(
+          workingHours: workingHours,
         ),
         updatedAt: DateTime.now(),
       );
@@ -353,11 +474,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
-        title: const Text('İşletme Bilgileri'),
+        title: const Text('İşletme Ayarları'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
@@ -376,23 +497,46 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
               // Page content
               Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildBusinessInfoPage(),
-                    _buildAddressPage(),
-                    _buildContactPage(),
-                    _buildSocialMediaPage(),
-                  ],
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildBasicInfoPage(),
+                      _buildAddressPage(),
+                      _buildContactPage(),
+                      _buildSocialMediaPage(),
+                      _buildWorkingHoursPage(),
+                    ],
+                  ),
                 ),
               ),
 
               // Error message
               if (_errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: ErrorMessage(message: _errorMessage!),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.error),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: AppColors.error),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(color: AppColors.error),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
               // Action buttons
@@ -405,80 +549,43 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   }
 
   Widget _buildProgressIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Row(
-        children: [
-          _buildStepIndicator(0, 'İşletme'),
-          _buildStepConnector(),
-          _buildStepIndicator(1, 'Adres'),
-          _buildStepConnector(),
-          _buildStepIndicator(2, 'İletişim'),
-          _buildStepConnector(),
-          _buildStepIndicator(3, 'Sosyal Medya'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepIndicator(int step, String label) {
-    final isActive = _currentStep == step;
-    final isCompleted = _currentStep > step;
-
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: isCompleted
-                  ? AppColors.success
-                  : isActive
-                      ? AppColors.primary
-                      : AppColors.greyLight,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isCompleted ? Icons.check : Icons.circle,
-              color: AppColors.white,
-              size: 16,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTypography.caption.copyWith(
-              color: isActive ? AppColors.primary : AppColors.textLight,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepConnector() {
     return Container(
-      height: 2,
-      width: 20,
-      color: _currentStep > 0 ? AppColors.success : AppColors.greyLight,
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: List.generate(5, (index) {
+          final isActive = index <= _currentStep;
+          final isCompleted = index < _currentStep;
+          
+          return Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isActive 
+                          ? AppColors.primary 
+                          : AppColors.greyLight,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                if (index < 4) const SizedBox(width: 8),
+              ],
+            ),
+          );
+        }),
+      ),
     );
   }
 
-  Widget _buildBusinessInfoPage() {
+  Widget _buildBasicInfoPage() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'İşletme Bilgileri',
-            style: AppTypography.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          _buildSectionTitle('Temel Bilgiler', Icons.business),
           const SizedBox(height: 24),
 
           // Logo Section
@@ -487,41 +594,367 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           const SizedBox(height: 24),
 
           // Business Name
-          TextFormField(
+          _buildTextField(
             controller: _businessNameController,
-            decoration: const InputDecoration(
-              labelText: 'İşletme Adı *',
-              hintText: 'İşletmenizin adını girin',
-              prefixIcon: Icon(Icons.business),
-            ),
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'İşletme adı gerekli';
-              }
-              return null;
-            },
+            label: 'İşletme Adı',
+            hint: 'İşletmenizin adını girin',
+            icon: Icons.business,
+            required: true,
           ),
 
           const SizedBox(height: 16),
 
           // Business Description
-          TextFormField(
+          _buildTextField(
             controller: _businessDescriptionController,
-            decoration: const InputDecoration(
-              labelText: 'İşletme Açıklaması *',
-              hintText: 'İşletmeniz hakkında kısa bir açıklama',
-              prefixIcon: Icon(Icons.description),
-            ),
+            label: 'İşletme Açıklaması',
+            hint: 'İşletmeniz hakkında kısa bir açıklama',
+            icon: Icons.description,
             maxLines: 3,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'İşletme açıklaması gerekli';
-              }
-              return null;
-            },
+            required: true,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Business Type Dropdown
+          _buildBusinessTypeDropdown(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddressPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Adres Bilgileri', Icons.location_on),
+          const SizedBox(height: 24),
+
+          _buildTextField(
+            controller: _streetController,
+            label: 'Adres',
+            hint: 'Tam adresinizi girin',
+            icon: Icons.home,
+            maxLines: 2,
+            required: true,
+          ),
+
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _cityController,
+                  label: 'Şehir',
+                  hint: 'Şehir',
+                  icon: Icons.location_city,
+                  required: true,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildTextField(
+                  controller: _districtController,
+                  label: 'İlçe',
+                  hint: 'İlçe',
+                  icon: Icons.location_on,
+                  required: true,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildTextField(
+            controller: _postalCodeController,
+            label: 'Posta Kodu',
+            hint: 'Posta kodu (opsiyonel)',
+            icon: Icons.mail,
+            keyboardType: TextInputType.number,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildContactPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('İletişim Bilgileri', Icons.contact_phone),
+          const SizedBox(height: 24),
+
+          _buildTextField(
+            controller: _phoneController,
+            label: 'Telefon',
+            hint: '+90 XXX XXX XX XX',
+            icon: Icons.phone,
+            keyboardType: TextInputType.phone,
+            required: true,
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildTextField(
+            controller: _emailController,
+            label: 'E-posta',
+            hint: 'ornek@email.com',
+            icon: Icons.email,
+            keyboardType: TextInputType.emailAddress,
+            required: true,
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildTextField(
+            controller: _websiteController,
+            label: 'Web Sitesi',
+            hint: 'https://www.ornek.com (opsiyonel)',
+            icon: Icons.web,
+            keyboardType: TextInputType.url,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialMediaPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Sosyal Medya', Icons.share),
+          const SizedBox(height: 8),
+          Text(
+            'Bu bilgiler opsiyoneldir. Müşterilerinizin sizi sosyal medyada bulmasını kolaylaştırır.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          _buildTextField(
+            controller: _instagramController,
+            label: 'Instagram',
+            hint: '@kullaniciadi',
+            icon: Icons.camera_alt,
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildTextField(
+            controller: _facebookController,
+            label: 'Facebook',
+            hint: 'facebook.com/sayfaniz',
+            icon: Icons.facebook,
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildTextField(
+            controller: _twitterController,
+            label: 'Twitter',
+            hint: '@kullaniciadi',
+            icon: Icons.alternate_email,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkingHoursPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Çalışma Saatleri', Icons.access_time),
+          const SizedBox(height: 8),
+          Text(
+            'İşletmenizin açık olduğu saatleri belirtin.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          ..._daysOfWeek.map((day) => _buildWorkingHourRow(day)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkingHourRow(String day) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              day,
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTimeField(
+                    controller: _openHoursControllers[day]!,
+                    hint: '09:00',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '-',
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildTimeField(
+                    controller: _closeHoursControllers[day]!,
+                    hint: '22:00',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeField({
+    required TextEditingController controller,
+    required String hint,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: hint,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 8,
+        ),
+      ),
+      keyboardType: TextInputType.text,
+      onTap: () async {
+        final time = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.now(),
+        );
+        if (time != null) {
+          controller.text = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+        }
+      },
+      readOnly: true,
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.primary,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: AppTypography.h5.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool required = false,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: required ? '$label *' : label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: AppColors.white,
+      ),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: required ? (value) {
+        if (value?.trim().isEmpty ?? true) {
+          return '$label gerekli';
+        }
+        return null;
+      } : null,
+    );
+  }
+
+  Widget _buildBusinessTypeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _businessTypeController.text.isEmpty ? null : _businessTypeController.text,
+      decoration: InputDecoration(
+        labelText: 'İşletme Türü *',
+        prefixIcon: const Icon(Icons.category),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: AppColors.white,
+      ),
+      items: _businessTypes.map((type) {
+        return DropdownMenuItem<String>(
+          value: type,
+          child: Text(type),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) {
+          _businessTypeController.text = value;
+        }
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'İşletme türü seçiniz';
+        }
+        return null;
+      },
     );
   }
 
@@ -539,7 +972,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         const SizedBox(height: 12),
         Center(
           child: GestureDetector(
-            onTap: _pickImage,
+            onTap: _isUploadingImage ? null : _pickImage,
             child: Container(
               width: 120,
               height: 120,
@@ -549,47 +982,75 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                 border: Border.all(
                   color: AppColors.greyLight,
                   width: 2,
-                  style: BorderStyle.solid,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: _selectedImage != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.file(
-                        _selectedImage!,
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  : _currentLogoUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            _currentLogoUrl!,
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildLogoPlaceholder();
-                            },
-                          ),
-                        )
-                      : _buildLogoPlaceholder(),
+              child: _isUploadingImage
+                  ? const Center(child: LoadingIndicator(size: 30))
+                  : _buildLogoContent(),
             ),
           ),
         ),
         const SizedBox(height: 8),
         Center(
           child: Text(
-            'Logoyu değiştirmek için tıklayın',
+            'Logo yüklemek için tıklayın',
             style: AppTypography.caption.copyWith(
-              color: AppColors.textLight,
+              color: AppColors.textSecondary,
             ),
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildLogoContent() {
+    if (_selectedImageFile != null) {
+      if (kIsWeb && _selectedImageBytes != null) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.memory(
+            _selectedImageBytes!,
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+          ),
+        );
+      } else if (!kIsWeb) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.file(
+            File(_selectedImageFile!.path),
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+          ),
+        );
+      }
+    }
+    
+    if (_currentLogoUrl != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          _currentLogoUrl!,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildLogoPlaceholder();
+          },
+        ),
+      );
+    }
+    
+    return _buildLogoPlaceholder();
   }
 
   Widget _buildLogoPlaceholder() {
@@ -597,283 +1058,68 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
-          Icons.add_a_photo,
-          size: 32,
-          color: AppColors.textLight,
+          Icons.add_photo_alternate,
+          size: 40,
+          color: AppColors.textSecondary,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
-          'Logo Ekle',
+          'Logo\nEkle',
+          textAlign: TextAlign.center,
           style: AppTypography.caption.copyWith(
-            color: AppColors.textLight,
+            color: AppColors.textSecondary,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAddressPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Adres Bilgileri',
-            style: AppTypography.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          TextFormField(
-            controller: _streetController,
-            decoration: const InputDecoration(
-              labelText: 'Adres *',
-              hintText: 'Sokak ve numara',
-              prefixIcon: Icon(Icons.location_on),
-            ),
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Adres gerekli';
-              }
-              return null;
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _cityController,
-                  decoration: const InputDecoration(
-                    labelText: 'Şehir *',
-                    hintText: 'Şehir adı',
-                    prefixIcon: Icon(Icons.location_city),
-                  ),
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'Şehir gerekli';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _districtController,
-                  decoration: const InputDecoration(
-                    labelText: 'İlçe *',
-                    hintText: 'İlçe adı',
-                    prefixIcon: Icon(Icons.map),
-                  ),
-                  validator: (value) {
-                    if (value?.trim().isEmpty ?? true) {
-                      return 'İlçe gerekli';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _postalCodeController,
-            decoration: const InputDecoration(
-              labelText: 'Posta Kodu *',
-              hintText: 'Posta kodu',
-              prefixIcon: Icon(Icons.mail),
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Posta kodu gerekli';
-              }
-              return null;
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'İletişim Bilgileri',
-            style: AppTypography.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          TextFormField(
-            controller: _phoneController,
-            decoration: const InputDecoration(
-              labelText: 'Telefon *',
-              hintText: 'Telefon numarası',
-              prefixIcon: Icon(Icons.phone),
-            ),
-            keyboardType: TextInputType.phone,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'Telefon numarası gerekli';
-              }
-              return null;
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'E-posta *',
-              hintText: 'E-posta adresi',
-              prefixIcon: Icon(Icons.email),
-            ),
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value?.trim().isEmpty ?? true) {
-                return 'E-posta adresi gerekli';
-              }
-              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
-                return 'Geçerli bir e-posta adresi girin';
-              }
-              return null;
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _websiteController,
-            decoration: const InputDecoration(
-              labelText: 'Web Sitesi',
-              hintText: 'Web sitesi adresi (opsiyonel)',
-              prefixIcon: Icon(Icons.web),
-            ),
-            keyboardType: TextInputType.url,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSocialMediaPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Sosyal Medya',
-            style: AppTypography.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sosyal medya hesaplarınızı ekleyin (opsiyonel)',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textLight,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          TextFormField(
-            controller: _instagramController,
-            decoration: const InputDecoration(
-              labelText: 'Instagram',
-              hintText: '@kullaniciadi',
-              prefixIcon: Icon(Icons.camera_alt, color: Colors.purple),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _facebookController,
-            decoration: const InputDecoration(
-              labelText: 'Facebook',
-              hintText: 'Facebook sayfa adı',
-              prefixIcon: Icon(Icons.facebook, color: Colors.blue),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _twitterController,
-            decoration: const InputDecoration(
-              labelText: 'Twitter',
-              hintText: '@kullaniciadi',
-              prefixIcon: Icon(Icons.flutter_dash, color: Colors.lightBlue),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _youtubeController,
-            decoration: const InputDecoration(
-              labelText: 'YouTube',
-              hintText: 'YouTube kanal adı',
-              prefixIcon: Icon(Icons.play_circle, color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActionButtons() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (_currentStep > 0)
-            ElevatedButton.icon(
-              onPressed: _isSaving ? null : _previousStep,
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Geri'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey,
-                foregroundColor: AppColors.white,
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _isSaving ? null : _previousStep,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: const BorderSide(color: AppColors.primary),
+                ),
+                child: const Text('Geri'),
               ),
-            )
-          else
-            const SizedBox.shrink(),
-          ElevatedButton.icon(
-            onPressed: _isSaving ? null : _nextStep,
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                    ),
-                  )
-                : Icon(_currentStep == 3 ? Icons.save : Icons.arrow_forward),
-            label: Text(_currentStep == 3 ? 'Kaydet' : 'İleri'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
+            ),
+          if (_currentStep > 0) const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: _isSaving ? null : _nextStep,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: AppColors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(_currentStep == 4 ? 'Kaydet' : 'İleri'),
             ),
           ),
         ],
