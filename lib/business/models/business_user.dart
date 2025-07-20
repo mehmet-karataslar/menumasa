@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import '../../data/models/business.dart';
 
 class BusinessUser {
@@ -19,6 +21,12 @@ class BusinessUser {
   final String? businessName;
   final String? businessAddress;
   final String? businessPhone;
+  
+  // Password related fields
+  final String passwordHash;
+  final String passwordSalt;
+  final DateTime? lastPasswordChange;
+  final bool requirePasswordChange;
 
   BusinessUser({
     required this.businessId,
@@ -38,6 +46,10 @@ class BusinessUser {
     this.businessName,
     this.businessAddress,
     this.businessPhone,
+    required this.passwordHash,
+    required this.passwordSalt,
+    this.lastPasswordChange,
+    this.requirePasswordChange = false,
   });
 
   factory BusinessUser.fromJson(Map<String, dynamic> data, {String? id}) {
@@ -61,6 +73,10 @@ class BusinessUser {
       businessName: data['businessName'],
       businessAddress: data['businessAddress'],
       businessPhone: data['businessPhone'],
+      passwordHash: data['passwordHash'] ?? '',
+      passwordSalt: data['passwordSalt'] ?? '',
+      lastPasswordChange: _parseDateTime(data['lastPasswordChange']),
+      requirePasswordChange: data['requirePasswordChange'] ?? false,
     );
   }
 
@@ -97,6 +113,10 @@ class BusinessUser {
       'businessName': businessName,
       'businessAddress': businessAddress,
       'businessPhone': businessPhone,
+      'passwordHash': passwordHash,
+      'passwordSalt': passwordSalt,
+      'lastPasswordChange': lastPasswordChange?.toIso8601String(),
+      'requirePasswordChange': requirePasswordChange,
     };
   }
 
@@ -118,6 +138,10 @@ class BusinessUser {
     String? businessName,
     String? businessAddress,
     String? businessPhone,
+    String? passwordHash,
+    String? passwordSalt,
+    DateTime? lastPasswordChange,
+    bool? requirePasswordChange,
   }) {
     return BusinessUser(
       businessId: businessId ?? this.businessId,
@@ -137,15 +161,96 @@ class BusinessUser {
       businessName: businessName ?? this.businessName,
       businessAddress: businessAddress ?? this.businessAddress,
       businessPhone: businessPhone ?? this.businessPhone,
+      passwordHash: passwordHash ?? this.passwordHash,
+      passwordSalt: passwordSalt ?? this.passwordSalt,
+      lastPasswordChange: lastPasswordChange ?? this.lastPasswordChange,
+      requirePasswordChange: requirePasswordChange ?? this.requirePasswordChange,
     );
   }
 
-  // Helper methods
+  // Password utility methods
+  static String _generateSalt() {
+    final bytes = List<int>.generate(32, (i) => DateTime.now().millisecondsSinceEpoch + i);
+    return base64Encode(bytes);
+  }
+
+  static String _hashPassword(String password, String salt) {
+    final bytes = utf8.encode(password + salt);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  static BusinessUser createWithPassword({
+    required String businessId,
+    required String username,
+    required String email,
+    required String fullName,
+    required String password,
+    String? avatarUrl,
+    BusinessRole role = BusinessRole.owner,
+    List<BusinessPermission> permissions = const [],
+    bool isActive = true,
+    bool isOwner = true,
+    String? businessName,
+    String? businessAddress,
+    String? businessPhone,
+  }) {
+    final salt = _generateSalt();
+    final passwordHash = _hashPassword(password, salt);
+
+    return BusinessUser(
+      businessId: businessId,
+      username: username,
+      email: email,
+      fullName: fullName,
+      avatarUrl: avatarUrl,
+      role: role,
+      permissions: permissions,
+      isActive: isActive,
+      isOwner: isOwner,
+      lastLoginAt: DateTime.now(),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      businessName: businessName,
+      businessAddress: businessAddress,
+      businessPhone: businessPhone,
+      passwordHash: passwordHash,
+      passwordSalt: salt,
+      lastPasswordChange: DateTime.now(),
+      requirePasswordChange: false,
+    );
+  }
+
+  bool verifyPassword(String password) {
+    final hashedPassword = _hashPassword(password, passwordSalt);
+    return hashedPassword == passwordHash;
+  }
+
+  BusinessUser updatePassword(String newPassword) {
+    final salt = _generateSalt();
+    final passwordHash = _hashPassword(newPassword, salt);
+
+    return copyWith(
+      passwordHash: passwordHash,
+      passwordSalt: salt,
+      lastPasswordChange: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  // Other utility methods
+  List<String> get permissionStrings => permissions.map((p) => p.value).toList();
+  
   bool hasPermission(BusinessPermission permission) {
-    if (isOwner) return true;
     return permissions.contains(permission);
   }
 
+  bool get canManageUsers => hasPermission(BusinessPermission.manageUsers);
+  bool get canManageProducts => hasPermission(BusinessPermission.manageProducts);
+  bool get canViewOrders => hasPermission(BusinessPermission.viewOrders);
+  bool get canManageOrders => hasPermission(BusinessPermission.manageOrders);
+
+  // Helper methods
   bool hasAnyPermission(List<BusinessPermission> requiredPermissions) {
     if (isOwner) return true;
     return requiredPermissions.any((perm) => permissions.contains(perm));
@@ -172,6 +277,18 @@ class BusinessUser {
 
   @override
   int get hashCode => businessId.hashCode;
+}
+
+// Business Exception for error handling
+class BusinessException implements Exception {
+  final String message;
+  final String code;
+  final Map<String, dynamic>? details;
+
+  const BusinessException(this.message, {this.code = 'BUSINESS_ERROR', this.details});
+
+  @override
+  String toString() => 'BusinessException: $message (Code: $code)';
 }
 
 enum BusinessRole {
@@ -275,6 +392,10 @@ class BusinessDefaults {
       businessName: businessName,
       businessAddress: businessAddress,
       businessPhone: businessPhone,
+      passwordHash: '', // Placeholder, actual password will be hashed
+      passwordSalt: '', // Placeholder, actual salt will be generated
+      lastPasswordChange: DateTime.now(),
+      requirePasswordChange: false,
     );
   }
 
@@ -309,6 +430,10 @@ class BusinessDefaults {
       lastLoginAt: DateTime.now(),
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      passwordHash: '', // Placeholder, actual password will be hashed
+      passwordSalt: '', // Placeholder, actual salt will be generated
+      lastPasswordChange: DateTime.now(),
+      requirePasswordChange: false,
     );
   }
 } 

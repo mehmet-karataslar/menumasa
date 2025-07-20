@@ -6,6 +6,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../data/models/business.dart';
 import '../../../data/models/category.dart';
+import '../../../business/models/business_user.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -35,6 +36,10 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _websiteController = TextEditingController();
+
+  // Password Controllers
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -77,6 +82,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
     _phoneController.dispose();
     _emailController.dispose();
     _websiteController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -183,6 +190,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   bool _validateContactInfo() {
     final phone = _phoneController.text.trim();
     final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
     
     if (phone.isEmpty) {
       setState(() {
@@ -201,6 +210,24 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
     ).hasMatch(email)) {
       setState(() {
         _errorMessage = 'Geçerli bir e-posta adresi girin';
+      });
+      return false;
+    }
+    if (password.isEmpty) {
+      setState(() {
+        _errorMessage = 'Şifre gerekli';
+      });
+      return false;
+    }
+    if (password.length < 6) {
+      setState(() {
+        _errorMessage = 'Şifre en az 6 karakter olmalı';
+      });
+      return false;
+    }
+    if (password != confirmPassword) {
+      setState(() {
+        _errorMessage = 'Şifreler eşleşmiyor';
       });
       return false;
     }
@@ -236,6 +263,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       final phone = _phoneController.text.trim();
       final email = _emailController.text.trim();
       final website = _websiteController.text.trim();
+      final password = _passwordController.text;
       
       // Create business model
       final business = Business(
@@ -288,6 +316,9 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       final businessId = await _firestoreService.saveBusiness(business);
 
       if (businessId.isNotEmpty) {
+        // Create BusinessUser with password
+        await _createBusinessUser(businessId, email, businessName, password);
+        
         // Create default categories
         await _createDefaultCategories(businessId);
       }
@@ -332,9 +363,10 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       final phone = _phoneController.text.trim();
       
       // Create user account with email and password
+      final password = _passwordController.text;
       final user = await _authService.createUserWithEmailAndPassword(
         email,
-        '123456', // Default password
+        password,
         businessName,
         phone.isEmpty ? null : phone,
       );
@@ -355,6 +387,44 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _createBusinessUser(String businessId, String email, String businessName, String password) async {
+    try {
+      // Create a username from email (part before @)
+      final username = email.split('@').first.toLowerCase();
+      
+      // Import BusinessUser and use the new createWithPassword method
+      final businessUser = BusinessUser.createWithPassword(
+        businessId: businessId,
+        username: username,
+        email: email,
+        fullName: businessName,
+        password: password,
+        businessName: businessName,
+        businessAddress: _streetController.text.trim(),
+        businessPhone: _phoneController.text.trim(),
+        role: BusinessRole.owner,
+        permissions: [
+          BusinessPermission.manageUsers,
+          BusinessPermission.manageProducts,
+          BusinessPermission.manageOrders,
+          BusinessPermission.viewOrders,
+          BusinessPermission.manageSettings,
+          BusinessPermission.viewAnalytics,
+        ],
+        isOwner: true,
+      );
+
+      // Save BusinessUser to Firestore
+      await FirebaseFirestore.instance
+          .collection('business_users')
+          .doc(businessId)
+          .set(businessUser.toJson());
+
+    } catch (e) {
+      throw Exception('İşletme kullanıcısı oluşturulurken hata: $e');
     }
   }
 
@@ -805,6 +875,67 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
               prefixIcon: Icon(Icons.web),
             ),
             keyboardType: TextInputType.url,
+            enabled: !_isLoading,
+          ),
+
+          const SizedBox(height: 24),
+
+          // Divider
+          const Divider(),
+          
+          const SizedBox(height: 16),
+          
+          Text(
+            'Giriş Bilgileri',
+            style: AppTypography.h5.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+
+          // Password field
+          TextFormField(
+            controller: _passwordController,
+            decoration: const InputDecoration(
+              labelText: 'Şifre',
+              hintText: 'En az 6 karakter',
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+            obscureText: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Şifre gerekli';
+              }
+              if (value.length < 6) {
+                return 'Şifre en az 6 karakter olmalı';
+              }
+              return null;
+            },
+            enabled: !_isLoading,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Confirm password field
+          TextFormField(
+            controller: _confirmPasswordController,
+            decoration: const InputDecoration(
+              labelText: 'Şifre Tekrarı',
+              hintText: 'Şifrenizi tekrar girin',
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+            obscureText: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Şifre tekrarı gerekli';
+              }
+              if (value != _passwordController.text) {
+                return 'Şifreler eşleşmiyor';
+              }
+              return null;
+            },
             enabled: !_isLoading,
           ),
 

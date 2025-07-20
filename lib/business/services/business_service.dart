@@ -48,9 +48,8 @@ class BusinessService {
       final businessData = businessQuery.docs.first.data();
       final business = BusinessUser.fromJson(businessData, id: businessQuery.docs.first.id);
 
-      // Şifre doğrulama (hash ile)
-      final hashedPassword = _hashPassword(password);
-      if (businessData['passwordHash'] != hashedPassword) {
+      // Şifre doğrulama (yeni method ile)
+      if (!business.verifyPassword(password)) {
         throw BusinessException('Geçersiz kullanıcı adı veya şifre');
       }
 
@@ -69,6 +68,7 @@ class BusinessService {
         'lastLoginAt': DateTime.now().toIso8601String(),
         'lastLoginIp': ipAddress,
         'sessionToken': session.sessionToken,
+        'updatedAt': DateTime.now().toIso8601String(),
       });
 
       // Activity log kaydet
@@ -190,80 +190,77 @@ class BusinessService {
   }
 
   /// Yeni business kullanıcısı oluştur
-  Future<String> createBusiness({
+  Future<BusinessUser> createBusiness({
     required String username,
     required String email,
     required String fullName,
     required String password,
     required BusinessRole role,
     required List<BusinessPermission> permissions,
+    String? businessName,
+    String? businessAddress,
+    String? businessPhone,
   }) async {
     try {
-      if (!_hasPermission(BusinessPermission.manageStaff)) {
-        throw BusinessException('Bu işlem için yetkiniz yok');
-      }
-
-      // Kullanıcı adı kontrolü
-      final existingUser = await _firestore
+      // Check if username already exists
+      final existingUserQuery = await _firestore
           .collection(_businessCollection)
           .where('username', isEqualTo: username)
           .limit(1)
           .get();
 
-      if (existingUser.docs.isNotEmpty) {
-        throw BusinessException('Bu kullanıcı adı zaten kullanılıyor');
+      if (existingUserQuery.docs.isNotEmpty) {
+        throw BusinessException('Bu kullanıcı adı zaten kullanımda');
       }
 
-      // Email kontrolü
-      final existingEmail = await _firestore
+      // Check if email already exists
+      final existingEmailQuery = await _firestore
           .collection(_businessCollection)
           .where('email', isEqualTo: email)
           .limit(1)
           .get();
 
-      if (existingEmail.docs.isNotEmpty) {
-        throw BusinessException('Bu email adresi zaten kullanılıyor');
+      if (existingEmailQuery.docs.isNotEmpty) {
+        throw BusinessException('Bu e-posta adresi zaten kullanımda');
       }
 
+      // Create new business user
       final businessId = _firestore.collection(_businessCollection).doc().id;
-      final hashedPassword = _hashPassword(password);
-
-      final business = BusinessUser(
+      
+      final businessUser = BusinessUser.createWithPassword(
         businessId: businessId,
         username: username,
         email: email,
         fullName: fullName,
+        password: password,
         role: role,
         permissions: permissions,
-        isActive: true,
-        isOwner: false,
-        lastLoginAt: DateTime.now(),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        businessName: businessName,
+        businessAddress: businessAddress,
+        businessPhone: businessPhone,
+        isOwner: role == BusinessRole.owner,
       );
 
+      // Save to Firestore
       await _firestore
           .collection(_businessCollection)
           .doc(businessId)
-          .set({
-        ...business.toJson(),
-        'passwordHash': hashedPassword,
-      });
+          .set(businessUser.toJson());
 
-      // Activity log kaydet
+      // Log activity
       await _logActivity(
-        businessId: _currentBusiness!.businessId,
-        businessUsername: _currentBusiness!.username,
-        action: 'CREATE_BUSINESS',
-        targetType: 'BUSINESS',
+        businessId: businessId,
+        businessUsername: username,
+        action: 'REGISTER',
+        targetType: 'USER',
         targetId: businessId,
-        details: 'Yeni business kullanıcısı oluşturuldu: $username',
+        details: 'Yeni business kullanıcısı oluşturuldu',
       );
 
-      return businessId;
+      return businessUser;
     } catch (e) {
       if (e is BusinessException) rethrow;
-      throw BusinessException('Business oluşturulurken hata: $e');
+      throw BusinessException('Business kullanıcısı oluşturulurken hata: $e');
     }
   }
 
@@ -354,13 +351,26 @@ class BusinessService {
         throw BusinessException('Bu işlem için yetkiniz yok');
       }
 
-      final hashedPassword = _hashPassword(newPassword);
+      // Get the business user and update password
+      final businessDoc = await _firestore
+          .collection(_businessCollection)
+          .doc(businessId)
+          .get();
+      
+      if (!businessDoc.exists) {
+        throw BusinessException('Business kullanıcısı bulunamadı');
+      }
+
+      final businessUser = BusinessUser.fromJson(businessDoc.data()!, id: businessDoc.id);
+      final updatedBusinessUser = businessUser.updatePassword(newPassword);
 
       await _firestore
           .collection(_businessCollection)
           .doc(businessId)
           .update({
-        'passwordHash': hashedPassword,
+        'passwordHash': updatedBusinessUser.passwordHash,
+        'passwordSalt': updatedBusinessUser.passwordSalt,
+        'lastPasswordChange': updatedBusinessUser.lastPasswordChange?.toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
       });
 
@@ -376,6 +386,49 @@ class BusinessService {
     } catch (e) {
       if (e is BusinessException) rethrow;
       throw BusinessException('Şifre değiştirilirken hata: $e');
+    }
+  }
+
+  /// Business şifre güncelleme
+  Future<void> updatePassword(String oldPassword, String newPassword) async {
+    try {
+      if (_currentBusiness == null) {
+        throw BusinessException('Giriş yapılması gerekli');
+      }
+
+      // Mevcut şifre doğrulama
+      if (!_currentBusiness!.verifyPassword(oldPassword)) {
+        throw BusinessException('Mevcut şifre yanlış');
+      }
+
+      // Yeni şifre ile business kullanıcısını güncelle
+      final updatedBusiness = _currentBusiness!.updatePassword(newPassword);
+
+      // Firestore'da güncelle
+      await _firestore
+          .collection(_businessCollection)
+          .doc(_currentBusiness!.businessId)
+          .update({
+        'passwordHash': updatedBusiness.passwordHash,
+        'passwordSalt': updatedBusiness.passwordSalt,
+        'lastPasswordChange': updatedBusiness.lastPasswordChange?.toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      // Activity log kaydet
+      await _logActivity(
+        businessId: _currentBusiness!.businessId,
+        businessUsername: _currentBusiness!.username,
+        action: 'PASSWORD_CHANGE',
+        targetType: 'USER',
+        targetId: _currentBusiness!.businessId,
+        details: 'Şifre güncellendi',
+      );
+
+      _currentBusiness = updatedBusiness;
+    } catch (e) {
+      if (e is BusinessException) rethrow;
+      throw BusinessException('Şifre güncellenirken hata: $e');
     }
   }
 
@@ -454,12 +507,7 @@ class BusinessService {
     return _currentBusiness!.hasPermission(permission);
   }
 
-  /// Şifre hash'leme
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
+
 
   /// Session oluştur
   Future<BusinessSession> _createSession({
@@ -490,8 +538,10 @@ class BusinessService {
 
   /// Session token oluştur
   String _generateSessionToken() {
-    final random = DateTime.now().millisecondsSinceEpoch.toString();
-    final bytes = utf8.encode(random);
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = DateTime.now().microsecondsSinceEpoch;
+    final combined = '$timestamp-$random';
+    final bytes = utf8.encode(combined);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }
