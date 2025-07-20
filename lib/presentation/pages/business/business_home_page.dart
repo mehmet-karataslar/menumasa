@@ -17,7 +17,7 @@ import 'order_management_page.dart';
 import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
 import 'qr_management_page.dart';
-import 'dart:html' as html;
+import '../../../core/services/url_service.dart';
 
 class BusinessHomePage extends StatefulWidget {
   final String businessId;
@@ -36,6 +36,7 @@ class BusinessHomePage extends StatefulWidget {
 class _BusinessHomePageState extends State<BusinessHomePage>
     with TickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
+  final UrlService _urlService = UrlService();
 
   Business? _business;
   List<app_order.Order> _recentOrders = [];
@@ -113,14 +114,15 @@ class _BusinessHomePageState extends State<BusinessHomePage>
   }
 
   void _updateUrl() {
-    final currentRoute = _tabRoutes[_tabController.index];
-    final newUrl = '/business/${widget.businessId}/$currentRoute';
+    final currentTab = _tabRoutes[_tabController.index];
+    final businessName = _business?.businessName;
     
-    // Update browser URL without reloading the page
-    html.window.history.pushState(null, _tabTitles[_tabController.index], newUrl);
-    
-    // Update page title
-    html.document.title = '${_business?.businessName ?? "İşletme"} - ${_tabTitles[_tabController.index]} | MasaMenu';
+    // Use UrlService to update browser URL and title
+    _urlService.updateBusinessUrl(
+      widget.businessId,
+      currentTab,
+      businessName: businessName,
+    );
   }
 
   @override
@@ -182,8 +184,8 @@ class _BusinessHomePageState extends State<BusinessHomePage>
         _pendingOrders = stats['pendingOrders'] ?? 0;
       });
 
-      // Update page title with business name
-      html.document.title = '${business.businessName} - ${_tabTitles[_tabController.index]} | MasaMenu';
+      // Update page title with business name using UrlService
+      _updateUrl();
     } catch (e) {
       setState(() {
         _errorMessage = 'Veriler yüklenirken hata: $e';

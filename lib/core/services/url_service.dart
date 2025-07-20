@@ -1,10 +1,61 @@
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-class UrlService {
+// Conditional imports for platform-specific functionality
+import 'url_service_stub.dart'
+    if (dart.library.html) 'url_service_web.dart'
+    if (dart.library.io) 'url_service_io.dart';
+
+abstract class UrlServiceBase {
+  /// Updates the browser URL and page title
+  void updateUrl(String route, {String? customTitle, Map<String, String>? params});
+
+  /// Replaces the current URL without adding to history
+  void replaceUrl(String route, {String? customTitle, Map<String, String>? params});
+
+  /// Updates URL for business pages with tab support
+  void updateBusinessUrl(String businessId, String tab, {String? businessName});
+
+  /// Updates URL for menu pages
+  void updateMenuUrl(String businessId, {int? tableNumber, String? businessName});
+
+  /// Updates URL for customer pages
+  void updateCustomerUrl(String userId, String page, {String? customTitle});
+
+  /// Updates URL for admin pages
+  void updateAdminUrl(String page, {String? customTitle});
+
+  /// Gets the current URL path
+  String getCurrentPath();
+
+  /// Gets the current URL parameters
+  Map<String, String> getCurrentParams();
+
+  /// Parses business URL to extract businessId and tab
+  Map<String, String?> parseBusinessUrl();
+
+  /// Parses menu URL to extract businessId and table number
+  Map<String, String?> parseMenuUrl();
+
+  /// Sets up URL listener for back/forward button support
+  void setupUrlListener(Function(String) onUrlChange);
+
+  /// Helper method for navigation with URL update
+  void navigateWithUrl(BuildContext context, String route, {
+    Object? arguments,
+    String? customTitle,
+    Map<String, String>? params,
+    bool replace = false,
+  });
+}
+
+class UrlService extends UrlServiceBase {
   static final UrlService _instance = UrlService._internal();
   factory UrlService() => _instance;
   UrlService._internal();
+
+  // Platform-specific implementation
+  late final UrlServiceBase _implementation = createUrlService();
 
   // Route definitions for different modules
   static const Map<String, String> routeTitles = {
@@ -46,211 +97,75 @@ class UrlService {
     'ayarlar': 'Ayarlar',
   };
 
-  /// Updates the browser URL and page title
+  @override
   void updateUrl(String route, {String? customTitle, Map<String, String>? params}) {
-    try {
-      // Construct the final URL with parameters
-      String finalUrl = route;
-      if (params != null && params.isNotEmpty) {
-        final queryParams = params.entries
-            .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-            .join('&');
-        finalUrl += '?$queryParams';
-      }
-
-      // Update browser URL without page reload
-      html.window.history.pushState(null, customTitle ?? _getPageTitle(route), finalUrl);
-      
-      // Update page title
-      html.document.title = customTitle ?? _getPageTitle(route);
-      
-      print('URL updated to: $finalUrl with title: ${html.document.title}');
-    } catch (e) {
-      print('Error updating URL: $e');
-    }
+    _implementation.updateUrl(route, customTitle: customTitle, params: params);
   }
 
-  /// Replaces the current URL without adding to history
+  @override
   void replaceUrl(String route, {String? customTitle, Map<String, String>? params}) {
-    try {
-      // Construct the final URL with parameters
-      String finalUrl = route;
-      if (params != null && params.isNotEmpty) {
-        final queryParams = params.entries
-            .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-            .join('&');
-        finalUrl += '?$queryParams';
-      }
-
-      // Replace current URL without page reload
-      html.window.history.replaceState(null, customTitle ?? _getPageTitle(route), finalUrl);
-      
-      // Update page title
-      html.document.title = customTitle ?? _getPageTitle(route);
-      
-      print('URL replaced to: $finalUrl with title: ${html.document.title}');
-    } catch (e) {
-      print('Error replacing URL: $e');
-    }
+    _implementation.replaceUrl(route, customTitle: customTitle, params: params);
   }
 
-  /// Updates URL for business pages with tab support
+  @override
   void updateBusinessUrl(String businessId, String tab, {String? businessName}) {
-    final route = '/business/$businessId/$tab';
-    final tabTitle = businessTabTitles[tab] ?? tab;
-    final title = businessName != null 
-        ? '$businessName - $tabTitle | MasaMenu'
-        : '$tabTitle | MasaMenu';
-    
-    updateUrl(route, customTitle: title);
+    _implementation.updateBusinessUrl(businessId, tab, businessName: businessName);
   }
 
-  /// Updates URL for menu pages
+  @override
   void updateMenuUrl(String businessId, {int? tableNumber, String? businessName}) {
-    String route = '/menu/$businessId';
-    Map<String, String>? params;
-    
-    if (tableNumber != null) {
-      params = {'table': tableNumber.toString()};
-    }
-    
-    final title = businessName != null 
-        ? '$businessName - Menü | MasaMenu'
-        : 'Menü | MasaMenu';
-    
-    updateUrl(route, customTitle: title, params: params);
+    _implementation.updateMenuUrl(businessId, tableNumber: tableNumber, businessName: businessName);
   }
 
-  /// Updates URL for customer pages
+  @override
   void updateCustomerUrl(String userId, String page, {String? customTitle}) {
-    final route = '/customer/$page';
-    final title = customTitle ?? _getPageTitle(route);
-    
-    updateUrl(route, customTitle: title, params: {'userId': userId});
+    _implementation.updateCustomerUrl(userId, page, customTitle: customTitle);
   }
 
-  /// Updates URL for admin pages
+  @override
   void updateAdminUrl(String page, {String? customTitle}) {
-    final route = '/admin/$page';
-    final title = customTitle ?? _getPageTitle(route);
-    
-    updateUrl(route, customTitle: title);
+    _implementation.updateAdminUrl(page, customTitle: customTitle);
   }
 
-  /// Gets the current URL path
+  @override
   String getCurrentPath() {
-    return html.window.location.pathname ?? '/';
+    return _implementation.getCurrentPath();
   }
 
-  /// Gets the current URL parameters
+  @override
   Map<String, String> getCurrentParams() {
-    final uri = Uri.parse(html.window.location.href);
-    return uri.queryParameters;
+    return _implementation.getCurrentParams();
   }
 
-  /// Parses business URL to extract businessId and tab
+  @override
   Map<String, String?> parseBusinessUrl() {
-    final path = getCurrentPath();
-    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-    
-    if (segments.length >= 2 && segments[0] == 'business') {
-      return {
-        'businessId': segments[1],
-        'tab': segments.length >= 3 ? segments[2] : 'genel-bakis',
-      };
-    }
-    
-    return {'businessId': null, 'tab': null};
+    return _implementation.parseBusinessUrl();
   }
 
-  /// Parses menu URL to extract businessId and table number
+  @override
   Map<String, String?> parseMenuUrl() {
-    final path = getCurrentPath();
-    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-    final params = getCurrentParams();
-    
-    if (segments.length >= 2 && segments[0] == 'menu') {
-      return {
-        'businessId': segments[1],
-        'tableNumber': params['table'],
-      };
-    }
-    
-    return {'businessId': null, 'tableNumber': null};
+    return _implementation.parseMenuUrl();
   }
 
-  /// Sets up URL listener for back/forward button support
+  @override
   void setupUrlListener(Function(String) onUrlChange) {
-    html.window.addEventListener('popstate', (event) {
-      final newPath = getCurrentPath();
-      onUrlChange(newPath);
-    });
+    _implementation.setupUrlListener(onUrlChange);
   }
 
-  /// Private method to get page title from route
-  String _getPageTitle(String route) {
-    // Check exact match first
-    if (routeTitles.containsKey(route)) {
-      return routeTitles[route]!;
-    }
-    
-    // Handle dynamic routes
-    final segments = route.split('/').where((s) => s.isNotEmpty).toList();
-    
-    if (segments.isEmpty) {
-      return routeTitles['/']!;
-    }
-    
-    // Business routes
-    if (segments.length >= 2 && segments[0] == 'business') {
-      if (segments.length >= 3) {
-        final tab = segments[2];
-        final tabTitle = businessTabTitles[tab] ?? tab;
-        return '$tabTitle | MasaMenu';
-      }
-      return 'İşletme Paneli | MasaMenu';
-    }
-    
-    // Menu routes
-    if (segments.length >= 2 && segments[0] == 'menu') {
-      return 'Menü | MasaMenu';
-    }
-    
-    // Admin routes
-    if (segments.length >= 2 && segments[0] == 'admin') {
-      final adminRoute = '/admin/${segments[1]}';
-      return routeTitles[adminRoute] ?? 'Admin Paneli | MasaMenu';
-    }
-    
-    // Customer routes
-    if (segments.length >= 2 && segments[0] == 'customer') {
-      final customerRoute = '/customer/${segments[1]}';
-      return routeTitles[customerRoute] ?? 'Müşteri Paneli | MasaMenu';
-    }
-    
-    // Default fallback
-    return 'MasaMenu - Dijital Menü Çözümü';
-  }
-
-  /// Helper method for navigation with URL update
+  @override
   void navigateWithUrl(BuildContext context, String route, {
     Object? arguments,
     String? customTitle,
     Map<String, String>? params,
     bool replace = false,
   }) {
-    // Update URL first
-    if (replace) {
-      replaceUrl(route, customTitle: customTitle, params: params);
-    } else {
-      updateUrl(route, customTitle: customTitle, params: params);
-    }
-    
-    // Then navigate
-    if (replace) {
-      Navigator.pushReplacementNamed(context, route, arguments: arguments);
-    } else {
-      Navigator.pushNamed(context, route, arguments: arguments);
-    }
+    _implementation.navigateWithUrl(
+      context,
+      route,
+      arguments: arguments,
+      customTitle: customTitle,
+      params: params,
+      replace: replace,
+    );
   }
 } 

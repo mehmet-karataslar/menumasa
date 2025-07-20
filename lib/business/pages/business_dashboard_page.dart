@@ -9,7 +9,7 @@ import '../../../presentation/widgets/shared/empty_state.dart';
 import '../../../presentation/pages/business/business_home_page.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/firestore_service.dart';
-import 'dart:html' as html;
+import '../../../core/services/url_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
@@ -23,6 +23,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   final BusinessService _businessService = BusinessService();
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final UrlService _urlService = UrlService();
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -61,20 +62,17 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           if (businessIds.isNotEmpty) {
             final businessId = businessIds.first;
             
-            // Get current URL to extract tab if any
-            final currentUrl = html.window.location.href;
-            final uri = Uri.parse(currentUrl);
+            // Get current URL to extract tab if any using UrlService
+            final businessUrlData = _urlService.parseBusinessUrl();
+            String? initialTab = businessUrlData['tab'];
             
-            String? initialTab;
-            if (uri.pathSegments.length >= 3 && uri.pathSegments[0] == 'business') {
-              final potentialTab = uri.pathSegments[2];
-              final validTabs = [
-                'genel-bakis', 'siparisler', 'kategoriler', 
-                'urunler', 'indirimler', 'qr-kodlar', 'ayarlar'
-              ];
-              if (validTabs.contains(potentialTab)) {
-                initialTab = potentialTab;
-              }
+            // Validate tab
+            final validTabs = [
+              'genel-bakis', 'siparisler', 'kategoriler', 
+              'urunler', 'indirimler', 'qr-kodlar', 'ayarlar'
+            ];
+            if (initialTab != null && !validTabs.contains(initialTab)) {
+              initialTab = 'genel-bakis';
             }
 
             // Navigate to business home page

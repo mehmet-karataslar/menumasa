@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../admin/models/admin_user.dart';
 import '../../admin/services/admin_service.dart';
+import '../../core/services/url_service.dart';
+import '../../core/mixins/url_mixin.dart';
 
 class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({Key? key}) : super(key: key);
@@ -10,18 +12,76 @@ class AdminDashboardPage extends StatefulWidget {
   State<AdminDashboardPage> createState() => _AdminDashboardPageState();
 }
 
-class _AdminDashboardPageState extends State<AdminDashboardPage> {
+class _AdminDashboardPageState extends State<AdminDashboardPage> with UrlMixin {
   final AdminService _adminService = AdminService();
+  final UrlService _urlService = UrlService();
+  
   AdminUser? _currentAdmin;
   bool _isLoading = true;
   int _selectedIndex = 0;
   Map<String, dynamic> _systemStats = {};
+
+  // Admin page routes
+  final List<String> _pageRoutes = [
+    'dashboard',
+    'businesses', 
+    'customers',
+    'admins',
+    'analytics',
+    'settings',
+    'logs',
+  ];
+
+  final List<String> _pageTitles = [
+    'Admin Paneli',
+    'İşletme Yönetimi',
+    'Müşteri Yönetimi', 
+    'Admin Yönetimi',
+    'Analitikler',
+    'Sistem Ayarları',
+    'Aktivite Logları',
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadCurrentAdmin();
     _loadSystemStats();
+    
+    // Update URL on page load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateAdminUrl();
+    });
+  }
+
+  void _updateAdminUrl() {
+    final route = _pageRoutes[_selectedIndex];
+    final title = '${_pageTitles[_selectedIndex]} | MasaMenu';
+    _urlService.updateAdminUrl(route, customTitle: title);
+  }
+
+  @override
+  void onUrlChanged(String newPath) {
+    // Handle browser back/forward buttons
+    final segments = newPath.split('/').where((s) => s.isNotEmpty).toList();
+    if (segments.length >= 2 && segments[0] == 'admin') {
+      final page = segments[1];
+      final pageIndex = _pageRoutes.indexOf(page);
+      if (pageIndex != -1 && pageIndex != _selectedIndex) {
+        setState(() {
+          _selectedIndex = pageIndex;
+        });
+      }
+    }
+  }
+
+  void _onPageSelected(int index) {
+    if (index != _selectedIndex) {
+      setState(() {
+        _selectedIndex = index;
+      });
+      _updateAdminUrl();
+    }
   }
 
   Future<void> _loadCurrentAdmin() async {
@@ -54,6 +114,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     try {
       await _adminService.logout();
       if (mounted) {
+        _urlService.updateUrl('/admin/login', customTitle: 'Admin Girişi | MasaMenu');
         Navigator.of(context).pushReplacementNamed('/admin/login');
       }
     } catch (e) {
@@ -144,43 +205,43 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         icon: Icons.dashboard,
                         title: 'Dashboard',
                         isSelected: _selectedIndex == 0,
-                        onTap: () => setState(() => _selectedIndex = 0),
+                        onTap: () => _onPageSelected(0),
                       ),
                       _buildMenuItem(
                         icon: Icons.business,
                         title: 'İşletmeler',
                         isSelected: _selectedIndex == 1,
-                        onTap: () => setState(() => _selectedIndex = 1),
+                        onTap: () => _onPageSelected(1),
                       ),
                       _buildMenuItem(
                         icon: Icons.people,
                         title: 'Müşteriler',
                         isSelected: _selectedIndex == 2,
-                        onTap: () => setState(() => _selectedIndex = 2),
+                        onTap: () => _onPageSelected(2),
                       ),
                       _buildMenuItem(
                         icon: Icons.admin_panel_settings,
                         title: 'Adminler',
                         isSelected: _selectedIndex == 3,
-                        onTap: () => setState(() => _selectedIndex = 3),
+                        onTap: () => _onPageSelected(3),
                       ),
                       _buildMenuItem(
                         icon: Icons.analytics,
                         title: 'Analitik',
                         isSelected: _selectedIndex == 4,
-                        onTap: () => setState(() => _selectedIndex = 4),
+                        onTap: () => _onPageSelected(4),
                       ),
                       _buildMenuItem(
                         icon: Icons.settings,
                         title: 'Sistem Ayarları',
                         isSelected: _selectedIndex == 5,
-                        onTap: () => setState(() => _selectedIndex = 5),
+                        onTap: () => _onPageSelected(5),
                       ),
                       _buildMenuItem(
                         icon: Icons.history,
                         title: 'Aktivite Logları',
                         isSelected: _selectedIndex == 6,
-                        onTap: () => setState(() => _selectedIndex = 6),
+                        onTap: () => _onPageSelected(6),
                       ),
                     ],
                   ),
@@ -229,9 +290,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF1a1a1a),
       appBar: AppBar(
-        title: const Text(
-          'Admin Dashboard',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          _pageTitles[_selectedIndex],
+          style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: const Color(0xFFD32F2F),
         actions: [
@@ -299,7 +360,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     title: 'Dashboard',
                     isSelected: _selectedIndex == 0,
                     onTap: () {
-                      setState(() => _selectedIndex = 0);
+                      _onPageSelected(0);
                       Navigator.pop(context);
                     },
                   ),
@@ -308,7 +369,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     title: 'İşletmeler',
                     isSelected: _selectedIndex == 1,
                     onTap: () {
-                      setState(() => _selectedIndex = 1);
+                      _onPageSelected(1);
                       Navigator.pop(context);
                     },
                   ),
@@ -317,7 +378,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     title: 'Müşteriler',
                     isSelected: _selectedIndex == 2,
                     onTap: () {
-                      setState(() => _selectedIndex = 2);
+                      _onPageSelected(2);
                       Navigator.pop(context);
                     },
                   ),
@@ -326,7 +387,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     title: 'Adminler',
                     isSelected: _selectedIndex == 3,
                     onTap: () {
-                      setState(() => _selectedIndex = 3);
+                      _onPageSelected(3);
                       Navigator.pop(context);
                     },
                   ),
@@ -335,7 +396,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     title: 'Analitik',
                     isSelected: _selectedIndex == 4,
                     onTap: () {
-                      setState(() => _selectedIndex = 4);
+                      _onPageSelected(4);
                       Navigator.pop(context);
                     },
                   ),
@@ -344,7 +405,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     title: 'Sistem Ayarları',
                     isSelected: _selectedIndex == 5,
                     onTap: () {
-                      setState(() => _selectedIndex = 5);
+                      _onPageSelected(5);
                       Navigator.pop(context);
                     },
                   ),
@@ -353,7 +414,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     title: 'Aktivite Logları',
                     isSelected: _selectedIndex == 6,
                     onTap: () {
-                      setState(() => _selectedIndex = 6);
+                      _onPageSelected(6);
                       Navigator.pop(context);
                     },
                   ),
