@@ -49,7 +49,7 @@ class _ProductManagementPageState extends State<ProductManagementPage> {
 
     try {
       await _dataService.initialize();
-      await _dataService.initializeSampleData();
+      await _dataService.initializeEmptyDatabase();
 
       final categories = await _dataService.getCategories(
         businessId: widget.businessId,
