@@ -597,6 +597,53 @@ class CustomerFirestoreService {
     _customerOrderListeners.remove(customerId);
   }
 
+  // =============================================================================
+  // REAL-TIME ORDER LISTENERS
+  // =============================================================================
+
+  // Order stream subscriptions for customers  
+  final Map<String, StreamSubscription<QuerySnapshot>?> _customerOrderStreams = {};
+  final Map<String, List<Function(List<app_order.Order>)>> _customerOrderListeners = {};
+
+  /// Starts listening to real-time order updates for a customer
+  void startCustomerOrderListener(String customerId, Function(List<app_order.Order>) onOrdersUpdated) {
+    // Cancel existing listener if any
+    stopCustomerOrderListener(customerId);
+
+    final stream = _ordersRef
+        .where('customerId', isEqualTo: customerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+
+    _customerOrderStreams[customerId] = stream.listen((snapshot) {
+      final orders = snapshot.docs
+          .map((doc) => app_order.Order.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
+          .toList();
+
+      print('📦 Customer orders updated: ${orders.length} orders for customer $customerId');
+
+      // Notify all listeners for this customer
+      final listeners = _customerOrderListeners[customerId] ?? [];
+      for (final listener in listeners) {
+        listener(orders);
+      }
+    });
+
+    // Add this callback to listeners
+    _customerOrderListeners[customerId] = _customerOrderListeners[customerId] ?? [];
+    _customerOrderListeners[customerId]!.add(onOrdersUpdated);
+  }
+
+  /// Stops listening to real-time order updates for a customer
+  void stopCustomerOrderListener(String customerId) {
+    _customerOrderStreams[customerId]?.cancel();
+    _customerOrderStreams[customerId] = null;
+    _customerOrderListeners[customerId]?.clear();
+  }
+
   /// Dispose all customer order listeners
   void disposeCustomerOrderListeners() {
     for (final stream in _customerOrderStreams.values) {

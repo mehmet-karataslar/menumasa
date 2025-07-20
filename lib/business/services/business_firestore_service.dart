@@ -610,6 +610,8 @@ class BusinessFirestoreService {
   /// Updates order status
   Future<void> updateOrderStatus(String orderId, app_order.OrderStatus status) async {
     try {
+      print('🔄 Updating order status: $orderId -> ${status.value}');
+      
       // Check if document exists first
       final docSnapshot = await _ordersRef.doc(orderId).get();
       if (!docSnapshot.exists) {
@@ -617,10 +619,13 @@ class BusinessFirestoreService {
       }
 
       await _ordersRef.doc(orderId).update({
-        'status': status.toString(),
+        'status': status.value, // Use .value instead of .toString()
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      
+      print('✅ Order status updated successfully');
     } catch (e) {
+      print('❌ Error updating order status: $e');
       throw Exception('Sipariş durumu güncellenirken hata oluştu: $e');
     }
   }

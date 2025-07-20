@@ -684,6 +684,21 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
     try {
       await _businessFirestoreService.updateOrderStatus(order.id, newStatus);
       
+      // Immediately update local state for better UX
+      if (mounted) {
+        setState(() {
+          final index = _orders.indexWhere((o) => o.id == order.id);
+          if (index != -1) {
+            _orders[index] = _orders[index].copyWith(
+              status: newStatus,
+              updatedAt: DateTime.now(),
+            );
+            _updateStatistics();
+            _filterOrders();
+          }
+        });
+      }
+      
       HapticFeedback.lightImpact();
       
       if (mounted) {
@@ -693,6 +708,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
               'Sipariş ${newStatus.displayName.toLowerCase()} olarak işaretlendi',
             ),
             backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -703,6 +719,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
           SnackBar(
             content: Text('Sipariş güncellenirken hata oluştu: $e'),
             backgroundColor: AppColors.error,
+            duration: Duration(seconds: 3),
           ),
         );
       }

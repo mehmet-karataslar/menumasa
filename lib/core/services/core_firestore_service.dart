@@ -105,7 +105,7 @@ class CoreFirestoreService {
       }
 
       await _ordersRef.doc(orderId).update({
-        'status': status.toString(),
+        'status': status.value, // Use .value instead of .toString()
         'updatedAt': FieldValue.serverTimestamp(),
       });
 

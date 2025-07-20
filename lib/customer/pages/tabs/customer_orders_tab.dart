@@ -55,6 +55,22 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
         _orders = orders;
         _isLoading = false;
       });
+      
+      // Show status change notification for recent orders
+      if (orders.isNotEmpty && _orders.isNotEmpty) {
+        final recentOrder = orders.first;
+        final oldOrder = _orders.firstWhere((o) => o.id == recentOrder.id, orElse: () => recentOrder);
+        
+        if (oldOrder.status != recentOrder.status) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Sipariş durumu güncellendi: ${recentOrder.status.displayName}'),
+              backgroundColor: AppColors.info,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
     }
   }
 
