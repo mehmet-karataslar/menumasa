@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../data/models/business.dart';
-import '../../../data/models/category.dart';
+import '../../../data/models/category.dart' as category_model;
 import '../../../data/models/product.dart';
 import '../../../data/models/discount.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/utils/time_rule_utils.dart';
-import '../../../core/services/data_service.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../core/services/cart_service.dart';
 import '../../widgets/customer/business_header.dart';
 import '../../widgets/customer/category_list.dart';
@@ -41,13 +41,13 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   // Data
   Business? _business;
-  List<Category> _categories = [];
+  List<category_model.Category> _categories = [];
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
   List<Discount> _discounts = [];
 
   // Services
-  final _dataService = DataService();
+  final _firestoreService = FirestoreService();
   final _cartService = CartService();
 
   // UI State
@@ -99,19 +99,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         _hasError = false;
       });
 
-      // Gerçek veri yükleme
-      _business = await _dataService.getBusiness(widget.businessId);
+      // Firebase'den gerçek veri yükleme
+      _business = await _firestoreService.getBusiness(widget.businessId);
       if (_business == null) {
         throw Exception('İşletme bulunamadı');
       }
 
-      _categories = await _dataService.getCategories(
-        businessId: widget.businessId,
-      );
-      _products = await _dataService.getProducts(businessId: widget.businessId);
-      _discounts = await _dataService.getDiscountsByBusinessId(
-        widget.businessId,
-      );
+      _categories = await _firestoreService.getBusinessCategories(widget.businessId);
+      _products = await _firestoreService.getBusinessProducts(widget.businessId, limit: 100);
+      _discounts = await _firestoreService.getDiscounts(businessId: widget.businessId);
 
       // Zaman kurallarına göre filtrele
       _filterProducts();
@@ -694,9 +690,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  List<Category> _createSampleCategories() {
+  List<category_model.Category> _createSampleCategories() {
     return [
-      Category(
+      category_model.Category(
         categoryId: 'cat-1',
         businessId: widget.businessId,
         name: 'Çorbalar',
@@ -707,7 +703,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
-      Category(
+      category_model.Category(
         categoryId: 'cat-2',
         businessId: widget.businessId,
         name: 'Ana Yemekler',
@@ -718,7 +714,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
-      Category(
+      category_model.Category(
         categoryId: 'cat-3',
         businessId: widget.businessId,
         name: 'Tatlılar',
@@ -729,7 +725,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
-      Category(
+      category_model.Category(
         categoryId: 'cat-4',
         businessId: widget.businessId,
         name: 'İçecekler',

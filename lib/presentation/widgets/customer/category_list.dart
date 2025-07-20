@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../data/models/category.dart';
+import '../../../data/models/category.dart' as category_model;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 
 class CategoryList extends StatelessWidget {
-  final List<Category> categories;
+  final List<category_model.Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
   final bool showAll;
@@ -22,7 +22,7 @@ class CategoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     // Aktif kategorileri filtrele
     final activeCategories = categories
-        .where((cat) => cat.isActiveNow)
+        .where((cat) => cat.isActive)
         .toList();
 
     // "Tümü" seçeneğini ekle
@@ -56,8 +56,8 @@ class CategoryList extends StatelessWidget {
     );
   }
 
-  Category _createAllCategory() {
-    return Category(
+  category_model.Category _createAllCategory() {
+    return category_model.Category(
       categoryId: 'all',
       businessId: '',
       name: 'Tümü',
@@ -72,7 +72,7 @@ class CategoryList extends StatelessWidget {
 }
 
 class CategoryChip extends StatelessWidget {
-  final Category category;
+  final category_model.Category category;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -146,7 +146,7 @@ class CategoryChip extends StatelessWidget {
 
 // Vertical category list for better organization
 class VerticalCategoryList extends StatelessWidget {
-  final List<Category> categories;
+  final List<category_model.Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
 
@@ -160,7 +160,7 @@ class VerticalCategoryList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeCategories = categories
-        .where((cat) => cat.isActiveNow)
+        .where((cat) => cat.isActive)
         .toList();
 
     return ListView.separated(
@@ -202,7 +202,7 @@ class VerticalCategoryList extends StatelessWidget {
 
 // Expandable category tree for hierarchical categories
 class CategoryTree extends StatefulWidget {
-  final List<Category> categories;
+  final List<category_model.Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
 
@@ -224,7 +224,7 @@ class _CategoryTreeState extends State<CategoryTree> {
   Widget build(BuildContext context) {
     final mainCategories =
         widget.categories
-            .where((cat) => cat.isMainCategory && cat.isActiveNow)
+            .where((cat) => cat.parentCategoryId == null && cat.isActive)
             .toList()
           ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
@@ -234,9 +234,8 @@ class _CategoryTreeState extends State<CategoryTree> {
       itemCount: mainCategories.length,
       itemBuilder: (context, index) {
         final category = mainCategories[index];
-        final subCategories = category
-            .getSubCategories(widget.categories)
-            .where((cat) => cat.isActiveNow)
+        final subCategories = widget.categories
+            .where((cat) => cat.parentCategoryId == category.categoryId && cat.isActive)
             .toList();
         final hasSubCategories = subCategories.isNotEmpty;
         final isExpanded = _expandedCategories.contains(category.categoryId);

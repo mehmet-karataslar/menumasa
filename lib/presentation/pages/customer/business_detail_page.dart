@@ -5,7 +5,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../../data/models/business.dart';
 import '../../../data/models/user.dart' as app_user;
 import '../../../data/models/product.dart';
-import '../../../data/models/category.dart';
+import '../../../data/models/category.dart' as category_model;
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 import '../../widgets/shared/empty_state.dart';
@@ -30,7 +30,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
   final FirestoreService _firestoreService = FirestoreService();
 
   List<Product> _products = [];
-  List<Category> _categories = [];
+  List<category_model.Category> _categories = [];
   bool _isLoading = true;
   String? _errorMessage;
   bool _isFavorite = false;
@@ -77,8 +77,9 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
 
   Future<void> _loadProducts() async {
     try {
-      final products = await _firestoreService.getProducts(
-        businessId: widget.business.id,
+      final products = await _firestoreService.getBusinessProducts(
+        widget.business.id,
+        limit: 50,
       );
       setState(() {
         _products = products;
@@ -90,8 +91,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
 
   Future<void> _loadCategories() async {
     try {
-      final categories = await _firestoreService.getCategories(
-        businessId: widget.business.id,
+      final categories = await _firestoreService.getBusinessCategories(
+        widget.business.id,
       );
       setState(() {
         _categories = categories;
