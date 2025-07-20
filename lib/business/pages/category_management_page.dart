@@ -12,8 +12,8 @@ import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
-import '../../data/models/category.dart' as category_model;
-import '../../data/models/discount.dart';
+import '../models/category.dart' as category_model;
+import '../models/discount.dart';
 import '../../core/services/firestore_service.dart';
 import '../../core/services/storage_service.dart';
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../data/models/business.dart';
-import '../../data/models/category.dart';
-import '../../data/models/product.dart';
-import '../../data/models/discount.dart';
+import '../../business/models/business.dart';
+import '../../business/models/category.dart';
+import '../../business/models/product.dart';
+import '../../business/models/discount.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';

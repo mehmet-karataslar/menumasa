@@ -4,9 +4,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/services/data_service.dart';
-import '../../../data/models/discount.dart';
-import '../../../data/models/category.dart';
-import '../../../data/models/product.dart';
+import '../../../business/models/discount.dart';
+import '../../../business/models/category.dart';
+import '../../../business/models/product.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 
 class DiscountManagementPage extends StatefulWidget {

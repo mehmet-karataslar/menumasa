@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../data/models/cart.dart';
-import '../../data/models/product.dart';
+import '../../customer/models/cart.dart';
+import '../../business/models/product.dart';
 
 class CartService {
   static final CartService _instance = CartService._internal();

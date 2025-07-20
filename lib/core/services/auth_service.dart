@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/user.dart' as app_user;
-import '../../data/models/business.dart';
+import '../../business/models/business.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();

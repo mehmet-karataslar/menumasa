@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../../data/models/business.dart';
+import '../../../business/models/business.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../../admin/pages/admin_dashboard_page.dart';

@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../data/models/business.dart';
-import '../../data/models/product.dart';
-import '../../data/models/category.dart';
-import '../../data/models/user.dart';
-import '../../data/models/discount.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../business/models/business.dart';
+import '../../business/models/product.dart';
+import '../../business/models/category.dart';
+import '../../data/models/user.dart' as app_user;
+import '../../business/models/discount.dart';
 
 class DataService {
   static final DataService _instance = DataService._internal();

@@ -6,8 +6,7 @@ import 'package:crypto/crypto.dart';
 import '../models/customer_user.dart';
 import '../models/customer_session.dart';
 import '../models/customer_activity_log.dart';
-import '../../data/models/business.dart';
-import '../../data/models/product.dart';
+import '../../business/models/business.dart';
 import '../../data/models/order.dart' as app_order;
 
 class CustomerService {

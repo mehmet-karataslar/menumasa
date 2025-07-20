@@ -5,10 +5,11 @@ import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../data/models/business.dart';
-import '../../../data/models/qr_code.dart';
+
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/qr_service.dart';
+import '../models/business.dart';
+import '../models/qr_code.dart';
 
 class QRManagementPage extends StatefulWidget {
   final String businessId;

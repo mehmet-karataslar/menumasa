@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../data/models/business.dart';
+import '../../business/models/business.dart';
 import '../../data/models/order.dart' as app_order;
 import '../../data/models/user.dart' as app_user;
 import '../../core/constants/app_colors.dart';

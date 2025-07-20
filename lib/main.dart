@@ -26,8 +26,8 @@ import 'presentation/pages/auth/login_page.dart';
 import 'presentation/pages/auth/register_page.dart';
 import 'presentation/pages/auth/business_register_page.dart';
 import 'core/services/data_service.dart';
-import 'data/models/product.dart';
-import 'data/models/business.dart';
+import 'business/models/product.dart';
+import 'business/models/business.dart';
 import 'app/routes/app_routes.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 

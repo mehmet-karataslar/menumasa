@@ -3,7 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math';
-import '../../data/models/business.dart';
+import '../../business/models/business.dart';
 
 class BusinessUser {
   final String businessId;

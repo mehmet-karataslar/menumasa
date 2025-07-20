@@ -1,4 +1,4 @@
-import 'product.dart';
+import '../../business/models/product.dart';
 
 class Cart {
   final String cartId;

@@ -1,5 +1,5 @@
-import '../../../data/models/category.dart';
-import '../../../data/models/product.dart';
+import '../../../business/models/category.dart';
+import '../../../business/models/product.dart';
 
 class TimeRuleUtils {
   /// Verilen zaman kurallarının şu anda aktif olup olmadığını kontrol eder

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../data/models/category.dart';
-import '../../../data/models/business.dart';
+import '../../../business/models/category.dart';
+import '../../../business/models/business.dart';
 
 import '../../presentation/widgets/shared/empty_state.dart';
 import 'business_detail_page.dart';

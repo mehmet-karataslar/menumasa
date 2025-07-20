@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../data/models/category.dart' as app_category;
+import '../../business/models/category.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 
 class CategoryList extends StatelessWidget {
-  final List<app_category.Category> categories;
+  final List<Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
   final bool showAll;
@@ -56,8 +56,8 @@ class CategoryList extends StatelessWidget {
     );
   }
 
-  app_category.Category _createAllCategory() {
-    return app_category.Category(
+  Category _createAllCategory() {
+    return Category(
       categoryId: 'all',
       businessId: '',
       name: 'Tümü',
@@ -72,7 +72,7 @@ class CategoryList extends StatelessWidget {
 }
 
 class CategoryChip extends StatelessWidget {
-  final app_category.Category category;
+  final Category category;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -146,7 +146,7 @@ class CategoryChip extends StatelessWidget {
 
 // Vertical category list for better organization
 class VerticalCategoryList extends StatelessWidget {
-  final List<app_category.Category> categories;
+  final List<Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
 
@@ -202,7 +202,7 @@ class VerticalCategoryList extends StatelessWidget {
 
 // Expandable category tree for hierarchical categories
 class CategoryTree extends StatefulWidget {
-  final List<app_category.Category> categories;
+  final List<Category> categories;
   final String? selectedCategoryId;
   final Function(String) onCategorySelected;
 

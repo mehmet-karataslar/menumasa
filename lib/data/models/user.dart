@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'business.dart';
+import '../../business/models/business.dart';
 
 // =============================================================================
 // USER TYPES AND ROLES

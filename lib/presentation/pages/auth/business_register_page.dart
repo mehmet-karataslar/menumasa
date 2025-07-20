@@ -8,12 +8,10 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../business/services/business_service.dart';
 import '../../../business/models/business_user.dart';
-import '../../../data/models/user.dart' as app_user;
-import '../../../data/models/business.dart';
-import '../../../data/models/category.dart';
-import '../../../data/models/product.dart';
-import '../../../core/utils/time_rule_utils.dart';
-import '../../../presentation/widgets/shared/loading_indicator.dart';
+
+import '../../../business/models/business.dart';
+import '../../../business/models/category.dart';
+
 import '../../../presentation/widgets/shared/error_message.dart';
 
 class BusinessRegisterPage extends StatefulWidget {

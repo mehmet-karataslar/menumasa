@@ -1,11 +1,15 @@
 import 'dart:math';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/models/business.dart';
-import '../../data/models/qr_code.dart';
+import '../../business/models/business.dart';
+import '../../business/models/qr_code.dart';
 import 'data_service.dart';
 import 'firestore_service.dart';
 

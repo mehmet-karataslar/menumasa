@@ -9,7 +9,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/mixins/url_mixin.dart';
-import '../../../data/models/business.dart';
+import '../../../business/models/business.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 

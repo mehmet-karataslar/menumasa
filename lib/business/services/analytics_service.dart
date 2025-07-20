@@ -1,8 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/analytics_models.dart';
+import '../models/business.dart';
+import '../models/product.dart';
+import '../models/category.dart';
+import '../models/discount.dart';
 import '../../data/models/order.dart' as app_order;
-import '../../data/models/product.dart';
-import '../../data/models/business.dart';
+import '../../data/models/user.dart' as app_user;
 import '../../core/services/firestore_service.dart';
 
 /// Business analytics service for comprehensive data analysis

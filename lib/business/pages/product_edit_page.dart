@@ -7,8 +7,8 @@ import 'dart:typed_data';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../data/models/product.dart';
-import '../../../data/models/category.dart' as category_model;
+import '../../../business/models/product.dart';
+import '../../../business/models/category.dart' as category_model;
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 

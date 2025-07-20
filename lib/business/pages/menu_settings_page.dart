@@ -5,7 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/services/data_service.dart';
-import '../../../data/models/business.dart';
+import '../../../business/models/business.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../../core/services/firestore_service.dart';
