@@ -1,3 +1,5 @@
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/business.dart';
 import '../../data/models/product.dart';
@@ -5,7 +7,7 @@ import '../../data/models/category.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../data/models/discount.dart';
 import '../../data/models/order.dart' as app_order;
-import 'package:firebase_auth/firebase_auth.dart';
+
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();

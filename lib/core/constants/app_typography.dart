@@ -102,7 +102,23 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: fontSizeSmall,
     fontWeight: fontWeightRegular,
-    color: AppColors.textLight,
+    color: AppColors.textSecondary,
+    height: 1.33,
+  );
+
+  static const TextStyle labelMedium = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeMedium,
+    fontWeight: fontWeightMedium,
+    color: AppColors.textPrimary,
+    height: 1.33,
+  );
+
+  static const TextStyle overline = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeSmall,
+    fontWeight: fontWeightRegular,
+    color: AppColors.textSecondary,
     height: 1.4,
   );
 

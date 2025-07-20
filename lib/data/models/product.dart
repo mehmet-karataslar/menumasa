@@ -147,11 +147,17 @@ class Product {
     );
   }
 
-  // Helper methods
+  // Helper getters
+  String get formattedCurrentPrice => '${currentPrice.toStringAsFixed(2)} $currency';
+  
+  String get displayName => name;
+  
   bool get hasDiscount => currentPrice < price;
-  double get discountAmount => hasDiscount ? price - currentPrice : 0.0;
-  double get discountPercentage =>
-      hasDiscount ? ((price - currentPrice) / price) * 100 : 0.0;
+  
+  double get discountAmount => price - currentPrice;
+  
+  double get discountPercentage => hasDiscount ? ((discountAmount / price) * 100) : 0.0;
+
   String get formattedPrice => '${currentPrice.toStringAsFixed(2)} $currency';
   String get formattedOriginalPrice => '${price.toStringAsFixed(2)} $currency';
   String get formattedDiscountPercentage =>

@@ -29,6 +29,9 @@ class Order {
     this.completedAt,
   });
 
+  // Getter for compatibility
+  String get id => orderId;
+
   factory Order.fromJson(Map<String, dynamic> data, {String? id}) {
     return Order(
       orderId: id ?? data['orderId'] ?? '',
@@ -279,6 +282,9 @@ class OrderItem {
   double get totalPrice => productPrice * quantity;
   String get formattedTotalPrice => '${totalPrice.toStringAsFixed(2)} TL';
   String get formattedUnitPrice => '${productPrice.toStringAsFixed(2)} TL';
+
+  // Getter for compatibility
+  double get price => productPrice;
 
   @override
   String toString() {

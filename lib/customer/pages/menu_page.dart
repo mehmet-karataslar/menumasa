@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:shimmer/shimmer.dart';
-import '../../../data/models/business.dart';
-import '../../../data/models/category.dart';
-import '../../../data/models/product.dart';
-import '../../../data/models/discount.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
-import '../../../core/constants/app_dimensions.dart';
-import '../../../core/utils/time_rule_utils.dart';
-import '../../../core/services/data_service.dart';
-import '../../../core/services/cart_service.dart';
-import '../../widgets/customer/business_header.dart';
-import '../../widgets/customer/category_list.dart';
-import '../../widgets/customer/product_grid.dart';
-import '../../widgets/customer/search_bar.dart';
-import '../../widgets/customer/filter_bottom_sheet.dart';
-import '../../widgets/shared/loading_indicator.dart';
-import '../../widgets/shared/error_message.dart';
-import '../../widgets/shared/empty_state.dart';
+import '../../data/models/business.dart';
+import '../../data/models/category.dart';
+import '../../data/models/product.dart';
+import '../../data/models/discount.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
+import '../../core/constants/app_dimensions.dart';
+import '../../core/utils/time_rule_utils.dart';
+import '../../core/services/data_service.dart';
+import '../../core/services/cart_service.dart';
+import '../widgets/business_header.dart';
+import '../widgets/category_list.dart';
+import '../widgets/product_grid.dart';
+import '../widgets/search_bar.dart';
+import '../widgets/filter_bottom_sheet.dart';
+import '../../presentation/widgets/shared/loading_indicator.dart';
+import '../../presentation/widgets/shared/error_message.dart';
+import '../../presentation/widgets/shared/empty_state.dart';
 import 'cart_page.dart';
-
+// CachedNetworkImage removed for Windows compatibility
+import 'package:shimmer/shimmer.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
@@ -863,4 +863,4 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       ),
     ];
   }
-}
+} 
