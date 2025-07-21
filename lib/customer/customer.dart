@@ -19,6 +19,8 @@ export 'pages/cart_page.dart';
 export 'pages/multi_business_cart_page.dart';
 export 'pages/product_detail_page.dart';
 export 'pages/search_page.dart';
+export 'pages/qr_menu_page.dart';
+export 'pages/qr_scanner_page.dart';
 export 'pages/customer_orders_page.dart';
 export 'pages/category_filter_page.dart';
 

@@ -13,6 +13,8 @@ import '../../customer/pages/customer_profile_page.dart';
 import '../../customer/pages/cart_page.dart';
 import '../../customer/pages/business_detail_page.dart';
 import '../../customer/pages/search_page.dart';
+import '../../customer/pages/qr_scanner_page.dart';
+import '../../customer/pages/qr_menu_page.dart';
 import '../../business/pages/business_dashboard_page.dart';
 import '../../business/models/category.dart' as app_category;
 import '../../business/models/business.dart';
@@ -48,6 +50,8 @@ class AppRoutes {
   static const String productDetail = '/product-detail';
   static const String businessDetail = '/business/detail';
   static const String search = '/search';
+  static const String qrScanner = '/qr-scanner';
+  static const String qrMenu = '/qr-menu';
 
   // Business route'ları
   static const String businessHome = '/business/home';
@@ -83,6 +87,8 @@ class AppRoutes {
     productDetail: (context) => const ProductDetailRouterPage(),
     businessDetail: (context) => const BusinessDetailRouterPage(),
     search: (context) => const SearchRouterPage(),
+    qrScanner: (context) => const QRScannerRouterPage(),
+    qrMenu: (context) => const QRMenuRouterPage(),
 
     // Business route'ları
     businessHome: (context) => const BusinessHomeRouterPage(),
@@ -134,6 +140,21 @@ class AppRoutes {
     // Menu route'ları (businessId parametresi ile)
     if (settings.name?.startsWith('/menu/') == true) {
       return _handleMenuRoutes(settings);
+    }
+
+    // QR Menü route'ları
+    if (settings.name?.startsWith('/qr-menu/') == true) {
+      return _handleQRMenuRoutes(settings);
+    }
+
+    // Genel QR scanner route'u
+    if (settings.name == qrScanner) {
+      final args = settings.arguments as Map<String, dynamic>?;
+      final userId = args?['userId'] as String?;
+      return MaterialPageRoute(
+        builder: (context) => QRScannerPage(userId: userId),
+        settings: settings,
+      );
     }
 
     return null;
@@ -244,6 +265,23 @@ class AppRoutes {
             final actionType = pathSegments[2];
 
             switch (actionType) {
+              case 'qr-scanner':
+                return MaterialPageRoute(
+                  builder: (context) => QRScannerPage(userId: userId),
+                  settings: settings,
+                );
+
+              case 'search':
+                final args = settings.arguments as Map<String, dynamic>?;
+                final businesses = args?['businesses'] as List<dynamic>? ?? [];
+                final categories = args?['categories'] as List<dynamic>? ?? [];
+                return MaterialPageRoute(
+                  builder: (context) => SearchPage(
+                    businesses: businesses.cast<Business>(),
+                    categories: categories.cast<app_category.Category>(),
+                  ),
+                  settings: settings,
+                );
               case 'search':
                 final args = settings.arguments as Map<String, dynamic>?;
                 final businesses = args?['businesses'] as List<dynamic>? ?? [];
@@ -581,6 +619,34 @@ class BusinessDetailRouterPage extends StatelessWidget {
       customerData: customerData,
     );
   }
+
+  // =============================================================================
+  // QR MENU ROUTE HANDLER
+  // =============================================================================
+  
+  static Route<dynamic>? _handleQRMenuRoutes(RouteSettings settings) {
+    final uri = Uri.parse(settings.name ?? '');
+    final pathSegments = uri.pathSegments;
+
+    // /qr-menu/{businessId} pattern'ı
+    if (pathSegments.length >= 2) {
+      final businessId = pathSegments[1];
+      final args = settings.arguments as Map<String, dynamic>?;
+      final userId = args?['userId'] as String?;
+      final qrCode = args?['qrCode'] as String?;
+
+      return MaterialPageRoute(
+        builder: (context) => QRMenuPage(
+          businessId: businessId,
+          userId: userId,
+          qrCode: qrCode,
+        ),
+        settings: settings,
+      );
+    }
+
+    return null;
+  }
 }
 
 class SearchRouterPage extends StatelessWidget {
@@ -640,5 +706,39 @@ class _BusinessHomeRouterPageState extends State<BusinessHomeRouterPage> {
     // Business home route should redirect to business dashboard
     // Check if user is authenticated business user
     return BusinessDashboard(businessId: _businessId!);
+  }
+}
+
+class QRScannerRouterPage extends StatelessWidget {
+  const QRScannerRouterPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final userId = args?['userId'] as String?;
+
+    return QRScannerPage(userId: userId);
+  }
+}
+
+class QRMenuRouterPage extends StatelessWidget {
+  const QRMenuRouterPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final businessId = args?['businessId'] as String?;
+    final userId = args?['userId'] as String?;
+    final qrCode = args?['qrCode'] as String?;
+
+    if (businessId == null) {
+      return const RouterPage();
+    }
+
+    return QRMenuPage(
+      businessId: businessId,
+      userId: userId,
+      qrCode: qrCode,
+    );
   }
 }

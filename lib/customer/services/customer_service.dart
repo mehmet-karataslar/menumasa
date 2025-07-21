@@ -871,4 +871,60 @@ class CustomerService {
 
     _currentCustomer = updatedCustomer;
   }
+
+  // =============================================================================
+  // ACTIVITY LOGGING
+  // =============================================================================
+
+  /// Log customer activity
+  Future<void> logActivity({
+    required String action,
+    required String details,
+    Map<String, dynamic>? metadata,
+  }) async {
+    if (_currentCustomer == null) return;
+
+    try {
+      // Action string'i CustomerActionType'a map et
+      CustomerActionType? actionType;
+      
+      switch (action.toLowerCase()) {
+        case 'qr_scan':
+        case 'qrscan':
+          actionType = CustomerActionType.qrScan;
+          break;
+        case 'business_visit':
+        case 'businessvisit':
+          actionType = CustomerActionType.businessVisit;
+          break;
+        case 'order_place':
+        case 'orderplace':
+          actionType = CustomerActionType.orderPlace;
+          break;
+        case 'favorite_add':
+        case 'favoriteadd':
+          actionType = CustomerActionType.favoriteAdd;
+          break;
+        case 'favorite_remove':
+        case 'favoriteremove':
+          actionType = CustomerActionType.favoriteRemove;
+          break;
+        case 'profile_update':
+        case 'profileupdate':
+          actionType = CustomerActionType.profileUpdate;
+          break;
+        default:
+          // Varsayılan olarak session_start kullan
+          actionType = CustomerActionType.sessionStart;
+      }
+
+      await _logActivity(
+        action: actionType,
+        details: details,
+        metadata: metadata ?? {},
+      );
+    } catch (e) {
+      print('Activity logging error: $e');
+    }
+  }
 } 

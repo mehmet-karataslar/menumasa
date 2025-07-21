@@ -10,20 +10,22 @@ import '../../core/services/cart_service.dart';
 
 class ProductGrid extends StatelessWidget {
   final List<Product> products;
-  final Function(Product) onProductTapped;
+  final Function(Product)? onProductTap;
   final Function(Product)? onAddToCart;
   final EdgeInsets? padding;
   final int crossAxisCount;
   final double childAspectRatio;
+  final bool isQRMenu;
 
   const ProductGrid({
     Key? key,
     required this.products,
-    required this.onProductTapped,
+    this.onProductTap,
     this.onAddToCart,
     this.padding,
     this.crossAxisCount = 2,
     this.childAspectRatio = 0.75,
+    this.isQRMenu = false,
   }) : super(key: key);
 
   @override
@@ -43,9 +45,10 @@ class ProductGrid extends StatelessWidget {
           final product = products[index];
           return ModernProductCard(
             product: product,
-            onTap: () => onProductTapped(product),
+            onTap: onProductTap != null ? () => onProductTap!(product) : null,
             onAddToCart: onAddToCart != null ? () => onAddToCart!(product) : null,
             index: index,
+            isQRMenu: isQRMenu,
           );
         },
       ),
@@ -55,16 +58,18 @@ class ProductGrid extends StatelessWidget {
 
 class ModernProductCard extends StatefulWidget {
   final Product product;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
   final int index;
+  final bool isQRMenu;
 
   const ModernProductCard({
     Key? key,
     required this.product,
-    required this.onTap,
+    this.onTap,
     this.onAddToCart,
     required this.index,
+    this.isQRMenu = false,
   }) : super(key: key);
 
   @override
@@ -136,10 +141,10 @@ class _ModernProductCardState extends State<ModernProductCard>
               onTapDown: _onTapDown,
               onTapUp: _onTapUp,
               onTapCancel: _onTapCancel,
-              onTap: () {
+              onTap: widget.onTap != null ? () {
                 HapticFeedback.lightImpact();
-                widget.onTap();
-              },
+                widget.onTap!();
+              } : null,
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.white,

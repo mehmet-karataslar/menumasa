@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../business/models/business.dart';
+import '../../../business/models/category.dart';
 import '../../../data/models/order.dart' as app_order;
 import '../../../data/models/user.dart' as app_user;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/url_service.dart';
 import '../../services/customer_firestore_service.dart';
+import '../../services/customer_service.dart';
 import '../../../presentation/widgets/shared/empty_state.dart';
 import '../menu_page.dart';
 import '../business_detail_page.dart';
+import '../search_page.dart';
+import '../qr_scanner_page.dart';
 
 /// Müşteri ana sayfa tab'ı
 class CustomerHomeTab extends StatefulWidget {
@@ -16,6 +20,7 @@ class CustomerHomeTab extends StatefulWidget {
   final app_user.User? user;
   final app_user.CustomerData? customerData;
   final VoidCallback onRefresh;
+  final Function(int)? onNavigateToTab;
 
   const CustomerHomeTab({
     super.key,
@@ -23,6 +28,7 @@ class CustomerHomeTab extends StatefulWidget {
     required this.user,
     required this.customerData,
     required this.onRefresh,
+    this.onNavigateToTab,
   });
 
   @override
@@ -31,12 +37,20 @@ class CustomerHomeTab extends StatefulWidget {
 
 class _CustomerHomeTabState extends State<CustomerHomeTab> {
   final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
 
   List<app_order.Order> _orders = [];
   List<Business> _nearbyBusinesses = [];
   List<Business> _favoriteBusinesses = [];
+  List<Category> _categories = [];
   bool _isLoading = false;
+  
+  // Gerçek istatistikler
+  int _totalOrders = 0;
+  double _totalSpent = 0.0;
+  int _favoriteCount = 0;
+  int _totalVisits = 0;
 
   @override
   void initState() {
@@ -56,14 +70,33 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
       // Yakındaki işletmeleri yükle
       final businesses = await _customerFirestoreService.getBusinesses();
       
-      // Favori işletmeleri yükle
-      final favoriteIds = widget.customerData?.favorites.map((f) => f.businessId).toList() ?? [];
+      // Kategorileri yükle
+      final categories = await _customerFirestoreService.getCategories();
+      
+      // Favori işletmeleri yükle - hem CustomerData hem CustomerService'den
+      Set<String> favoriteIds = <String>{};
+      
+      // CustomerData'dan favori ID'leri al
+      if (widget.customerData?.favorites != null) {
+        favoriteIds.addAll(widget.customerData!.favorites.map((f) => f.businessId));
+      }
+      
+      // CustomerService'den de favori ID'leri al (daha güncel olabilir)
+      final currentCustomer = _customerService.currentCustomer;
+      if (currentCustomer?.favoriteBusinessIds != null) {
+        favoriteIds.addAll(currentCustomer!.favoriteBusinessIds);
+      }
+      
       final favorites = businesses.where((b) => favoriteIds.contains(b.id)).toList();
+
+      // Gerçek istatistikleri hesapla
+      _calculateRealStatistics(orders, favorites);
 
       setState(() {
         _orders = orders;
         _nearbyBusinesses = businesses.where((b) => b.isActive).take(6).toList();
         _favoriteBusinesses = favorites;
+        _categories = categories;
       });
     } catch (e) {
       print('Veri yükleme hatası: $e');
@@ -72,6 +105,23 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
         _isLoading = false;
       });
     }
+  }
+
+  void _calculateRealStatistics(List<app_order.Order> orders, List<Business> favorites) {
+    // Toplam sipariş sayısı
+    _totalOrders = orders.length;
+    
+    // Toplam harcama - tamamlanan siparişlerin toplamı
+    _totalSpent = orders
+        .where((order) => order.status == app_order.OrderStatus.completed)
+        .fold(0.0, (sum, order) => sum + order.totalAmount);
+    
+    // Favori işletme sayısı
+    _favoriteCount = favorites.length;
+    
+    // Toplam ziyaret sayısı - benzersiz işletme sayısı
+    final uniqueBusinessIds = orders.map((order) => order.businessId).toSet();
+    _totalVisits = uniqueBusinessIds.length;
   }
 
   Future<void> _handleRefresh() async {
@@ -85,17 +135,25 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
     final dynamicRoute = '/customer/${widget.userId}/search?t=$timestamp&ref=home';
     _urlService.updateUrl(dynamicRoute, customTitle: 'İşletme Ara | MasaMenu');
     
-    Navigator.pushNamed(
-      context, 
-      '/search',
-      arguments: {
-        'userId': widget.userId,
-        'timestamp': timestamp,
-        'businesses': _nearbyBusinesses,
-        'categories': [],
-        'referrer': 'home',
-        'source': 'dashboard',
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchPage(
+          businesses: _nearbyBusinesses,
+          categories: _categories,
+        ),
+        settings: RouteSettings(
+          name: dynamicRoute,
+          arguments: {
+            'userId': widget.userId,
+            'timestamp': timestamp,
+            'businesses': _nearbyBusinesses,
+            'categories': _categories,
+            'referrer': 'home',
+            'source': 'dashboard',
+          },
+        ),
+      ),
     );
   }
 
@@ -186,14 +244,7 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
   }
 
   Widget _buildQuickStatsCards() {
-    final stats = widget.customerData?.stats ?? app_user.CustomerStats(
-      totalOrders: 0,
-      totalSpent: 0.0,
-      favoriteBusinessCount: 0,
-      totalVisits: 0,
-      categoryPreferences: {},
-      businessSpending: {},
-    );
+    // Gerçek verilerden istatistikleri kullan
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,7 +262,7 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
             Expanded(
               child: _buildStatCard(
                 title: 'Toplam Sipariş',
-                value: '${_orders.length}',
+                value: '$_totalOrders',
                 icon: Icons.shopping_bag_rounded,
                 color: AppColors.primary,
                 gradient: [AppColors.primary, AppColors.primaryLight],
@@ -221,17 +272,17 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
             Expanded(
               child: _buildStatCard(
                 title: 'Harcama',
-                value: '${stats.totalSpent.toStringAsFixed(0)}₺',
+                value: '${_totalSpent.toStringAsFixed(0)}₺',
                 icon: Icons.payments_rounded,
                 color: AppColors.success,
-                gradient: [AppColors.success, Color(0xFF2ECC71)],
+                gradient: [AppColors.success, const Color(0xFF2ECC71)],
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
                 title: 'Favoriler',
-                value: '${_favoriteBusinesses.length}',
+                value: '$_favoriteCount',
                 icon: Icons.favorite_rounded,
                 color: AppColors.accent,
                 gradient: [AppColors.accent, AppColors.accentLight],
@@ -315,11 +366,25 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
                 icon: Icons.qr_code_scanner_rounded,
                 color: AppColors.primary,
                 onTap: () {
-                  // QR tarama sayfası - URL güncelle
+                  // QR tarama sayfasına yönlendir
                   final timestamp = DateTime.now().millisecondsSinceEpoch;
                   final dynamicRoute = '/customer/${widget.userId}/qr-scan?t=$timestamp';
                   _urlService.updateUrl(dynamicRoute, customTitle: 'QR Tara | MasaMenu');
-                  // QR scanning implementation
+                  
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QRScannerPage(userId: widget.userId),
+                      settings: RouteSettings(
+                        name: dynamicRoute,
+                        arguments: {
+                          'userId': widget.userId,
+                          'timestamp': timestamp,
+                          'referrer': 'home_quick_actions',
+                        },
+                      ),
+                    ),
+                  );
                 },
               ),
             ),
@@ -349,9 +414,8 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
                 onTap: () {
                   // Navigate to orders tab with URL update
                   final timestamp = DateTime.now().millisecondsSinceEpoch;
-                  final dynamicRoute = '/customer/${widget.userId}/orders?t=$timestamp';
                   _urlService.updateCustomerUrl(widget.userId, 'orders', customTitle: 'Siparişlerim | MasaMenu');
-                  DefaultTabController.of(context)?.animateTo(1);
+                  widget.onNavigateToTab?.call(1);
                 },
               ),
             ),
@@ -365,9 +429,8 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
                 onTap: () {
                   // Navigate to favorites tab with URL update
                   final timestamp = DateTime.now().millisecondsSinceEpoch;
-                  final dynamicRoute = '/customer/${widget.userId}/favorites?t=$timestamp';
                   _urlService.updateCustomerUrl(widget.userId, 'favorites', customTitle: 'Favorilerim | MasaMenu');
-                  DefaultTabController.of(context)?.animateTo(2);
+                  widget.onNavigateToTab?.call(2);
                 },
               ),
             ),

@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../data/models/order.dart' as app_order;
 import '../../business/models/business.dart';
+import '../../business/models/category.dart';
+import '../../business/models/product.dart';
 
 class CustomerFirestoreService {
   static final CustomerFirestoreService _instance = CustomerFirestoreService._internal();
@@ -15,6 +17,8 @@ class CustomerFirestoreService {
   CollectionReference get _usersRef => _firestore.collection('users');
   CollectionReference get _ordersRef => _firestore.collection('orders');
   CollectionReference get _businessesRef => _firestore.collection('businesses');
+  CollectionReference get _categoriesRef => _firestore.collection('categories');
+  CollectionReference get _productsRef => _firestore.collection('products');
 
   // =============================================================================
   // CUSTOMER USER OPERATIONS
@@ -606,5 +610,117 @@ class CustomerFirestoreService {
     }
     _customerOrderStreams.clear();
     _customerOrderListeners.clear();
+  }
+
+  // =============================================================================
+  // BUSINESS OPERATIONS
+  // =============================================================================
+
+  /// Get business by ID
+  Future<Business?> getBusinessById(String businessId) async {
+    try {
+      final doc = await _businessesRef.doc(businessId).get();
+      if (doc.exists) {
+        return Business.fromJson({
+          ...doc.data() as Map<String, dynamic>,
+          'id': doc.id,
+        });
+      }
+      return null;
+    } catch (e) {
+      print('Error getting business by ID: $e');
+      return null;
+    }
+  }
+
+  // =============================================================================
+  // CATEGORY OPERATIONS
+  // =============================================================================
+
+  /// Get all categories
+  Future<List<Category>> getCategories() async {
+    try {
+      final snapshot = await _categoriesRef
+          .where('isActive', isEqualTo: true)
+          .orderBy('sortOrder')
+          .get();
+      
+      return snapshot.docs
+          .map((doc) => Category.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }))
+          .toList();
+    } catch (e) {
+      print('Error getting categories: $e');
+      return [];
+    }
+  }
+
+  /// Get categories by business ID
+  Future<List<Category>> getCategoriesByBusiness(String businessId) async {
+    try {
+      final snapshot = await _categoriesRef
+          .where('businessId', isEqualTo: businessId)
+          .where('isActive', isEqualTo: true)
+          .orderBy('sortOrder')
+          .get();
+      
+      return snapshot.docs
+          .map((doc) => Category.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }))
+          .toList();
+    } catch (e) {
+      print('Error getting categories by business: $e');
+      return [];
+    }
+  }
+
+  // =============================================================================
+  // PRODUCT OPERATIONS
+  // =============================================================================
+
+  /// Get products by business ID
+  Future<List<Product>> getProductsByBusiness(String businessId) async {
+    try {
+      final snapshot = await _productsRef
+          .where('businessId', isEqualTo: businessId)
+          .where('isAvailable', isEqualTo: true)
+          .orderBy('sortOrder')
+          .get();
+      
+      return snapshot.docs
+          .map((doc) => Product.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }))
+          .toList();
+    } catch (e) {
+      print('Error getting products by business: $e');
+      return [];
+    }
+  }
+
+  /// Get products by category ID
+  Future<List<Product>> getProductsByCategory(String categoryId) async {
+    try {
+      final snapshot = await _productsRef
+          .where('categoryId', isEqualTo: categoryId)
+          .where('isAvailable', isEqualTo: true)
+          .orderBy('sortOrder')
+          .get();
+      
+      return snapshot.docs
+          .map((doc) => Product.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }))
+          .toList();
+    } catch (e) {
+      print('Error getting products by category: $e');
+      return [];
+    }
   }
 } 
