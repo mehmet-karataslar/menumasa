@@ -9,6 +9,8 @@ import '../../data/models/user.dart' as app_user;
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../services/customer_firestore_service.dart';
+import 'dart:convert'; // Added import for jsonDecode
+import 'package:shared_preferences/shared_preferences.dart'; // Added import for SharedPreferences
 
 // Tab sayfaları
 import 'tabs/customer_home_tab.dart';
@@ -74,25 +76,52 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     // Cart değişikliklerini dinle
     _cartService.addCartListener((cart) {
       if (mounted) {
-        setState(() {
-          _cartItemCount = cart.totalItems;
-        });
+        // Cart listener'dan gelen cart tek bir business için olabilir
+        // Bu yüzden tüm business'ları tekrar kontrol edelim
+        _updateCartCount();
       }
     });
   }
 
-  void _updateCartCount() async {
+  Future<void> _updateCartCount() async {
     try {
-      // Herhangi bir business ID kullanabiliriz çünkü genel sepet sayısını istiyoruz
-      final cartCount = await _cartService.getCartItemCount('default');
-      setState(() {
-        _cartItemCount = cartCount;
-      });
+      // Sadece current cart'ı kontrol et (en güvenilir yöntem)
+      final prefs = await SharedPreferences.getInstance();
+      final currentCartJson = prefs.getString('current_cart');
+      
+      if (currentCartJson != null) {
+        try {
+          final cartData = jsonDecode(currentCartJson);
+          final businessId = cartData['businessId'] as String?;
+          
+          if (businessId != null && businessId.isNotEmpty) {
+            final cartCount = await _cartService.getCartItemCount(businessId);
+            setState(() {
+              _cartItemCount = cartCount;
+            });
+            print('📊 Cart count for $businessId: $cartCount');
+          } else {
+            setState(() {
+              _cartItemCount = 0;
+            });
+          }
+        } catch (e) {
+          print('❌ Error parsing current cart for count: $e');
+          setState(() {
+            _cartItemCount = 0;
+          });
+        }
+      } else {
+        setState(() {
+          _cartItemCount = 0;
+        });
+        print('📊 No current cart found, count = 0');
+      }
     } catch (e) {
-      // Hata durumunda 0 olarak ayarla
       setState(() {
         _cartItemCount = 0;
       });
+      print('❌ Error updating cart count: $e');
     }
   }
 

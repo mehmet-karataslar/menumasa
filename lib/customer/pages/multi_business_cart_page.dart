@@ -43,28 +43,73 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
     try {
       await _cartService.initialize();
       
-      // Get all business IDs that have items in cart
-      // This is a simplified approach - in a real app, you'd get this from a more structured way
-      final businessIds = await _getAllBusinessIdsWithCarts();
+      // STEP 1: Get current cart first (most reliable)
+      print('🔍 STEP 1: Checking current cart...');
+      final prefs = await SharedPreferences.getInstance();
+      final currentCartJson = prefs.getString('current_cart');
       
-      for (final businessId in businessIds) {
+      if (currentCartJson != null) {
         try {
-          final cart = await _cartService.getCurrentCart(businessId);
-          if (cart.items.isNotEmpty) {
-            _businessCarts[businessId] = cart;
+          final cartData = jsonDecode(currentCartJson);
+          print('📦 Current cart found: $cartData');
+          
+          final businessId = cartData['businessId'] as String?;
+          if (businessId != null && businessId.isNotEmpty) {
+            print('🏪 Current cart business ID: $businessId');
             
-            // Load business information
-            final business = await _businessFirestoreService.getBusiness(businessId);
-            if (business != null) {
-              _businesses[businessId] = business;
+            // Load this business cart
+            final cart = await _cartService.getCurrentCart(businessId);
+            print('📦 Cart for $businessId has ${cart.items.length} items');
+            
+            if (cart.items.isNotEmpty) {
+              _businessCarts[businessId] = cart;
+              print('✅ Added cart for business $businessId');
+              
+              // Load business info
+              final business = await _businessFirestoreService.getBusiness(businessId);
+              if (business != null) {
+                _businesses[businessId] = business;
+                print('✅ Loaded business: ${business.businessName}');
+              }
             }
           }
         } catch (e) {
-          print('Error loading cart for business $businessId: $e');
+          print('❌ Error parsing current cart: $e');
         }
       }
+      
+      // STEP 2: Check additional business IDs if any
+      print('🔍 STEP 2: Checking for additional business IDs...');
+      final additionalBusinessIds = await _getAdditionalBusinessIds();
+      
+      for (final businessId in additionalBusinessIds) {
+        if (!_businessCarts.containsKey(businessId)) {
+          try {
+            print('🔍 Checking additional business: $businessId');
+            final cart = await _cartService.getCurrentCart(businessId);
+            
+            if (cart.items.isNotEmpty) {
+              _businessCarts[businessId] = cart;
+              print('✅ Added additional cart for business $businessId');
+              
+              final business = await _businessFirestoreService.getBusiness(businessId);
+              if (business != null) {
+                _businesses[businessId] = business;
+              }
+            }
+          } catch (e) {
+            print('❌ Error loading additional business $businessId: $e');
+          }
+        }
+      }
+      
+      print('🛒 FINAL RESULT: Loaded ${_businessCarts.length} business carts');
+      for (final entry in _businessCarts.entries) {
+        print('   - ${entry.key}: ${entry.value.items.length} items');
+      }
+      
     } catch (e) {
-      print('Error loading carts: $e');
+      print('❌ Error in _loadAllCarts: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -72,52 +117,26 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
     }
   }
 
-  Future<List<String>> _getAllBusinessIdsWithCarts() async {
-    List<String> businessIds = [];
-    
+  Future<List<String>> _getAdditionalBusinessIds() async {
     try {
-      // SharedPreferences'dan business ID'leri al
       final prefs = await SharedPreferences.getInstance();
+      final businessIds = <String>{};
       
-      // Cart key'lerini kontrol et - cart verilerinin key'leri 'cart_businessId' formatında olabilir
+      // Check all keys for cart-related data
       final keys = prefs.getKeys();
       for (final key in keys) {
-        if (key.startsWith('cart_') || key.contains('business')) {
-          // Business ID'yi extract et
+        if (key.startsWith('cart_') && key != 'current_cart') {
           final businessId = key.replaceFirst('cart_', '').split('_').first;
-          if (businessId.isNotEmpty && !businessIds.contains(businessId)) {
+          if (businessId.isNotEmpty) {
             businessIds.add(businessId);
           }
         }
       }
       
-      // Current cart'tan da business ID al
-      final currentCartJson = prefs.getString('current_cart');
-      if (currentCartJson != null) {
-        try {
-          final cartData = jsonDecode(currentCartJson);
-          final businessId = cartData['businessId'] as String?;
-          if (businessId != null && businessId.isNotEmpty && !businessIds.contains(businessId)) {
-            businessIds.add(businessId);
-          }
-        } catch (e) {
-          print('Error parsing current cart: $e');
-        }
-      }
-      
-      // Eğer hiç business ID bulunamazsa, varsayılan ID'ler ekle
-      if (businessIds.isEmpty) {
-        businessIds.addAll([
-          'FHQ48XbCxx6plmZhkXE7', // Example business ID
-          // Diğer test business ID'leri buraya eklenebilir
-        ]);
-      }
-      
-      return businessIds;
+      return businessIds.toList();
     } catch (e) {
-      print('Error getting business IDs: $e');
-      // Fallback business IDs
-      return ['FHQ48XbCxx6plmZhkXE7'];
+      print('❌ Error getting additional business IDs: $e');
+      return [];
     }
   }
 

@@ -842,8 +842,14 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
         children: [
           // Order summary
           _buildOrderSummary(),
-          // Order form
-          Flexible(child: _buildOrderForm()),
+          // Order form - with constraints to prevent overflow
+          if (_isFormExpanded)
+            Container(
+              constraints: BoxConstraints(
+                maxHeight: 350, // Reduced from 400 to prevent overflow
+              ),
+              child: _buildOrderFormContent(),
+            ),
         ],
       ),
     );
@@ -913,141 +919,86 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildOrderForm() {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      height: _isFormExpanded ? 400 : 0, // Fixed max height
-      child: _isFormExpanded
-          ? Container(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: AppColors.greyLight, width: 1),
+  Widget _buildOrderFormContent() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: AppColors.greyLight, width: 1),
+        ),
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 20),
+              Text(
+                'Sipariş Bilgileri',
+                style: AppTypography.h6.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                    SizedBox(height: 20),
-                    Text(
-                      'Sipariş Bilgileri',
-                      style: AppTypography.h6.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildModernTextField(
+                      controller: _customerNameController,
+                      labelText: 'Adınız *',
+                      icon: Icons.person_rounded,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Ad alanı gerekli';
+                        }
+                        return null;
+                      },
                     ),
-                    SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildModernTextField(
-                            controller: _customerNameController,
-                            labelText: 'Adınız *',
-                            icon: Icons.person_rounded,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Ad alanı gerekli';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: _buildModernTextField(
-                            controller: _tableNumberController,
-                            labelText: 'Masa No *',
-                            icon: Icons.table_restaurant_rounded,
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Masa numarası gerekli';
-                              }
-                              final number = int.tryParse(value.trim());
-                              if (number == null || number <= 0) {
-                                return 'Geçersiz masa numarası';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                    _buildModernTextField(
-                      controller: _customerPhoneController,
-                      labelText: 'Telefon (Opsiyonel)',
-                      icon: Icons.phone_rounded,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    SizedBox(height: 16),
-                    _buildModernTextField(
-                      controller: _notesController,
-                      labelText: 'Özel İstekler (Opsiyonel)',
-                      icon: Icons.note_rounded,
-                      maxLines: 3,
-                    ),
-                    SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isPlacingOrder ? null : _placeOrder,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: _isPlacingOrder
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          AppColors.white),
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    'Sipariş Veriliyor...',
-                                    style: AppTypography.bodyLarge.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.restaurant_rounded),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Sipariş Ver (${_cart!.formattedTotalPrice})',
-                                    style: AppTypography.bodyLarge.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ],
                   ),
-                ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: _buildModernTextField(
+                      controller: _tableNumberController,
+                      labelText: 'Masa No *',
+                      icon: Icons.table_restaurant_rounded,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Masa numarası gerekli';
+                        }
+                        final tableNum = int.tryParse(value);
+                        if (tableNum == null || tableNum <= 0) {
+                          return 'Geçerli masa numarası girin';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
               ),
-            )
-          : SizedBox.shrink(),
+              SizedBox(height: 16),
+              _buildModernTextField(
+                controller: _customerPhoneController,
+                labelText: 'Telefon',
+                icon: Icons.phone_rounded,
+                keyboardType: TextInputType.phone,
+              ),
+              SizedBox(height: 16),
+              _buildModernTextField(
+                controller: _notesController,
+                labelText: 'Sipariş Notu',
+                icon: Icons.note_rounded,
+                maxLines: 2,
+              ),
+              SizedBox(height: 24),
+              _buildModernOrderButton(),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1092,6 +1043,59 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       ),
       style: AppTypography.bodyMedium.copyWith(
         color: AppColors.textPrimary,
+      ),
+    );
+  }
+
+  Widget _buildModernOrderButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isPlacingOrder ? null : _placeOrder,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          padding: EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 0,
+        ),
+        child: _isPlacingOrder
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Sipariş Veriliyor...',
+                    style: AppTypography.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.restaurant_rounded),
+                  SizedBox(width: 8),
+                  Text(
+                    'Sipariş Ver (${_cart!.formattedTotalPrice})',
+                    style: AppTypography.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
