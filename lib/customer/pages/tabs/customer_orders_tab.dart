@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/order.dart' as app_order;
 import '../../../data/models/user.dart' as app_user;
+import '../../../business/models/business.dart';
+import '../../../business/services/business_firestore_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../services/customer_firestore_service.dart';
@@ -27,9 +29,11 @@ class CustomerOrdersTab extends StatefulWidget {
 
 class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
   final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final UrlService _urlService = UrlService(); // Added UrlService instance
 
   List<app_order.Order> _orders = [];
+  Map<String, Business> _businessCache = {}; // Cache for business information
   bool _isLoading = false;
 
   @override
@@ -53,25 +57,34 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
     if (mounted) {
       setState(() {
         _orders = orders;
-        _isLoading = false;
       });
-      
-      // Show status change notification for recent orders
-      if (orders.isNotEmpty && _orders.isNotEmpty) {
-        final recentOrder = orders.first;
-        final oldOrder = _orders.firstWhere((o) => o.id == recentOrder.id, orElse: () => recentOrder);
-        
-        if (oldOrder.status != recentOrder.status) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Sipariş durumu güncellendi: ${recentOrder.status.displayName}'),
-              backgroundColor: AppColors.info,
-              duration: Duration(seconds: 2),
-            ),
-          );
+      // Load business information for new orders
+      _loadBusinessInformation();
+    }
+  }
+
+  Future<void> _loadBusinessInformation() async {
+    final businessIds = _orders
+        .map((order) => order.businessId)
+        .where((id) => id.isNotEmpty && !_businessCache.containsKey(id))
+        .toSet();
+
+    for (final businessId in businessIds) {
+      try {
+        final business = await _businessFirestoreService.getBusiness(businessId);
+        if (business != null && mounted) {
+          setState(() {
+            _businessCache[businessId] = business;
+          });
         }
+      } catch (e) {
+        print('Error loading business $businessId: $e');
       }
     }
+  }
+
+  Business? _getBusinessForOrder(app_order.Order order) {
+    return _businessCache[order.businessId];
   }
 
   Future<void> _loadOrders() async {
@@ -84,6 +97,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
       setState(() {
         _orders = orders;
       });
+      // Load business information for the orders
+      await _loadBusinessInformation();
     } catch (e) {
       print('Siparişler yükleme hatası: $e');
     } finally {
@@ -125,6 +140,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
   }
 
   Widget _buildModernOrderCard(app_order.Order order) {
+    final business = _getBusinessForOrder(order);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -148,7 +165,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Üst kısım - Sipariş numarası ve durum
+                // Üst kısım - İşletme adı ve durum
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -156,14 +173,36 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // İşletme adı
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.store_rounded,
+                                color: AppColors.primary,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  business?.businessName ?? 'İşletme Bulunamadı',
+                                  style: AppTypography.bodyLarge.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           Text(
                             'Sipariş #${order.orderId.substring(0, 8)}',
-                            style: AppTypography.bodyLarge.copyWith(
-                              fontWeight: FontWeight.bold,
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             _formatOrderDate(order.createdAt),
                             style: AppTypography.caption.copyWith(
@@ -386,6 +425,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
   }
 
   void _showOrderDetails(app_order.Order order) {
+    final business = _getBusinessForOrder(order);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -424,6 +465,28 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // İşletme adı
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.store_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  business?.businessName ?? 'İşletme Bulunamadı',
+                                  style: AppTypography.h6.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           Text(
                             'Sipariş Detayları',
                             style: AppTypography.h5.copyWith(
@@ -431,8 +494,9 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                               color: AppColors.textPrimary,
                             ),
                           ),
+                          const SizedBox(height: 4),
                           Text(
-                            '#${order.orderId.substring(0, 8)}',
+                            'Sipariş #${order.orderId.substring(0, 8)} • ${_formatOrderDate(order.createdAt)}',
                             style: AppTypography.bodyMedium.copyWith(
                               color: AppColors.textSecondary,
                             ),

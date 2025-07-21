@@ -15,6 +15,7 @@ import 'tabs/customer_home_tab.dart';
 import 'tabs/customer_orders_tab.dart';
 import 'tabs/customer_favorites_tab.dart';
 import 'tabs/customer_profile_tab.dart';
+import 'cart_page.dart'; // Added import for CartPage
 
 /// Müşteri ana dashboard sayfası - modern tab navigation
 class CustomerDashboardPage extends StatefulWidget {
@@ -332,17 +333,198 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     );
   }
 
-  void _navigateToCart() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final dynamicRoute = '/customer/${widget.userId}/cart?t=$timestamp';
-    _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetim | MasaMenu');
-    Navigator.pushNamed(
-      context,
-      '/cart',
-      arguments: {
-        'userId': widget.userId,
-        'timestamp': timestamp,
-      },
+  void _navigateToCart() async {
+    try {
+      // Sepetteki ürün sayısını kontrol et
+      if (_cartItemCount > 0) {
+        // Kullanıcının son ziyaret ettiği işletmeyi bul
+        final lastBusinessId = await _getLastUsedBusinessId();
+        
+        if (lastBusinessId != null && lastBusinessId.isNotEmpty) {
+          // Cart sayfasına git
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final dynamicRoute = '/customer/${widget.userId}/cart/$lastBusinessId?t=$timestamp';
+          _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetim | MasaMenu');
+          
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CartPage(
+                businessId: lastBusinessId,
+                userId: widget.userId,
+              ),
+              settings: RouteSettings(name: dynamicRoute),
+            ),
+          );
+        } else {
+          // Business ID bulunamadı, kullanıcıyı bilgilendir
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.info_rounded, color: AppColors.white, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(child: Text('Sepetinize işletme menüsünden erişebilirsiniz.')),
+                ],
+              ),
+              backgroundColor: AppColors.info,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Sepet boşsa bilgi mesajı göster
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_rounded, color: AppColors.white, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Sepetiniz boş! Önce ürün ekleyin.')),
+              ],
+            ),
+            backgroundColor: AppColors.info,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_rounded, color: AppColors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Sepet yüklenirken hata: $e')),
+            ],
+          ),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<String?> _getLastUsedBusinessId() async {
+    try {
+      // Customer data'dan son ziyaret edilen işletme
+      if (_customerData != null && _customerData!.recentBusinessIds.isNotEmpty) {
+        return _customerData!.recentBusinessIds.first;
+      }
+      
+      // Eğer recent business yok ise, herhangi bir active business'ı bulmaya çalış
+      // Bu daha gelişmiş bir implementasyon gerektirir
+      
+      return null;
+    } catch (e) {
+      print('Error getting last business ID: $e');
+      return null;
+    }
+  }
+
+  void _showCartDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.greyLight,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Icon(Icons.shopping_cart_rounded, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Sepetim',
+                    style: AppTypography.h5.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            
+            const Divider(height: 1),
+            
+            // Cart content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.shopping_cart_rounded,
+                        size: 80,
+                        color: AppColors.primary.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Sepet Özelliği',
+                        style: AppTypography.h4.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sepet özelliği şu anda geliştiriliyor.\nYakında kullanıma sunulacak!',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Tamam'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -410,58 +592,48 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             offset: Offset(0, _slideAnimation.value),
             child: Opacity(
               opacity: _fadeAnimation.value,
-              child: Column(
-                children: [
-                  // Sabit buton çubuğu
-                  _buildTopActionBar(),
-                  
-                  // Ana içerik
-                  Expanded(
-                    child: CustomScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      slivers: [
-                        _buildModernSliverAppBar(screenWidth, screenHeight),
-                        SliverToBoxAdapter(
-                          child: Column(
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  _buildModernSliverAppBar(screenWidth, screenHeight),
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        _buildEnhancedTabBar(screenWidth),
+                        Container(
+                          height: screenHeight * 0.75,
+                          child: TabBarView(
+                            controller: _tabController,
+                            physics: const BouncingScrollPhysics(),
                             children: [
-                              _buildEnhancedTabBar(screenWidth),
-                              Container(
-                                height: screenHeight * 0.7,
-                                child: TabBarView(
-                                  controller: _tabController,
-                                  physics: const BouncingScrollPhysics(),
-                                  children: [
-                                    CustomerHomeTab(
-                                      userId: widget.userId,
-                                      user: _user,
-                                      customerData: _customerData,
-                                      onRefresh: _loadUserData,
-                                    ),
-                                    CustomerOrdersTab(
-                                      userId: widget.userId,
-                                      customerData: _customerData,
-                                      onRefresh: _loadUserData,
-                                    ),
-                                    CustomerFavoritesTab(
-                                      userId: widget.userId,
-                                      customerData: _customerData,
-                                      onRefresh: _loadUserData,
-                                    ),
-                                    CustomerProfileTab(
-                                      userId: widget.userId,
-                                      user: _user,
-                                      customerData: _customerData,
-                                      onRefresh: _loadUserData,
-                                      onLogout: _handleLogout,
-                                      onNavigateToTab: (int tabIndex) {
-                                        setState(() {
-                                          _selectedTabIndex = tabIndex;
-                                          _tabController.animateTo(tabIndex);
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
+                              CustomerHomeTab(
+                                userId: widget.userId,
+                                user: _user,
+                                customerData: _customerData,
+                                onRefresh: _loadUserData,
+                              ),
+                              CustomerOrdersTab(
+                                userId: widget.userId,
+                                customerData: _customerData,
+                                onRefresh: _loadUserData,
+                              ),
+                              CustomerFavoritesTab(
+                                userId: widget.userId,
+                                customerData: _customerData,
+                                onRefresh: _loadUserData,
+                              ),
+                              CustomerProfileTab(
+                                userId: widget.userId,
+                                user: _user,
+                                customerData: _customerData,
+                                onRefresh: _loadUserData,
+                                onLogout: _handleLogout,
+                                onNavigateToTab: (int tabIndex) {
+                                  setState(() {
+                                    _selectedTabIndex = tabIndex;
+                                    _tabController.animateTo(tabIndex);
+                                  });
+                                },
                               ),
                             ],
                           ),
@@ -474,167 +646,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             ),
           );
         },
-      ),
-      floatingActionButton: _buildEnhancedFloatingActionButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
-
-  Widget _buildTopActionBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
-            // Arama Butonu
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.search_rounded,
-                label: 'Ara',
-                color: AppColors.primary,
-                onTap: _navigateToSearch,
-              ),
-            ),
-            
-            const SizedBox(width: 8),
-            
-            // Filtre Butonu
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.tune_rounded,
-                label: 'Filtre',
-                color: AppColors.secondary,
-                onTap: _showFilterOptions,
-              ),
-            ),
-            
-            const SizedBox(width: 8),
-            
-            // Siparişler Butonu
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.receipt_long_rounded,
-                label: 'Siparişler',
-                color: AppColors.info,
-                onTap: () => _navigateToTab(1),
-                badge: _hasNewOrders ? '!' : null,
-              ),
-            ),
-            
-            const SizedBox(width: 8),
-            
-            // Sepet Butonu
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.shopping_cart_rounded,
-                label: 'Sepet',
-                color: AppColors.accent,
-                onTap: _navigateToCart,
-                badge: _cartItemCount > 0 ? _cartItemCount.toString() : null,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    String? badge,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    color: color,
-                    size: 20,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-              
-              // Badge
-              if (badge != null)
-                Positioned(
-                  top: -2,
-                  right: 4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.error.withOpacity(0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      badge,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -650,6 +661,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       pinned: true,
       elevation: 0,
       backgroundColor: Colors.transparent,
+      automaticallyImplyLeading: false,
       flexibleSpace: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -731,23 +743,23 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Hoşgeldin! 👋',
+                                  'Hoşgeldin!👋',
                                   style: AppTypography.bodyLarge.copyWith(
-                                    color: AppColors.white.withOpacity(0.9),
+                                    color: AppColors.white.withOpacity(0.8),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 3),
                                 Text(
                                   _user?.name ?? 'Değerli Müşteri',
                                   style: AppTypography.h4.copyWith(
                                     color: AppColors.white,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: isCompact ? 22 : 26,
+                                    fontSize: isCompact ? 20 : 24,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1),
                                 Text(
                                   'Bugün hangi lezzeti tercih edersin?',
                                   style: AppTypography.bodyMedium.copyWith(
@@ -771,130 +783,29 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       ),
       actions: [
         // Arama butonu
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _navigateToSearch,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.white.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Icon(
-                  Icons.search_rounded,
-                  color: AppColors.white,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
+        _buildAppBarActionButton(
+          icon: Icons.search_rounded,
+          onTap: _navigateToSearch,
         ),
-        // Menu butonu
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          child: PopupMenuButton<String>(
-            icon: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.white.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                Icons.more_vert_rounded,
-                color: AppColors.white,
-                size: 24,
-              ),
-            ),
-            offset: const Offset(0, 55),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            color: AppColors.white,
-            elevation: 8,
-            onSelected: (value) {
-              switch (value) {
-                case 'logout':
-                  _handleLogout();
-                  break;
-                case 'settings':
-                // Navigate to settings
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'settings',
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.settings_rounded,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Ayarlar',
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'logout',
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.logout_rounded,
-                          color: AppColors.error,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Çıkış Yap',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.error,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+        
+        // Siparişlerim butonu
+        _buildAppBarActionButton(
+          icon: Icons.receipt_long_rounded,
+          onTap: () => _navigateToTab(1),
+          badge: _hasNewOrders,
+        ),
+        
+        // Sepet butonu
+        _buildAppBarActionButton(
+          icon: Icons.shopping_cart_rounded,
+          onTap: _navigateToCart,
+          badgeCount: _cartItemCount,
+        ),
+        
+        // Çıkış Yap butonu
+        _buildAppBarActionButton(
+          icon: Icons.logout_rounded,
+          onTap: _handleLogout,
         ),
       ],
     );
@@ -902,7 +813,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
   Widget _buildEnhancedTabBar(double screenWidth) {
     final isCompact = screenWidth < 360;
-    final tabHeight = isCompact ? 56.0 : 64.0;
+    final tabHeight = isCompact ? 45.0 : 64.0;
     final horizontalPadding = isCompact ? 12.0 : 20.0;
     final tabItems = [
       {'icon': Icons.dashboard_rounded, 'label': 'Ana Sayfa', 'activeColor': AppColors.primary},
@@ -1015,55 +926,258 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         return Transform.scale(
           scale: _fabScaleAnimation.value,
           child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.accent,
-                  AppColors.accent.withOpacity(0.8),
+                  AppColors.white,
+                  AppColors.white.withOpacity(0.95),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.accent.withOpacity(0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
+                  color: AppColors.shadow.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                  spreadRadius: 0,
+                ),
+                BoxShadow(
+                  color: AppColors.shadow.withOpacity(0.1),
+                  blurRadius: 40,
+                  offset: const Offset(0, 16),
                   spreadRadius: 0,
                 ),
               ],
             ),
-            child: FloatingActionButton(
-              onPressed: _navigateToSearch,
-              backgroundColor: Colors.transparent,
-              foregroundColor: AppColors.white,
-              elevation: 0,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    Icons.qr_code_scanner_rounded,
-                    size: 28,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Arama Butonu
+                Expanded(
+                  child: _buildFloatingActionButton(
+                    icon: Icons.search_rounded,
+                    label: 'Ara',
+                    color: AppColors.primary,
+                    onTap: _navigateToSearch,
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withOpacity(0.8),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Filtre Butonu
+                Expanded(
+                  child: _buildFloatingActionButton(
+                    icon: Icons.tune_rounded,
+                    label: 'Filtre',
+                    color: AppColors.secondary,
+                    onTap: _showFilterOptions,
                   ),
-                ],
-              ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Siparişler Butonu
+                Expanded(
+                  child: _buildFloatingActionButton(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Siparişler',
+                    color: AppColors.info,
+                    onTap: () => _navigateToTab(1),
+                    badge: _hasNewOrders ? '!' : null,
+                  ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Sepet Butonu
+                Expanded(
+                  child: _buildFloatingActionButton(
+                    icon: Icons.shopping_cart_rounded,
+                    label: 'Sepet',
+                    color: AppColors.accent,
+                    onTap: _navigateToCart,
+                    badge: _cartItemCount > 0 ? _cartItemCount.toString() : null,
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFloatingActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1.5,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    color: color,
+                    size: 24,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+              
+              // Badge
+              if (badge != null)
+                Positioned(
+                  top: -2,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.error.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBarActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool badge = false,
+    int? badgeCount,
+  }) {
+    final showBadge = badge || (badgeCount != null && badgeCount > 0);
+    final badgeText = badgeCount != null && badgeCount > 0 
+        ? badgeCount.toString() 
+        : '!';
+
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Icon(
+                  icon,
+                  color: AppColors.white,
+                  size: 24,
+                ),
+                if (showBadge)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.error.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
