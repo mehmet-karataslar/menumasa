@@ -5,21 +5,25 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/url_service.dart';
 import '../../services/customer_firestore_service.dart';
+import '../../services/customer_service.dart';
 import '../../../presentation/widgets/shared/empty_state.dart';
 import '../menu_page.dart';
 import '../business_detail_page.dart';
+import '../search_page.dart';
 
 /// Müşteri favoriler tab'ı
 class CustomerFavoritesTab extends StatefulWidget {
   final String userId;
   final app_user.CustomerData? customerData;
   final VoidCallback onRefresh;
+  final Function(int)? onNavigateToTab;
 
   const CustomerFavoritesTab({
     super.key,
     required this.userId,
     required this.customerData,
     required this.onRefresh,
+    this.onNavigateToTab,
   });
 
   @override
@@ -28,15 +32,45 @@ class CustomerFavoritesTab extends StatefulWidget {
 
 class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
   final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
 
   List<Business> _favoriteBusinesses = [];
+  List<Business> _allBusinesses = [];
   bool _isLoading = false;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadFavorites();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
+  }
+
+  List<Business> get _filteredFavorites {
+    if (_searchQuery.isEmpty) {
+      return _favoriteBusinesses;
+    }
+    
+    return _favoriteBusinesses.where((business) {
+      final query = _searchQuery.toLowerCase();
+      return business.businessName.toLowerCase().contains(query) ||
+             business.businessType.toLowerCase().contains(query) ||
+             business.businessAddress.toLowerCase().contains(query);
+    }).toList();
   }
 
   Future<void> _loadFavorites() async {
@@ -47,9 +81,21 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
     try {
       // Tüm işletmeleri yükle
       final businesses = await _customerFirestoreService.getBusinesses();
+      _allBusinesses = businesses;
       
-      // Favori işletme ID'lerini al
-      final favoriteIds = widget.customerData?.favorites.map((f) => f.businessId).toList() ?? [];
+      // Favori işletme ID'lerini al - hem CustomerData hem CustomerService'den
+      Set<String> favoriteIds = <String>{};
+      
+      // CustomerData'dan favori ID'leri al
+      if (widget.customerData?.favorites != null) {
+        favoriteIds.addAll(widget.customerData!.favorites.map((f) => f.businessId));
+      }
+      
+      // CustomerService'den de favori ID'leri al (daha güncel olabilir)
+      final currentCustomer = _customerService.currentCustomer;
+      if (currentCustomer?.favoriteBusinessIds != null) {
+        favoriteIds.addAll(currentCustomer!.favoriteBusinessIds);
+      }
       
       // Favori işletmeleri filtrele
       final favorites = businesses.where((b) => favoriteIds.contains(b.id)).toList();
@@ -73,43 +119,69 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
 
   Future<void> _toggleFavorite(Business business) async {
     try {
-      // Favori durumunu değiştir
+      // CustomerService kullanarak favori durumunu değiştir
+      await _customerService.toggleFavorite(business.id);
+      
+      // Favorileri yeniden yükle
+      await _loadFavorites();
+      
+      // Üst widget'ı da yenile
+      widget.onRefresh();
+      
+      // Kullanıcıya bilgi ver
       final isFavorite = _favoriteBusinesses.any((b) => b.id == business.id);
       
-      if (isFavorite) {
-        // Favorilerden çıkar
-        await _customerFirestoreService.removeFromFavorites(widget.userId, business.id);
-        setState(() {
-          _favoriteBusinesses.removeWhere((b) => b.id == business.id);
-        });
-        
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${business.businessName} favorilerden çıkarıldı'),
-            backgroundColor: AppColors.warning,
-          ),
-        );
-      } else {
-        // Favorilere ekle
-        await _customerFirestoreService.addToFavorites(widget.userId, business.id);
-        setState(() {
-          _favoriteBusinesses.add(business);
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${business.businessName} favorilere eklendi'),
-            backgroundColor: AppColors.success,
+            content: Row(
+              children: [
+                Icon(
+                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isFavorite 
+                      ? '${business.businessName} favorilere eklendi'
+                      : '${business.businessName} favorilerden çıkarıldı',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: isFavorite ? AppColors.success : AppColors.warning,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Hata: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Hata: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
     }
   }
 
@@ -169,27 +241,51 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       color: AppColors.primary,
-      child: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _favoriteBusinesses.isEmpty
-              ? Center(
-                  child: _buildEmptyStateCard(
-                    icon: Icons.favorite_rounded,
-                    title: 'Henüz favori işletmeniz yok',
-                    subtitle: 'Beğendiğiniz işletmeleri favorilerinize ekleyin',
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _favoriteBusinesses.length,
-                  itemBuilder: (context, index) {
-                    final business = _favoriteBusinesses[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: _buildFavoriteBusinessCard(business),
-                    );
-                  },
-                ),
+      child: Column(
+        children: [
+          // Arama ve filtre alanı
+          if (_favoriteBusinesses.isNotEmpty) _buildSearchAndFilterSection(),
+          
+          // İçerik alanı
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _favoriteBusinesses.isEmpty
+                    ? SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: _buildEmptyStateCard(
+                            icon: Icons.favorite_rounded,
+                            title: 'Henüz favori işletmeniz yok',
+                            subtitle: 'Beğendiğiniz işletmeleri favorilerinize ekleyin',
+                          ),
+                        ),
+                      )
+                    : _filteredFavorites.isEmpty
+                        ? SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: _buildEmptyStateCard(
+                                icon: Icons.search_off_rounded,
+                                title: 'Arama sonucu bulunamadı',
+                                subtitle: 'Farklı kelimeler ile tekrar deneyin',
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _filteredFavorites.length,
+                            itemBuilder: (context, index) {
+                              final business = _filteredFavorites[index];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                child: _buildFavoriteBusinessCard(business),
+                              );
+                            },
+                          ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -435,17 +531,12 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
             mainAxisSize: MainAxisSize.min,
             children: [
               OutlinedButton.icon(
-                onPressed: () {
-                  // Navigate to home tab (search businesses) with URL update
-                  final timestamp = DateTime.now().millisecondsSinceEpoch;
-                  _urlService.updateCustomerUrl(widget.userId, 'dashboard', customTitle: 'Ana Sayfa | MasaMenu');
-                  DefaultTabController.of(context)?.animateTo(0);
-                },
-                icon: Icon(Icons.search_rounded),
-                label: Text('İşletme Ara'),
+                onPressed: () => _navigateToSearch(),
+                icon: const Icon(Icons.search_rounded),
+                label: const Text('İşletme Ara'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary),
+                  side: const BorderSide(color: AppColors.primary),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -454,14 +545,9 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
               ),
               const SizedBox(width: 12),
               ElevatedButton.icon(
-                onPressed: () {
-                  // Keşfet butonuna basıldığında home tab'a git with URL update
-                  final timestamp = DateTime.now().millisecondsSinceEpoch;
-                  _urlService.updateCustomerUrl(widget.userId, 'dashboard', customTitle: 'Ana Sayfa | MasaMenu');
-                  DefaultTabController.of(context)?.animateTo(0);
-                },
-                icon: Icon(Icons.explore_rounded),
-                label: Text('Keşfet'),
+                onPressed: () => _navigateToExplore(),
+                icon: const Icon(Icons.explore_rounded),
+                label: const Text('Keşfet'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   foregroundColor: AppColors.white,
@@ -476,5 +562,160 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
         ],
       ),
     );
+  }
+
+  // ============================================================================
+  // ARAMA VE FİLTRE BÖLÜMÜ
+  // ============================================================================
+
+  Widget _buildSearchAndFilterSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Başlık ve sayı
+          Row(
+            children: [
+              Icon(
+                Icons.favorite_rounded,
+                color: AppColors.accent,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Favori İşletmelerim',
+                style: AppTypography.h6.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_favoriteBusinesses.length}',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Arama çubuğu
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.greyLight),
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Favori işletmeler arasında ara...',
+                hintStyle: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.textSecondary,
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                        icon: const Icon(
+                          Icons.clear_rounded,
+                          color: AppColors.textSecondary,
+                        ),
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          
+          // Arama sonucu sayısı
+          if (_searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.filter_list_rounded,
+                  color: AppColors.textSecondary,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${_filteredFavorites.length} sonuç bulundu',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // NAVIGATION METODLARI
+  // ============================================================================
+
+  void _navigateToSearch() {
+    // Arama sayfasına yönlendir
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    _urlService.updateCustomerUrl(widget.userId, 'search', customTitle: 'İşletme Ara | MasaMenu');
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchPage(
+          businesses: _allBusinesses,
+          categories: [], // Kategorileri de yüklemek gerekecek
+        ),
+        settings: RouteSettings(
+          name: '/customer/${widget.userId}/search?t=$timestamp',
+          arguments: {
+            'userId': widget.userId,
+            'timestamp': timestamp,
+            'referrer': 'favorites',
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToExplore() {
+    // Ana sayfa/dashboard'a yönlendir (keşfet için)
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    _urlService.updateCustomerUrl(widget.userId, 'dashboard', customTitle: 'Ana Sayfa | MasaMenu');
+    
+    // Ana tab'a geç
+    widget.onNavigateToTab?.call(0);
   }
 } 

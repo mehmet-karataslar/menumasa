@@ -4,6 +4,7 @@ import '../../business/models/business.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../services/customer_service.dart';
 
 class BusinessHeader extends StatefulWidget {
   final Business business;
@@ -37,6 +38,10 @@ class _BusinessHeaderState extends State<BusinessHeader>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _pulseAnimation;
+  
+  final CustomerService _customerService = CustomerService();
+  bool _isFavorite = false;
+  bool _isToggling = false;
 
   @override
   void initState() {
@@ -86,6 +91,58 @@ class _BusinessHeaderState extends State<BusinessHeader>
 
     _animationController.forward();
     _pulseController.repeat(reverse: true);
+    
+    // Favori durumunu kontrol et
+    _checkFavoriteStatus();
+  }
+  
+  void _checkFavoriteStatus() {
+    final currentCustomer = _customerService.currentCustomer;
+    if (currentCustomer != null) {
+      setState(() {
+        _isFavorite = currentCustomer.favoriteBusinessIds.contains(widget.business.id);
+      });
+    }
+  }
+
+  Widget _buildFavoriteButton() {
+    return _buildFloatingActionButton(
+      icon: _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+      isActive: _isFavorite,
+      onPressed: _isToggling ? null : () async {
+        HapticFeedback.mediumImpact();
+        await _toggleFavorite();
+      },
+    );
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isToggling) return;
+
+    setState(() {
+      _isToggling = true;
+    });
+
+    try {
+      await _customerService.toggleFavorite(widget.business.id);
+      _checkFavoriteStatus();
+    } catch (e) {
+      // Hata durumunda kullanıcıya bilgi ver
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Favori durumu değiştirilemedi: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isToggling = false;
+        });
+      }
+    }
   }
 
   @override
@@ -572,13 +629,7 @@ class _BusinessHeaderState extends State<BusinessHeader>
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              _buildFloatingActionButton(
-                icon: Icons.favorite_border_rounded,
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  // TODO: Add to favorites
-                },
-              ),
+              _buildFavoriteButton(),
               const SizedBox(width: 12),
               _buildCartButton(),
             ],
@@ -590,20 +641,28 @@ class _BusinessHeaderState extends State<BusinessHeader>
 
   Widget _buildFloatingActionButton({
     required IconData icon,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
+    bool isActive = false,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.2),
+        color: isActive 
+            ? AppColors.accent.withOpacity(0.9)
+            : AppColors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.white.withOpacity(0.3),
+          color: isActive 
+              ? AppColors.accent
+              : AppColors.white.withOpacity(0.3),
           width: 1,
         ),
       ),
       child: IconButton(
         onPressed: onPressed,
-        icon: Icon(icon, color: AppColors.white),
+        icon: Icon(
+          icon, 
+          color: isActive ? AppColors.white : AppColors.white,
+        ),
         iconSize: 20,
       ),
     );

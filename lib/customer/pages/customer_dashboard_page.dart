@@ -489,6 +489,12 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                                 userId: widget.userId,
                                 customerData: _customerData,
                                 onRefresh: _loadUserData,
+                                onNavigateToTab: (int tabIndex) {
+                                  setState(() {
+                                    _selectedTabIndex = tabIndex;
+                                  });
+                                  _tabController.animateTo(tabIndex);
+                                },
                               ),
                               CustomerProfileTab(
                                 userId: widget.userId,
