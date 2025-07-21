@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
@@ -28,8 +28,7 @@ class _QRScannerPageState extends State<QRScannerPage>
   late Animation<double> _scanAnimation;
   late Animation<double> _pulseAnimation;
   
-  QRViewController? _qrController;
-  final GlobalKey _qrKey = GlobalKey(debugLabel: 'QR');
+  MobileScannerController _qrController = MobileScannerController();
   bool _isScanning = false;
   String? _scannedCode;
   bool _flashOn = false;
@@ -80,7 +79,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
   @override
   void dispose() {
-    _qrController?.dispose();
+    _qrController.dispose();
     _scanAnimationController.dispose();
     _pulseAnimationController.dispose();
     super.dispose();
@@ -94,21 +93,14 @@ class _QRScannerPageState extends State<QRScannerPage>
     HapticFeedback.mediumImpact();
     
     // Kamera erişimini başlat
-    if (_qrController != null) {
-      await _qrController!.resumeCamera();
-    }
+    await _qrController.start();
   }
 
-  void _onQRViewCreated(QRViewController controller) {
-    setState(() {
-      _qrController = controller;
-    });
-    
-    controller.scannedDataStream.listen((scanData) {
-      if (scanData.code != null && !_isScanning) {
-        _handleQRCodeFromCamera(scanData.code!);
-      }
-    });
+  void _onQRCodeDetected(BarcodeCapture barcodeCapture) {
+    final barcode = barcodeCapture.barcodes.first;
+    if (barcode.rawValue != null && !_isScanning) {
+      _handleQRCodeFromCamera(barcode.rawValue!);
+    }
   }
 
   Future<void> _handleQRCodeFromCamera(String qrCode) async {
@@ -119,7 +111,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     HapticFeedback.heavyImpact();
     
     // Kamera taramayı durdur
-    await _qrController?.pauseCamera();
+    await _qrController.stop();
 
     try {
       // QR kodundan business ID'sini çıkar
@@ -154,7 +146,7 @@ class _QRScannerPageState extends State<QRScannerPage>
       });
       
       // Kamera taramayı tekrar başlat
-      await _qrController?.resumeCamera();
+      await _qrController.start();
     }
   }
 
@@ -188,20 +180,16 @@ class _QRScannerPageState extends State<QRScannerPage>
   }
 
   Future<void> _toggleFlash() async {
-    if (_qrController != null) {
-      await _qrController!.toggleFlash();
-      setState(() {
-        _flashOn = !_flashOn;
-      });
-      HapticFeedback.lightImpact();
-    }
+    await _qrController.toggleTorch();
+    setState(() {
+      _flashOn = !_flashOn;
+    });
+    HapticFeedback.lightImpact();
   }
 
   Future<void> _flipCamera() async {
-    if (_qrController != null) {
-      await _qrController!.flipCamera();
-      HapticFeedback.lightImpact();
-    }
+    await _qrController.switchCamera();
+    HapticFeedback.lightImpact();
   }
 
   Future<void> _handleQRCodeDetected(String qrCode, String businessId) async {
@@ -504,16 +492,9 @@ class _QRScannerPageState extends State<QRScannerPage>
                       color: AppColors.success,
                     ),
                   )
-                : QRView(
-                    key: _qrKey,
-                    onQRViewCreated: _onQRViewCreated,
-                    overlay: QrScannerOverlayShape(
-                      borderColor: _isScanning ? AppColors.primary : AppColors.greyLight,
-                      borderRadius: 24,
-                      borderLength: 40,
-                      borderWidth: 3,
-                      cutOutSize: 240,
-                    ),
+                : MobileScanner(
+                    controller: _qrController,
+                    onDetect: _onQRCodeDetected,
                   ),
           ),
         ),
@@ -535,6 +516,18 @@ class _QRScannerPageState extends State<QRScannerPage>
             ),
           ),
         ),
+        
+        // QR Tarama overlay çerçevesi
+        if (_scannedCode == null)
+          Container(
+            width: 280,
+            height: 280,
+            child: CustomPaint(
+              painter: QRScannerOverlayPainter(
+                borderColor: _isScanning ? AppColors.primary : AppColors.greyLight,
+              ),
+            ),
+          ),
         
         // Köşe işaretleri
         Positioned.fill(
@@ -713,4 +706,64 @@ class _QRScannerPageState extends State<QRScannerPage>
       ),
     );
   }
+}
+
+class QRScannerOverlayPainter extends CustomPainter {
+  final Color borderColor;
+  
+  QRScannerOverlayPainter({required this.borderColor});
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = borderColor
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+    
+    final cornerLength = 30.0;
+    final cornerRadius = 8.0;
+    
+    // Sol üst köşe
+    canvas.drawPath(
+      Path()
+        ..moveTo(cornerRadius, 0)
+        ..lineTo(cornerLength, 0)
+        ..moveTo(0, cornerRadius)
+        ..lineTo(0, cornerLength),
+      paint,
+    );
+    
+    // Sağ üst köşe
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width - cornerLength, 0)
+        ..lineTo(size.width - cornerRadius, 0)
+        ..moveTo(size.width, cornerRadius)
+        ..lineTo(size.width, cornerLength),
+      paint,
+    );
+    
+    // Sol alt köşe
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, size.height - cornerLength)
+        ..lineTo(0, size.height - cornerRadius)
+        ..moveTo(cornerRadius, size.height)
+        ..lineTo(cornerLength, size.height),
+      paint,
+    );
+    
+    // Sağ alt köşe
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width, size.height - cornerLength)
+        ..lineTo(size.width, size.height - cornerRadius)
+        ..moveTo(size.width - cornerRadius, size.height)
+        ..lineTo(size.width - cornerLength, size.height),
+      paint,
+    );
+  }
+  
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 } 
