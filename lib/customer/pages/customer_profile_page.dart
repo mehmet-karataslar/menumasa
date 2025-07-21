@@ -360,12 +360,12 @@ class _CustomerProfilePageState extends State<CustomerProfilePage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Statistics Section
+            // Statistics Section - özet bilgiler
             if (_profile != null) _buildStatisticsSection(),
             
             const SizedBox(height: 20),
 
-            // Personal Information Section
+            // Personal Information Section - temel profil bilgileri
             _buildSectionCard(
               title: 'Kişisel Bilgiler',
               icon: Icons.person_rounded,
@@ -442,19 +442,103 @@ class _CustomerProfilePageState extends State<CustomerProfilePage>
 
             const SizedBox(height: 20),
 
-            // Settings Sections
-            _buildSettingsSection(),
-
-            const SizedBox(height: 20),
-
-            // Menu Items
-            _buildMenuItems(),
+            // Adres Bilgileri
+            if (_profile?.addresses.isNotEmpty == true)
+              _buildSectionCard(
+                title: 'Adres Bilgileri',
+                icon: Icons.location_on_rounded,
+                children: [
+                  ..._profile!.addresses.take(1).map((address) => // Sadece varsayılan adresi göster
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.greyLight),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            address.isDefault ? Icons.home_rounded : Icons.location_on_outlined,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  address.title,
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  address.fullAddress,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ).toList(),
+                  const SizedBox(height: 12),
+                  if (_isEditing)
+                    TextButton.icon(
+                      onPressed: () => _navigateToAddressManagement(),
+                      icon: const Icon(Icons.add_location_alt_outlined),
+                      label: const Text('Adres Yönetimi'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
+                    ),
+                ],
+              ),
 
             const SizedBox(height: 30),
 
-            // Action Buttons
-            if (_isEditing) _buildActionButtons(),
-
+            // Kaydet butonu (sadece edit modunda)
+            if (_isEditing)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                child: ElevatedButton(
+                  onPressed: _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.save_rounded),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Değişiklikleri Kaydet',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
             const SizedBox(height: 20),
           ],
         ),
@@ -547,121 +631,7 @@ class _CustomerProfilePageState extends State<CustomerProfilePage>
     );
   }
 
-  Widget _buildSettingsSection() {
-    return Column(
-      children: [
-        _buildSectionCard(
-          title: 'Konum Ayarları',
-          icon: Icons.location_on_rounded,
-          children: [
-            if (_profile != null) ...[
-              _buildSettingSwitch(
-                title: 'Konum Servisleri',
-                subtitle: 'Yakındaki işletmeleri göster',
-                value: _profile!.locationSettings.isLocationEnabled,
-                onChanged: (value) => _updateLocationSetting('isLocationEnabled', value),
-              ),
-              const SizedBox(height: 16),
-              _buildSettingSwitch(
-                title: 'Konum Takibi',
-                subtitle: 'Konumumu takip etmeye izin ver',
-                value: _profile!.locationSettings.allowLocationTracking,
-                onChanged: (value) => _updateLocationSetting('allowLocationTracking', value),
-              ),
-              const SizedBox(height: 16),
-              _buildSettingSwitch(
-                title: 'Konum Tabanlı Teklifler',
-                subtitle: 'Bulunduğum yere özel kampanyalar',
-                value: _profile!.locationSettings.showLocationBasedOffers,
-                onChanged: (value) => _updateLocationSetting('showLocationBasedOffers', value),
-              ),
-            ],
-          ],
-        ),
-        
-        const SizedBox(height: 20),
-        
-        _buildSectionCard(
-          title: 'Bildirim Ayarları',
-          icon: Icons.notifications_rounded,
-          children: [
-            if (_profile != null) ...[
-              _buildSettingSwitch(
-                title: 'Tüm Bildirimler',
-                subtitle: 'Bildirimleri al',
-                value: _profile!.notificationSettings.isNotificationsEnabled,
-                onChanged: (value) => _updateNotificationSetting('isNotificationsEnabled', value),
-              ),
-              const SizedBox(height: 16),
-              _buildSettingSwitch(
-                title: 'Sipariş Bildirimleri',
-                subtitle: 'Sipariş durumu güncellemeleri',
-                value: _profile!.notificationSettings.orderNotifications,
-                onChanged: (value) => _updateNotificationSetting('orderNotifications', value),
-              ),
-              const SizedBox(height: 16),
-              _buildSettingSwitch(
-                title: 'Kampanya Bildirimleri',
-                subtitle: 'Kampanya ve fırsat bildirimleri',
-                value: _profile!.notificationSettings.campaignNotifications,
-                onChanged: (value) => _updateNotificationSetting('campaignNotifications', value),
-              ),
-              const SizedBox(height: 16),
-              _buildSettingSwitch(
-                title: 'Sistem Mesajları',
-                subtitle: 'Önemli sistem bildirimleri',
-                value: _profile!.notificationSettings.systemNotifications,
-                onChanged: (value) => _updateNotificationSetting('systemNotifications', value),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMenuItems() {
-    return _buildSectionCard(
-      title: 'Hesap',
-      icon: Icons.account_circle_rounded,
-      children: [
-        _buildMenuItem(
-          title: 'Detaylı Sipariş Geçmişi',
-          subtitle: 'Tüm siparişlerinizi görüntüleyin',
-          icon: Icons.history_rounded,
-          onTap: () => _navigateToOrderHistory(),
-        ),
-        _buildMenuDivider(),
-        _buildMenuItem(
-          title: 'Favori İşletmeler',
-          subtitle: 'Beğendiğiniz işletmeler',
-          icon: Icons.favorite_rounded,
-          onTap: () => _navigateToFavorites(),
-        ),
-        _buildMenuDivider(),
-        _buildMenuItem(
-          title: 'Bildirim Ayarları',
-          subtitle: 'Bildirim tercihlerinizi yönetin',
-          icon: Icons.notifications_outlined,
-          onTap: () => _navigateToNotificationSettings(),
-        ),
-        _buildMenuDivider(),
-        _buildMenuItem(
-          title: 'Güvenlik',
-          subtitle: 'Hesap güvenliği ve gizlilik',
-          icon: Icons.security_rounded,
-          onTap: () => _navigateToSecurity(),
-        ),
-        _buildMenuDivider(),
-        _buildMenuItem(
-          title: 'Yardım ve Destek',
-          subtitle: 'SSS ve iletişim',
-          icon: Icons.help_outline_rounded,
-          onTap: () => _navigateToSupport(),
-        ),
-      ],
-    );
-  }
+  // Bu metodlar kaldırıldı - ayarlar artık ayrı sayfalarda
 
   Widget _buildSectionCard({
     required String title,
@@ -876,151 +846,7 @@ class _CustomerProfilePageState extends State<CustomerProfilePage>
     }
   }
 
-  Widget _buildSettingSwitch({
-    required String title,
-    required String subtitle,
-    bool value = false,
-    Function(bool)? onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: AppColors.primary,
-            ),
-          ],
-        ),
-        Text(
-          subtitle,
-          style: AppTypography.caption.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMenuItem({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary, size: 24),
-      title: Text(
-        title,
-        style: AppTypography.bodyMedium.copyWith(
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTypography.caption.copyWith(
-          color: AppColors.textSecondary,
-        ),
-      ),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildMenuDivider() {
-    return const Divider(
-      height: 1,
-      color: AppColors.greyLight,
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        // Save Button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _saveProfile,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 8,
-              shadowColor: AppColors.primary.withOpacity(0.3),
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.save_rounded, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Değişiklikleri Kaydet',
-                        style: AppTypography.bodyLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // Cancel Button
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: _isLoading ? null : _cancelEdit,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textSecondary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              side: const BorderSide(color: AppColors.greyLight),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.cancel_outlined, size: 20),
-                const SizedBox(width: 12),
-                Text(
-                  'İptal Et',
-                  style: AppTypography.bodyLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // Kullanılmayan widget helper metodları kaldırıldı - artık gereksiz
 
   void _toggleEditMode() {
     if (_isEditing) {
@@ -1139,66 +965,7 @@ class _CustomerProfilePageState extends State<CustomerProfilePage>
     }
   }
 
-  void _updateLocationSetting(String key, bool value) async {
-    if (_profile != null) {
-      try {
-        LocationSettings updatedSettings;
-        
-        switch (key) {
-          case 'isLocationEnabled':
-            updatedSettings = _profile!.locationSettings.copyWith(isLocationEnabled: value);
-            break;
-          case 'allowLocationTracking':
-            updatedSettings = _profile!.locationSettings.copyWith(allowLocationTracking: value);
-            break;
-          case 'showLocationBasedOffers':
-            updatedSettings = _profile!.locationSettings.copyWith(showLocationBasedOffers: value);
-            break;
-          default:
-            return;
-        }
-
-        await _customerService.updateLocationSettings(updatedSettings);
-        await _loadProfile(); // Reload to get updated settings
-        
-        HapticFeedback.lightImpact();
-      } catch (e) {
-        _showErrorSnackBar('Konum ayarları güncellenemedi: $e');
-      }
-    }
-  }
-
-  void _updateNotificationSetting(String key, bool value) async {
-    if (_profile != null) {
-      try {
-        NotificationSettings updatedSettings;
-        
-        switch (key) {
-          case 'isNotificationsEnabled':
-            updatedSettings = _profile!.notificationSettings.copyWith(isNotificationsEnabled: value);
-            break;
-          case 'orderNotifications':
-            updatedSettings = _profile!.notificationSettings.copyWith(orderNotifications: value);
-            break;
-          case 'campaignNotifications':
-            updatedSettings = _profile!.notificationSettings.copyWith(campaignNotifications: value);
-            break;
-          case 'systemNotifications':
-            updatedSettings = _profile!.notificationSettings.copyWith(systemNotifications: value);
-            break;
-          default:
-            return;
-        }
-
-        await _customerService.updateNotificationSettings(updatedSettings);
-        await _loadProfile(); // Reload to get updated settings
-        
-        HapticFeedback.lightImpact();
-      } catch (e) {
-        _showErrorSnackBar('Bildirim ayarları güncellenemedi: $e');
-      }
-    }
-  }
+  // Ayar güncelleme metodları kaldırıldı - artık ayrı sayfalarda yapılacak
 
   Future<void> _selectBirthdate() async {
     final DateTime? picked = await showDatePicker(
@@ -1230,38 +997,12 @@ class _CustomerProfilePageState extends State<CustomerProfilePage>
     }
   }
 
-  void _navigateToOrderHistory() {
-    // TODO: Implement navigation to order history
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sipariş geçmişi sayfasına yönlendiriliyorsunuz...')),
-    );
-  }
+  // Navigation metodları kaldırıldı - bu özellikler profil sekmesindeki alt menülerden erişilecek
 
-  void _navigateToFavorites() {
-    // TODO: Implement navigation to favorite businesses
+  void _navigateToAddressManagement() {
+    // TODO: Implement navigation to address management
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Favori işletmeler sayfasına yönlendiriliyorsunuz...')),
-    );
-  }
-
-  void _navigateToNotificationSettings() {
-    // TODO: Implement navigation to notification settings
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bildirim ayarlarına yönlendiriliyorsunuz...')),
-    );
-  }
-
-  void _navigateToSecurity() {
-    // TODO: Implement navigation to security settings
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Güvenlik ayarlarına yönlendiriliyorsunuz...')),
-    );
-  }
-
-  void _navigateToSupport() {
-    // TODO: Implement navigation to support
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Yardım ve destek sayfasına yönlendiriliyorsunuz...')),
+      const SnackBar(content: Text('Adres yönetimi sayfasına yönlendiriliyorsunuz...')),
     );
   }
 

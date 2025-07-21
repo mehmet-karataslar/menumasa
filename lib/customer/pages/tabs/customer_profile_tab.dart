@@ -334,21 +334,16 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
   Widget _buildProfileMenuOptions() {
     final menuItems = [
       {
-        'icon': Icons.dashboard_rounded,
-        'title': 'Detaylı Dashboard',
-        'subtitle': 'Tüm aktivitelerinizi görüntüleyin',
+        'icon': Icons.edit_rounded,
+        'title': 'Profil Düzenle',
+        'subtitle': 'Kişisel bilgilerini güncelle',
         'color': AppColors.primary,
-        'action': () {
-          // Navigate to dashboard with URL update
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          _urlService.updateCustomerUrl(widget.userId, 'dashboard', customTitle: 'Ana Sayfa | MasaMenu');
-          widget.onNavigateToTab?.call(0);
-        },
+        'action': () => _navigateToProfile(),
       },
       {
         'icon': Icons.history_rounded,
-        'title': 'Sipariş Geçmişi',
-        'subtitle': 'Geçmiş siparişlerinizi inceleyin',
+        'title': 'Detaylı Sipariş Geçmişi',
+        'subtitle': 'Tüm siparişlerinizi görüntüleyin',
         'color': AppColors.info,
         'action': () {
           // Navigate to orders with URL update
@@ -370,34 +365,39 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         },
       },
       {
-        'icon': Icons.notifications_rounded,
-        'title': 'Bildirimler',
-        'subtitle': 'Bildirim ayarlarını düzenleyin',
+        'icon': Icons.location_on_rounded,
+        'title': 'Konum Ayarları',
+        'subtitle': 'GPS, konum servisleri ve izinler',
         'color': AppColors.warning,
-        'action': () {
-          // Bildirim ayarları
-          _showNotificationSettings();
-        },
+        'action': () => _navigateToLocationSettings(),
+      },
+      {
+        'icon': Icons.notifications_rounded,
+        'title': 'Bildirim Ayarları',
+        'subtitle': 'Bildirim tercihlerinizi yönetin',
+        'color': AppColors.info,
+        'action': () => _navigateToNotificationSettings(),
+      },
+      {
+        'icon': Icons.analytics_rounded,
+        'title': 'Harcama Analizi',
+        'subtitle': 'Detaylı harcama raporları',
+        'color': AppColors.success,
+        'action': () => _navigateToSpendingAnalysis(),
       },
       {
         'icon': Icons.security_rounded,
-        'title': 'Güvenlik',
+        'title': 'Güvenlik & Gizlilik',
         'subtitle': 'Hesap güvenliği ayarları',
-        'color': AppColors.success,
-        'action': () {
-          // Güvenlik ayarları
-          _showSecuritySettings();
-        },
+        'color': AppColors.secondary,
+        'action': () => _navigateToSecuritySettings(),
       },
       {
         'icon': Icons.help_rounded,
         'title': 'Yardım & Destek',
-        'subtitle': 'Sık sorulan sorular ve destek',
-        'color': AppColors.secondary,
-        'action': () {
-          // Yardım sayfası
-          _showHelpDialog();
-        },
+        'subtitle': 'SSS ve müşteri desteği',
+        'color': AppColors.accent,
+        'action': () => _showHelpDialog(),
       },
       {
         'icon': Icons.logout_rounded,
@@ -494,44 +494,80 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
     );
   }
 
-  void _showNotificationSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Bildirim Ayarları'),
-        content: Text('Bildirim ayarları yakında kullanıma sunulacak.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Tamam'),
-          ),
-        ],
-      ),
+  // ============================================================================
+  // NAVIGATION METHODS - Ayrı sayfalar için
+  // ============================================================================
+
+  void _navigateToLocationSettings() {
+    // TODO: Implement location settings page
+    _showTemporaryDialog(
+      'Konum Ayarları',
+      '• GPS Servisleri\n• Konum Takibi\n• Yakındaki İşletmeler\n• Konum Tabanlı Teklifler\n\nBu sayfa yakında kullanıma sunulacak.',
     );
   }
 
-  void _showSecuritySettings() {
+  void _navigateToNotificationSettings() {
+    // TODO: Implement notification settings page
+    _showTemporaryDialog(
+      'Bildirim Ayarları',
+      '• Sipariş Bildirimleri\n• Kampanya Bildirimleri\n• Sistem Mesajları\n• E-posta Bildirimleri\n• Push Bildirimleri\n\nBu sayfa yakında kullanıma sunulacak.',
+    );
+  }
+
+  void _navigateToSpendingAnalysis() {
+    // TODO: Implement spending analysis page
+    _showTemporaryDialog(
+      'Harcama Analizi',
+      '• Aylık Harcama Grafikleri\n• Kategori Bazında Analiz\n• İşletme Bazında Harcamalar\n• Harcama Trendleri\n• Bütçe Takibi\n\nBu sayfa yakında kullanıma sunulacak.',
+    );
+  }
+
+  void _navigateToSecuritySettings() {
+    // TODO: Implement security settings page
+    _showTemporaryDialog(
+      'Güvenlik & Gizlilik',
+      '• Şifre Değiştirme\n• İki Faktörlü Doğrulama\n• Oturum Geçmişi\n• Gizlilik Ayarları\n• Veri İndirme\n• Hesap Silme\n\nBu sayfa yakında kullanıma sunulacak.',
+    );
+  }
+
+  void _showTemporaryDialog(String title, String content) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Güvenlik Ayarları'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
           children: [
-            Text('Güvenlik ayarları:'),
-            const SizedBox(height: 8),
-            Text('• Şifre değiştirme'),
-            Text('• İki faktörlü doğrulama'),
-            Text('• Oturum geçmişi'),
-            const SizedBox(height: 8),
-            Text('Bu özellikler yakında kullanıma sunulacak.'),
+            Icon(
+              Icons.construction_rounded,
+              color: AppColors.warning,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ],
+        ),
+        content: Text(
+          content,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+            height: 1.5,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Tamam'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+            ),
+            child: const Text('Tamam'),
           ),
         ],
       ),
@@ -542,25 +578,91 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Yardım & Destek'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.help_rounded,
+              color: AppColors.accent,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Yardım & Destek',
+              style: AppTypography.h6.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Destek konuları:'),
-            const SizedBox(height: 8),
-            Text('• Sipariş verme'),
-            Text('• Ödeme işlemleri'),
-            Text('• Hesap yönetimi'),
-            Text('• Teknik sorunlar'),
+            Text(
+              'Destek Konuları:',
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...[
+              '• Sipariş verme ve takibi',
+              '• Ödeme işlemleri',
+              '• Hesap yönetimi',
+              '• Teknik sorunlar',
+              '• Favori işletmeler',
+              '• Bildirim ayarları',
+            ].map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                item,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            )).toList(),
             const SizedBox(height: 16),
-            Text('İletişim: support@masamenu.com'),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.accent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.email_rounded,
+                    color: AppColors.accent,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'support@masamenu.com',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Tamam'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+            ),
+            child: const Text('Tamam'),
           ),
         ],
       ),
