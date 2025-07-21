@@ -16,6 +16,7 @@ import 'tabs/customer_orders_tab.dart';
 import 'tabs/customer_favorites_tab.dart';
 import 'tabs/customer_profile_tab.dart';
 import 'cart_page.dart'; // Added import for CartPage
+import 'multi_business_cart_page.dart'; // Added import for MultiBusinessCartPage
 
 /// Müşteri ana dashboard sayfası - modern tab navigation
 class CustomerDashboardPage extends StatefulWidget {
@@ -335,59 +336,20 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
   void _navigateToCart() async {
     try {
-      // Sepetteki ürün sayısını kontrol et
-      if (_cartItemCount > 0) {
-        // Kullanıcının son ziyaret ettiği işletmeyi bul
-        final lastBusinessId = await _getLastUsedBusinessId();
-        
-        if (lastBusinessId != null && lastBusinessId.isNotEmpty) {
-          // Cart sayfasına git
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final dynamicRoute = '/customer/${widget.userId}/cart/$lastBusinessId?t=$timestamp';
-          _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetim | MasaMenu');
-          
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CartPage(
-                businessId: lastBusinessId,
-                userId: widget.userId,
-              ),
-              settings: RouteSettings(name: dynamicRoute),
-            ),
-          );
-        } else {
-          // Business ID bulunamadı, kullanıcıyı bilgilendir
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.info_rounded, color: AppColors.white, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('Sepetinize işletme menüsünden erişebilirsiniz.')),
-                ],
-              ),
-              backgroundColor: AppColors.info,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      } else {
-        // Sepet boşsa bilgi mesajı göster
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.info_rounded, color: AppColors.white, size: 20),
-                const SizedBox(width: 8),
-                const Expanded(child: Text('Sepetiniz boş! Önce ürün ekleyin.')),
-              ],
-            ),
-            backgroundColor: AppColors.info,
-            duration: const Duration(seconds: 3),
+      // Her zaman multi-business cart sayfasına git
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final dynamicRoute = '/customer/${widget.userId}/carts?t=$timestamp';
+      _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetlerim | MasaMenu');
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MultiBusinessCartPage(
+            userId: widget.userId,
           ),
-        );
-      }
+          settings: RouteSettings(name: dynamicRoute),
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -403,129 +365,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         ),
       );
     }
-  }
-
-  Future<String?> _getLastUsedBusinessId() async {
-    try {
-      // Customer data'dan son ziyaret edilen işletme
-      if (_customerData != null && _customerData!.recentBusinessIds.isNotEmpty) {
-        return _customerData!.recentBusinessIds.first;
-      }
-      
-      // Eğer recent business yok ise, herhangi bir active business'ı bulmaya çalış
-      // Bu daha gelişmiş bir implementasyon gerektirir
-      
-      return null;
-    } catch (e) {
-      print('Error getting last business ID: $e');
-      return null;
-    }
-  }
-
-  void _showCartDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.greyLight,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Icon(Icons.shopping_cart_rounded, color: AppColors.primary),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Sepetim',
-                    style: AppTypography.h5.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            
-            const Divider(height: 1),
-            
-            // Cart content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.shopping_cart_rounded,
-                        size: 80,
-                        color: AppColors.primary.withOpacity(0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Sepet Özelliği',
-                        style: AppTypography.h4.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Sepet özelliği şu anda geliştiriliyor.\nYakında kullanıma sunulacak!',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Tamam'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _navigateToTab(int index) {
