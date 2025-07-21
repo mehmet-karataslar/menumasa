@@ -96,6 +96,8 @@ class AppColors {
   static const Color pending = Color(0xFFFFC107);
   static const Color active = Color(0xFF2196F3);
   static const Color inactive = Color(0xFF9E9E9E);
+
+  static const Color divider = Color(0xFF9E9E9E);
 }
 
 class AppColorScheme {

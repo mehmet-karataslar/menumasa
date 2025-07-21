@@ -30,7 +30,9 @@ class CategoryManagementPage extends StatefulWidget {
 
 class _CategoryManagementPageState extends State<CategoryManagementPage>
     with TickerProviderStateMixin, UrlMixin {
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  // --- MEVCUT İŞLEVSEL KODLAR (DEĞİŞTİRİLMEDİ) ---
+  final BusinessFirestoreService _businessFirestoreService =
+  BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
@@ -51,7 +53,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     _initializeAnimations();
     _loadData();
 
-    // Update URL for category management
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _urlService.updateBusinessUrl(widget.businessId, 'kategoriler');
     });
@@ -84,7 +85,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     });
 
     try {
-      // Load categories and discounts in parallel
       final futures = await Future.wait([
         _businessFirestoreService.getBusinessCategories(widget.businessId),
         _businessFirestoreService.getDiscounts(businessId: widget.businessId),
@@ -110,6 +110,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     }
   }
 
+  // --- YENİDEN TASARLANMIŞ VE DÜZELTİLMİŞ WIDGET'LAR ---
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,7 +120,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
         opacity: _fadeAnimation,
         child: _buildBody(),
       ),
-      floatingActionButton: _buildFAB(),
+      floatingActionButton: _isReordering ? null : _buildFAB(),
     );
   }
 
@@ -127,178 +129,123 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       return const Center(child: LoadingIndicator());
     }
 
-    return Column(
-      children: [
-        // Header with stats and search
+    // Filtrelenmiş kategorileri al
+    final filteredCategories = _getFilteredCategories();
+
+    return CustomScrollView(
+      slivers: [
         _buildHeader(),
-
-        // Filter tabs
-        _buildFilterTabs(),
-
-        // Category list
-        Expanded(child: _buildCategoryList()),
+        _buildFilterSection(),
+        if (filteredCategories.isEmpty)
+          SliverFillRemaining(child: _buildEmptyState())
+        else if (_isReordering)
+          _buildReorderableList(filteredCategories)
+        else
+          _buildNormalList(filteredCategories),
       ],
     );
   }
 
   Widget _buildHeader() {
+    return SliverAppBar(
+      backgroundColor: AppColors.white,
+      pinned: true,
+      floating: true,
+      elevation: 1,
+      expandedHeight: 200.0,
+      title: Text('Kategori Yönetimi', style: AppTypography.h5.copyWith(color: AppColors.textPrimary)),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 90, 16, 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _buildSearchBar(),
+              const SizedBox(height: 16),
+              _buildStatsRow(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return TextField(
+      onChanged: (value) => setState(() => _searchQuery = value),
+      decoration: InputDecoration(
+        hintText: 'Kategori ara...',
+        prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+        filled: true,
+        fillColor: AppColors.backgroundLight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow() {
     final activeCount = _categories.where((c) => c.isActive).length;
     final inactiveCount = _categories.length - activeCount;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
+    return IntrinsicHeight(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem('Toplam', '${_categories.length}', AppColors.primary),
+          const VerticalDivider(thickness: 1, indent: 8, endIndent: 8),
+          _buildStatItem('Aktif', '$activeCount', AppColors.success),
+          const VerticalDivider(thickness: 1, indent: 8, endIndent: 8),
+          _buildStatItem('Pasif', '$inactiveCount', AppColors.error),
         ],
       ),
-      child: Column(
-        children: [
-          // Search bar
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TextField(
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Kategori ara...',
-                prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-            ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          value,
+          style: AppTypography.h4.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
           ),
+        ),
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
 
-          const SizedBox(height: 16),
-
-          // Stats row
-          Row(
+  Widget _buildFilterSection() {
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          border: Border(bottom: BorderSide(color: AppColors.greyLighter, width: 1)),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
             children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Toplam',
-                  '${_categories.length}',
-                  AppColors.primary,
-                  Icons.category,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Aktif',
-                  '$activeCount',
-                  AppColors.success,
-                  Icons.visibility,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Pasif',
-                  '$inactiveCount',
-                  AppColors.error,
-                  Icons.visibility_off,
-                ),
-              ),
+              _buildFilterChip('all', 'Tümü', _categories.length),
+              _buildFilterChip('active', 'Aktif', _categories.where((c) => c.isActive).length),
+              _buildFilterChip('inactive', 'Pasif', _categories.where((c) => !c.isActive).length),
+              const SizedBox(width: 24),
+              _buildReorderButton(),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTypography.h5.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            label,
-            style: AppTypography.caption.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterTabs() {
-    return Container(
-      color: AppColors.white,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            _buildFilterChip('all', 'Tümü', _categories.length),
-            const SizedBox(width: 8),
-            _buildFilterChip('active', 'Aktif', _categories.where((c) => c.isActive).length),
-            const SizedBox(width: 8),
-            _buildFilterChip('inactive', 'Pasif', _categories.where((c) => !c.isActive).length),
-            const SizedBox(width: 16),
-            // Reorder button
-            InkWell(
-              onTap: _toggleReordering,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _isReordering ? AppColors.primary : AppColors.backgroundLight,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _isReordering ? AppColors.primary : AppColors.greyLight,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _isReordering ? Icons.check : Icons.reorder,
-                      color: _isReordering ? AppColors.white : AppColors.textSecondary,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _isReordering ? 'Tamamla' : 'Sırala',
-                      style: AppTypography.caption.copyWith(
-                        color: _isReordering ? AppColors.white : AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -306,262 +253,206 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
   Widget _buildFilterChip(String filter, String label, int count) {
     final isSelected = _selectedFilter == filter;
-    
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedFilter = filter;
-        });
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.backgroundLight,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.greyLight,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: ActionChip(
+        onPressed: () => setState(() => _selectedFilter = filter),
+        label: Row(
           children: [
-            Text(
-              label,
-              style: AppTypography.caption.copyWith(
-                color: isSelected ? AppColors.white : AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+            Text(label),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : AppColors.textSecondary.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            if (count > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.white : AppColors.primary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  count.toString(),
-                  style: AppTypography.caption.copyWith(
-                    color: isSelected ? AppColors.primary : AppColors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+          ],
+        ),
+        backgroundColor: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.backgroundLight,
+        labelStyle: TextStyle(
+          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+        side: BorderSide(
+          color: isSelected ? AppColors.primary : AppColors.greyLight,
+          width: 1,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      ),
+    );
+  }
+
+  Widget _buildReorderButton() {
+    return TextButton.icon(
+      onPressed: _toggleReordering,
+      icon: Icon(_isReordering ? Icons.check_circle_outline : Icons.reorder, size: 18),
+      label: Text(_isReordering ? 'Sıralamayı Bitir' : 'Sırala'),
+      style: TextButton.styleFrom(
+        foregroundColor: _isReordering ? AppColors.success : AppColors.textSecondary,
+        backgroundColor: _isReordering ? AppColors.success.withOpacity(0.1) : AppColors.backgroundLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-            ],
+              child: Icon(
+                _searchQuery.isEmpty ? Icons.category_outlined : Icons.search_off,
+                size: 60,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _searchQuery.isEmpty ? 'Henüz Kategori Yok' : 'Sonuç Bulunamadı',
+              style: AppTypography.h5.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _searchQuery.isEmpty
+                  ? 'İşletmenizin menüsünü düzenlemek için yeni kategoriler ekleyin.'
+                  : 'Arama kriterlerinizi değiştirerek tekrar deneyin.',
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCategoryList() {
-    final filteredCategories = _getFilteredCategories();
-
-    if (filteredCategories.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(60),
-                ),
-                child: Icon(
-                  _searchQuery.isEmpty ? Icons.category_outlined : Icons.search_off,
-                  size: 60,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                _searchQuery.isEmpty ? 'Henüz kategori yok' : 'Kategori bulunamadı',
-                style: AppTypography.h5.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _searchQuery.isEmpty
-                    ? 'İşletmenizin menüsünü organize etmek için kategoriler oluşturun. Kategori eklemek için aşağıdaki + butonuna tıklayın.'
-                    : 'Aradığınız kriterlere uygun kategori bulunamadı. Lütfen farklı arama terimleri deneyin.',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: _searchQuery.isEmpty
-            ? _showAddCategoryDialog
-            : () {
-                setState(() {
-                  _searchQuery = '';
-                });
-              },
-                icon: Icon(_searchQuery.isEmpty ? Icons.add : Icons.clear),
-                label: Text(_searchQuery.isEmpty ? 'İlk Kategorinizi Ekleyin' : 'Aramayı Temizle'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return _isReordering
-        ? _buildReorderableList(filteredCategories)
-        : _buildNormalList(filteredCategories);
-  }
-
-  List<category_model.Category> _getFilteredCategories() {
-    List<category_model.Category> filtered = _categories;
-
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((category) {
-        return category.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               (category.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
-      }).toList();
-    }
-
-    // Apply status filter
-    switch (_selectedFilter) {
-      case 'active':
-        filtered = filtered.where((c) => c.isActive).toList();
-        break;
-      case 'inactive':
-        filtered = filtered.where((c) => !c.isActive).toList();
-        break;
-    }
-
-    return filtered;
-  }
-
   Widget _buildNormalList(List<category_model.Category> categories) {
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _buildCategoryCard(category);
-        },
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+              (context, index) {
+            final category = categories[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildCategoryCard(category),
+            );
+          },
+          childCount: categories.length,
+        ),
       ),
     );
   }
 
   Widget _buildReorderableList(List<category_model.Category> categories) {
-    return ReorderableListView.builder(
-      padding: const EdgeInsets.all(16),
+    return SliverReorderableList(
       itemCount: categories.length,
       onReorder: _onReorder,
       itemBuilder: (context, index) {
         final category = categories[index];
-        return _buildCategoryCard(category, key: ValueKey(category.categoryId));
+        return Padding(
+          key: ValueKey(category.categoryId),
+          padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
+          child: _buildCategoryCard(category),
+        );
       },
     );
   }
 
   Widget _buildCategoryCard(category_model.Category category, {Key? key}) {
-    final categoryDiscounts = _discounts.where((d) => 
-      d.applicableCategories.contains(category.categoryId) && d.isActive
-    ).length;
+    final categoryDiscounts = _discounts
+        .where((d) =>
+    d.applicableCategories.contains(category.categoryId) && d.isActive)
+        .length;
 
     return Card(
       key: key,
       elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shadowColor: AppColors.shadow.withOpacity(0.1),
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       child: InkWell(
         onTap: _isReordering ? null : () => _showCategoryDetails(category),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.0),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              // Category icon
               _buildCategoryIcon(category),
-              
               const SizedBox(width: 16),
-              
-              // Category info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Text(
                             category.name,
-                            style: AppTypography.bodyLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         _buildStatusBadge(category),
                       ],
                     ),
-                    
                     if (category.description?.isNotEmpty == true) ...[
                       const SizedBox(height: 4),
                       Text(
                         category.description!,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    
                     const SizedBox(height: 8),
-                    
-                    // Metadata
                     Row(
                       children: [
-                        if (categoryDiscounts > 0) ...[
-                          _buildInfoChip(
-                            icon: Icons.local_offer,
-                            label: '$categoryDiscounts indirim',
-                            color: AppColors.warning,
-                          ),
-                          const SizedBox(width: 8),
-                        ],
                         _buildInfoChip(
                           icon: Icons.sort,
-                          label: 'Sıra ${category.sortOrder + 1}',
+                          label: 'Sıra: ${category.sortOrder + 1}',
                           color: AppColors.info,
                         ),
+                        if (categoryDiscounts > 0) ...[
+                          const SizedBox(width: 8),
+                          _buildInfoChip(
+                            icon: Icons.local_offer,
+                            label: '$categoryDiscounts İndirim',
+                            color: AppColors.warning,
+                          ),
+                        ],
                       ],
                     ),
                   ],
                 ),
               ),
-              
-              // Actions
-              if (_isReordering)
-                Icon(
-                  Icons.drag_handle,
-                  color: AppColors.textSecondary,
-                )
-              else
-                _buildCategoryActions(category),
+              const SizedBox(width: 8),
+              _isReordering
+                  ? ReorderableDragStartListener(
+                index: _categories.indexOf(category),
+                child: const Icon(Icons.drag_handle, color: AppColors.textLight),
+              )
+                  : _buildCategoryActions(category),
             ],
           ),
         ),
@@ -569,41 +460,28 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     );
   }
 
-    Widget _buildCategoryIcon(category_model.Category category) {
+  Widget _buildCategoryIcon(category_model.Category category) {
+    Color iconColor = category.isActive ? AppColors.primary : AppColors.textLight;
+
     return Container(
-      width: 56,
-      height: 56,
+      width: 64,
+      height: 64,
       decoration: BoxDecoration(
-        color: category.isActive
-            ? AppColors.primary.withOpacity(0.1)
-            : AppColors.textLight.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: category.isActive ? AppColors.primary.withOpacity(0.3) : AppColors.greyLight,
-        ),
+        color: iconColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12.0),
       ),
-      child: category.imageUrl != null && category.imageUrl!.isNotEmpty
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.network(
-                category.imageUrl!,
-                width: 56,
-                height: 56,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    _getCategoryIcon(category.name),
-                    color: category.isActive ? AppColors.primary : AppColors.textLight,
-                    size: 28,
-                  );
-                },
-              ),
-            )
-          : Icon(
-              _getCategoryIcon(category.name),
-              color: category.isActive ? AppColors.primary : AppColors.textLight,
-              size: 28,
-            ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12.0),
+        child: category.imageUrl != null && category.imageUrl!.isNotEmpty
+            ? Image.network(
+          category.imageUrl!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(_getCategoryIcon(category.name), color: iconColor, size: 32),
+          loadingBuilder: (_, child, progress) =>
+          progress == null ? child : const Center(child: LoadingIndicator(size: 20)),
+        )
+            : Icon(_getCategoryIcon(category.name), color: iconColor, size: 32),
+      ),
     );
   }
 
@@ -611,39 +489,35 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: category.isActive
-            ? AppColors.success.withOpacity(0.1)
-            : AppColors.error.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: category.isActive
-              ? AppColors.success.withOpacity(0.3)
-              : AppColors.error.withOpacity(0.3),
-        ),
+        color: (category.isActive ? AppColors.success : AppColors.error).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        category.isActive ? 'Aktif' : 'Pasif',
-        style: AppTypography.caption.copyWith(
-          color: category.isActive ? AppColors.success : AppColors.error,
-          fontWeight: FontWeight.bold,
-        ),
+      child: Row(
+        children: [
+          Icon(
+            category.isActive ? Icons.visibility : Icons.visibility_off,
+            size: 12,
+            color: category.isActive ? AppColors.success : AppColors.error,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            category.isActive ? 'Aktif' : 'Pasif',
+            style: AppTypography.caption.copyWith(
+              color: category.isActive ? AppColors.success : AppColors.error,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
+  Widget _buildInfoChip({required IconData icon, required String label, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-        ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -664,67 +538,57 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
   IconData _getCategoryIcon(String categoryName) {
     final name = categoryName.toLowerCase();
-    if (name.contains('çorba')) return Icons.soup_kitchen;
-    if (name.contains('ana') || name.contains('yemek')) return Icons.restaurant_menu;
-    if (name.contains('tatlı') || name.contains('desert')) return Icons.cake;
-    if (name.contains('içecek') || name.contains('drink')) return Icons.local_drink;
-    if (name.contains('başlangıç') || name.contains('meze')) return Icons.restaurant;
-    if (name.contains('salata')) return Icons.eco;
-    if (name.contains('pizza')) return Icons.local_pizza;
-    if (name.contains('burger')) return Icons.lunch_dining;
-    if (name.contains('kahve') || name.contains('coffee')) return Icons.local_cafe;
-    return Icons.category;
+    if (name.contains('çorba')) return Icons.soup_kitchen_outlined;
+    if (name.contains('ana') || name.contains('yemek')) return Icons.restaurant_menu_outlined;
+    if (name.contains('tatlı') || name.contains('desert')) return Icons.cake_outlined;
+    if (name.contains('içecek') || name.contains('drink')) return Icons.local_bar_outlined;
+    if (name.contains('başlangıç') || name.contains('meze')) return Icons.restaurant_outlined;
+    if (name.contains('salata')) return Icons.eco_outlined;
+    if (name.contains('pizza')) return Icons.local_pizza_outlined;
+    if (name.contains('burger')) return Icons.lunch_dining_outlined;
+    if (name.contains('kahve') || name.contains('coffee')) return Icons.local_cafe_outlined;
+    return Icons.category_outlined;
   }
 
   Widget _buildCategoryActions(category_model.Category category) {
     return PopupMenuButton<String>(
       onSelected: (value) => _handleCategoryAction(value, category),
-      icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
+      icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+      tooltip: 'Seçenekler',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'view',
-          child: ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('Detaylar'),
-            contentPadding: EdgeInsets.zero,
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'edit',
-          child: ListTile(
-            leading: Icon(Icons.edit),
-            title: Text('Düzenle'),
-            contentPadding: EdgeInsets.zero,
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'discount',
-          child: ListTile(
-            leading: Icon(Icons.local_offer),
-            title: Text('İndirim Ekle'),
-            contentPadding: EdgeInsets.zero,
-          ),
-        ),
-        PopupMenuItem(
+        _buildPopupMenuItem(icon: Icons.info_outline, text: 'Detaylar', value: 'view'),
+        _buildPopupMenuItem(icon: Icons.edit_outlined, text: 'Düzenle', value: 'edit'),
+        _buildPopupMenuItem(icon: Icons.local_offer_outlined, text: 'İndirim Ekle', value: 'discount'),
+        PopupMenuItem<String>(
           value: 'toggle',
           child: ListTile(
-            leading: Icon(
-              category.isActive ? Icons.visibility_off : Icons.visibility,
-            ),
+            leading: Icon(category.isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined),
             title: Text(category.isActive ? 'Pasif Yap' : 'Aktif Yap'),
             contentPadding: EdgeInsets.zero,
           ),
         ),
         const PopupMenuDivider(),
-        const PopupMenuItem(
+        PopupMenuItem<String>(
           value: 'delete',
           child: ListTile(
-            leading: Icon(Icons.delete, color: AppColors.error),
-            title: Text('Sil', style: TextStyle(color: AppColors.error)),
+            leading: const Icon(Icons.delete_outline, color: AppColors.error),
+            title: const Text('Sil', style: TextStyle(color: AppColors.error)),
             contentPadding: EdgeInsets.zero,
           ),
         ),
       ],
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupMenuItem({required IconData icon, required String text, required String value}) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(text),
+        contentPadding: EdgeInsets.zero,
+      ),
     );
   }
 
@@ -734,186 +598,108 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
       icon: const Icon(Icons.add),
-      label: const Text('Kategori Ekle'),
+      label: const Text('Yeni Kategori'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
     );
   }
 
-  void _handleCategoryAction(String action, category_model.Category category) {
-    switch (action) {
-      case 'view':
-        _showCategoryDetails(category);
-        break;
-      case 'edit':
-        _showEditCategoryDialog(category);
-        break;
-      case 'discount':
-        _showDiscountDialog(category);
-        break;
-      case 'toggle':
-        _toggleCategoryStatus(category);
-        break;
-      case 'delete':
-        _showDeleteConfirmation(category);
-        break;
-    }
-  }
+  // --- MEVCUT SHOW DIALOG/MODAL KODLARI (TASARIMLARI YENİLENDİ) ---
 
   void _showCategoryDetails(category_model.Category category) {
-    final categoryDiscounts = _discounts.where((d) => 
-      d.applicableCategories.contains(category.categoryId) && d.isActive
+    final categoryDiscounts = _discounts.where((d) =>
+    d.applicableCategories.contains(category.categoryId) && d.isActive
     ).toList();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(24),
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: category.isActive
-                        ? AppColors.primary.withOpacity(0.1)
-                        : AppColors.textLight.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: category.isActive ? AppColors.primary.withOpacity(0.3) : AppColors.greyLight,
+                    color: AppColors.greyLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Header
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCategoryIcon(category),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(category.name, style: AppTypography.h5.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        _buildStatusBadge(category),
+                      ],
                     ),
                   ),
-                  child: category.imageUrl != null && category.imageUrl!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.network(
-                            category.imageUrl!,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                _getCategoryIcon(category.name),
-                                color: category.isActive ? AppColors.primary : AppColors.textLight,
-                                size: 40,
-                              );
-                            },
-                          ),
-                        )
-                      : Icon(
-                          _getCategoryIcon(category.name),
-                          color: category.isActive ? AppColors.primary : AppColors.textLight,
-                          size: 40,
-                        ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        category.name,
-                        style: AppTypography.h5.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      _buildStatusBadge(category),
-                    ],
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Kapat',
                   ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
+                ],
+              ),
+              const Divider(height: 32),
+              // Description
+              if (category.description?.isNotEmpty == true) ...[
+                Text('Açıklama', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Text(category.description!, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 24),
               ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            if (category.description?.isNotEmpty == true) ...[
-              Text(
-                'Açıklama',
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
+              // Stats
+              Row(
+                children: [
+                  Expanded(
+                      child: _buildDetailCard('Sıra Numarası', '${category.sortOrder + 1}', Icons.sort, AppColors.info)
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: _buildDetailCard('Aktif İndirim', '${categoryDiscounts.length}', Icons.local_offer, AppColors.warning)
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              // Actions
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showEditCategoryDialog(category);
+                },
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Kategoriyi Düzenle'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                category.description!,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
             ],
-            
-            // Stats
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailCard(
-                    'Sıra',
-                    '${category.sortOrder + 1}',
-                    Icons.sort,
-                    AppColors.info,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDetailCard(
-                    'İndirimler',
-                    '${categoryDiscounts.length}',
-                    Icons.local_offer,
-                    AppColors.warning,
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Actions
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showEditCategoryDialog(category);
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Düzenle'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showDiscountDialog(category);
-                    },
-                    icon: const Icon(Icons.local_offer),
-                    label: const Text('İndirim Ekle'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.warning,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            
-            // Safe area padding
-            SizedBox(height: MediaQuery.of(context).padding.bottom),
-          ],
+          ),
         ),
       ),
     );
@@ -923,30 +709,17 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-        ),
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(icon, color: color, size: 28),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: AppTypography.h5.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            label,
-            style: AppTypography.caption.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(value, style: AppTypography.h5.copyWith(color: color, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(label, style: AppTypography.caption.copyWith(color: color.withOpacity(0.8), fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -963,12 +736,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   void _showCategoryDialog(category_model.Category? category) {
     final isEditing = category != null;
     final nameController = TextEditingController(text: category?.name ?? '');
-    final descriptionController = TextEditingController(
-      text: category?.description ?? '',
-    );
+    final descriptionController = TextEditingController(text: category?.description ?? '');
     bool isActive = category?.isActive ?? true;
-    
-    // Image handling
+
     XFile? selectedImageFile;
     Uint8List? selectedImageBytes;
     String? currentImageUrl = category?.imageUrl;
@@ -978,14 +748,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
           title: Row(
             children: [
-              Icon(
-                isEditing ? Icons.edit : Icons.add,
-                color: AppColors.primary,
-              ),
+              Icon(isEditing ? Icons.edit_note : Icons.add_circle_outline, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text(isEditing ? 'Kategori Düzenle' : 'Kategori Ekle'),
+              Text(isEditing ? 'Kategori Düzenle' : 'Yeni Kategori Ekle'),
             ],
           ),
           content: SingleChildScrollView(
@@ -993,7 +761,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Category image
                 _buildCategoryImageSection(
                   currentImageUrl: currentImageUrl,
                   selectedImageFile: selectedImageFile,
@@ -1006,80 +773,32 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                     });
                   },
                   onUploadStateChanged: (bool uploading) {
-                    setDialogState(() {
-                      isUploadingImage = uploading;
-                    });
+                    setDialogState(() => isUploadingImage = uploading);
                   },
                 ),
-
-                const SizedBox(height: 16),
-                
-                // Category name
+                const SizedBox(height: 24),
                 TextField(
                   controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Kategori Adı *',
-                    hintText: 'Örn: Ana Yemekler',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    prefixIcon: const Icon(Icons.category),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Kategori Adı *', hintText: 'Örn: Ana Yemekler', prefixIcon: Icon(Icons.category_outlined)),
                   textCapitalization: TextCapitalization.words,
                 ),
-                
                 const SizedBox(height: 16),
-                
-                // Description
                 TextField(
                   controller: descriptionController,
-                  decoration: InputDecoration(
-                    labelText: 'Açıklama',
-                    hintText: 'Kategori açıklaması (isteğe bağlı)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    prefixIcon: const Icon(Icons.description),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Açıklama (İsteğe Bağlı)', hintText: 'Kısa bir açıklama girin', prefixIcon: Icon(Icons.description_outlined)),
                   maxLines: 3,
+                  minLines: 1,
                   textCapitalization: TextCapitalization.sentences,
                 ),
-                
                 const SizedBox(height: 16),
-                
-                // Active status
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.greyLight),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: SwitchListTile(
-                    title: const Text('Aktif Kategori'),
-                    subtitle: Text(
-                      isActive
-                          ? 'Kategori müşteriler tarafından görülebilir'
-                          : 'Kategori gizli olacak',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    value: isActive,
-                    onChanged: (value) {
-                      setDialogState(() {
-                        isActive = value;
-                      });
-                    },
-                    activeColor: AppColors.success,
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                Text(
-                  '* Zorunlu alan',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textLight,
-                  ),
+                SwitchListTile.adaptive(
+                  title: const Text('Aktif Kategori'),
+                  subtitle: Text(isActive ? 'Menüde görünecek' : 'Menüde gizli kalacak', style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+                  value: isActive,
+                  onChanged: (value) => setDialogState(() => isActive = value),
+                  activeColor: AppColors.success,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                  tileColor: AppColors.backgroundLight,
                 ),
               ],
             ),
@@ -1103,7 +822,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Kategori adı zorunludur'),
+                      content: Text('Kategori adı zorunludur.'),
                       backgroundColor: AppColors.warning,
                     ),
                   );
@@ -1117,9 +836,51 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     );
   }
 
+  // --- MEVCUT İŞLEVSEL KODLAR (DEĞİŞTİRİLMEDİ) ---
+
+  List<category_model.Category> _getFilteredCategories() {
+    List<category_model.Category> filtered = List.from(_categories);
+
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((category) {
+        return category.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            (category.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+      }).toList();
+    }
+
+    switch (_selectedFilter) {
+      case 'active':
+        filtered = filtered.where((c) => c.isActive).toList();
+        break;
+      case 'inactive':
+        filtered = filtered.where((c) => !c.isActive).toList();
+        break;
+    }
+
+    return filtered;
+  }
+
+  void _handleCategoryAction(String action, category_model.Category category) {
+    switch (action) {
+      case 'view':
+        _showCategoryDetails(category);
+        break;
+      case 'edit':
+        _showEditCategoryDialog(category);
+        break;
+      case 'discount':
+        _showDiscountDialog(category);
+        break;
+      case 'toggle':
+        _toggleCategoryStatus(category);
+        break;
+      case 'delete':
+        _showDeleteConfirmation(category);
+        break;
+    }
+  }
+
   void _showDiscountDialog(category_model.Category category) {
-    // This would show a dialog to create discount for this category
-    // For now, just show a placeholder
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1136,16 +897,15 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   }
 
   Future<void> _saveCategory(
-    category_model.Category? category,
-    String name,
-    String description,
-    bool isActive,
-    XFile? imageFile,
-  ) async {
+      category_model.Category? category,
+      String name,
+      String description,
+      bool isActive,
+      XFile? imageFile,
+      ) async {
     try {
       String? imageUrl = category?.imageUrl;
 
-      // Upload new image if selected
       if (imageFile != null) {
         final fileName = 'category_${DateTime.now().millisecondsSinceEpoch}.jpg';
         imageUrl = await _storageService.uploadCategoryImage(
@@ -1157,7 +917,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       }
 
       if (category == null) {
-        // Add new category
         final newCategory = category_model.Category(
           categoryId: '',
           businessId: widget.businessId,
@@ -1176,6 +935,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
         setState(() {
           _categories.add(savedCategory);
+          _categories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
         });
 
         if (mounted) {
@@ -1193,7 +953,6 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
           );
         }
       } else {
-        // Update existing category
         final updatedCategory = category.copyWith(
           name: name,
           description: description,
@@ -1204,9 +963,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
         await _businessFirestoreService.saveCategory(updatedCategory);
 
-        final index = _categories.indexWhere(
-          (c) => c.categoryId == category.categoryId,
-        );
+        final index = _categories.indexWhere((c) => c.categoryId == category.categoryId);
         if (index != -1) {
           setState(() {
             _categories[index] = updatedCategory;
@@ -1245,9 +1002,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
       await _businessFirestoreService.saveCategory(updatedCategory);
 
-      final index = _categories.indexWhere(
-        (c) => c.categoryId == category.categoryId,
-      );
+      final index = _categories.indexWhere((c) => c.categoryId == category.categoryId);
       if (index != -1) {
         setState(() {
           _categories[index] = updatedCategory;
@@ -1258,9 +1013,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
         HapticFeedback.lightImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              '${category.name} ${category.isActive ? 'pasif' : 'aktif'} yapıldı',
-            ),
+            content: Text('${category.name} durumu güncellendi'),
             backgroundColor: AppColors.success,
             action: SnackBarAction(
               label: 'Geri Al',
@@ -1287,48 +1040,15 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
         title: Row(
           children: [
-            Icon(Icons.warning, color: AppColors.error),
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
             const SizedBox(width: 8),
-            const Text('Kategori Sil'),
+            const Text('Kategoriyi Sil'),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${category.name} kategorisini silmek istediğinizden emin misiniz?',
-              style: AppTypography.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.error.withOpacity(0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info, color: AppColors.error, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Bu işlem geri alınamaz ve kategoriye ait tüm ürünler etkilenebilir.',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        content: Text('${category.name} kategorisini kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1339,7 +1059,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
               await _deleteCategory(category);
               if (mounted) Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+            ),
             child: const Text('Sil'),
           ),
         ],
@@ -1381,7 +1104,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     setState(() {
       _isReordering = !_isReordering;
     });
-    
+
     HapticFeedback.selectionClick();
   }
 
@@ -1393,18 +1116,16 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       final category = _categories.removeAt(oldIndex);
       _categories.insert(newIndex, category);
 
-      // Update sort orders
       for (int i = 0; i < _categories.length; i++) {
         _categories[i] = _categories[i].copyWith(sortOrder: i);
       }
     });
 
-    // Save updated sort orders
     try {
-      final futures = _categories.map((category) => 
-        _businessFirestoreService.saveCategory(category)
+      final futures = _categories.map((category) =>
+          _businessFirestoreService.saveCategory(category)
       ).toList();
-      
+
       await Future.wait(futures);
 
       if (mounted) {
@@ -1426,6 +1147,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
           ),
         );
       }
+      _loadData();
     }
   }
 
@@ -1437,129 +1159,79 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     required Function(XFile?, Uint8List?) onImagePicked,
     required Function(bool) onUploadStateChanged,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Kategori Görseli',
-          style: AppTypography.bodyLarge.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
+    return Center(
+      child: GestureDetector(
+        onTap: isUploadingImage ? null : () => _pickCategoryImage(onImagePicked, onUploadStateChanged),
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: AppColors.backgroundLight,
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(color: AppColors.greyLight, style: BorderStyle.solid, width: 2),
           ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: GestureDetector(
-            onTap: isUploadingImage ? null : () => _pickCategoryImage(onImagePicked, onUploadStateChanged),
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.greyLighter,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.greyLight,
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _buildImageContent(currentImageUrl, selectedImageFile, selectedImageBytes),
+              if (isUploadingImage)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12.0),
                   ),
-                ],
-              ),
-              child: isUploadingImage
-                  ? const Center(child: LoadingIndicator(size: 30))
-                  : _buildImageContent(currentImageUrl, selectedImageFile, selectedImageBytes),
-            ),
+                  child: const Center(child: LoadingIndicator(color: Colors.white)),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: const Icon(Icons.camera_alt, color: Colors.white70, size: 30),
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        Center(
-          child: Text(
-            'Resim seçmek için tıklayın (isteğe bağlı)',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildImageContent(String? currentImageUrl, XFile? selectedImageFile, Uint8List? selectedImageBytes) {
-    if (selectedImageFile != null) {
-      if (kIsWeb && selectedImageBytes != null) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.memory(
-            selectedImageBytes,
-            width: 120,
-            height: 120,
-            fit: BoxFit.cover,
-          ),
-        );
-      } else if (!kIsWeb) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.file(
-            File(selectedImageFile.path),
-            width: 120,
-            height: 120,
-            fit: BoxFit.cover,
-          ),
-        );
-      }
+    ImageProvider? imageProvider;
+
+    if (kIsWeb && selectedImageBytes != null) {
+      imageProvider = MemoryImage(selectedImageBytes);
+    } else if (!kIsWeb && selectedImageFile != null) {
+      imageProvider = FileImage(File(selectedImageFile.path));
+    } else if (currentImageUrl != null && currentImageUrl.isNotEmpty) {
+      imageProvider = NetworkImage(currentImageUrl);
     }
-    
-    if (currentImageUrl != null && currentImageUrl.isNotEmpty) {
+
+    if (imageProvider != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          currentImageUrl,
-          width: 120,
-          height: 120,
+        borderRadius: BorderRadius.circular(12.0),
+        child: Image(
+          image: imageProvider,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return _buildImagePlaceholder();
-          },
+          errorBuilder: (_, __, ___) => _buildImagePlaceholder(),
         ),
       );
     }
-    
+
     return _buildImagePlaceholder();
   }
 
   Widget _buildImagePlaceholder() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.add_photo_alternate,
-          size: 40,
-          color: AppColors.textSecondary,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Resim\nEkle',
-          textAlign: TextAlign.center,
-          style: AppTypography.caption.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
-    );
+    return const Icon(Icons.image, size: 50, color: AppColors.greyLight);
   }
 
   Future<void> _pickCategoryImage(
-    Function(XFile?, Uint8List?) onImagePicked,
-    Function(bool) onUploadStateChanged,
-  ) async {
+      Function(XFile?, Uint8List?) onImagePicked,
+      Function(bool) onUploadStateChanged,
+      ) async {
     try {
       onUploadStateChanged(true);
-      
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
