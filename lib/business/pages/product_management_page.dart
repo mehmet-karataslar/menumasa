@@ -2120,6 +2120,11 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     double discount,
   ) async {
     try {
+      // Debug: Check if product ID is valid
+      if (product.id.isEmpty) {
+        throw Exception('Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
+      }
+
       final discountedPrice = price * (1 - discount / 100);
       final updatedProduct = product.copyWith(
         price: price,
@@ -2130,7 +2135,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       await _businessFirestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
-        (p) => p.id == product.id, // Changed from productId to id
+        (p) => p.id == product.id,
       );
       if (index != -1) {
         setState(() {
@@ -2160,6 +2165,11 @@ class _ProductManagementPageState extends State<ProductManagementPage>
 
   Future<void> _toggleProductStatus(Product product) async {
     try {
+      // Debug: Check if product ID is valid
+      if (product.id.isEmpty) {
+        throw Exception('Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
+      }
+
       final updatedProduct = product.copyWith(
         isAvailable: !product.isAvailable,
         updatedAt: DateTime.now(),
@@ -2168,7 +2178,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       await _businessFirestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
-        (p) => p.id == product.id, // Changed from productId to id
+        (p) => p.id == product.id,
       );
       if (index != -1) {
         setState(() {
@@ -2223,17 +2233,22 @@ class _ProductManagementPageState extends State<ProductManagementPage>
 
   Future<void> _deleteProduct(Product product) async {
     try {
-      await _businessFirestoreService.deleteProduct(product.id); // Changed from productId to id
+      // Debug: Check if product ID is valid
+      if (product.id.isEmpty) {
+        throw Exception('Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
+      }
+
+      await _businessFirestoreService.deleteProduct(product.id);
 
       setState(() {
-        _products.removeWhere((p) => p.id == product.id); // Changed from productId to id
+        _products.removeWhere((p) => p.id == product.id);
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${product.name} ürünü silindi'),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.success, // Changed to success for delete confirmation
           ),
         );
       }
