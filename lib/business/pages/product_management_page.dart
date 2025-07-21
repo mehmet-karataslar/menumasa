@@ -354,162 +354,167 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Product image
-          Expanded(
-            flex: 2,
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    color: AppColors.greyLight,
-                  ),
-                  child: product.images.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child: Image.network(
-                            product.images.first.url,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return _buildImagePlaceholder();
-                            },
-                            errorBuilder: (context, error, stackTrace) =>
-                                _buildImagePlaceholder(),
-                          ),
-                        )
-                      : _buildImagePlaceholder(),
-                ),
-
-                // Status badge
-                Positioned(top: 6, right: 6, child: _buildStatusBadge(product)),
-
-                // Actions
-                Positioned(top: 6, left: 6, child: _buildQuickActions(product)),
-              ],
-            ),
-          ),
-
-          // Product info
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: SizedBox(
+        height: 180, // Fixed height for consistency
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product image
+            Expanded(
+              flex: 2,
+              child: Stack(
                 children: [
-                  // Product name and category
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: AppTypography.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _getCategoryName(product.categoryId),
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      color: AppColors.greyLight,
                     ),
+                    child: product.images.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                            child: Image.network(
+                              product.images.first.url,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return _buildImagePlaceholder();
+                              },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildImagePlaceholder(),
+                            ),
+                          )
+                        : _buildImagePlaceholder(),
                   ),
 
-                  // Price and actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${product.price.toStringAsFixed(2)} ₺',
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.priceColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        padding: EdgeInsets.zero,
-                        iconSize: 20,
-                        onSelected: (value) =>
-                            _handleProductAction(value, product),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: ListTile(
-                              leading: Icon(Icons.edit, size: 18),
-                              title: Text('Düzenle'),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'price',
-                            child: ListTile(
-                              leading: Icon(Icons.price_change, size: 18),
-                              title: Text('Fiyat Güncelle'),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'toggle',
-                            child: ListTile(
-                              leading: Icon(
-                                product.isAvailable
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                size: 18,
-                              ),
-                              title: Text(
-                                product.isAvailable ? 'Pasif Yap' : 'Aktif Yap',
-                              ),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: ListTile(
-                              leading: Icon(
-                                Icons.delete,
-                                color: AppColors.error,
-                                size: 18,
-                              ),
-                              title: Text(
-                                'Sil',
-                                style: TextStyle(color: AppColors.error),
-                              ),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  // Status badge
+                  Positioned(top: 6, right: 6, child: _buildStatusBadge(product)),
+
+                  // Actions
+                  Positioned(top: 6, left: 6, child: _buildQuickActions(product)),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // Product info
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Product name and category
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            product.name,
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _getCategoryName(product.categoryId),
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+                    // Price and actions
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${product.price.toStringAsFixed(2)} ₺',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.priceColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          iconSize: 20,
+                          onSelected: (value) =>
+                              _handleProductAction(value, product),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                leading: Icon(Icons.edit, size: 18),
+                                title: Text('Düzenle'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'price',
+                              child: ListTile(
+                                leading: Icon(Icons.price_change, size: 18),
+                                title: Text('Fiyat Güncelle'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'toggle',
+                              child: ListTile(
+                                leading: Icon(
+                                  product.isAvailable
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  size: 18,
+                                ),
+                                title: Text(
+                                  product.isAvailable ? 'Pasif Yap' : 'Aktif Yap',
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: Icon(
+                                  Icons.delete,
+                                  color: AppColors.error,
+                                  size: 18,
+                                ),
+                                title: Text(
+                                  'Sil',
+                                  style: TextStyle(color: AppColors.error),
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
