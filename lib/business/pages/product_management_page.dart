@@ -2130,7 +2130,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       await _businessFirestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
-        (p) => p.productId == product.productId,
+        (p) => p.id == product.id, // Changed from productId to id
       );
       if (index != -1) {
         setState(() {
@@ -2168,7 +2168,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       await _businessFirestoreService.saveProduct(updatedProduct);
 
       final index = _products.indexWhere(
-        (p) => p.productId == product.productId,
+        (p) => p.id == product.id, // Changed from productId to id
       );
       if (index != -1) {
         setState(() {
@@ -2180,7 +2180,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${product.name} ${product.isAvailable ? 'pasif' : 'aktif'} yapıldı',
+              '${product.name} ${updatedProduct.isAvailable ? 'aktif' : 'pasif'} yapıldı',
             ),
             backgroundColor: AppColors.success,
           ),
@@ -2202,21 +2202,18 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ürün Sil'),
-        content: Text(
-          '${product.name} ürünunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-        ),
+        title: const Text('Ürünü Sil'),
+        content: Text('${product.name} ürününü silmek istediğinizden emin misiniz?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('İptal'),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              await _deleteProduct(product);
-              if (mounted) Navigator.pop(context);
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _deleteProduct(product);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Sil'),
           ),
         ],
@@ -2226,10 +2223,10 @@ class _ProductManagementPageState extends State<ProductManagementPage>
 
   Future<void> _deleteProduct(Product product) async {
     try {
-      await _businessFirestoreService.deleteProduct(product.productId);
+      await _businessFirestoreService.deleteProduct(product.id); // Changed from productId to id
 
       setState(() {
-        _products.removeWhere((p) => p.productId == product.productId);
+        _products.removeWhere((p) => p.id == product.id); // Changed from productId to id
       });
 
       if (mounted) {
