@@ -646,20 +646,40 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                         gradient: LinearGradient(
                           colors: [AppColors.greyLighter, AppColors.greyLight],
                         ),
-                        image: item.productImage != null
-                            ? DecorationImage(
-                                image: NetworkImage(item.productImage!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
                       ),
-                      child: item.productImage == null
-                          ? Icon(
+                      child: item.productImage != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                item.productImage!,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Icon(
+                                  Icons.restaurant_rounded,
+                                  color: AppColors.textSecondary,
+                                  size: 32,
+                                ),
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : Icon(
                               Icons.restaurant_rounded,
                               color: AppColors.textSecondary,
                               size: 32,
-                            )
-                          : null,
+                            ),
                     ),
                   ),
                   SizedBox(width: 16),

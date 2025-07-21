@@ -60,11 +60,23 @@ class CartService {
   }) async {
     await initialize();
 
+    print('🛒 CartService.addToCart called:');
+    print('   Product ID: ${product.productId}');
+    print('   Product Name: ${product.name}');
+    print('   Business ID: $businessId');
+    
     // If cart is for different business, clear it
     if (_currentCart != null && _currentCart!.businessId != businessId) {
+      print('🛒 Different business, clearing cart');
       _currentCart = CartDefaults.createEmpty(businessId: businessId);
     } else if (_currentCart == null) {
+      print('🛒 No existing cart, creating new one');
       _currentCart = CartDefaults.createEmpty(businessId: businessId);
+    }
+
+    print('🛒 Current cart before adding: ${_currentCart!.items.length} items');
+    for (var item in _currentCart!.items) {
+      print('   - ${item.productName} (ID: ${item.productId})');
     }
 
     _currentCart = _currentCart!.addItem(
@@ -72,6 +84,12 @@ class CartService {
       quantity: quantity,
       notes: notes,
     );
+    
+    print('🛒 Current cart after adding: ${_currentCart!.items.length} items');
+    for (var item in _currentCart!.items) {
+      print('   - ${item.productName} (ID: ${item.productId})');
+    }
+    
     await _saveCurrentCart();
     _notifyCartListeners();
   }

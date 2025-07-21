@@ -213,12 +213,6 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
       tag: 'business_${widget.business.id}',
       child: Container(
         decoration: BoxDecoration(
-          image: widget.business.logoUrl != null
-              ? DecorationImage(
-                  image: NetworkImage(widget.business.logoUrl!),
-                  fit: BoxFit.cover,
-                )
-              : null,
           gradient: widget.business.logoUrl == null
               ? LinearGradient(
                   begin: Alignment.topLeft,
@@ -230,15 +224,35 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
                 )
               : null,
         ),
-        child: widget.business.logoUrl == null
-            ? Center(
+        child: widget.business.logoUrl != null
+            ? Image.network(
+                widget.business.logoUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Icon(
+                    Icons.store_rounded,
+                    size: 120,
+                    color: AppColors.white.withOpacity(0.3),
+                  ),
+                ),
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white.withOpacity(0.8)),
+                    ),
+                  );
+                },
+              )
+            : Center(
                 child: Icon(
                   Icons.store_rounded,
                   size: 120,
                   color: AppColors.white.withOpacity(0.3),
                 ),
-              )
-            : null,
+              ),
       ),
     );
   }

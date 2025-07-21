@@ -159,10 +159,11 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
           padding: const EdgeInsets.fromLTRB(16, 90, 16, 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSearchBar(),
-              const SizedBox(height: 16),
-              _buildStatsRow(),
+              Flexible(child: _buildSearchBar()),
+              const SizedBox(height: 12),
+              Flexible(child: _buildStatsRow()),
             ],
           ),
         ),

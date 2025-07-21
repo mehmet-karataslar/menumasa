@@ -14,6 +14,7 @@ class CustomerProfileTab extends StatefulWidget {
   final app_user.CustomerData? customerData;
   final VoidCallback onRefresh;
   final VoidCallback onLogout;
+  final Function(int)? onNavigateToTab;
 
   const CustomerProfileTab({
     super.key,
@@ -22,6 +23,7 @@ class CustomerProfileTab extends StatefulWidget {
     required this.customerData,
     required this.onRefresh,
     required this.onLogout,
+    this.onNavigateToTab,
   });
 
   @override
@@ -339,7 +341,7 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
           // Navigate to dashboard with URL update
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           _urlService.updateCustomerUrl(widget.userId, 'dashboard', customTitle: 'Ana Sayfa | MasaMenu');
-          DefaultTabController.of(context)?.animateTo(0);
+          widget.onNavigateToTab?.call(0);
         },
       },
       {
@@ -351,7 +353,7 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
           // Navigate to orders with URL update
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           _urlService.updateCustomerUrl(widget.userId, 'orders', customTitle: 'Siparişlerim | MasaMenu');
-          DefaultTabController.of(context)?.animateTo(1);
+          widget.onNavigateToTab?.call(1);
         },
       },
       {
@@ -363,7 +365,7 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
           // Navigate to favorites with URL update
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           _urlService.updateCustomerUrl(widget.userId, 'favorites', customTitle: 'Favorilerim | MasaMenu');
-          DefaultTabController.of(context)?.animateTo(2);
+          widget.onNavigateToTab?.call(2);
         },
       },
       {

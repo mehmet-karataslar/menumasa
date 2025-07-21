@@ -208,24 +208,46 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             return Hero(
               tag: 'product_image_${widget.product.productId}',
               child: Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(images[index].url),
-                    fit: BoxFit.cover,
-                    onError: (error, stackTrace) {},
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        AppColors.black.withOpacity(0.1),
-                      ],
+                decoration: BoxDecoration(),
+                child: Stack(
+                  children: [
+                    Image.network(
+                      images[index].url,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.greyLight,
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 60,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          ),
+                        );
+                      },
                     ),
-                  ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            AppColors.black.withOpacity(0.1),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );

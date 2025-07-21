@@ -1172,16 +1172,36 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             decoration: BoxDecoration(
               color: AppColors.greyLight,
               borderRadius: BorderRadius.circular(14),
-              image: product.imageUrl != null
-                  ? DecorationImage(
-                image: NetworkImage(product.imageUrl!),
-                fit: BoxFit.cover,
-              )
-                  : null,
             ),
-            child: product.imageUrl == null
-                ? Icon(Icons.restaurant_rounded, color: AppColors.textSecondary, size: 24)
-                : null,
+            child: product.imageUrl != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.network(
+                      product.imageUrl!,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.restaurant_rounded, 
+                        color: AppColors.textSecondary, 
+                        size: 24
+                      ),
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : Icon(Icons.restaurant_rounded, color: AppColors.textSecondary, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
