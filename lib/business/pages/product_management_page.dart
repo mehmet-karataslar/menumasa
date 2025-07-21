@@ -404,7 +404,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6), // Reduced from 8
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -419,17 +419,17 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                             product.name,
                             style: AppTypography.bodyMedium.copyWith(
                               fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                              fontSize: 12, // Reduced from 13
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1), // Reduced from 2
                           Text(
                             _getCategoryName(product.categoryId),
                             style: AppTypography.bodySmall.copyWith(
                               color: AppColors.textSecondary,
-                              fontSize: 10,
+                              fontSize: 9, // Reduced from 10
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -438,7 +438,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                       ),
                     ),
 
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2), // Reduced from 4
                     // Price and actions
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -449,7 +449,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                             style: AppTypography.bodyMedium.copyWith(
                               color: AppColors.priceColor,
                               fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                              fontSize: 11, // Reduced from 12
                             ),
                           ),
                         ),
