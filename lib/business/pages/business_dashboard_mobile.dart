@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
 import '../models/business.dart';
 import '../models/product.dart';
 import '../models/category.dart' as business_category;
@@ -23,7 +21,6 @@ import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
-import 'dart:ui';
 
 class BusinessDashboardMobile extends StatefulWidget {
   final String businessId;
@@ -39,8 +36,7 @@ class BusinessDashboardMobile extends StatefulWidget {
   State<BusinessDashboardMobile> createState() => _BusinessDashboardMobileState();
 }
 
-class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
-    with TickerProviderStateMixin {
+class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
   final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final UrlService _urlService = UrlService();
   final AuthService _authService = AuthService();
@@ -60,17 +56,11 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   int _totalCategories = 0;
   double _totalRevenue = 0.0;
   int _todayOrders = 0;
-  double _todayRevenue = 0.0;
   int _pendingOrders = 0;
 
   // Notifications
   List<NotificationModel> _notifications = [];
   int _unreadNotificationCount = 0;
-
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   int _currentIndex = 0;
   PageController _pageController = PageController();
@@ -97,45 +87,18 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   ];
 
   final List<IconData> _tabIcons = [
-    Icons.dashboard_rounded,
-    Icons.receipt_long_rounded,
-    Icons.category_rounded,
-    Icons.restaurant_menu_rounded,
-    Icons.local_offer_rounded,
-    Icons.qr_code_rounded,
-    Icons.settings_rounded,
+    Icons.dashboard,
+    Icons.receipt_long,
+    Icons.category,
+    Icons.restaurant_menu,
+    Icons.local_offer,
+    Icons.qr_code,
+    Icons.settings,
   ];
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize animations
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-
     _setInitialTab();
     _loadBusinessData();
     _setupNotificationListener();
@@ -177,20 +140,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         _notifications = notifications;
         _unreadNotificationCount = notifications.length;
       });
-
-      if (notifications.isNotEmpty) {
-        final latestNotification = notifications.first;
-        if (latestNotification.type == NotificationType.newOrder) {
-          _notificationService.showInAppNotification(
-            context,
-            latestNotification,
-            onTap: () {
-              _navigateToTab(1);
-              _notificationService.markAsRead(latestNotification.id);
-            },
-          );
-        }
-      }
     }
   }
 
@@ -229,14 +178,10 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         _totalCategories = stats['totalCategories'] ?? 0;
         _totalRevenue = stats['totalRevenue'] ?? 0.0;
         _todayOrders = stats['todayOrders'] ?? 0;
-        _todayRevenue = stats['todayRevenue'] ?? 0.0;
         _pendingOrders = stats['pendingOrders'] ?? 0;
       });
 
       _updateUrl();
-
-      _fadeController.forward();
-      _slideController.forward();
     } catch (e) {
       setState(() {
         _errorMessage = 'Veriler yüklenirken hata: $e';
@@ -271,7 +216,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         'totalCategories': _categories.length,
         'totalRevenue': totalRevenue,
         'todayOrders': dailyStats['total'] ?? 0,
-        'todayRevenue': 0.0,
         'pendingOrders': pendingOrders,
       };
     } catch (e) {
@@ -284,7 +228,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Çıkış Yap'),
         content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
         actions: [
@@ -292,13 +235,10 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('İptal'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Çıkış Yap', style: TextStyle(color: Colors.white)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Çıkış Yap'),
           ),
         ],
       ),
@@ -311,11 +251,9 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
           Navigator.pushReplacementNamed(context, '/');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Çıkış yapıldı'),
+            const SnackBar(
+              content: Text('Çıkış yapıldı'),
               backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
         }
@@ -325,8 +263,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             SnackBar(
               content: Text('Çıkış hatası: $e'),
               backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
         }
@@ -362,19 +298,12 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
       _currentIndex = index;
     });
 
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-
+    _pageController.jumpToPage(index);
     _updateUrl();
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
-    _slideController.dispose();
     _pageController.dispose();
     _notificationService.removeNotificationListener(
         widget.businessId, _onNotificationsChanged);
@@ -384,132 +313,64 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        body: Container(
-          decoration: _buildBackgroundDecoration(),
-          child: const Center(child: LoadingIndicator()),
-        ),
+      return const Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        body: Center(child: LoadingIndicator()),
       );
     }
 
     if (_errorMessage != null) {
       return Scaffold(
+        backgroundColor: AppColors.backgroundLight,
         appBar: _buildAppBar(),
-        body: Container(
-          decoration: _buildBackgroundDecoration(),
-          child: Center(child: ErrorMessage(message: _errorMessage!)),
-        ),
+        body: Center(child: ErrorMessage(message: _errorMessage!)),
       );
     }
 
     if (_business == null) {
       return Scaffold(
+        backgroundColor: AppColors.backgroundLight,
         appBar: _buildAppBar(),
-        body: Container(
-          decoration: _buildBackgroundDecoration(),
-          child: const Center(
-            child: EmptyState(
-              icon: Icons.business,
-              title: 'İşletme Bulunamadı',
-              message: 'İşletme bilgileri yüklenemedi',
-            ),
+        body: const Center(
+          child: EmptyState(
+            icon: Icons.business,
+            title: 'İşletme Bulunamadı',
+            message: 'İşletme bilgileri yüklenemedi',
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBody: true,
+      backgroundColor: AppColors.backgroundLight,
       appBar: _buildAppBar(),
-      body: Container(
-        decoration: _buildBackgroundDecoration(),
-        child: Column(
-          children: [
-            Expanded(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                      _updateUrl();
-                    },
-                    children: [
-                      _buildOverviewPage(),
-                      OrderManagementPage(businessId: widget.businessId),
-                      CategoryManagementPage(businessId: widget.businessId),
-                      ProductManagementPage(businessId: widget.businessId),
-                      DiscountManagementPage(businessId: widget.businessId),
-                      QRManagementPage(businessId: widget.businessId),
-                      BusinessProfilePage(businessId: widget.businessId),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          _updateUrl();
+        },
+        children: [
+          _buildOverviewPage(),
+          OrderManagementPage(businessId: widget.businessId),
+          CategoryManagementPage(businessId: widget.businessId),
+          ProductManagementPage(businessId: widget.businessId),
+          DiscountManagementPage(businessId: widget.businessId),
+          QRManagementPage(businessId: widget.businessId),
+          BusinessProfilePage(businessId: widget.businessId),
+        ],
       ),
       bottomNavigationBar: _buildBottomNavigation(),
     );
   }
 
-  BoxDecoration _buildBackgroundDecoration() {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFF667eea).withOpacity(0.05),
-          const Color(0xFF764ba2).withOpacity(0.05),
-          AppColors.backgroundLight,
-          const Color(0xFFF093FB).withOpacity(0.02),
-        ],
-        stops: const [0.0, 0.3, 0.8, 1.0],
-      ),
-    );
-  }
-
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              AppColors.primary.withOpacity(0.8),
-              const Color(0xFF667eea),
-            ],
-          ),
-        ),
-        child: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.2),
-                    Colors.white.withOpacity(0.1),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      backgroundColor: AppColors.primary,
       foregroundColor: AppColors.white,
+      elevation: 1,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -518,13 +379,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             style: AppTypography.bodyLarge.copyWith(
               color: AppColors.white,
               fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -533,46 +387,50 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             style: AppTypography.caption.copyWith(
               color: AppColors.white.withOpacity(0.9),
               fontSize: 11,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 1,
-                  offset: const Offset(0, 0.5),
-                ),
-              ],
             ),
           ),
         ],
       ),
       actions: [
-        _buildGlassButton(
-          icon: Icons.notifications_rounded,
+        IconButton(
+          icon: Stack(
+            children: [
+              const Icon(Icons.notifications),
+              if (_unreadNotificationCount > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_unreadNotificationCount',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           onPressed: _showNotificationsDialog,
-          badge: _unreadNotificationCount > 0 ? _unreadNotificationCount : null,
         ),
-        const SizedBox(width: 8),
-        _buildGlassButton(
-          icon: Icons.refresh_rounded,
+        IconButton(
+          icon: const Icon(Icons.refresh),
           onPressed: _loadBusinessData,
         ),
-        const SizedBox(width: 8),
         PopupMenuButton<String>(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              Icons.more_vert_rounded,
-              color: AppColors.white,
-              size: 18,
-            ),
-          ),
+          icon: const Icon(Icons.more_vert),
           onSelected: (value) {
             switch (value) {
               case 'logout':
@@ -580,134 +438,40 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 break;
             }
           },
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 20,
-          color: Colors.white,
           itemBuilder: (context) => [
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'logout',
               child: ListTile(
-                leading: Icon(Icons.logout_rounded, color: AppColors.error),
+                leading: Icon(Icons.logout, color: AppColors.error),
                 title: Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
           ],
         ),
-        const SizedBox(width: 12),
-      ],
-    );
-  }
-
-  Widget _buildGlassButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    int? badge,
-  }) {
-    return Stack(
-      children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Icon(icon, color: AppColors.white, size: 18),
-            ),
-          ),
-        ),
-        if (badge != null)
-          Positioned(
-            right: 2,
-            top: 2,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.error, AppColors.error.withOpacity(0.8)],
-                ),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.white, width: 1.5),
-              ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              child: Text(
-                badge.toString(),
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
       ],
     );
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+    return BottomNavigationBar(
+      currentIndex: _currentIndex,
+      onTap: _navigateToTab,
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: AppColors.white,
+      selectedItemColor: AppColors.primary,
+      unselectedItemColor: AppColors.textSecondary,
+      selectedLabelStyle: AppTypography.caption.copyWith(
+        fontWeight: FontWeight.w700,
+        fontSize: 10,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withOpacity(0.9),
-                  Colors.white.withOpacity(0.8),
-                ],
-              ),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: _navigateToTab,
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.transparent,
-              selectedItemColor: AppColors.primary,
-              unselectedItemColor: AppColors.textSecondary.withOpacity(0.6),
-              selectedLabelStyle: AppTypography.caption.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 10,
-              ),
-              unselectedLabelStyle: AppTypography.caption.copyWith(fontSize: 9),
-              elevation: 0,
-              items: List.generate(
-                _tabTitles.length,
-                (index) => BottomNavigationBarItem(
-                  icon: _buildNavIcon(_tabIcons[index], index),
-                  label: _getShortLabel(index),
-                ),
-              ),
-            ),
-          ),
+      unselectedLabelStyle: AppTypography.caption.copyWith(fontSize: 9),
+      elevation: 8,
+      items: List.generate(
+        _tabTitles.length,
+        (index) => BottomNavigationBarItem(
+          icon: _buildNavIcon(_tabIcons[index], index),
+          label: _getShortLabel(index),
         ),
       ),
     );
@@ -717,45 +481,36 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     final isSelected = _currentIndex == index;
     final badge = index == 1 ? _pendingOrders : null;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Stack(
-        children: [
-          Icon(
-            icon,
-            size: isSelected ? 24 : 20,
-            color: isSelected ? AppColors.primary : AppColors.textSecondary.withOpacity(0.6),
-          ),
-          if (badge != null && badge > 0)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.white, width: 1),
+    return Stack(
+      children: [
+        Icon(
+          icon,
+          size: isSelected ? 24 : 20,
+          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+        ),
+        if (badge != null && badge > 0)
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+              child: Text(
+                badge.toString(),
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
                 ),
-                constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                child: Text(
-                  badge.toString(),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                textAlign: TextAlign.center,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -809,8 +564,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               child: _buildMobileStatCard(
                 title: 'Bugün',
                 value: _todayOrders.toString(),
-                subtitle: '${_todayRevenue.toStringAsFixed(0)} TL',
-                icon: Icons.today_rounded,
+                subtitle: 'Sipariş',
+                icon: Icons.today,
                 color: AppColors.primary,
               ),
             ),
@@ -820,7 +575,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 title: 'Bekleyen',
                 value: _pendingOrders.toString(),
                 subtitle: 'Sipariş',
-                icon: Icons.pending_rounded,
+                icon: Icons.pending,
                 color: _pendingOrders > 0 ? AppColors.warning : AppColors.success,
               ),
             ),
@@ -834,7 +589,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 title: 'Ürünler',
                 value: _totalProducts.toString(),
                 subtitle: '$_totalCategories Kategori',
-                icon: Icons.restaurant_menu_rounded,
+                icon: Icons.restaurant_menu,
                 color: AppColors.info,
               ),
             ),
@@ -846,7 +601,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                     ? '${(_totalRevenue / 1000).toStringAsFixed(1)}K'
                     : '${_totalRevenue.toStringAsFixed(0)}',
                 subtitle: 'TL',
-                icon: Icons.attach_money_rounded,
+                icon: Icons.attach_money,
                 color: AppColors.success,
               ),
             ),
@@ -863,67 +618,41 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     required IconData icon,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
+    return Card(
+      elevation: 2,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: AppTypography.h5.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              subtitle,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textLight,
+                fontSize: 10,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: AppTypography.h5.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            subtitle,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textLight,
-              fontSize: 10,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }
@@ -950,25 +679,25 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           children: [
             _buildQuickActionCard(
               title: 'Ürün Ekle',
-              icon: Icons.add_business_rounded,
+              icon: Icons.add_business,
               color: AppColors.success,
               onTap: () => _navigateToTab(3),
             ),
             _buildQuickActionCard(
               title: 'Kategori',
-              icon: Icons.category_rounded,
+              icon: Icons.category,
               color: AppColors.primary,
               onTap: () => _navigateToTab(2),
             ),
             _buildQuickActionCard(
               title: 'İndirim',
-              icon: Icons.local_offer_rounded,
+              icon: Icons.local_offer,
               color: AppColors.warning,
               onTap: () => _navigateToTab(4),
             ),
             _buildQuickActionCard(
               title: 'QR Kod',
-              icon: Icons.qr_code_rounded,
+              icon: Icons.qr_code,
               color: AppColors.info,
               onTap: () => _navigateToTab(5),
             ),
@@ -984,38 +713,16 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
+    return Card(
+      elevation: 1,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withOpacity(0.15),
-                color.withOpacity(0.08),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
+              Icon(icon, color: color, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -1050,30 +757,21 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             ),
             TextButton(
               onPressed: () => _navigateToTab(1),
-              child: Text(
-                'Tümü',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: const Text('Tümü'),
             ),
           ],
         ),
         const SizedBox(height: 16),
         if (_recentOrders.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.greyLight),
-            ),
-            child: const Center(
-              child: EmptyState(
-                icon: Icons.receipt_long_rounded,
-                title: 'Henüz sipariş yok',
-                message: 'İlk siparişinizi bekliyoruz',
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(
+                child: EmptyState(
+                  icon: Icons.receipt_long,
+                  title: 'Henüz sipariş yok',
+                  message: 'İlk siparişinizi bekliyoruz',
+                ),
               ),
             ),
           )
@@ -1093,87 +791,25 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   }
 
   Widget _buildMobileOrderCard(app_order.Order order) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _getStatusColor(order.status).withOpacity(0.3),
-          width: 1,
+    return Card(
+      elevation: 1,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: _getStatusColor(order.status),
+          child: Text(
+            order.tableNumber.toString(),
+            style: const TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: _getStatusColor(order.status).withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        title: Text(order.customerName),
+        subtitle: Text(_getStatusText(order.status)),
+        trailing: Text(
+          '${order.totalAmount.toStringAsFixed(2)} TL',
+          style: AppTypography.bodyMedium.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.success,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _getStatusColor(order.status).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.restaurant_rounded,
-              color: _getStatusColor(order.status),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Masa ${order.tableNumber}',
-                  style: AppTypography.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  order.customerName,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${order.totalAmount.toStringAsFixed(2)} TL',
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.success,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(order.status),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _getStatusText(order.status),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1194,30 +830,21 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             ),
             TextButton(
               onPressed: () => _navigateToTab(3),
-              child: Text(
-                'Tümü',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: const Text('Tümü'),
             ),
           ],
         ),
         const SizedBox(height: 16),
         if (_popularProducts.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.greyLight),
-            ),
-            child: const Center(
-              child: EmptyState(
-                icon: Icons.restaurant_menu_rounded,
-                title: 'Henüz ürün yok',
-                message: 'İlk ürününüzü ekleyin',
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(
+                child: EmptyState(
+                  icon: Icons.restaurant_menu,
+                  title: 'Henüz ürün yok',
+                  message: 'İlk ürününüzü ekleyin',
+                ),
               ),
             ),
           )
@@ -1237,81 +864,45 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   }
 
   Widget _buildMobileProductCard(Product product) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.greyLight.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppColors.greyLight,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: product.imageUrl != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      product.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          Icon(Icons.restaurant_rounded, color: AppColors.textSecondary),
-                    ),
-                  )
-                : Icon(Icons.restaurant_rounded, color: AppColors.textSecondary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.productName,
-                  style: AppTypography.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
+    return Card(
+      elevation: 1,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: AppColors.greyLight,
+          child: product.imageUrl != null
+              ? ClipOval(
+                  child: Image.network(
+                    product.imageUrl!,
+                    fit: BoxFit.cover,
+                    width: 40,
+                    height: 40,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.restaurant, color: AppColors.textSecondary),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${product.price.toStringAsFixed(2)} TL',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+                )
+              : const Icon(Icons.restaurant, color: AppColors.textSecondary),
+        ),
+        title: Text(
+          product.productName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text('${product.price.toStringAsFixed(2)} TL'),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: product.isAvailable ? AppColors.success : AppColors.error,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            product.isAvailable ? 'Mevcut' : 'Tükendi',
+            style: const TextStyle(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: product.isAvailable ? AppColors.success : AppColors.error,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              product.isAvailable ? 'Mevcut' : 'Tükendi',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
