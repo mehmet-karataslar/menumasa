@@ -178,9 +178,7 @@ class AppRoutes {
           final customerData = args?['customerData'];
           final userId = args?['userId'] as String?;
           return MaterialPageRoute(
-            builder: (context) => CustomerProfilePage(
-              customerData: customerData,
-            ),
+            builder: (context) => const CustomerProfilePage(),
             settings: settings,
           );
 
@@ -259,12 +257,8 @@ class AppRoutes {
                 );
 
               case 'profile':
-                final args = settings.arguments as Map<String, dynamic>?;
-                final customerData = args?['customerData'];
                 return MaterialPageRoute(
-                  builder: (context) => CustomerProfilePage(
-                    customerData: customerData,
-                  ),
+                  builder: (context) => const CustomerProfilePage(),
                   settings: settings,
                 );
             }
@@ -547,11 +541,7 @@ class CustomerProfileRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final customerData = args?['customerData'];
-
-    return CustomerProfilePage(customerData: customerData);
+    return const CustomerProfilePage();
   }
 }
 

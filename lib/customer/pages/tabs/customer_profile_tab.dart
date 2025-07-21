@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/url_service.dart';
 import '../../services/customer_firestore_service.dart';
+import '../customer_profile_page.dart';
 
 /// Müşteri profil tab'ı
 class CustomerProfileTab extends StatefulWidget {
@@ -81,15 +82,15 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
     final dynamicRoute = '/customer/${widget.userId}/profile?t=$timestamp';
     _urlService.updateCustomerUrl(widget.userId, 'profile', customTitle: 'Profilim | MasaMenu');
     
-    Navigator.pushNamed(
+    Navigator.push(
       context,
-      '/customer/profile',
-      arguments: {
-        'customerData': widget.customerData,
-        'userId': widget.userId,
-        'timestamp': timestamp,
-      },
-    );
+      MaterialPageRoute(
+        builder: (context) => const CustomerProfilePage(),
+      ),
+    ).then((_) {
+      // Profil sayfasından dönüldüğünde verileri yenile
+      _handleRefresh();
+    });
   }
 
   @override

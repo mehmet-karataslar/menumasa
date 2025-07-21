@@ -6,19 +6,24 @@ import 'package:crypto/crypto.dart';
 import '../models/customer_user.dart';
 import '../models/customer_session.dart';
 import '../models/customer_activity_log.dart';
+import '../models/customer_profile.dart';
 import '../../business/models/business.dart';
 import '../../data/models/order.dart' as app_order;
+import '../../core/services/storage_service.dart';
 
 class CustomerService {
   static const String _customerCollection = 'customers';
   static const String _customerSessionsCollection = 'customer_sessions';
   static const String _customerLogsCollection = 'customer_activity_logs';
+  static const String _customerProfilesCollection = 'customer_profiles';
   static const String _businessCollection = 'businesses';
   static const String _ordersCollection = 'orders';
   
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final StorageService _storageService = StorageService();
   CustomerUser? _currentCustomer;
   CustomerSession? _currentSession;
+  CustomerProfile? _currentProfile;
 
   // Singleton pattern
   static final CustomerService _instance = CustomerService._internal();
@@ -28,7 +33,347 @@ class CustomerService {
   // Getters
   CustomerUser? get currentCustomer => _currentCustomer;
   CustomerSession? get currentSession => _currentSession;
+  CustomerProfile? get currentProfile => _currentProfile;
   bool get isLoggedIn => _currentCustomer != null && _currentSession?.isValid == true;
+
+  // PROFILE MANAGEMENT METHODS
+
+  /// Müşteri profili getir
+  Future<CustomerProfile?> getCustomerProfile(String customerId) async {
+    try {
+      final doc = await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(customerId)
+          .get();
+
+      if (doc.exists) {
+        return CustomerProfile.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      throw CustomerException('Profil bilgileri getirilemedi: $e');
+    }
+  }
+
+  /// Müşteri profili oluştur
+  Future<CustomerProfile> createCustomerProfile(String customerId) async {
+    try {
+      final profile = CustomerProfile.newCustomer(customerId);
+      
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(customerId)
+          .set(profile.toFirestore());
+
+      _currentProfile = profile;
+      return profile;
+    } catch (e) {
+      throw CustomerException('Profil oluşturulamadı: $e');
+    }
+  }
+
+  /// Profil bilgilerini güncelle
+  Future<CustomerProfile> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? phone,
+    DateTime? birthDate,
+    String? gender,
+  }) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Kullanıcı girişi yapılmamış');
+      }
+
+      CustomerProfile? profile = _currentProfile;
+      
+      // Profil yoksa oluştur
+      if (profile == null) {
+        profile = await createCustomerProfile(_currentCustomer!.customerId);
+      }
+
+      // Profili güncelle
+      final updatedProfile = profile.copyWith(
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        birthDate: birthDate,
+        gender: gender,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(_currentCustomer!.customerId)
+          .update(updatedProfile.toFirestore());
+
+      _currentProfile = updatedProfile;
+
+      // Activity log
+      await _logActivity(
+        action: CustomerActionType.profileUpdate,
+        details: 'Profil güncellendi: ${[
+          if (firstName != null) 'Ad',
+          if (lastName != null) 'Soyad',
+          if (email != null) 'E-posta',
+          if (phone != null) 'Telefon',
+          if (birthDate != null) 'Doğum tarihi',
+          if (gender != null) 'Cinsiyet',
+        ].join(', ')}',
+        metadata: {
+          'updated_fields': [
+            if (firstName != null) 'firstName',
+            if (lastName != null) 'lastName',
+            if (email != null) 'email',
+            if (phone != null) 'phone',
+            if (birthDate != null) 'birthDate',
+            if (gender != null) 'gender',
+          ],
+        },
+      );
+
+      return updatedProfile;
+    } catch (e) {
+      throw CustomerException('Profil güncellenemedi: $e');
+    }
+  }
+
+  /// Profil fotoğrafı yükle
+  Future<String> uploadProfileImage(File imageFile) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Kullanıcı girişi yapılmamış');
+      }
+
+      // Resmi storage'a yükle
+      final imageUrl = await _storageService.uploadProfileImage(
+        customerId: _currentCustomer!.customerId,
+        imageFile: imageFile,
+      );
+
+      // Profildeki resim URL'ini güncelle
+      CustomerProfile? profile = _currentProfile;
+      
+      if (profile == null) {
+        profile = await createCustomerProfile(_currentCustomer!.customerId);
+      }
+
+      final updatedProfile = profile.copyWith(
+        profileImageUrl: imageUrl,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(_currentCustomer!.customerId)
+          .update({
+            'profileImageUrl': imageUrl,
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+
+      _currentProfile = updatedProfile;
+
+      return imageUrl;
+    } catch (e) {
+      throw CustomerException('Profil fotoğrafı yüklenemedi: $e');
+    }
+  }
+
+  /// Adres ekle
+  Future<CustomerAddress> addAddress(CustomerAddress address) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Kullanıcı girişi yapılmamış');
+      }
+
+      CustomerProfile? profile = _currentProfile;
+      
+      if (profile == null) {
+        profile = await createCustomerProfile(_currentCustomer!.customerId);
+      }
+
+      final addresses = List<CustomerAddress>.from(profile.addresses);
+      
+      // Eğer bu ilk adres ise veya default olarak işaretlenmişse diğerlerini default olmaktan çıkar
+      if (address.isDefault || addresses.isEmpty) {
+        for (int i = 0; i < addresses.length; i++) {
+          addresses[i] = CustomerAddress.fromMap(addresses[i].toMap()..['isDefault'] = false);
+        }
+      }
+
+      addresses.add(address);
+
+      final updatedProfile = profile.copyWith(
+        addresses: addresses,
+        defaultAddress: address.isDefault ? address : profile.defaultAddress,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(_currentCustomer!.customerId)
+          .update(updatedProfile.toFirestore());
+
+      _currentProfile = updatedProfile;
+
+      return address;
+    } catch (e) {
+      throw CustomerException('Adres eklenemedi: $e');
+    }
+  }
+
+  /// Konum ayarlarını güncelle
+  Future<LocationSettings> updateLocationSettings(LocationSettings settings) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Kullanıcı girişi yapılmamış');
+      }
+
+      CustomerProfile? profile = _currentProfile;
+      
+      if (profile == null) {
+        profile = await createCustomerProfile(_currentCustomer!.customerId);
+      }
+
+      final updatedProfile = profile.copyWith(
+        locationSettings: settings,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(_currentCustomer!.customerId)
+          .update({
+            'locationSettings': settings.toMap(),
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+
+      _currentProfile = updatedProfile;
+
+      return settings;
+    } catch (e) {
+      throw CustomerException('Konum ayarları güncellenemedi: $e');
+    }
+  }
+
+  /// Bildirim ayarlarını güncelle
+  Future<NotificationSettings> updateNotificationSettings(NotificationSettings settings) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Kullanıcı girişi yapılmamış');
+      }
+
+      CustomerProfile? profile = _currentProfile;
+      
+      if (profile == null) {
+        profile = await createCustomerProfile(_currentCustomer!.customerId);
+      }
+
+      final updatedProfile = profile.copyWith(
+        notificationSettings: settings,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(_currentCustomer!.customerId)
+          .update({
+            'notificationSettings': settings.toMap(),
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+
+      _currentProfile = updatedProfile;
+
+      return settings;
+    } catch (e) {
+      throw CustomerException('Bildirim ayarları güncellenemedi: $e');
+    }
+  }
+
+  /// Gizlilik ayarlarını güncelle
+  Future<PrivacySettings> updatePrivacySettings(PrivacySettings settings) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Kullanıcı girişi yapılmamış');
+      }
+
+      CustomerProfile? profile = _currentProfile;
+      
+      if (profile == null) {
+        profile = await createCustomerProfile(_currentCustomer!.customerId);
+      }
+
+      final updatedProfile = profile.copyWith(
+        privacySettings: settings,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(_currentCustomer!.customerId)
+          .update({
+            'privacySettings': settings.toMap(),
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+
+      _currentProfile = updatedProfile;
+
+      return settings;
+    } catch (e) {
+      throw CustomerException('Gizlilik ayarları güncellenemedi: $e');
+    }
+  }
+
+  /// İstatistikleri güncelle
+  Future<CustomerStatistics> updateStatistics(CustomerStatistics stats) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Kullanıcı girişi yapılmamış');
+      }
+
+      CustomerProfile? profile = _currentProfile;
+      
+      if (profile == null) {
+        profile = await createCustomerProfile(_currentCustomer!.customerId);
+      }
+
+      final updatedProfile = profile.copyWith(
+        statistics: stats,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerProfilesCollection)
+          .doc(_currentCustomer!.customerId)
+          .update({
+            'statistics': stats.toMap(),
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+
+      _currentProfile = updatedProfile;
+
+      return stats;
+    } catch (e) {
+      throw CustomerException('İstatistikler güncellenemedi: $e');
+    }
+  }
+
+  /// Profil ve oturum yükle
+  Future<void> loadCustomerProfileAndSession(String customerId) async {
+    try {
+      // Profili yükle
+      _currentProfile = await getCustomerProfile(customerId);
+      
+      // Profil yoksa oluştur
+      if (_currentProfile == null) {
+        _currentProfile = await createCustomerProfile(customerId);
+      }
+    } catch (e) {
+      throw CustomerException('Müşteri profili yüklenemedi: $e');
+    }
+  }
 
   /// QR Kod tarama ile business'a erişim
   Future<Map<String, dynamic>> scanQRCode(String qrCodeData) async {

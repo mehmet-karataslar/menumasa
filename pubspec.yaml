@@ -42,20 +42,39 @@ dependencies:
   # File & Image Picking
   image_picker: ^1.0.7
   file_picker: ^8.0.0
-
+  
+  # Location Services
+  geolocator: ^10.1.0
+  geocoding: ^3.0.0
+  location: ^5.0.3
+  
+  # Permissions
+  permission_handler: ^11.3.0
+  
+  # Notifications
+  flutter_local_notifications: ^16.3.2
+  firebase_messaging: ^15.1.6
+  
+  # Image Handling
+  image: ^4.1.7
+  cached_network_image: ^3.3.1
+  
   # HTTP & Network
   dio: ^5.4.1
   connectivity_plus: ^5.0.2
   crypto: ^3.0.3
+  http: ^1.2.0
 
   # Local Storage
   shared_preferences: ^2.2.2
+  sqflite: ^2.3.2
 
   # Firebase
   firebase_core: ^3.15.1
   firebase_auth: ^5.6.2
   cloud_firestore: ^5.6.11
   firebase_storage: ^12.4.9
+  firebase_analytics: ^11.3.6
 
   # Animation
   lottie: ^3.1.0

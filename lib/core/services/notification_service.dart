@@ -2,6 +2,12 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 import '../constants/app_colors.dart';
 
 /// Bildirim servisi - tüm bildirim işlemlerini yönetir
@@ -12,10 +18,277 @@ class NotificationService {
   NotificationService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   
   // Bildirim dinleyicileri için haritalar
   final Map<String, StreamSubscription<QuerySnapshot>?> _notificationStreams = {};
   final Map<String, List<Function(List<NotificationModel>)>> _notificationListeners = {};
+
+  bool _isInitialized = false;
+
+  // =============================================================================
+  // INITIALIZATION & PERMISSIONS
+  // =============================================================================
+
+  /// Initialize notification service
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      // Initialize timezone data
+      tz.initializeTimeZones();
+      
+      // Initialize local notifications
+      await _initializeLocalNotifications();
+      
+      // Initialize Firebase messaging
+      await _initializeFirebaseMessaging();
+      
+      // Request permissions
+      await _requestPermissions();
+      
+      _isInitialized = true;
+      print('NotificationService initialized successfully');
+    } catch (e) {
+      print('Error initializing NotificationService: $e');
+    }
+  }
+
+  Future<void> _initializeLocalNotifications() async {
+    const androidInitialization = AndroidInitializationSettings('@drawable/ic_notification');
+    const iosInitialization = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    
+    const initializationSettings = InitializationSettings(
+      android: androidInitialization,
+      iOS: iosInitialization,
+    );
+
+    await _localNotifications.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
+
+    // Create notification channel for Android
+    if (!kIsWeb) {
+      const androidChannel = AndroidNotificationChannel(
+        'masamenu_channel',
+        'MasaMenu Notifications',
+        description: 'Sipariş, kampanya ve sistem bildirimleri',
+        importance: Importance.high,
+        enableVibration: true,
+        playSound: true,
+      );
+
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(androidChannel);
+    }
+  }
+
+  Future<void> _initializeFirebaseMessaging() async {
+    // Handle background messages
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
+    // Handle notification taps when app is in background
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+  }
+
+  Future<void> _requestPermissions() async {
+    // Request notification permission for Android 13+
+    if (!kIsWeb) {
+      final status = await Permission.notification.request();
+      print('Notification permission status: $status');
+    }
+
+    // Request Firebase messaging permission for iOS
+    final messaging = FirebaseMessaging.instance;
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      provisional: false,
+      sound: true,
+    );
+    
+    print('Firebase messaging permission granted: ${settings.authorizationStatus}');
+  }
+
+  /// Check if notifications are enabled
+  Future<bool> areNotificationsEnabled() async {
+    if (kIsWeb) return true;
+    
+    final status = await Permission.notification.status;
+    return status == PermissionStatus.granted;
+  }
+
+  /// Open app settings for notification permissions
+  Future<void> openNotificationSettings() async {
+    await openAppSettings();
+  }
+
+  // =============================================================================
+  // LOCAL NOTIFICATIONS
+  // =============================================================================
+
+  /// Show local notification
+  Future<void> showLocalNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+    NotificationPriority priority = NotificationPriority.high,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    const androidDetails = AndroidNotificationDetails(
+      'masamenu_channel',
+      'MasaMenu Notifications',
+      channelDescription: 'Sipariş, kampanya ve sistem bildirimleri',
+      importance: Importance.high,
+      priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
+      icon: '@drawable/ic_notification',
+      color: Color(0xFFFF6B35),
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(id, title, body, details, payload: payload);
+  }
+
+  /// Schedule notification for later
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    const androidDetails = AndroidNotificationDetails(
+      'masamenu_channel',
+      'MasaMenu Notifications',
+      channelDescription: 'Zamanlanmış bildirimler',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const iosDetails = DarwinNotificationDetails();
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    // Convert DateTime to TZDateTime
+    final location = tz.getLocation('Europe/Istanbul'); // Türkiye timezone
+    final scheduledTZDateTime = tz.TZDateTime.from(scheduledDate, location);
+
+    await _localNotifications.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduledTZDateTime,
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
+  }
+
+  /// Cancel notification
+  Future<void> cancelNotification(int id) async {
+    await _localNotifications.cancel(id);
+  }
+
+  /// Cancel all notifications
+  Future<void> cancelAllNotifications() async {
+    await _localNotifications.cancelAll();
+  }
+
+  // =============================================================================
+  // FIREBASE MESSAGING HANDLERS
+  // =============================================================================
+
+  void _handleForegroundMessage(RemoteMessage message) {
+    print('Received foreground message: ${message.messageId}');
+    
+    if (message.notification != null) {
+      showLocalNotification(
+        id: message.hashCode,
+        title: message.notification!.title ?? 'MasaMenu',
+        body: message.notification!.body ?? '',
+        payload: message.data.toString(),
+      );
+    }
+  }
+
+  void _handleNotificationTap(RemoteMessage message) {
+    print('Notification tapped: ${message.messageId}');
+    // Handle navigation based on message data
+    _navigateBasedOnPayload(message.data);
+  }
+
+  void _onNotificationTapped(NotificationResponse response) {
+    print('Local notification tapped: ${response.payload}');
+    // Handle local notification tap
+    if (response.payload != null) {
+      _navigateBasedOnPayload({'data': response.payload});
+    }
+  }
+
+  void _navigateBasedOnPayload(Map<String, dynamic> data) {
+    // TODO: Implement navigation logic based on notification data
+    print('Navigation data: $data');
+  }
+
+  /// Get FCM token for this device
+  Future<String?> getFCMToken() async {
+    try {
+      return await _firebaseMessaging.getToken();
+    } catch (e) {
+      print('Error getting FCM token: $e');
+      return null;
+    }
+  }
+
+  /// Subscribe to topic
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      await _firebaseMessaging.subscribeToTopic(topic);
+      print('Subscribed to topic: $topic');
+    } catch (e) {
+      print('Error subscribing to topic $topic: $e');
+    }
+  }
+
+  /// Unsubscribe from topic
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await _firebaseMessaging.unsubscribeFromTopic(topic);
+      print('Unsubscribed from topic: $topic');
+    } catch (e) {
+      print('Error unsubscribing from topic $topic: $e');
+    }
+  }
 
   // =============================================================================
   // BİLDİRİM DİNLEYİCİ YÖNETİMİ
@@ -653,3 +926,13 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
     }
   }
 } 
+
+// Top-level function for background message handling
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('Handling background message: ${message.messageId}');
+  // Initialize Firebase if needed
+  // await Firebase.initializeApp();
+}
+
+enum NotificationPriority { low, normal, high, urgent } 

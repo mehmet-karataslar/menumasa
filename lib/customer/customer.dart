@@ -1,31 +1,34 @@
-// Customer Module Export
-// Ana customer modülü - tüm customer bileşenlerini export eder
-
-// Models
+// Export customer models
+export 'models/customer_profile.dart'; // This exports CustomerAddress and other profile models
 export 'models/customer_user.dart';
 export 'models/customer_session.dart';
 export 'models/customer_activity_log.dart';
 export 'models/customer_preferences.dart';
-// CustomerStats is already exported via customer_user.dart
+export 'models/cart.dart';
 
-// Services
+// Export customer services
 export 'services/customer_service.dart';
+export 'services/customer_firestore_service.dart';
 
-// Pages
+// Export customer pages
 export 'pages/customer_dashboard_page.dart';
+export 'pages/customer_profile_page.dart';
 export 'pages/business_detail_page.dart';
 export 'pages/menu_page.dart';
 export 'pages/cart_page.dart';
-export 'pages/customer_orders_page.dart';
+export 'pages/multi_business_cart_page.dart';
+export 'pages/product_detail_page.dart';
 export 'pages/search_page.dart';
+export 'pages/customer_orders_page.dart';
+export 'pages/category_filter_page.dart';
 
-// Tab Pages
+// Export customer tabs
 export 'pages/tabs/customer_home_tab.dart';
-export 'pages/tabs/customer_orders_tab.dart';
-export 'pages/tabs/customer_favorites_tab.dart';
 export 'pages/tabs/customer_profile_tab.dart';
+export 'pages/tabs/customer_favorites_tab.dart';
+export 'pages/tabs/customer_orders_tab.dart';
 
-// Widgets
+// Export customer widgets
 export 'widgets/business_header.dart';
 export 'widgets/category_list.dart';
 export 'widgets/product_grid.dart';

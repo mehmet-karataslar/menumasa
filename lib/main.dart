@@ -21,6 +21,8 @@ import 'core/constants/app_typography.dart';
 import 'core/services/core_firestore_service.dart';
 import 'admin/admin.dart';
 import 'core/services/data_service.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/location_service.dart';
 import 'app/routes/app_routes.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -46,8 +48,14 @@ void main() async {
   // App Check is disabled for now to avoid hot restart issues
   // Firebase will work without App Check in development
 
-  // Initialize Firestore database
+  // Initialize services
   final coreFirestoreService = CoreFirestoreService();
+  
+  // Initialize notification service
+  await NotificationService().initialize();
+  
+  // Initialize location service (don't request permissions yet)
+  final locationService = LocationService();
   await coreFirestoreService.initializeDatabase();
 
   // Initialize Admin Module

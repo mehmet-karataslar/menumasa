@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notification colors -->
+    <color name="notification_color">#FF6B35</color>
+    <color name="primary_color">#FF6B35</color>
+    <color name="primary_dark">#E55A2B</color>
+    <color name="accent_color">#FFA726</color>
+    <color name="background_color">#F5F7FA</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="grey_light">#E0E4E7</color>
+    <color name="text_primary">#2D3748</color>
+    <color name="text_secondary">#718096</color>
+    <color name="success">#38A169</color>
+    <color name="error">#E53E3E</color>
+    <color name="warning">#D69E2E</color>
+    <color name="info">#3182CE</color>
+</resources> 

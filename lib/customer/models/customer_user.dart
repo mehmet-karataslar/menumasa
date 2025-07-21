@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'customer_profile.dart';
 
 // Customer Exception for error handling
 class CustomerException implements Exception {
@@ -466,41 +467,8 @@ class CustomerFavorite {
   }
 }
 
-class CustomerAddress {
-  final String addressId;
-  final String title;
-  final String fullAddress;
-  final String? coordinates;
-  final bool isDefault;
-
-  CustomerAddress({
-    required this.addressId,
-    required this.title,
-    required this.fullAddress,
-    this.coordinates,
-    required this.isDefault,
-  });
-
-  factory CustomerAddress.fromMap(Map<String, dynamic> map) {
-    return CustomerAddress(
-      addressId: map['addressId'] ?? '',
-      title: map['title'] ?? '',
-      fullAddress: map['fullAddress'] ?? '',
-      coordinates: map['coordinates'],
-      isDefault: map['isDefault'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'addressId': addressId,
-      'title': title,
-      'fullAddress': fullAddress,
-      'coordinates': coordinates,
-      'isDefault': isDefault,
-    };
-  }
-}
+// CustomerAddress is now defined in customer_profile.dart
+// This is kept for backward compatibility - will be removed in future versions
 
 class CustomerPaymentMethod {
   final String paymentId;

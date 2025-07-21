@@ -280,7 +280,80 @@ class StorageService {
   }
 
   // =============================================================================
-  // PREDEFINED CATEGORY IMAGES
+  // GENERAL FILE OPERATIONS
+  // =============================================================================
+
+  /// Uploads a general file to Firebase Storage
+  Future<String> uploadFile(File file, String storagePath) async {
+    try {
+      final ref = _storage.ref().child(storagePath);
+      final uploadTask = ref.putFile(file);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Dosya yüklenirken hata oluştu: $e');
+    }
+  }
+
+  /// Uploads a file from bytes (for web)
+  Future<String> uploadFileFromBytes(Uint8List bytes, String storagePath) async {
+    try {
+      final ref = _storage.ref().child(storagePath);
+      final uploadTask = ref.putData(bytes);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Dosya yüklenirken hata oluştu: $e');
+    }
+  }
+
+  /// Uploads a profile image for a customer
+  Future<String> uploadProfileImage({
+    required String customerId,
+    required dynamic imageFile, // File for mobile, Uint8List for web
+    String? fileName,
+  }) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final finalFileName = fileName ?? 'profile_$timestamp.jpg';
+      final storagePath = 'customers/$customerId/profile/$finalFileName';
+
+      if (kIsWeb) {
+        return await uploadFileFromBytes(imageFile as Uint8List, storagePath);
+      } else {
+        return await uploadFile(imageFile as File, storagePath);
+      }
+    } catch (e) {
+      throw Exception('Profil resmi yüklenirken hata oluştu: $e');
+    }
+  }
+
+  /// Deletes a file from Firebase Storage
+  Future<void> deleteFile(String storagePath) async {
+    try {
+      final ref = _storage.ref().child(storagePath);
+      await ref.delete();
+    } catch (e) {
+      throw Exception('Dosya silinirken hata oluştu: $e');
+    }
+  }
+
+  /// Deletes a file from Firebase Storage using URL
+  Future<void> deleteFileByUrl(String downloadUrl) async {
+    try {
+      final ref = _storage.refFromURL(downloadUrl);
+      await ref.delete();
+    } catch (e) {
+      throw Exception('Dosya silinirken hata oluştu: $e');
+    }
+  }
+
+  // =============================================================================
+  // PREDEFINED CATEGORIES AND IMAGES
   // =============================================================================
 
   /// Returns predefined category images for common food categories
