@@ -161,10 +161,10 @@ class BusinessFirestoreService {
 
       final snapshot = await query.get();
       return snapshot.docs
-          .map((doc) => Product.fromJson({
-                ...doc.data() as Map<String, dynamic>,
-                'id': doc.id,
-              }))
+          .map((doc) => Product.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
           .toList();
     } catch (e) {
       print('Error getting products: $e');
@@ -186,10 +186,10 @@ class BusinessFirestoreService {
 
       final snapshot = await query.get();
       return snapshot.docs
-          .map((doc) => Product.fromJson({
-                ...doc.data() as Map<String, dynamic>,
-                'id': doc.id,
-              }))
+          .map((doc) => Product.fromJson(
+                doc.data() as Map<String, dynamic>,
+                id: doc.id,
+              ))
           .toList();
     } catch (e) {
       print('Error getting business products: $e');
@@ -202,10 +202,10 @@ class BusinessFirestoreService {
     try {
       final doc = await _productsRef.doc(productId).get();
       if (doc.exists) {
-        return Product.fromJson({
-          ...doc.data() as Map<String, dynamic>,
-          'id': doc.id,
-        });
+        return Product.fromJson(
+          doc.data() as Map<String, dynamic>,
+          id: doc.id,
+        );
       }
       return null;
     } catch (e) {

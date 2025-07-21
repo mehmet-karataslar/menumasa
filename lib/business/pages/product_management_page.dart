@@ -419,17 +419,16 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                             product.name,
                             style: AppTypography.bodyMedium.copyWith(
                               fontWeight: FontWeight.w600,
-                              fontSize: 12, // Reduced from 13
+                              fontSize: 10, // Further reduced from 12
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 1), // Reduced from 2
                           Text(
                             _getCategoryName(product.categoryId),
                             style: AppTypography.bodySmall.copyWith(
                               color: AppColors.textSecondary,
-                              fontSize: 9, // Reduced from 10
+                              fontSize: 8, // Further reduced from 9
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
