@@ -69,25 +69,16 @@ class Cart {
 
   bool get isNotEmpty => items.isNotEmpty;
 
-  // Cart operations
+    // Cart operations
   Cart addItem(Product product, {int quantity = 1, String? notes}) {
-    print('🛒 Cart.addItem called:');
-    print('   Product ID: ${product.productId}');
-    print('   Product Name: ${product.name}');
-    print('   Product Price: ${product.currentPrice}');
-    print('   Existing items in cart: ${items.length}');
-    
     final existingItemIndex = items.indexWhere(
       (item) => item.productId == product.productId,
     );
-
-    print('   Existing item index: $existingItemIndex');
 
     List<CartItem> newItems = List.from(items);
 
     if (existingItemIndex >= 0) {
       // Update existing item
-      print('   Updating existing item quantity');
       final existingItem = items[existingItemIndex];
       newItems[existingItemIndex] = existingItem.copyWith(
         quantity: existingItem.quantity + quantity,
@@ -95,7 +86,6 @@ class Cart {
       );
     } else {
       // Add new item
-      print('   Adding new item to cart');
       final newCartItem = CartItem(
         cartItemId: 'cart_item_${DateTime.now().millisecondsSinceEpoch}',
         productId: product.productId,
@@ -107,9 +97,8 @@ class Cart {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      print('   New cart item: ${newCartItem.productName} (ID: ${newCartItem.productId})');
-             newItems.add(newCartItem);
-      }
+      newItems.add(newCartItem);
+    }
 
     return copyWith(items: newItems, updatedAt: DateTime.now());
   }

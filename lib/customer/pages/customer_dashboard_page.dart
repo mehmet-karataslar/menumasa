@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/url_service.dart';
+import '../../core/services/cart_service.dart';
 import '../../core/mixins/url_mixin.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../presentation/widgets/shared/loading_indicator.dart';
@@ -29,12 +30,15 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   final AuthService _authService = AuthService();
   final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
   final UrlService _urlService = UrlService();
+  final CartService _cartService = CartService();
 
   app_user.User? _user;
   app_user.CustomerData? _customerData;
   bool _isLoading = true;
   String? _errorMessage;
   int _selectedTabIndex = 0;
+  int _cartItemCount = 0;
+  bool _hasNewOrders = false;
 
   late TabController _tabController;
   late AnimationController _animationController;
@@ -52,11 +56,42 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     super.initState();
     _initAnimations();
     _loadUserData();
+    _initCartTracking();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateCustomerUrl();
       _animationController.forward();
     });
+  }
+
+  void _initCartTracking() async {
+    await _cartService.initialize();
+    // Mevcut sepet sayısını al
+    _updateCartCount();
+    
+    // Cart değişikliklerini dinle
+    _cartService.addCartListener((cart) {
+      if (mounted) {
+        setState(() {
+          _cartItemCount = cart.totalItems;
+        });
+      }
+    });
+  }
+
+  void _updateCartCount() async {
+    try {
+      // Herhangi bir business ID kullanabiliriz çünkü genel sepet sayısını istiyoruz
+      final cartCount = await _cartService.getCartItemCount('default');
+      setState(() {
+        _cartItemCount = cartCount;
+      });
+    } catch (e) {
+      // Hata durumunda 0 olarak ayarla
+      setState(() {
+        _cartItemCount = 0;
+      });
+    }
   }
 
   void _initAnimations() {
@@ -98,6 +133,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     _tabController.dispose();
     _animationController.dispose();
     _fabAnimationController.dispose();
+    _cartService.dispose();
     super.dispose();
   }
 
@@ -222,7 +258,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   void _navigateToSearch() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final dynamicRoute = '/customer/${widget.userId}/search?t=$timestamp';
-    _urlService.updateUrl(dynamicRoute, customTitle: 'İşletme Ara | MasaMenu');
+    _urlService.updateUrl(dynamicRoute, customTitle: 'Arama | MasaMenu');
     Navigator.pushNamed(
       context,
       '/search',
@@ -231,6 +267,89 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         'timestamp': timestamp,
       },
     );
+  }
+
+  void _showFilterOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.greyLight,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(Icons.tune_rounded, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text(
+                  'Filtre Seçenekleri',
+                  style: AppTypography.h5.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Filtre seçenekleri yakında eklenecek...',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Tamam'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToCart() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dynamicRoute = '/customer/${widget.userId}/cart?t=$timestamp';
+    _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetim | MasaMenu');
+    Navigator.pushNamed(
+      context,
+      '/cart',
+      arguments: {
+        'userId': widget.userId,
+        'timestamp': timestamp,
+      },
+    );
+  }
+
+  void _navigateToTab(int index) {
+    if (_selectedTabIndex != index) {
+      _tabController.animateTo(index);
+    }
   }
 
   @override
@@ -291,48 +410,58 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             offset: Offset(0, _slideAnimation.value),
             child: Opacity(
               opacity: _fadeAnimation.value,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  _buildModernSliverAppBar(screenWidth, screenHeight),
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        _buildEnhancedTabBar(screenWidth),
-                        Container(
-                          height: screenHeight * 0.75,
-                          child: TabBarView(
-                            controller: _tabController,
-                            physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Sabit buton çubuğu
+                  _buildTopActionBar(),
+                  
+                  // Ana içerik
+                  Expanded(
+                    child: CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        _buildModernSliverAppBar(screenWidth, screenHeight),
+                        SliverToBoxAdapter(
+                          child: Column(
                             children: [
-                              CustomerHomeTab(
-                                userId: widget.userId,
-                                user: _user,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                              ),
-                              CustomerOrdersTab(
-                                userId: widget.userId,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                              ),
-                              CustomerFavoritesTab(
-                                userId: widget.userId,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                              ),
-                              CustomerProfileTab(
-                                userId: widget.userId,
-                                user: _user,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                                onLogout: _handleLogout,
-                                onNavigateToTab: (int tabIndex) {
-                                  setState(() {
-                                    _selectedTabIndex = tabIndex;
-                                    _tabController.animateTo(tabIndex);
-                                  });
-                                },
+                              _buildEnhancedTabBar(screenWidth),
+                              Container(
+                                height: screenHeight * 0.7,
+                                child: TabBarView(
+                                  controller: _tabController,
+                                  physics: const BouncingScrollPhysics(),
+                                  children: [
+                                    CustomerHomeTab(
+                                      userId: widget.userId,
+                                      user: _user,
+                                      customerData: _customerData,
+                                      onRefresh: _loadUserData,
+                                    ),
+                                    CustomerOrdersTab(
+                                      userId: widget.userId,
+                                      customerData: _customerData,
+                                      onRefresh: _loadUserData,
+                                    ),
+                                    CustomerFavoritesTab(
+                                      userId: widget.userId,
+                                      customerData: _customerData,
+                                      onRefresh: _loadUserData,
+                                    ),
+                                    CustomerProfileTab(
+                                      userId: widget.userId,
+                                      user: _user,
+                                      customerData: _customerData,
+                                      onRefresh: _loadUserData,
+                                      onLogout: _handleLogout,
+                                      onNavigateToTab: (int tabIndex) {
+                                        setState(() {
+                                          _selectedTabIndex = tabIndex;
+                                          _tabController.animateTo(tabIndex);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -348,6 +477,165 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       ),
       floatingActionButton: _buildEnhancedFloatingActionButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildTopActionBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            // Arama Butonu
+            Expanded(
+              child: _buildActionButton(
+                icon: Icons.search_rounded,
+                label: 'Ara',
+                color: AppColors.primary,
+                onTap: _navigateToSearch,
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // Filtre Butonu
+            Expanded(
+              child: _buildActionButton(
+                icon: Icons.tune_rounded,
+                label: 'Filtre',
+                color: AppColors.secondary,
+                onTap: _showFilterOptions,
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // Siparişler Butonu
+            Expanded(
+              child: _buildActionButton(
+                icon: Icons.receipt_long_rounded,
+                label: 'Siparişler',
+                color: AppColors.info,
+                onTap: () => _navigateToTab(1),
+                badge: _hasNewOrders ? '!' : null,
+              ),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            // Sepet Butonu
+            Expanded(
+              child: _buildActionButton(
+                icon: Icons.shopping_cart_rounded,
+                label: 'Sepet',
+                color: AppColors.accent,
+                onTap: _navigateToCart,
+                badge: _cartItemCount > 0 ? _cartItemCount.toString() : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    color: color,
+                    size: 20,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              
+              // Badge
+              if (badge != null)
+                Positioned(
+                  top: -2,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.error.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

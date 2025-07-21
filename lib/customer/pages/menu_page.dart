@@ -378,17 +378,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   Future<void> _addToCart(Product product, {int quantity = 1}) async {
     try {
-      print('🛒 Adding product to cart:');
-      print('   Product ID: ${product.productId}');
-      print('   Product Name: ${product.name}');
-      print('   Business ID: ${widget.businessId}');
-      print('   Quantity: $quantity');
+      // Debug logging
+      print('🛒 Adding to cart: ${product.name}');
+      print('   Product ID: ${product.productId}'); 
+      print('   Price: ${product.price}');
+      print('   Current Price: ${product.currentPrice}');
       
       await _cartService.addToCart(product, widget.businessId, quantity: quantity);
       
-      // Debug: Check what's in cart after adding
+      // Debug: Check cart contents
       final cart = await _cartService.getCurrentCart(widget.businessId);
-      print('🛒 Cart after adding:');
+      print('🛒 Cart now has ${cart.items.length} unique items:');
       for (var item in cart.items) {
         print('   - ${item.productName} (ID: ${item.productId}) x${item.quantity}');
       }

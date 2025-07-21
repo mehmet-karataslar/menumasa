@@ -57,7 +57,9 @@ class Product {
       description: data['description'] ?? '',
       detailedDescription: data['detailedDescription'] ?? '',
       price: _parsePrice(data['price']),
-      currentPrice: _parsePrice(data['currentPrice']),
+      currentPrice: _parsePrice(data['currentPrice']) > 0 
+          ? _parsePrice(data['currentPrice']) 
+          : _parsePrice(data['price']),
       currency: data['currency'] ?? 'TL',
       images: (data['images'] as List<dynamic>? ?? [])
           .map((image) => ProductImage.fromMap(image))
