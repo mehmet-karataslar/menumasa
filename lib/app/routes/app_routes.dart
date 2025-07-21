@@ -144,7 +144,7 @@ class AppRoutes {
 
     // QR Menü route'ları
     if (settings.name?.startsWith('/qr-menu/') == true) {
-      return _handleQRMenuRoutes(settings);
+      return _handleMenuRoutes(settings);
     }
 
     // Genel QR scanner route'u

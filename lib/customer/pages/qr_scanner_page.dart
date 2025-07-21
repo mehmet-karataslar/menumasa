@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_code_scanner/qr_code_scanner.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
@@ -27,8 +28,11 @@ class _QRScannerPageState extends State<QRScannerPage>
   late Animation<double> _scanAnimation;
   late Animation<double> _pulseAnimation;
   
+  QRViewController? _qrController;
+  final GlobalKey _qrKey = GlobalKey(debugLabel: 'QR');
   bool _isScanning = false;
   String? _scannedCode;
+  bool _flashOn = false;
 
   @override
   void initState() {
@@ -76,6 +80,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
   @override
   void dispose() {
+    _qrController?.dispose();
     _scanAnimationController.dispose();
     _pulseAnimationController.dispose();
     super.dispose();
@@ -88,14 +93,115 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     HapticFeedback.mediumImpact();
     
-    // Simulated QR scanning - gerçekte kamera entegrasyonu gerekir
-    await Future.delayed(const Duration(seconds: 2));
+    // Kamera erişimini başlat
+    if (_qrController != null) {
+      await _qrController!.resumeCamera();
+    }
+  }
+
+  void _onQRViewCreated(QRViewController controller) {
+    setState(() {
+      _qrController = controller;
+    });
     
-    // Demo QR kod - gerçekte kameradan gelecek
-    final demoBusinessId = 'demo_business_123';
-    final demoQRCode = 'masamenu_${demoBusinessId}_table_5';
+    controller.scannedDataStream.listen((scanData) {
+      if (scanData.code != null && !_isScanning) {
+        _handleQRCodeFromCamera(scanData.code!);
+      }
+    });
+  }
+
+  Future<void> _handleQRCodeFromCamera(String qrCode) async {
+    setState(() {
+      _isScanning = true;
+    });
+
+    HapticFeedback.heavyImpact();
     
-    await _handleQRCodeDetected(demoQRCode, demoBusinessId);
+    // Kamera taramayı durdur
+    await _qrController?.pauseCamera();
+
+    try {
+      // QR kodundan business ID'sini çıkar
+      String businessId = _extractBusinessIdFromQR(qrCode);
+      
+      await _handleQRCodeDetected(qrCode, businessId);
+    } catch (e) {
+      // Hatalı QR kod durumu
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('Geçersiz QR kod. Lütfen tekrar deneyin.'),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+      
+      setState(() {
+        _isScanning = false;
+      });
+      
+      // Kamera taramayı tekrar başlat
+      await _qrController?.resumeCamera();
+    }
+  }
+
+  String _extractBusinessIdFromQR(String qrCode) {
+    // QR kod formatları:
+    // 1. "masamenu_{businessId}_table_{tableNumber}"
+    // 2. "{businessId}"
+    // 3. URL formatı: "https://menumebak.web.app/qr-menu/{businessId}"
+    
+    if (qrCode.startsWith('masamenu_')) {
+      // Format: masamenu_businessId_table_5
+      final parts = qrCode.split('_');
+      if (parts.length >= 2) {
+        return parts[1];
+      }
+    } else if (qrCode.startsWith('http')) {
+      // URL formatı
+      final uri = Uri.tryParse(qrCode);
+      if (uri != null && uri.pathSegments.isNotEmpty) {
+        final lastSegment = uri.pathSegments.last;
+        if (lastSegment.isNotEmpty) {
+          return lastSegment;
+        }
+      }
+    } else {
+      // Direkt business ID
+      return qrCode;
+    }
+    
+    throw Exception('Geçersiz QR kod formatı');
+  }
+
+  Future<void> _toggleFlash() async {
+    if (_qrController != null) {
+      await _qrController!.toggleFlash();
+      setState(() {
+        _flashOn = !_flashOn;
+      });
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  Future<void> _flipCamera() async {
+    if (_qrController != null) {
+      await _qrController!.flipCamera();
+      HapticFeedback.lightImpact();
+    }
   }
 
   Future<void> _handleQRCodeDetected(String qrCode, String businessId) async {
@@ -278,7 +384,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           
           // Tarama alanı
           Expanded(
-            child: Container(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -286,12 +392,40 @@ class _QRScannerPageState extends State<QRScannerPage>
                   // QR tarama frame
                   _buildScanFrame(),
                   
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 32),
                   
-                  // Tarama butonu
-                  _buildScanButton(),
+                  // Kamera kontrolleri
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Flash butonu
+                      IconButton(
+                        onPressed: _toggleFlash,
+                        icon: Icon(
+                          _flashOn ? Icons.flash_on : Icons.flash_off,
+                          color: _flashOn ? AppColors.warning : AppColors.textSecondary,
+                        ),
+                        tooltip: 'Flash ${_flashOn ? 'Kapat' : 'Aç'}',
+                      ),
+                      
+                      const SizedBox(width: 16),
+                      
+                      // Tarama durumu
+                      _buildScanButton(),
+                      
+                      const SizedBox(width: 16),
+                      
+                      // Kamerayı değiştir butonu
+                      IconButton(
+                        onPressed: _flipCamera,
+                        icon: const Icon(Icons.flip_camera_ios),
+                        color: AppColors.textSecondary,
+                        tooltip: 'Kamerayı Değiştir',
+                      ),
+                    ],
+                  ),
                   
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   
                   // Manuel giriş butonu
                   OutlinedButton.icon(
@@ -351,7 +485,40 @@ class _QRScannerPageState extends State<QRScannerPage>
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Arka plan
+        // Kamera görünümü
+        Container(
+          width: 280,
+          height: 280,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: _scannedCode != null 
+                ? Container(
+                    color: AppColors.success.withOpacity(0.1),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 80,
+                      color: AppColors.success,
+                    ),
+                  )
+                : QRView(
+                    key: _qrKey,
+                    onQRViewCreated: _onQRViewCreated,
+                    overlay: QrScannerOverlayShape(
+                      borderColor: _isScanning ? AppColors.primary : AppColors.greyLight,
+                      borderRadius: 24,
+                      borderLength: 40,
+                      borderWidth: 3,
+                      cutOutSize: 240,
+                    ),
+                  ),
+          ),
+        ),
+        
+        // Overlay ve border
         Container(
           width: 280,
           height: 280,
@@ -478,10 +645,10 @@ class _QRScannerPageState extends State<QRScannerPage>
   Widget _buildScanButton() {
     if (_scannedCode != null) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.success.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.success),
         ),
         child: Row(
@@ -490,12 +657,12 @@ class _QRScannerPageState extends State<QRScannerPage>
             Icon(
               Icons.check_circle_rounded,
               color: AppColors.success,
-              size: 20,
+              size: 16,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             Text(
-              'QR Kod Başarıyla Tarandı',
-              style: AppTypography.bodyMedium.copyWith(
+              'Başarılı',
+              style: AppTypography.caption.copyWith(
                 color: AppColors.success,
                 fontWeight: FontWeight.w600,
               ),
@@ -505,27 +672,44 @@ class _QRScannerPageState extends State<QRScannerPage>
       );
     }
 
-    return ElevatedButton.icon(
-      onPressed: _isScanning ? null : _startScanning,
-      icon: _isScanning
-          ? SizedBox(
-              width: 20,
-              height: 20,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: _isScanning 
+            ? AppColors.primary.withOpacity(0.1)
+            : AppColors.greyLight.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _isScanning ? AppColors.primary : AppColors.greyLight,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isScanning)
+            SizedBox(
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             )
-          : const Icon(Icons.qr_code_scanner_rounded),
-      label: Text(_isScanning ? 'Taranıyor...' : 'QR Kodu Tara'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        elevation: 0,
+          else
+            Icon(
+              Icons.qr_code_scanner_rounded,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+          const SizedBox(width: 4),
+          Text(
+            _isScanning ? 'Taranıyor...' : 'Kamera Aktif',
+            style: AppTypography.caption.copyWith(
+              color: _isScanning ? AppColors.primary : AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
