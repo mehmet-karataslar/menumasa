@@ -58,6 +58,54 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
     
+    // Waiters collection - garson yönetimi
+    match /waiters/{waiterId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir (business kontrolü app seviyesinde)
+    }
+    
+    // Waiter calls collection - garson çağırma sistemi
+    match /waiter_calls/{callId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
+    // Reviews and ratings collection - müşteri değerlendirmeleri
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
+    // Customer feedback collection - müşteri geri bildirimleri
+    match /feedback/{feedbackId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
+    // Multilingual content collection - çoklu dil içerikleri
+    match /multilingual_content/{contentId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
+    // Detailed nutrition info collection - detaylı beslenme bilgileri
+    match /nutrition_info/{nutritionId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
+    // Customer allergen profiles collection - müşteri alerjen profilleri
+    match /allergen_profiles/{profileId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.customerId; // Sadece kendi profili
+      allow write: if request.auth != null && request.auth.uid == request.resource.data.customerId; // Sadece kendi profili
+    }
+    
+    // Notifications collection - bildirimler
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
     // Allow authenticated users to read/write to any collection for development
     // TODO: Make this more restrictive in production
     match /{document=**} {

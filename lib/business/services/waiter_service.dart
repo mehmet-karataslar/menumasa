@@ -116,12 +116,22 @@ class WaiterService {
       final query = await _firestore
           .collection(_collection)
           .where('businessId', isEqualTo: businessId)
-          .where('isActive', isEqualTo: true)
-          .orderBy('rank')
-          .orderBy('firstName')
           .get();
 
-      return query.docs.map((doc) => Waiter.fromFirestore(doc)).toList();
+      // Verileri client-side'da filtrele ve sırala
+      final waiters = query.docs
+          .map((doc) => Waiter.fromFirestore(doc))
+          .where((waiter) => waiter.isActive)
+          .toList();
+
+      // Sıralama: Rank sonra isim
+      waiters.sort((a, b) {
+        final rankComparison = a.rank.level.compareTo(b.rank.level);
+        if (rankComparison != 0) return rankComparison;
+        return a.firstName.compareTo(b.firstName);
+      });
+
+      return waiters;
     } catch (e) {
       throw Exception('Garsonlar alınırken hata oluştu: $e');
     }
@@ -133,15 +143,21 @@ class WaiterService {
       final query = await _firestore
           .collection(_collection)
           .where('businessId', isEqualTo: businessId)
-          .where('isActive', isEqualTo: true)
-          .where('status', isEqualTo: WaiterStatus.available.toString())
-          .orderBy('rank')
           .get();
 
-      final waiters = query.docs.map((doc) => Waiter.fromFirestore(doc)).toList();
+      // Client-side filtreleme
+      final waiters = query.docs
+          .map((doc) => Waiter.fromFirestore(doc))
+          .where((waiter) => 
+              waiter.isActive && 
+              waiter.status == WaiterStatus.available && 
+              waiter.isOnline)
+          .toList();
       
-      // Çevrimiçi olanları filtrele
-      return waiters.where((waiter) => waiter.isOnline).toList();
+      // Rank'e göre sırala
+      waiters.sort((a, b) => a.rank.level.compareTo(b.rank.level));
+      
+      return waiters;
     } catch (e) {
       throw Exception('Müsait garsonlar alınırken hata oluştu: $e');
     }
@@ -171,12 +187,17 @@ class WaiterService {
       final query = await _firestore
           .collection(_collection)
           .where('businessId', isEqualTo: businessId)
-          .where('isActive', isEqualTo: true)
-          .where('rank', isEqualTo: rank.toString())
-          .orderBy('firstName')
           .get();
 
-      return query.docs.map((doc) => Waiter.fromFirestore(doc)).toList();
+      // Client-side filtreleme ve sıralama
+      final waiters = query.docs
+          .map((doc) => Waiter.fromFirestore(doc))
+          .where((waiter) => waiter.isActive && waiter.rank == rank)
+          .toList();
+      
+      waiters.sort((a, b) => a.firstName.compareTo(b.firstName));
+      
+      return waiters;
     } catch (e) {
       throw Exception('Rütbeye göre garsonlar alınırken hata oluştu: $e');
     }
@@ -211,13 +232,22 @@ class WaiterService {
     return _firestore
         .collection(_collection)
         .where('businessId', isEqualTo: businessId)
-        .where('isActive', isEqualTo: true)
-        .orderBy('rank')
-        .orderBy('firstName')
         .snapshots()
-        .map((snapshot) => 
-            snapshot.docs.map((doc) => Waiter.fromFirestore(doc)).toList()
-        );
+        .map((snapshot) {
+          final waiters = snapshot.docs
+              .map((doc) => Waiter.fromFirestore(doc))
+              .where((waiter) => waiter.isActive)
+              .toList();
+          
+          // Sıralama: Rank sonra isim
+          waiters.sort((a, b) {
+            final rankComparison = a.rank.level.compareTo(b.rank.level);
+            if (rankComparison != 0) return rankComparison;
+            return a.firstName.compareTo(b.firstName);
+          });
+          
+          return waiters;
+        });
   }
 
   /// Müsait garsonlar stream'i

@@ -27,6 +27,24 @@ service firebase.storage {
       allow write: if request.auth != null && isBusinessMember(businessId);
     }
     
+    // Waiter profile images - only business members can upload
+    match /waiter_profiles/{businessId}/{waiterId}/{allPaths=**} {
+      allow read: if true; // Public read for waiter profile images
+      allow write: if request.auth != null && isBusinessMember(businessId) && isValidImage();
+    }
+    
+    // Customer profile images - only the customer can upload their own
+    match /customer_profiles/{userId}/{allPaths=**} {
+      allow read: if true; // Public read for customer profile images
+      allow write: if request.auth != null && request.auth.uid == userId && isValidImage();
+    }
+    
+    // Menu videos and media - only business members can upload
+    match /menu_media/{businessId}/{allPaths=**} {
+      allow read: if true; // Public read for menu media
+      allow write: if request.auth != null && isBusinessMember(businessId) && isValidMedia();
+    }
+    
     // Helper functions
     function isBusinessOwner() {
       return request.auth != null && request.auth.uid != null;
@@ -40,6 +58,12 @@ service firebase.storage {
     function isValidImage() {
       return request.resource.size < 5 * 1024 * 1024 && // 5MB limit
              request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidMedia() {
+      return request.resource.size < 50 * 1024 * 1024 && // 50MB limit for videos
+             (request.resource.contentType.matches('image/.*') ||
+              request.resource.contentType.matches('video/.*'));
     }
     
     // Default allow for authenticated users (simplified for now)

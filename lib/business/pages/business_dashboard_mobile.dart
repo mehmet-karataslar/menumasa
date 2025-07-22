@@ -21,6 +21,7 @@ import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_settings_page.dart';
 import 'discount_management_page.dart';
+import 'waiter_management_page.dart';
 
 class BusinessDashboardMobile extends StatefulWidget {
   final String businessId;
@@ -36,7 +37,8 @@ class BusinessDashboardMobile extends StatefulWidget {
   State<BusinessDashboardMobile> createState() => _BusinessDashboardMobileState();
 }
 
-class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
+class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
+    with TickerProviderStateMixin {
   final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final UrlService _urlService = UrlService();
   final AuthService _authService = AuthService();
@@ -63,7 +65,11 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
   int _unreadNotificationCount = 0;
 
   int _currentIndex = 0;
-  PageController _pageController = PageController();
+  
+  // Yan menü kontrolü
+  bool _isDrawerOpen = false;
+  late AnimationController _drawerAnimationController;
+  late Animation<double> _drawerAnimation;
 
   // Tab routes for URL
   final List<String> _tabRoutes = [
@@ -71,6 +77,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     'siparisler',
     'kategoriler',
     'urunler',
+    'garsonlar',
     'indirimler',
     'qr-kodlar',
     'ayarlar',
@@ -81,6 +88,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     'Siparişler',
     'Kategoriler',
     'Ürünler',
+    'Garsonlar',
     'İndirimler',
     'QR Kodlar',
     'Ayarlar',
@@ -91,6 +99,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     Icons.receipt_long_rounded,
     Icons.category_rounded,
     Icons.restaurant_menu_rounded,
+    Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
     Icons.settings_rounded,
@@ -102,6 +111,19 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     _setInitialTab();
     _loadBusinessData();
     _setupNotificationListener();
+    
+    // Drawer animasyonu
+    _drawerAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _drawerAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _drawerAnimationController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   void _setInitialTab() {
@@ -109,7 +131,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
       final tabIndex = _tabRoutes.indexOf(widget.initialTab!);
       if (tabIndex != -1) {
         _currentIndex = tabIndex;
-        _pageController = PageController(initialPage: tabIndex);
       }
     }
 
@@ -132,6 +153,27 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
   void _setupNotificationListener() {
     _notificationService.addNotificationListener(
         widget.businessId, _onNotificationsChanged);
+  }
+
+  void _toggleDrawer() {
+    setState(() {
+      _isDrawerOpen = !_isDrawerOpen;
+    });
+    
+    if (_isDrawerOpen) {
+      _drawerAnimationController.forward();
+    } else {
+      _drawerAnimationController.reverse();
+    }
+  }
+
+  void _closeDrawer() {
+    if (_isDrawerOpen) {
+      setState(() {
+        _isDrawerOpen = false;
+      });
+      _drawerAnimationController.reverse();
+    }
   }
 
   void _onNotificationsChanged(List<NotificationModel> notifications) {
@@ -329,14 +371,12 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     setState(() {
       _currentIndex = index;
     });
-
-    _pageController.jumpToPage(index);
     _updateUrl();
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _drawerAnimationController.dispose();
     _notificationService.removeNotificationListener(
         widget.businessId, _onNotificationsChanged);
     super.dispose();
@@ -376,33 +416,42 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            _buildCustomHeader(),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                  _updateUrl();
-                },
+            // Ana içerik
+            GestureDetector(
+              onTap: _closeDrawer,
+              child: Column(
                 children: [
-                  _buildOverviewPage(),
-                  OrderManagementPage(businessId: widget.businessId),
-                  CategoryManagementPage(businessId: widget.businessId),
-                  ProductManagementPage(businessId: widget.businessId),
-                  DiscountManagementPage(businessId: widget.businessId),
-                  QRManagementPage(businessId: widget.businessId),
-                  BusinessProfilePage(businessId: widget.businessId),
+                  _buildCustomHeader(),
+                  Expanded(
+                    child: _buildCurrentPage(),
+                  ),
                 ],
               ),
             ),
+            
+            // Yan menü
+            _buildSideDrawer(),
+            
+            // Overlay (arka plan karartma)
+            if (_isDrawerOpen)
+              AnimatedBuilder(
+                animation: _drawerAnimation,
+                builder: (context, child) {
+                  return Positioned.fill(
+                    child: Container(
+                      color: AppColors.black.withOpacity(0.3 * _drawerAnimation.value),
+                      child: GestureDetector(
+                        onTap: _closeDrawer,
+                      ),
+                    ),
+                  );
+                },
+              ),
           ],
         ),
       ),
-      bottomNavigationBar: _buildModernBottomNav(),
     );
   }
 
@@ -421,6 +470,29 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
       ),
       child: Row(
         children: [
+          // Drawer açma butonu
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _toggleDrawer,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 40,
+                height: 40,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _isDrawerOpen ? Icons.close_rounded : Icons.menu_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+          
           if (_business?.logoUrl != null)
             Container(
               width: 40,
@@ -582,27 +654,211 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     );
   }
 
-  Widget _buildModernBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
+
+
+  Widget _buildSideDrawer() {
+    return AnimatedBuilder(
+      animation: _drawerAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(-280 + (280 * _drawerAnimation.value), 0),
+          child: Container(
+            width: 280,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(5, 0),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryLight],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_business?.logoUrl != null)
+                          Container(
+                            width: 60,
+                            height: 60,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: AppColors.white, width: 2),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(13),
+                              child: Image.network(
+                                _business!.logoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  color: AppColors.white.withOpacity(0.2),
+                                  child: Icon(Icons.business_rounded, color: AppColors.white, size: 30),
+                                ),
+                              ),
+                            ),
+                          ),
+                        Text(
+                          _business?.businessName ?? 'İşletme',
+                          style: AppTypography.h6.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'İşletme Yönetimi',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                // Menü Listesi
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _tabTitles.length,
+                    itemBuilder: (context, index) => _buildDrawerMenuItem(index),
+                  ),
+                ),
+                
+                // Alt Kısım - Çıkış
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: AppColors.greyLight, width: 0.5),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildDrawerActionItem(
+                        icon: Icons.help_outline_rounded,
+                        title: 'Yardım',
+                        onTap: () {
+                          // Yardım sayfası
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _buildDrawerActionItem(
+                        icon: Icons.logout_rounded,
+                        title: 'Çıkış Yap',
+                        color: AppColors.error,
+                        onTap: () {
+                          _closeDrawer();
+                          _handleLogout();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: SafeArea(
-        child: Container(
-          height: 65,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(
-              _tabTitles.length,
-                  (index) => _buildNavItem(index),
+        );
+      },
+    );
+  }
+
+  Widget _buildDrawerMenuItem(int index) {
+    final isSelected = _currentIndex == index;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _navigateToTab(index);
+            _closeDrawer();
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? AppColors.primary.withOpacity(0.3) : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? AppColors.primary 
+                        : AppColors.greyLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _tabIcons[index],
+                    color: isSelected ? AppColors.white : AppColors.textSecondary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _tabTitles[index],
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                else if (index == 1 && _pendingOrders > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$_pendingOrders',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -610,76 +866,44 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     );
   }
 
-  Widget _buildNavItem(int index) {
-    final isSelected = _currentIndex == index;
-    final badge = index == 1 ? _pendingOrders : null;
-
-    return Expanded(
+  Widget _buildDrawerActionItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    final itemColor = color ?? AppColors.textSecondary;
+    
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
-        onTap: () => _navigateToTab(index),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
             children: [
-              Stack(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      _tabIcons[index],
-                      size: isSelected ? 26 : 22,
-                      color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                    ),
-                  ),
-                  if (badge != null && badge > 0)
-                    Positioned(
-                      right: -4,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.error.withOpacity(0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                        child: Text(
-                          badge.toString(),
-                          style: const TextStyle(
-                            color: AppColors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: itemColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: itemColor,
+                  size: 20,
+                ),
               ),
-              const SizedBox(height: 2),
-              Flexible(
+              const SizedBox(width: 12),
+              Expanded(
                 child: Text(
-                  _getShortLabel(index),
-                  style: TextStyle(
-                    fontSize: isSelected ? 10 : 9,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  title,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: itemColor,
+                    fontWeight: FontWeight.w500,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -689,17 +913,27 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
     );
   }
 
-  String _getShortLabel(int index) {
-    const shortLabels = [
-      'Genel',
-      'Sipariş',
-      'Kategori',
-      'Ürün',
-      'İndirim',
-      'QR',
-      'Ayarlar',
-    ];
-    return shortLabels[index];
+  Widget _buildCurrentPage() {
+    switch (_currentIndex) {
+      case 0:
+        return _buildOverviewPage();
+      case 1:
+        return OrderManagementPage(businessId: widget.businessId);
+      case 2:
+        return CategoryManagementPage(businessId: widget.businessId);
+      case 3:
+        return ProductManagementPage(businessId: widget.businessId);
+      case 4:
+        return WaiterManagementPage(businessId: widget.businessId);
+      case 5:
+        return DiscountManagementPage(businessId: widget.businessId);
+      case 6:
+        return QRManagementPage(businessId: widget.businessId);
+      case 7:
+        return BusinessProfilePage(businessId: widget.businessId);
+      default:
+        return _buildOverviewPage();
+    }
   }
 
   Widget _buildOverviewPage() {
