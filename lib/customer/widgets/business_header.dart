@@ -323,10 +323,11 @@ class _BusinessHeaderState extends State<BusinessHeader>
               ),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildDetailedInfo(),
+                Flexible(child: _buildDetailedInfo()),
                 const SizedBox(height: 16),
-                _buildQuickActions(),
+                Flexible(child: _buildQuickActions()),
               ],
             ),
           ),
@@ -529,25 +530,30 @@ class _BusinessHeaderState extends State<BusinessHeader>
     required String value,
   }) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppColors.white, size: 20),
-        const SizedBox(height: 4),
+        Icon(icon, color: AppColors.white, size: 18),
+        const SizedBox(height: 2),
         Text(
           title,
           style: AppTypography.caption.copyWith(
             color: AppColors.white.withOpacity(0.7),
+            fontSize: 10,
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: AppTypography.caption.copyWith(
-            color: AppColors.white,
-            fontWeight: FontWeight.w600,
+        const SizedBox(height: 1),
+        Flexible(
+          child: Text(
+            value,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -593,10 +599,10 @@ class _BusinessHeaderState extends State<BusinessHeader>
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: AppColors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: AppColors.white.withOpacity(0.3),
             width: 1,
@@ -605,13 +611,14 @@ class _BusinessHeaderState extends State<BusinessHeader>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.white, size: 16),
-            const SizedBox(width: 4),
+            Icon(icon, color: AppColors.white, size: 14),
+            const SizedBox(width: 3),
             Text(
               label,
               style: AppTypography.caption.copyWith(
                 color: AppColors.white,
                 fontWeight: FontWeight.w600,
+                fontSize: 10,
               ),
             ),
           ],
