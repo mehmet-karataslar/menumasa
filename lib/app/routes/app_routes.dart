@@ -142,12 +142,13 @@ class AppRoutes {
       return _handleBusinessRoutes(settings);
     }
 
-    // Menu route'ları (businessId parametresi ile)
+    // Menu route'ları (businessId parametresi ile) - eski format
     if (settings.name?.startsWith('/menu/') == true) {
+      print('🎯 Menu route (eski format) tespit edildi: ${settings.name}');
       return _handleMenuRoutes(settings);
     }
 
-    // QR Menü route'ları
+    // QR Menü route'ları - yeni format
     if (settings.name?.startsWith('/qr-menu/') == true) {
       print('🎯 QR Menu route tespit edildi: ${settings.name}');
       return _handleMenuRoutes(settings);
@@ -363,12 +364,14 @@ class AppRoutes {
     if (pathSegments.length >= 2) {
       final businessId = pathSegments[1];
       final isQRMenu = pathSegments[0] == 'qr-menu';
+      final isMenu = pathSegments[0] == 'menu';
       
       print('   🏢 Business ID: $businessId');
       print('   📱 Is QR Menu: $isQRMenu');
+      print('   🍽️ Is Menu: $isMenu');
       
-      if (isQRMenu) {
-        // QR Menü route'u için QRMenuPage'e yönlendir
+      if (isQRMenu || isMenu) {
+        // Hem /qr-menu/ hem /menu/ için QRMenuPage'e yönlendir
         final tableNumber = uri.queryParameters['table'] != null 
             ? int.tryParse(uri.queryParameters['table']!) 
             : null;
@@ -382,13 +385,6 @@ class AppRoutes {
             qrCode: settings.name,
             tableNumber: tableNumber,
           ),
-          settings: settings,
-        );
-      } else {
-        // Normal menü route'u için MenuPage'e yönlendir
-        print('   ✅ Yönlendiriliyor MenuPage\'e');
-        return MaterialPageRoute(
-          builder: (context) => MenuPage(businessId: businessId),
           settings: settings,
         );
       }

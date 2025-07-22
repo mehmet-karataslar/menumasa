@@ -9,6 +9,7 @@ import 'login_page.dart';
 import 'business_register_page.dart';
 import 'register_page.dart';
 import '../../../business/pages/business_login_page.dart';
+import '../../../customer/pages/qr_menu_page.dart';
 
 class RouterPage extends StatefulWidget {
   const RouterPage({super.key});
@@ -89,31 +90,9 @@ class _RouterPageState extends State<RouterPage> {
   Widget build(BuildContext context) {
     // URL'den QR menü kontrolü
     final routeName = ModalRoute.of(context)?.settings.name;
-    if (routeName != null && routeName.startsWith('/qr-menu/')) {
+    if (routeName != null && (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/'))) {
       // QR menü URL'si tespit edildi, direkt QR menü sayfasına yönlendir
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, routeName);
-        }
-      });
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: AppColors.primary),
-              const SizedBox(height: 16),
-              Text(
-                'Menü yükleniyor...',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildQRMenuRedirect(routeName);
     }
 
     if (_isLoading) {
@@ -433,6 +412,29 @@ class _RouterPageState extends State<RouterPage> {
   Future<bool> _checkIfUserAuthenticated() async {
     final currentUser = _authService.currentUser;
     return currentUser != null;
+  }
+
+  Widget _buildQRMenuRedirect(String routeName) {
+    // URL'i parse et
+    final uri = Uri.parse(routeName);
+    final pathSegments = uri.pathSegments;
+    
+    if (pathSegments.length >= 2) {
+      final businessId = pathSegments[1];
+      final tableNumber = uri.queryParameters['table'] != null 
+          ? int.tryParse(uri.queryParameters['table']!) 
+          : null;
+      
+      // Direkt QRMenuPage widget'ını döndür
+      return QRMenuPage(
+        businessId: businessId,
+        qrCode: routeName,
+        tableNumber: tableNumber,
+      );
+    }
+    
+    // Geçersiz URL ise normal router'ı göster
+    return _buildWelcomePage();
   }
 
   Widget _buildFeatureHighlights() {

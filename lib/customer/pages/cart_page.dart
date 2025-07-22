@@ -12,6 +12,7 @@ import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../../core/services/core_firestore_service.dart';
+import '../../core/services/auth_service.dart';
 import '../services/customer_firestore_service.dart';
 
 class CartPage extends StatefulWidget {
@@ -294,6 +295,12 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       return;
     }
 
+    // Auth kontrolü - sipariş vermek için giriş yapma zorunluluğu
+    final user = await _checkAuthenticationForOrder();
+    if (user == null) {
+      return; // Auth dialog gösterildi, işlem iptal edildi
+    }
+
     if (!_formKey.currentState!.validate()) {
       _showErrorSnackBar('Lütfen gerekli alanları doldurun');
       return;
@@ -346,6 +353,135 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
         _showErrorSnackBar('Sipariş verilirken hata oluştu: $e');
       }
     }
+  }
+
+  Future<dynamic> _checkAuthenticationForOrder() async {
+    final authService = AuthService();
+    final currentUser = authService.currentUser;
+    
+    if (currentUser != null) {
+      return currentUser; // Kullanıcı giriş yapmış
+    }
+    
+    // Kullanıcı giriş yapmamış, auth dialog göster
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryLight],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.person_add_rounded, color: AppColors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Hesap Gerekli',
+                style: AppTypography.h6.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Sipariş takibi', style: AppTypography.bodyMedium)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Garson çağırma', style: AppTypography.bodyMedium)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Sipariş geçmişi', style: AppTypography.bodyMedium)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Sipariş verebilmek için üye olmanız gerekiyor. Hızlı kayıt ile 30 saniyede üye olun!',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'cancel'),
+            child: Text(
+              'Vazgeç',
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton(
+                onPressed: () => Navigator.pop(context, 'login'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Giriş Yap'),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'register'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Kayıt Ol'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    
+    if (result == 'login') {
+      Navigator.pushNamed(context, '/login');
+    } else if (result == 'register') {
+      Navigator.pushNamed(context, '/register');
+    }
+    
+    return null; // Auth gerekli, işlem iptal edildi
   }
 
   void _showErrorSnackBar(String message) {
