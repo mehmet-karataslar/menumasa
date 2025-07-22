@@ -8,6 +8,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pdf_service.dart';
 import '../../business/models/business.dart';
 import '../../business/models/qr_code.dart';
 
@@ -533,5 +534,26 @@ class QRService {
       businessName: 'İşletme', // Will be updated with actual name
       tableCount: tableCount,
     );
+  }
+
+  // =============================================================================
+  // PDF GENERATION
+  // =============================================================================
+
+  /// Downloads table QR codes as a PDF file
+  Future<void> downloadTableQRsPDF({
+    required String businessId,
+    required String businessName,
+    required List<QRCode> tableQRs,
+  }) async {
+    try {
+      await PdfService.downloadTableQRsPDF(
+        businessId: businessId,
+        businessName: businessName,
+        tableQRs: tableQRs,
+      );
+    } catch (e) {
+      throw Exception('PDF oluşturulurken hata: $e');
+    }
   }
 }

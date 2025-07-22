@@ -103,3 +103,10 @@ flutter:
     - assets/icons/
     - assets/images/
     - assets/animations/
+    - assets/fonts/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400

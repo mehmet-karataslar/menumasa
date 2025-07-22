@@ -55,6 +55,169 @@ class _QRManagementPageState extends State<QRManagementPage>
     super.dispose();
   }
 
+  // PDF indirme metodu
+  Future<void> _downloadTableQRsPDF() async {
+    if (_tableQRs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Önce masa QR kodları oluşturun'),
+            ],
+          ),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 8),
+              Text('PDF hazırlanıyor...'),
+            ],
+          ),
+          backgroundColor: AppColors.info,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: Duration(seconds: 5),
+        ),
+      );
+
+      // PDF oluşturma işlemini QR Service'e yönlendir
+      await _qrService.downloadTableQRsPDF(
+        businessId: widget.businessId,
+        businessName: _business!.businessName,
+        tableQRs: _tableQRs,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('PDF başarıyla indirildi'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('PDF oluşturulurken hata: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
+  // Yardım dialogu gösterme
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.help_outline, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('QR Kod Yönetimi Yardım'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHelpItem('🏢', 'İşletme QR', 'Genel menü erişimi için'),
+            _buildHelpItem('🪑', 'Masa QR', 'Masa numarası ile menü erişimi'),
+            _buildHelpItem('📊', 'İstatistikler', 'Tarama verilerini görüntüle'),
+            _buildHelpItem('📤', 'Paylaş', 'QR kodunu sosyal medyada paylaş'),
+            _buildHelpItem('🖨️', 'Yazdır', 'Fiziksel kopya oluştur'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpItem(String emoji, String title, String description) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Text(emoji, style: TextStyle(fontSize: 20)),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(description, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  // FAB butonu
+  Widget _buildFAB() {
+    return FloatingActionButton.extended(
+      onPressed: _isCreatingQRs ? null : _createAllQRs,
+      backgroundColor: AppColors.primary,
+      foregroundColor: AppColors.white,
+      icon: _isCreatingQRs 
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.white,
+            ),
+          )
+        : Icon(Icons.auto_awesome),
+      label: Text(_isCreatingQRs ? 'Oluşturuluyor...' : 'Tümünü Oluştur'),
+    );
+  }
+
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
@@ -343,14 +506,13 @@ class _QRManagementPageState extends State<QRManagementPage>
           appBar: _buildAppBar(),
           body: Column(
             children: [
-              _buildStatsOverview(isDesktop),
               _buildTabBar(),
               Expanded(
                 child: _buildTabView(isDesktop),
               ),
             ],
           ),
-          // floatingActionButton: _buildFAB(),
+          floatingActionButton: _buildFAB(),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
@@ -429,7 +591,7 @@ class _QRManagementPageState extends State<QRManagementPage>
           margin: EdgeInsets.only(right: 16),
           child: IconButton(
             icon: Icon(Icons.help_outline_rounded),
-            onPressed: () => {}, // _showHelpDialog,
+            onPressed: _showHelpDialog,
             style: IconButton.styleFrom(
               backgroundColor: AppColors.white.withOpacity(0.2),
               shape: RoundedRectangleBorder(
@@ -663,8 +825,7 @@ class _QRManagementPageState extends State<QRManagementPage>
             _buildBusinessQRCard(isDesktop)
           else
             _buildCreateBusinessQRCard(),
-          SizedBox(height: 20),
-          _buildBusinessQRActions(),
+
         ],
       ),
     );
@@ -794,58 +955,11 @@ class _QRManagementPageState extends State<QRManagementPage>
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Container(
-                  margin: EdgeInsets.only(left: 8),
-                  child: IconButton(
-                    icon: Icon(Icons.copy_rounded, size: 20),
-                    onPressed: () => {}, // _copyToClipboard(_businessQR!.url),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      foregroundColor: AppColors.primary,
-                      padding: EdgeInsets.all(8),
-                    ),
-                  ),
-                ),
+                
               ],
             ),
           ),
-          SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _qrService.shareBusinessQR(widget.businessId),
-                  icon: Icon(Icons.share_rounded),
-                  label: Text('Paylaş'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _qrService.openQRUrl(_businessQR!.url),
-                  icon: Icon(Icons.open_in_new_rounded),
-                  label: Text('Test Et'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
+
         ],
       ),
     );
@@ -940,116 +1054,7 @@ class _QRManagementPageState extends State<QRManagementPage>
     );
   }
 
-  Widget _buildBusinessQRActions() {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'QR Kod İşlemleri',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 20),
-          _buildActionTile(
-            icon: Icons.print_rounded,
-            title: 'QR Kodu Yazdır',
-            subtitle: 'Fiziksel kopyalar için yazdırın',
-            color: AppColors.primary,
-            onTap: _businessQR != null ? () => {} : null, // _printBusinessQR
-          ),
-          SizedBox(height: 12),
-          _buildActionTile(
-            icon: Icons.download_rounded,
-            title: 'QR Kodu İndir',
-            subtitle: 'PNG formatında kaydet',
-            color: AppColors.success,
-            onTap: _businessQR != null ? () => {} : null, // _downloadBusinessQR
-          ),
-          SizedBox(height: 12),
-          _buildActionTile(
-            icon: Icons.refresh_rounded,
-            title: 'QR Kodu Yenile',
-            subtitle: 'Mevcut QR kodu güncelle',
-            color: AppColors.warning,
-            onTap: _isCreatingQRs ? null : _createBusinessQR,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildActionTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    VoidCallback? onTap,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 14,
-          ),
-        ),
-        trailing: Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            Icons.arrow_forward_ios_rounded,
-            color: color,
-            size: 16,
-          ),
-        ),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
-    );
-  }
 
   Widget _buildTableQRTab(bool isDesktop) {
     return SingleChildScrollView(
@@ -1287,14 +1292,14 @@ class _QRManagementPageState extends State<QRManagementPage>
               ),
               Container(
                 child: ElevatedButton.icon(
-                  onPressed: () => {}, // _printAllTableQRs,
-                  icon: Icon(Icons.print_rounded, size: 18),
+                  onPressed: _downloadTableQRsPDF,
+                  icon: Icon(Icons.picture_as_pdf_rounded, size: 18),
                   label: Text(
-                    'Tümünü Yazdır',
+                    'PDF İndir',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.success,
                     foregroundColor: AppColors.white,
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -1390,47 +1395,21 @@ class _QRManagementPageState extends State<QRManagementPage>
                         ),
                       ),
                       SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 40,
-                              child: ElevatedButton(
-                                onPressed: () => _qrService.shareTableQR(
-                                  widget.businessId,
-                                  tableNumber,
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: AppColors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: Icon(Icons.share_rounded, size: 18),
-                              ),
-                            ),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                        ),
+                        child: Text(
+                          'Masa $tableNumber QR Kodu',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.info,
                           ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Container(
-                              height: 40,
-                              child: ElevatedButton(
-                                onPressed: () => {}, // _copyToClipboard(qr.url),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.secondary,
-                                  foregroundColor: AppColors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: Icon(Icons.copy_rounded, size: 18),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
