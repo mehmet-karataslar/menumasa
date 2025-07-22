@@ -368,9 +368,12 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   }
 
   void _navigateToTab(int index) {
-    if (_currentIndex == index) return;
+    if (_currentIndex == index) {
+      print('⚠️ Already on tab $index, skipping navigation');
+      return;
+    }
 
-    print('🚀 Navigating to tab: $index (${_tabTitles[index]})');
+    print('🚀 Navigating from tab $_currentIndex to tab $index (${_tabTitles[index]})');
     
     setState(() {
       _currentIndex = index;
@@ -443,12 +446,16 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             // Yan menü
             _buildSideDrawer(),
             
-            // Overlay (arka plan karartma)
+            // Overlay (arka plan karartma) - sadece drawer'ın sağ tarafında
             if (_isDrawerOpen)
               AnimatedBuilder(
                 animation: _drawerAnimation,
                 builder: (context, child) {
-                  return Positioned.fill(
+                  return Positioned(
+                    left: 280 * _drawerAnimation.value,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
                     child: Container(
                       color: AppColors.black.withOpacity(0.3 * _drawerAnimation.value),
                       child: GestureDetector(
@@ -748,6 +755,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
+                    physics: const BouncingScrollPhysics(),
                     itemCount: _tabTitles.length,
                     itemBuilder: (context, index) => _buildDrawerMenuItem(index),
                   ),
@@ -798,6 +806,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Material(
         color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: () async {
             print('🖱️ Drawer item tapped: $index (${_tabTitles[index]})');
@@ -813,9 +822,11 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             }
           },
           borderRadius: BorderRadius.circular(12),
+          splashColor: AppColors.primary.withOpacity(0.2),
+          highlightColor: AppColors.primary.withOpacity(0.1),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
@@ -839,12 +850,12 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   decoration: BoxDecoration(
                     color: isSelected 
                         ? AppColors.primary 
-                        : AppColors.greyLight,
+                        : AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     _tabIcons[index],
-                    color: isSelected ? AppColors.white : AppColors.textSecondary,
+                    color: isSelected ? AppColors.white : AppColors.textPrimary,
                     size: 20,
                   ),
                 ),

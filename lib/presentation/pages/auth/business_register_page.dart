@@ -251,7 +251,16 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   }
 
   Future<void> _handleBusinessRegister() async {
-    if (_formKey.currentState?.validate() != true) return;
+    print('📋 Form validation starting...');
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    print('📋 Form validation result: $isFormValid');
+    
+    if (!isFormValid) {
+      print('❌ Form validation failed, stopping registration');
+      return;
+    }
+
+    print('🚀 Starting business registration...');
 
     setState(() {
       _isLoading = true;
@@ -260,17 +269,25 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
 
     try {
       final currentUser = _authService.currentUser;
+      print('🔍 Current user before registration: ${currentUser?.uid ?? "NULL"}');
+      
       if (currentUser == null) {
+        print('❌ No current user, creating account first...');
         // If user is not logged in, create account first
         await _createUserAccount();
         // After user account creation, check again
         final newCurrentUser = _authService.currentUser;
+        print('🔍 Current user after account creation: ${newCurrentUser?.uid ?? "NULL"}');
+        
         if (newCurrentUser == null) {
+          print('❌ User account creation failed');
           setState(() {
             _errorMessage = 'Kullanıcı hesabı oluşturulamadı';
           });
           return;
         }
+      } else {
+        print('✅ User already authenticated: ${currentUser.uid}');
       }
 
       // Ensure businessId is set
@@ -291,6 +308,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       final phone = _phoneController.text.trim();
       final email = _emailController.text.trim();
       final website = _websiteController.text.trim();
+      
+      print('🏢 Creating business model with ID: $_businessId');
       
       // Create business model
       final business = Business(
@@ -317,19 +336,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
           website: website.isEmpty ? null : website,
         ),
         qrCodeUrl: null,
-        menuSettings: MenuSettings(
-          theme: 'light',
-          primaryColor: '#2C1810',
-          fontFamily: 'Poppins',
-          fontSize: 16.0,
-          imageSize: 120.0,
-          showCategories: true,
-          showRatings: false,
-          layoutStyle: 'card',
-          showNutritionInfo: false,
-          showBadges: true,
-          showAvailability: true,
-        ),
+        menuSettings: MenuSettings.defaultRestaurant(),
         settings: BusinessSettings.defaultRestaurant(),
         stats: BusinessStats.empty(),
         isActive: true,
@@ -340,11 +347,18 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         updatedAt: DateTime.now(),
       );
 
-      // Save business to Firestore with the specific ID
-      await _businessFirestoreService.saveBusiness(business);
+      print('💾 Saving business to Firestore...');
+      // Save business to Firestore with the specific ID using toFirestore() for proper Timestamp conversion
+      await FirebaseFirestore.instance
+          .collection('businesses')
+          .doc(_businessId!)
+          .set(business.toFirestore());
+      print('✅ Business saved successfully');
 
+      print('📂 Creating default categories...');
       // Create default categories
       await _createDefaultCategories(_businessId!);
+      print('✅ Default categories created');
 
       if (mounted) {
         // Registration successful, navigate to business dashboard
@@ -354,14 +368,23 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         );
       }
     } on AuthException catch (e) {
+      print('🔥 AuthException: ${e.message}');
       setState(() {
         _errorMessage = e.message;
       });
+    } on FirebaseAuthException catch (e) {
+      print('🔥 FirebaseAuthException: ${e.code} - ${e.message}');
+      setState(() {
+        _errorMessage = 'Kimlik doğrulama hatası: ${e.message}';
+      });
     } on FirebaseException catch (e) {
+      print('🔥 FirebaseException: ${e.code} - ${e.message}');
       setState(() {
         _errorMessage = 'Firebase hatası: ${e.message}';
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔥 General Exception: $e');
+      print('🔥 Stack Trace: $stackTrace');
       setState(() {
         _errorMessage = 'İşletme kaydedilirken bir hata oluştu: $e';
       });
@@ -373,6 +396,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   }
 
   Future<void> _createUserAccount() async {
+    print('👤 Creating user account...');
+    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -385,11 +410,17 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       final phone = _phoneController.text.trim();
       final password = _passwordController.text;
       
+      print('📧 Email: $email');
+      print('🏢 Business Name: $businessName');
+      print('📞 Phone: $phone');
+      
       // Generate business ID first if not already set
       if (_businessId == null) {
         _businessId = FirebaseFirestore.instance.collection('businesses').doc().id;
+        print('🆔 Generated business ID: $_businessId');
       }
       
+      print('🔐 Creating Firebase Auth user...');
       // Create business user with Firebase Auth and BusinessService
       final businessUser = await _authService.createBusinessUserWithEmailAndPassword(
         email,
@@ -400,11 +431,15 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       );
 
       if (businessUser != null) {
-        // User account created successfully, 
-        // business registration will continue in _handleBusinessRegister
-        print('Business user account created successfully');
+        print('✅ Business user account created successfully');
+        print('👤 User ID: ${businessUser.id}');
+      } else {
+        print('❌ Business user creation returned null');
+        throw Exception('Business user creation failed - returned null');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('🔥 Error creating user account: $e');
+      print('🔥 Stack Trace: $stackTrace');
       setState(() {
         _errorMessage = 'İşletme kullanıcısı oluşturulurken hata: $e';
       });
@@ -501,7 +536,28 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
 
       // Save each category to Firestore
       for (final category in categories) {
-        await _businessFirestoreService.saveCategory(category);
+        // Generate a new ID for each category
+        final categoryId = FirebaseFirestore.instance.collection('categories').doc().id;
+        final categoryWithId = Category(
+          categoryId: categoryId,
+          businessId: category.businessId,
+          name: category.name,
+          description: category.description,
+          sortOrder: category.sortOrder,
+          isActive: category.isActive,
+          timeRules: category.timeRules,
+          createdAt: category.createdAt,
+          updatedAt: category.updatedAt,
+        );
+        
+        final categoryData = categoryWithId.toJson();
+        categoryData['createdAt'] = Timestamp.fromDate(categoryWithId.createdAt);
+        categoryData['updatedAt'] = Timestamp.fromDate(categoryWithId.updatedAt);
+        
+        await FirebaseFirestore.instance
+            .collection('categories')
+            .doc(categoryId)
+            .set(categoryData);
       }
     } catch (e) {
       print('Error creating default categories: $e');
