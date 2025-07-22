@@ -197,12 +197,12 @@ class QRService {
 
   /// Generates a unique QR code URL for a business
   String generateBusinessQRUrl(String businessId) {
-    return '$baseUrl/menu/$businessId';
+    return '$baseUrl/qr-menu/$businessId';
   }
 
   /// Generates a QR code URL for a specific table
   String generateTableQRUrl(String businessId, int tableNumber) {
-    return '$baseUrl/menu/$businessId?table=$tableNumber';
+    return '$baseUrl/qr-menu/$businessId?table=$tableNumber';
   }
 
   /// Generates a QR code URL for a specific table with additional parameters
@@ -213,7 +213,7 @@ class QRService {
     String? sessionId,
     Map<String, String>? extraParams,
   }) {
-    final uri = Uri.parse('$baseUrl/menu/$businessId');
+    final uri = Uri.parse('$baseUrl/qr-menu/$businessId');
     final queryParams = <String, String>{'table': tableNumber.toString()};
 
     if (waiterCode != null) queryParams['waiter'] = waiterCode;

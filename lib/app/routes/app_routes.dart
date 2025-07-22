@@ -351,10 +351,29 @@ class AppRoutes {
 
     if (pathSegments.length >= 2) {
       final businessId = pathSegments[1];
-      return MaterialPageRoute(
-        builder: (context) => MenuPage(businessId: businessId),
-        settings: settings,
-      );
+      final isQRMenu = pathSegments[0] == 'qr-menu';
+      
+      if (isQRMenu) {
+        // QR Menü route'u için QRMenuPage'e yönlendir
+        final tableNumber = uri.queryParameters['table'] != null 
+            ? int.tryParse(uri.queryParameters['table']!) 
+            : null;
+        
+        return MaterialPageRoute(
+          builder: (context) => QRMenuPage(
+            businessId: businessId,
+            qrCode: settings.name,
+            tableNumber: tableNumber,
+          ),
+          settings: settings,
+        );
+      } else {
+        // Normal menü route'u için MenuPage'e yönlendir
+        return MaterialPageRoute(
+          builder: (context) => MenuPage(businessId: businessId),
+          settings: settings,
+        );
+      }
     }
 
     return null;
@@ -730,6 +749,7 @@ class QRMenuRouterPage extends StatelessWidget {
     final businessId = args?['businessId'] as String?;
     final userId = args?['userId'] as String?;
     final qrCode = args?['qrCode'] as String?;
+    final tableNumber = args?['tableNumber'] as int?;
 
     if (businessId == null) {
       return const RouterPage();
@@ -739,6 +759,7 @@ class QRMenuRouterPage extends StatelessWidget {
       businessId: businessId,
       userId: userId,
       qrCode: qrCode,
+      tableNumber: tableNumber,
     );
   }
 }
