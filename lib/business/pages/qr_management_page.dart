@@ -338,8 +338,11 @@ class _QRManagementPageState extends State<QRManagementPage>
         _businessQR = businessQR;
         _tableQRs = tableQRs;
         _qrStats = qrStats;
-        _tableCount = tableQRs.length > 0 ? tableQRs.length : 10;
-        _tableCountController.text = _tableCount.toString();
+        // Sadece ilk yüklemede mevcut QR kod sayısını kullan
+        if (_tableCount == 10 && tableQRs.length > 0) {
+          _tableCount = tableQRs.length;
+          _tableCountController.text = _tableCount.toString();
+        }
       });
     } catch (e) {
       setState(() {
@@ -414,6 +417,14 @@ class _QRManagementPageState extends State<QRManagementPage>
   Future<void> _createTableQRs() async {
     if (_business == null) return;
 
+    // TextField'dan güncel masa sayısını al
+    final inputCount = int.tryParse(_tableCountController.text);
+    if (inputCount != null && inputCount > 0 && inputCount <= 100) {
+      _tableCount = inputCount;
+    }
+
+    print('🔢 QR Management: Creating QR codes for $_tableCount tables');
+
     setState(() {
       _isCreatingQRs = true;
     });
@@ -474,6 +485,14 @@ class _QRManagementPageState extends State<QRManagementPage>
 
   Future<void> _createAllQRs() async {
     if (_business == null) return;
+
+    // TextField'dan güncel masa sayısını al
+    final inputCount = int.tryParse(_tableCountController.text);
+    if (inputCount != null && inputCount > 0 && inputCount <= 100) {
+      _tableCount = inputCount;
+    }
+
+    print('🔢 QR Management: Creating ALL QR codes for $_tableCount tables');
 
     setState(() {
       _isCreatingQRs = true;

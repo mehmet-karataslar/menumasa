@@ -38,8 +38,17 @@ class PdfService {
     try {
       final fontData = await rootBundle.load('assets/fonts/Poppins-Regular.ttf');
       font = pw.Font.ttf(fontData);
+      print('✅ PDF Service: Font başarıyla yüklendi');
     } catch (e) {
-      print('Font yüklenemedi, varsayılan font kullanılacak: $e');
+      print('❌ PDF Service: Font yüklenemedi: $e');
+      // Fallback font kullan
+      try {
+        font = pw.Font.helvetica();
+        print('✅ PDF Service: Helvetica font kullanılıyor');
+      } catch (e2) {
+        print('❌ PDF Service: Helvetica font de yüklenemedi: $e2');
+        font = null;
+      }
     }
     
     final pdf = pw.Document();
@@ -80,7 +89,7 @@ class PdfService {
                        ),
                        pw.SizedBox(height: 8),
                        pw.Text(
-                         'Table QR Codes',
+                         'Masa QR Kodlari',
                          style: pw.TextStyle(
                            fontSize: 16,
                            color: PdfColors.blue700,
@@ -109,7 +118,7 @@ class PdfService {
                     borderRadius: pw.BorderRadius.circular(5),
                   ),
                                      child: pw.Text(
-                     'Paste QR codes on tables. Customers can scan these codes to access your menu.',
+                     'QR kodlarini masalarin uzerine yapistiriniz. Musteriler bu kodlari tarayarak menuye ulasabilir.',
                      style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700, font: font),
                      textAlign: pw.TextAlign.center,
                    ),
@@ -174,7 +183,7 @@ class PdfService {
                 borderRadius: pw.BorderRadius.circular(20),
               ),
                              child: pw.Text(
-                 'TABLE $tableNumber',
+                 'MASA $tableNumber',
                  style: pw.TextStyle(
                    fontSize: 16,
                    fontWeight: pw.FontWeight.bold,
@@ -236,7 +245,7 @@ class PdfService {
                 borderRadius: pw.BorderRadius.circular(8),
               ),
                              child: pw.Text(
-                 'Scan QR code\nfor menu',
+                 'Menu icin\nQR kodu tarayin',
                  style: pw.TextStyle(
                    fontSize: 10,
                    color: PdfColors.grey700,

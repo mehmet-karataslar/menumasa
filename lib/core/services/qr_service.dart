@@ -31,8 +31,15 @@ class QRService {
 
   /// Saves a QR code to Firestore
   Future<String> saveQRCode(QRCode qrCode) async {
-    final docRef = await _firestore.collection('qr_codes').add(qrCode.toFirestore());
-    return docRef.id;
+    try {
+      print('💾 QR Service: Saving QR code to Firestore...');
+      final docRef = await _firestore.collection('qr_codes').add(qrCode.toFirestore());
+      print('✅ QR Service: QR code saved with ID: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('❌ QR Service: Error saving QR code: $e');
+      throw Exception('QR kod kaydedilirken hata: $e');
+    }
   }
 
   /// Updates an existing QR code
