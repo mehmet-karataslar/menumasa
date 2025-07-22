@@ -563,18 +563,20 @@ class _QRMenuPageState extends State<QRMenuPage>
 
   Widget _buildWaiterCallButton() {
     return Container(
+      width: 56,
+      height: 56,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.primary, AppColors.primaryLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -582,26 +584,12 @@ class _QRMenuPageState extends State<QRMenuPage>
         color: Colors.transparent,
         child: InkWell(
           onTap: _showWaiterCallDialog,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.room_service_rounded,
-                  color: AppColors.white,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Garson',
-                  style: AppTypography.bodyLarge.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child: Icon(
+              Icons.room_service_rounded,
+              color: AppColors.white,
+              size: 28,
             ),
           ),
         ),
@@ -929,16 +917,20 @@ class _QRMenuPageState extends State<QRMenuPage>
     switch (callType) {
       case WaiterCallType.service:
         return AppColors.primary;
+      case WaiterCallType.order:
+        return AppColors.secondary;
+      case WaiterCallType.payment:
+        return AppColors.success;
+      case WaiterCallType.complaint:
+        return AppColors.error;
+      case WaiterCallType.assistance:
+        return AppColors.info;
       case WaiterCallType.bill:
         return AppColors.success;
       case WaiterCallType.help:
         return AppColors.info;
-      case WaiterCallType.complaint:
-        return AppColors.error;
       case WaiterCallType.cleaning:
         return AppColors.warning;
-      case WaiterCallType.order:
-        return AppColors.secondary;
       case WaiterCallType.emergency:
         return AppColors.error;
     }
@@ -948,16 +940,20 @@ class _QRMenuPageState extends State<QRMenuPage>
     switch (callType) {
       case WaiterCallType.service:
         return Icons.room_service_rounded;
+      case WaiterCallType.order:
+        return Icons.restaurant_menu_rounded;
+      case WaiterCallType.payment:
+        return Icons.receipt_rounded;
+      case WaiterCallType.complaint:
+        return Icons.report_problem_rounded;
+      case WaiterCallType.assistance:
+        return Icons.help_rounded;
       case WaiterCallType.bill:
         return Icons.receipt_rounded;
       case WaiterCallType.help:
         return Icons.help_rounded;
-      case WaiterCallType.complaint:
-        return Icons.report_problem_rounded;
       case WaiterCallType.cleaning:
         return Icons.cleaning_services_rounded;
-      case WaiterCallType.order:
-        return Icons.restaurant_menu_rounded;
       case WaiterCallType.emergency:
         return Icons.emergency_rounded;
     }

@@ -346,11 +346,13 @@ class WaiterCall {
   static int _getExpectedResponseTime(WaiterCallType type, WaiterCallPriority priority) {
     final baseTime = switch (type) {
       WaiterCallType.service => 3,
+      WaiterCallType.order => 2,
+      WaiterCallType.payment => 5,
+      WaiterCallType.complaint => 1,
+      WaiterCallType.assistance => 2,
       WaiterCallType.bill => 5,
       WaiterCallType.help => 2,
-      WaiterCallType.complaint => 1,
       WaiterCallType.cleaning => 8,
-      WaiterCallType.order => 2,
       WaiterCallType.emergency => 1,
     };
     
@@ -372,12 +374,14 @@ class WaiterCall {
         return WaiterCallPriority.emergency;
       case WaiterCallType.complaint:
         return WaiterCallPriority.urgent;
+      case WaiterCallType.assistance:
       case WaiterCallType.help:
         return WaiterCallPriority.high;
       case WaiterCallType.order:
         return WaiterCallPriority.high;
       case WaiterCallType.service:
         return WaiterCallPriority.normal;
+      case WaiterCallType.payment:
       case WaiterCallType.bill:
         return WaiterCallPriority.normal;
       case WaiterCallType.cleaning:
@@ -394,11 +398,13 @@ class WaiterCall {
 /// Garson çağırma türleri
 enum WaiterCallType {
   service('Hizmet'),
+  order('Sipariş'),
+  payment('Hesap'),
+  complaint('Şikayet'),
+  assistance('Yardım'),
   bill('Hesap'),
   help('Yardım'),
-  complaint('Şikayet'),
   cleaning('Temizlik'),
-  order('Sipariş'),
   emergency('Acil Durum');
 
   const WaiterCallType(this.displayName);
@@ -408,16 +414,20 @@ enum WaiterCallType {
     switch (this) {
       case WaiterCallType.service:
         return 'Genel hizmet talebi';
+      case WaiterCallType.order:
+        return 'Sipariş alma';
+      case WaiterCallType.payment:
+        return 'Hesap isteme';
+      case WaiterCallType.complaint:
+        return 'Şikayet bildirimi';
+      case WaiterCallType.assistance:
+        return 'Yardım talebi';
       case WaiterCallType.bill:
         return 'Hesap isteme';
       case WaiterCallType.help:
         return 'Yardım talebi';
-      case WaiterCallType.complaint:
-        return 'Şikayet bildirimi';
       case WaiterCallType.cleaning:
         return 'Masa temizleme';
-      case WaiterCallType.order:
-        return 'Sipariş alma';
       case WaiterCallType.emergency:
         return 'Acil durum';
     }
@@ -427,16 +437,20 @@ enum WaiterCallType {
     switch (this) {
       case WaiterCallType.service:
         return 'room_service';
+      case WaiterCallType.order:
+        return 'restaurant_menu';
+      case WaiterCallType.payment:
+        return 'receipt';
+      case WaiterCallType.complaint:
+        return 'report_problem';
+      case WaiterCallType.assistance:
+        return 'help';
       case WaiterCallType.bill:
         return 'receipt';
       case WaiterCallType.help:
         return 'help';
-      case WaiterCallType.complaint:
-        return 'report_problem';
       case WaiterCallType.cleaning:
         return 'cleaning_services';
-      case WaiterCallType.order:
-        return 'restaurant_menu';
       case WaiterCallType.emergency:
         return 'emergency';
     }
