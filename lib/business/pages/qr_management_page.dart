@@ -456,27 +456,46 @@ class _QRManagementPageState extends State<QRManagementPage>
           children: [
             // QR Code display
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.greyLight),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.greyLight, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   Text(
                     _business!.businessName,
-                    style: AppTypography.h6.copyWith(
+                    style: AppTypography.h5.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  _qrService.createQRWidget(_businessQR!, overrideSize: 200),
-                  const SizedBox(height: 16),
-                  const Text(
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 2),
+                    ),
+                    child: _qrService.createQRWidget(_businessQR!, overrideSize: 280),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
                     'Menümüze ulaşmak için QR kodu tarayın',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -766,10 +785,10 @@ class _QRManagementPageState extends State<QRManagementPage>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.8,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
               ),
               itemCount: _tableQRs.length,
               itemBuilder: (context, index) {
@@ -777,41 +796,106 @@ class _QRManagementPageState extends State<QRManagementPage>
                 final tableNumber = qr.data.tableNumber ?? (index + 1);
                 
                 return Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: _qrService.createQRWidget(qr, overrideSize: 80),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Masa $tableNumber',
-                          style: AppTypography.bodySmall.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              onPressed: () => _qrService.shareTableQR(
-                                widget.businessId,
-                                tableNumber,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.white,
+                          AppColors.primary.withOpacity(0.02),
+                        ],
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          // Table number header
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'Masa $tableNumber',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.bold,
                               ),
-                              icon: const Icon(Icons.share, size: 16),
-                              tooltip: 'Paylaş',
                             ),
-                            IconButton(
-                              onPressed: () => _copyToClipboard(qr.url),
-                              icon: const Icon(Icons.copy, size: 16),
-                              tooltip: 'Kopyala',
+                          ),
+                          const SizedBox(height: 16),
+                          // QR Code
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: _qrService.createQRWidget(qr, overrideSize: 120),
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Action buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => _qrService.shareTableQR(
+                                    widget.businessId,
+                                    tableNumber,
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: AppColors.white,
+                                    elevation: 2,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                  ),
+                                  child: const Icon(Icons.share, size: 16),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => _copyToClipboard(qr.url),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.secondary,
+                                    foregroundColor: AppColors.white,
+                                    elevation: 2,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                  ),
+                                  child: const Icon(Icons.copy, size: 16),
+                                ),
+                              ),
                           ],
                         ),
                       ],
+                    ),
                     ),
                   ),
                 );

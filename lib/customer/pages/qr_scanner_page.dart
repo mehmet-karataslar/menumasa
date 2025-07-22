@@ -186,20 +186,31 @@ class _QRScannerPageState extends State<QRScannerPage>
 
   int? _extractTableNumberFromQR(String qrCode) {
     try {
+      print('🔍 QR Kod analiz ediliyor: $qrCode');
+      
       if (qrCode.contains('table_')) {
+        print('📋 Eski format tespit edildi: table_');
         final parts = qrCode.split('_');
         final tableIndex = parts.indexOf('table');
         if (tableIndex >= 0 && tableIndex + 1 < parts.length) {
-          return int.tryParse(parts[tableIndex + 1]);
+          final tableNumber = int.tryParse(parts[tableIndex + 1]);
+          print('📋 Masa numarasi bulundu: $tableNumber');
+          return tableNumber;
         }
       } else if (qrCode.contains('table=')) {
+        print('🔗 URL format tespit edildi: table=');
         final uri = Uri.tryParse(qrCode);
         if (uri != null && uri.queryParameters.containsKey('table')) {
-          return int.tryParse(uri.queryParameters['table']!);
+          final tableNumber = int.tryParse(uri.queryParameters['table']!);
+          print('🔗 URL den masa numarasi: $tableNumber');
+          return tableNumber;
         }
       }
+      
+      print('❌ Masa numarasi bulunamadi');
       return null;
     } catch (e) {
+      print('❌ Masa numarasi parse hatasi: $e');
       return null;
     }
   }
