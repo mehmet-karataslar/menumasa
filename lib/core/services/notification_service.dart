@@ -731,6 +731,9 @@ class NotificationModel {
 enum NotificationType {
   newOrder('new_order', 'Yeni Sipariş'),
   orderUpdate('order_update', 'Sipariş Güncellendi'),
+  waiterCall('waiter_call', 'Garson Çağrısı'),
+  promotion('promotion', 'Promosyon'),
+  reminder('reminder', 'Hatırlatma'),
   system('system', 'Sistem Bildirimi');
 
   const NotificationType(this.value, this.displayName);
@@ -909,6 +912,12 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
         return AppColors.success;
       case NotificationType.orderUpdate:
         return AppColors.info;
+      case NotificationType.waiterCall:
+        return AppColors.primary;
+      case NotificationType.promotion:
+        return AppColors.accent;
+      case NotificationType.reminder:
+        return AppColors.warning;
       case NotificationType.system:
         return AppColors.warning;
     }
@@ -921,6 +930,12 @@ class _InAppNotificationWidgetState extends State<InAppNotificationWidget>
         return Icons.shopping_cart;
       case NotificationType.orderUpdate:
         return Icons.update;
+      case NotificationType.waiterCall:
+        return Icons.room_service;
+      case NotificationType.promotion:
+        return Icons.local_offer;
+      case NotificationType.reminder:
+        return Icons.alarm;
       case NotificationType.system:
         return Icons.info;
     }
@@ -935,4 +950,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // await Firebase.initializeApp();
 }
 
-enum NotificationPriority { low, normal, high, urgent } 
+enum NotificationPriority { low, normal, high, urgent }
+
+ 

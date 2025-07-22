@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../business/models/product.dart';
 import '../../business/models/business.dart';
+import '../../business/models/detailed_nutrition_info.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/auth_service.dart';
+import '../models/allergen_profile.dart';
+import '../services/customer_firestore_service.dart';
 import 'cart_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -28,8 +31,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   int _quantity = 1;
   bool _isLoading = false;
   bool _isFavorite = false;
+  DetailedNutritionInfo? _nutritionInfo;
+  AllergenProfile? _allergenProfile;
+  ProductSafetyResult? _safetyResult;
+  
   final CartService _cartService = CartService();
   final AuthService _authService = AuthService();
+  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
 
   // Animation controllers
   late AnimationController _fadeAnimationController;
@@ -71,6 +79,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     _fadeAnimationController.forward();
     _slideAnimationController.forward();
     _scaleAnimationController.forward();
+    
+    // Load nutrition and allergen data
+    _loadNutritionData();
   }
 
   @override
@@ -1378,6 +1389,44 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         margin: const EdgeInsets.all(16),
       ),
     );
+  }
+
+  // ============================================================================
+  // NUTRITION & ALLERGEN METHODS
+  // ============================================================================
+
+  Future<void> _loadNutritionData() async {
+    try {
+      // Detaylı beslenme bilgilerini yükle
+      final nutritionInfo = await _customerFirestoreService.getDetailedNutritionInfo(widget.product.productId);
+      
+      // Kullanıcının alerjen profilini yükle
+      final userId = _authService.currentUser?.uid;
+      AllergenProfile? allergenProfile;
+      ProductSafetyResult? safetyResult;
+      
+      if (userId != null) {
+        allergenProfile = await _customerFirestoreService.getAllergenProfile(userId);
+        
+        // Güvenlik kontrolü yap
+        if (allergenProfile != null) {
+          safetyResult = allergenProfile.checkProductSafety(
+            widget.product.allergens,
+            [], // mayContain - ürün modelinde eklenmeli
+            nutritionInfo?.ingredients?.split(',') ?? [],
+            widget.product.tags,
+          );
+        }
+      }
+      
+      setState(() {
+        _nutritionInfo = nutritionInfo;
+        _allergenProfile = allergenProfile;
+        _safetyResult = safetyResult;
+      });
+    } catch (e) {
+      print('Beslenme verisi yükleme hatası: $e');
+    }
   }
 }
 

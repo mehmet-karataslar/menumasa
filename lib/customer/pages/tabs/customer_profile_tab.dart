@@ -5,7 +5,9 @@ import '../../../data/models/user.dart' as app_user;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/url_service.dart';
+import '../../../core/services/multilingual_service.dart';
 import '../../services/customer_firestore_service.dart';
+import '../../models/language_settings.dart';
 import '../customer_profile_page.dart';
 
 /// Müşteri profil tab'ı
@@ -34,9 +36,11 @@ class CustomerProfileTab extends StatefulWidget {
 class _CustomerProfileTabState extends State<CustomerProfileTab> {
   final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
   final UrlService _urlService = UrlService();
+  final MultilingualService _multilingualService = MultilingualService();
 
   List<app_order.Order> _orders = [];
   List<Business> _favoriteBusinesses = [];
+  LanguageSettings? _languageSettings;
   bool _isLoading = false;
 
   @override
@@ -59,9 +63,13 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
       final favoriteIds = widget.customerData?.favorites.map((f) => f.businessId).toList() ?? [];
       final favorites = businesses.where((b) => favoriteIds.contains(b.id)).toList();
 
+      // Dil ayarlarını yükle
+      final languageSettings = await _multilingualService.getLanguageSettings(widget.userId);
+
       setState(() {
         _orders = orders;
         _favoriteBusinesses = favorites;
+        _languageSettings = languageSettings;
       });
     } catch (e) {
       print('Profil veri yükleme hatası: $e');
@@ -339,6 +347,15 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         'subtitle': 'Kişisel bilgilerini güncelle',
         'color': AppColors.primary,
         'action': () => _navigateToProfile(),
+      },
+      {
+        'icon': Icons.language_rounded,
+        'title': 'Dil Seçimi',
+        'subtitle': _languageSettings != null 
+            ? 'Mevcut: ${LanguageSettings.getLanguageInfo(_languageSettings!.preferredLanguage)?.name ?? "Türkçe"}'
+            : 'Menü dilini değiştirin',
+        'color': AppColors.secondary,
+        'action': () => _showLanguageSelection(),
       },
       {
         'icon': Icons.history_rounded,
@@ -667,5 +684,246 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         ],
       ),
     );
+  }
+
+  // ============================================================================
+  // DIL SEÇİMİ METHODS
+  // ============================================================================
+
+  void _showLanguageSelection() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildLanguageSelectionSheet(),
+    );
+  }
+
+  Widget _buildLanguageSelectionSheet() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.greyLight,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Icon(Icons.language_rounded, color: AppColors.primary, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Dil Seçimi',
+                  style: AppTypography.h5.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          
+          // Language list
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: LanguageSettings.supportedLanguages.length,
+              itemBuilder: (context, index) {
+                final language = LanguageSettings.supportedLanguages[index];
+                final isSelected = _languageSettings?.preferredLanguage == language.code;
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _selectLanguage(language.code),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.greyLighter,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : AppColors.greyLight,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              language.flag,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    language.name,
+                                    style: AppTypography.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    language.code.toUpperCase(),
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primary,
+                                size: 24,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // Auto detect toggle
+          Container(
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.settings_rounded, color: AppColors.info, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Otomatik Dil Algılama',
+                        style: AppTypography.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.info,
+                        ),
+                      ),
+                      Text(
+                        'Sistem dilinize göre menü dilini otomatik seç',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.info,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _languageSettings?.autoDetectLanguage ?? true,
+                  onChanged: _toggleAutoDetect,
+                  activeColor: AppColors.info,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selectLanguage(String languageCode) async {
+    try {
+      await _multilingualService.updateLanguageSettings(
+        widget.userId,
+        preferredLanguage: languageCode,
+      );
+      
+      // Dil ayarlarını güncelle
+      final updatedSettings = await _multilingualService.getLanguageSettings(widget.userId);
+      setState(() {
+        _languageSettings = updatedSettings;
+      });
+      
+      Navigator.pop(context);
+      
+      // Başarı mesajı
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.language_rounded, color: AppColors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Dil ${LanguageSettings.getLanguageInfo(languageCode)?.name} olarak güncellendi',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      
+      // Sayfayı yenile
+      widget.onRefresh();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Dil ayarı güncellenirken hata: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _toggleAutoDetect(bool value) async {
+    try {
+      await _multilingualService.updateLanguageSettings(
+        widget.userId,
+        autoDetectLanguage: value,
+      );
+      
+      // Dil ayarlarını güncelle
+      final updatedSettings = await _multilingualService.getLanguageSettings(widget.userId);
+      setState(() {
+        _languageSettings = updatedSettings;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ayar güncellenirken hata: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 } 

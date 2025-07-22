@@ -6,8 +6,10 @@ import '../../business/models/product.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
+import '../../core/services/waiter_call_service.dart';
 import '../services/customer_firestore_service.dart';
 import '../services/customer_service.dart';
+import '../models/waiter_call.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../widgets/business_header.dart';
@@ -36,6 +38,7 @@ class _QRMenuPageState extends State<QRMenuPage>
   final CustomerFirestoreService _firestoreService = CustomerFirestoreService();
   final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
+  final WaiterCallService _waiterCallService = WaiterCallService();
   
   // Data variables
   Business? _business;
@@ -195,6 +198,8 @@ class _QRMenuPageState extends State<QRMenuPage>
           : _errorMessage != null
               ? _buildErrorView()
               : _buildMenuContent(),
+      floatingActionButton: _buildWaiterCallButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -550,5 +555,411 @@ class _QRMenuPageState extends State<QRMenuPage>
     // Harita açma
     HapticFeedback.mediumImpact();
     // Location implementation
+  }
+
+  // ============================================================================
+  // WAITER CALL METHODS
+  // ============================================================================
+
+  Widget _buildWaiterCallButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _showWaiterCallDialog,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.room_service_rounded,
+                  color: AppColors.white,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Garson',
+                  style: AppTypography.bodyLarge.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showWaiterCallDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildWaiterCallSheet(),
+    );
+  }
+
+  Widget _buildWaiterCallSheet() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.greyLight,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.room_service_rounded,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Garson Çağırın',
+                        style: AppTypography.h5.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'İhtiyacınızı seçin, garson gelsin',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          
+          // Call types
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: WaiterCallType.values.length,
+              itemBuilder: (context, index) {
+                final callType = WaiterCallType.values[index];
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _makeWaiterCall(callType),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.greyLighter,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.greyLight),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: _getCallTypeColor(callType).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getCallTypeIcon(callType),
+                                color: _getCallTypeColor(callType),
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    callType.displayName,
+                                    style: AppTypography.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    callType.description,
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: AppColors.textSecondary,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // Note
+          Container(
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: AppColors.info, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'QR menüde sepet yok. Sipariş vermek için garson çağırın veya mobil uygulamayı indirin.',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.info,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _makeWaiterCall(WaiterCallType callType) async {
+    Navigator.pop(context);
+    
+    // Masa numarası al
+    final tableNumber = await _getTableNumber();
+    if (tableNumber == null) return;
+    
+    try {
+      // Loading göster
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const LoadingIndicator(),
+      );
+      
+      final callId = await _waiterCallService.callWaiter(
+        businessId: widget.businessId,
+        customerId: widget.userId ?? 'qr_customer_${DateTime.now().millisecondsSinceEpoch}',
+        customerName: 'QR Müşterisi',
+        tableNumber: tableNumber,
+        requestType: callType,
+        message: 'QR menü üzerinden çağrı',
+        metadata: {
+          'source': 'qr_menu',
+          'qr_code': widget.qrCode,
+        },
+      );
+      
+      Navigator.pop(context); // Loading kapat
+      
+      // Başarı mesajı
+      _showSuccessDialog(callType, tableNumber);
+      
+    } catch (e) {
+      Navigator.pop(context); // Loading kapat
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Garson çağırırken hata: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<int?> _getTableNumber() async {
+    final TextEditingController controller = TextEditingController();
+    
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.table_restaurant_rounded, color: AppColors.primary),
+            const SizedBox(width: 12),
+            const Text('Masa Numarası'),
+          ],
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Masa Numarası',
+            hintText: 'Örn: 15',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final tableNumber = int.tryParse(controller.text);
+              if (tableNumber != null && tableNumber > 0) {
+                Navigator.pop(context, tableNumber);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Lütfen geçerli bir masa numarası girin'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            },
+            child: const Text('Devam'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog(WaiterCallType callType, int tableNumber) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.success.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.check_rounded,
+            color: AppColors.success,
+            size: 32,
+          ),
+        ),
+        title: const Text('Garson Çağrıldı'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${callType.displayName} talebiniz için garson çağrıldı.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Masa: $tableNumber',
+              style: AppTypography.bodyLarge.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getCallTypeColor(WaiterCallType callType) {
+    switch (callType) {
+      case WaiterCallType.service:
+        return AppColors.primary;
+      case WaiterCallType.bill:
+        return AppColors.success;
+      case WaiterCallType.help:
+        return AppColors.info;
+      case WaiterCallType.complaint:
+        return AppColors.error;
+      case WaiterCallType.cleaning:
+        return AppColors.warning;
+      case WaiterCallType.order:
+        return AppColors.secondary;
+      case WaiterCallType.emergency:
+        return AppColors.error;
+    }
+  }
+
+  IconData _getCallTypeIcon(WaiterCallType callType) {
+    switch (callType) {
+      case WaiterCallType.service:
+        return Icons.room_service_rounded;
+      case WaiterCallType.bill:
+        return Icons.receipt_rounded;
+      case WaiterCallType.help:
+        return Icons.help_rounded;
+      case WaiterCallType.complaint:
+        return Icons.report_problem_rounded;
+      case WaiterCallType.cleaning:
+        return Icons.cleaning_services_rounded;
+      case WaiterCallType.order:
+        return Icons.restaurant_menu_rounded;
+      case WaiterCallType.emergency:
+        return Icons.emergency_rounded;
+    }
   }
 } 

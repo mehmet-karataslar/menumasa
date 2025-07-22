@@ -5,6 +5,8 @@ import '../../data/models/order.dart' as app_order;
 import '../../business/models/business.dart';
 import '../../business/models/category.dart';
 import '../../business/models/product.dart';
+import '../../business/models/detailed_nutrition_info.dart';
+import '../models/allergen_profile.dart';
 
 class CustomerFirestoreService {
   static final CustomerFirestoreService _instance = CustomerFirestoreService._internal();
@@ -721,6 +723,71 @@ class CustomerFirestoreService {
     } catch (e) {
       print('Error getting products by category: $e');
       return [];
+    }
+  }
+
+  // =============================================================================
+  // NUTRITION & ALLERGEN OPERATIONS
+  // =============================================================================
+
+  /// Ürün için detaylı beslenme bilgisi al
+  Future<DetailedNutritionInfo?> getDetailedNutritionInfo(String productId) async {
+    try {
+      final doc = await _firestore.collection('detailed_nutrition_info').doc(productId).get();
+      
+      if (doc.exists) {
+        return DetailedNutritionInfo.fromFirestore(doc);
+      }
+      
+      return null;
+    } catch (e) {
+      print('Detaylı beslenme bilgisi alınırken hata: $e');
+      return null;
+    }
+  }
+
+  /// Müşteri alerjen profili al
+  Future<AllergenProfile?> getAllergenProfile(String customerId) async {
+    try {
+      final doc = await _firestore.collection('allergen_profiles').doc(customerId).get();
+      
+      if (doc.exists) {
+        return AllergenProfile.fromFirestore(doc);
+      }
+      
+      // Profil yoksa varsayılan profil oluştur
+      final defaultProfile = AllergenProfile.defaultProfile(customerId);
+      await saveAllergenProfile(defaultProfile);
+      return defaultProfile;
+    } catch (e) {
+      print('Alerjen profili alınırken hata: $e');
+      return null;
+    }
+  }
+
+  /// Müşteri alerjen profili kaydet
+  Future<void> saveAllergenProfile(AllergenProfile profile) async {
+    try {
+      await _firestore
+          .collection('allergen_profiles')
+          .doc(profile.customerId)
+          .set(profile.toFirestore());
+    } catch (e) {
+      print('Alerjen profili kaydedilirken hata: $e');
+      rethrow;
+    }
+  }
+
+  /// Beslenme bilgisi kaydet (işletme için)
+  Future<void> saveDetailedNutritionInfo(DetailedNutritionInfo nutritionInfo) async {
+    try {
+      await _firestore
+          .collection('detailed_nutrition_info')
+          .doc(nutritionInfo.productId)
+          .set(nutritionInfo.toFirestore());
+    } catch (e) {
+      print('Beslenme bilgisi kaydedilirken hata: $e');
+      rethrow;
     }
   }
 } 

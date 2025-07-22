@@ -241,6 +241,12 @@ class NotificationDialog extends StatelessWidget {
         return AppColors.success;
       case NotificationType.orderUpdate:
         return AppColors.info;
+      case NotificationType.waiterCall:
+        return AppColors.primary;
+      case NotificationType.promotion:
+        return AppColors.accent;
+      case NotificationType.reminder:
+        return AppColors.warning;
       case NotificationType.system:
         return AppColors.warning;
     }
@@ -252,6 +258,12 @@ class NotificationDialog extends StatelessWidget {
         return Icons.shopping_cart;
       case NotificationType.orderUpdate:
         return Icons.update;
+      case NotificationType.waiterCall:
+        return Icons.room_service;
+      case NotificationType.promotion:
+        return Icons.local_offer;
+      case NotificationType.reminder:
+        return Icons.alarm;
       case NotificationType.system:
         return Icons.info;
     }

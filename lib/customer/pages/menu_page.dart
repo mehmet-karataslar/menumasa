@@ -8,8 +8,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/utils/time_rule_utils.dart';
+import '../../core/services/multilingual_service.dart';
 
 import '../services/customer_firestore_service.dart';
+import '../models/language_settings.dart';
 import '../../business/services/business_firestore_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
@@ -59,6 +61,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   final _cartService = CartService();
   final _urlService = UrlService();
   final _authService = AuthService();
+  final _multilingualService = MultilingualService();
 
   // UI State
   String _searchQuery = '';
@@ -67,6 +70,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   bool _showSearchBar = false;
   int _cartItemCount = 0;
   double _headerOpacity = 1.0;
+  String _currentLanguage = 'tr';
 
   // Animation controllers
   late AnimationController _fadeAnimationController;
@@ -81,6 +85,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     super.initState();
     _initControllers();
     _initAnimations();
+    _determineUserLanguage();
     _loadMenuData();
     _initializeCart();
   }
@@ -1606,6 +1611,44 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  // ============================================================================
+  // MULTILINGUAL METHODS
+  // ============================================================================
+
+  Future<void> _determineUserLanguage() async {
+    try {
+      final userId = _authService.currentUser?.uid;
+      if (userId != null) {
+        final language = await _multilingualService.determineUserLanguage(userId);
+        setState(() {
+          _currentLanguage = language;
+        });
+      }
+    } catch (e) {
+      print('Dil belirleme hatası: $e');
+    }
+  }
+
+  Future<String> _getTranslatedText({
+    required String entityId,
+    required String entityType,
+    required String fieldName,
+    required String fallbackText,
+  }) async {
+    try {
+      return await _multilingualService.getTranslation(
+        entityId: entityId,
+        entityType: entityType,
+        fieldName: fieldName,
+        languageCode: _currentLanguage,
+        fallbackContent: fallbackText,
+      );
+    } catch (e) {
+      print('Çeviri alma hatası: $e');
+      return fallbackText;
+    }
   }
 }
 
