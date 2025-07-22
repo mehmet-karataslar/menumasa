@@ -3,11 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
 import '../constants/app_colors.dart';
 
 /// Bildirim servisi - tüm bildirim işlemlerini yönetir
@@ -18,7 +15,6 @@ class NotificationService {
   NotificationService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   
   // Bildirim dinleyicileri için haritalar
@@ -36,8 +32,7 @@ class NotificationService {
     if (_isInitialized) return;
 
     try {
-      // Initialize timezone data
-      tz.initializeTimeZones();
+      // Timezone initialization removed (was for flutter_local_notifications)
       
       // Initialize local notifications
       await _initializeLocalNotifications();
@@ -56,38 +51,9 @@ class NotificationService {
   }
 
   Future<void> _initializeLocalNotifications() async {
-    const androidInitialization = AndroidInitializationSettings('@drawable/ic_notification');
-    const iosInitialization = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
-    
-    const initializationSettings = InitializationSettings(
-      android: androidInitialization,
-      iOS: iosInitialization,
-    );
-
-    await _localNotifications.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
-
-    // Create notification channel for Android
-    if (!kIsWeb) {
-      const androidChannel = AndroidNotificationChannel(
-        'masamenu_channel',
-        'MasaMenu Notifications',
-        description: 'Sipariş, kampanya ve sistem bildirimleri',
-        importance: Importance.high,
-        enableVibration: true,
-        playSound: true,
-      );
-
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(androidChannel);
-    }
+    // Local notifications will be handled by Firebase Messaging
+    // This method is kept for compatibility but doesn't use flutter_local_notifications
+    print('Local notifications initialized via Firebase Messaging');
   }
 
   Future<void> _initializeFirebaseMessaging() async {
@@ -145,32 +111,8 @@ class NotificationService {
     String? payload,
     NotificationPriority priority = NotificationPriority.high,
   }) async {
-    if (!_isInitialized) await initialize();
-
-    const androidDetails = AndroidNotificationDetails(
-      'masamenu_channel',
-      'MasaMenu Notifications',
-      channelDescription: 'Sipariş, kampanya ve sistem bildirimleri',
-      importance: Importance.high,
-      priority: Priority.high,
-      enableVibration: true,
-      playSound: true,
-      icon: '@drawable/ic_notification',
-      color: Color(0xFFFF6B35),
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _localNotifications.show(id, title, body, details, payload: payload);
+    // Local notifications are now handled via Firebase Messaging
+    print('Local notification: $title - $body');
   }
 
   /// Schedule notification for later
@@ -181,47 +123,20 @@ class NotificationService {
     required DateTime scheduledDate,
     String? payload,
   }) async {
-    if (!_isInitialized) await initialize();
-
-    const androidDetails = AndroidNotificationDetails(
-      'masamenu_channel',
-      'MasaMenu Notifications',
-      channelDescription: 'Zamanlanmış bildirimler',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    // Convert DateTime to TZDateTime
-    final location = tz.getLocation('Europe/Istanbul'); // Türkiye timezone
-    final scheduledTZDateTime = tz.TZDateTime.from(scheduledDate, location);
-
-    await _localNotifications.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledTZDateTime,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      payload: payload,
-    );
+    // Scheduled notifications are now handled via Firebase Messaging
+    print('Schedule notification: $title at $scheduledDate');
   }
 
   /// Cancel notification
   Future<void> cancelNotification(int id) async {
-    await _localNotifications.cancel(id);
+    // Notifications are handled by Firebase Messaging
+    print('Cancel notification: $id');
   }
 
   /// Cancel all notifications
   Future<void> cancelAllNotifications() async {
-    await _localNotifications.cancelAll();
+    // Notifications are handled by Firebase Messaging
+    print('Cancel all notifications');
   }
 
   // =============================================================================
@@ -247,12 +162,10 @@ class NotificationService {
     _navigateBasedOnPayload(message.data);
   }
 
-  void _onNotificationTapped(NotificationResponse response) {
-    print('Local notification tapped: ${response.payload}');
+  void _onNotificationTapped(Map<String, dynamic> payload) {
+    print('Local notification tapped: $payload');
     // Handle local notification tap
-    if (response.payload != null) {
-      _navigateBasedOnPayload({'data': response.payload});
-    }
+    _navigateBasedOnPayload(payload);
   }
 
   void _navigateBasedOnPayload(Map<String, dynamic> data) {

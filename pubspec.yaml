@@ -52,7 +52,6 @@ dependencies:
   permission_handler: ^11.3.0
   
   # Notifications
-  flutter_local_notifications: ^16.3.2
   firebase_messaging: ^15.1.6
   
   # Image Handling
