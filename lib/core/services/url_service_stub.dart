@@ -76,6 +76,11 @@ class UrlServiceStub extends UrlServiceBase {
   }
 
   @override
+  String getCurrentBaseUrl() {
+    return 'https://your-app.com'; // Stub implementation
+  }
+
+  @override
   Map<String, String> getCurrentParams() {
     // Return empty params for non-web platforms
     return {};

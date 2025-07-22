@@ -76,6 +76,11 @@ class UrlServiceIO extends UrlServiceBase {
   }
 
   @override
+  String getCurrentBaseUrl() {
+    return 'https://your-app.com'; // Default for mobile (not used for QR codes)
+  }
+
+  @override
   Map<String, String> getCurrentParams() {
     // Return empty params for mobile/desktop platforms
     return {};

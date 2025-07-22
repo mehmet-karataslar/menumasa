@@ -41,11 +41,23 @@
   <title>Masa Menü - Dijital Menü Çözümü</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- Hash routing removal script -->
+  <!-- QR Menu compatible routing script -->
   <script>
-    // Clear cache and remove hash immediately
+    // QR Menu and normal route handler
     (function() {
-      // Clear browser cache for this page
+      const currentPath = window.location.pathname;
+      const currentSearch = window.location.search;
+      
+      // Check if this is a QR menu URL
+      const isQRMenuURL = currentPath.includes('/menu/') || currentPath.includes('/qr-menu/');
+      
+      // Don't redirect QR menu URLs
+      if (isQRMenuURL) {
+        console.log('QR Menu URL detected, preserving route:', currentPath + currentSearch);
+        return;
+      }
+      
+      // Clear cache for non-QR URLs
       if ('caches' in window) {
         caches.keys().then(function(names) {
           for (let name of names) {
@@ -54,10 +66,15 @@
         });
       }
       
-      // Remove hash and redirect
-      if (window.location.hash) {
+      // Handle hash routing only for non-QR URLs
+      if (window.location.hash && !isQRMenuURL) {
         const path = window.location.hash.substring(1);
         if (path && path !== '/') {
+          // Check if hash contains QR menu path
+          if (path.includes('/menu/') || path.includes('/qr-menu/')) {
+            window.history.replaceState(null, null, path);
+            return; // Don't redirect QR menu paths
+          }
           window.history.replaceState(null, null, path);
           window.location.replace(path);
         } else {
@@ -67,43 +84,23 @@
       }
     })();
     
-    // Intercept all hash changes
+    // Intercept hash changes for non-QR URLs
     window.addEventListener('hashchange', function(e) {
-      e.preventDefault();
       const path = window.location.hash.substring(1);
+      
+      // Don't interfere with QR menu URLs
+      if (path && (path.includes('/menu/') || path.includes('/qr-menu/'))) {
+        window.history.replaceState(null, null, path);
+        return;
+      }
+      
+      e.preventDefault();
       if (path && path !== '/') {
         window.history.replaceState(null, null, path);
         window.location.replace(path);
       } else {
         window.history.replaceState(null, null, '/');
         window.location.replace('/');
-      }
-    });
-    
-    // Override pushState to prevent hash
-    const originalPushState = history.pushState;
-    history.pushState = function(state, title, url) {
-      if (url && url.includes('#')) {
-        url = url.split('#')[0];
-      }
-      return originalPushState.call(this, state, title, url);
-    };
-    
-    // Override replaceState to prevent hash
-    const originalReplaceState = history.replaceState;
-    history.replaceState = function(state, title, url) {
-      if (url && url.includes('#')) {
-        url = url.split('#')[0];
-      }
-      return originalReplaceState.call(this, state, title, url);
-    };
-    
-    // Force reload without cache
-    window.addEventListener('load', function() {
-      if (window.location.hash) {
-        const path = window.location.hash.substring(1);
-        window.history.replaceState(null, null, path || '/');
-        window.location.reload();
       }
     });
   </script>

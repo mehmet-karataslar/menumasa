@@ -13,6 +13,7 @@ import '../../business/models/business.dart';
 import '../../business/models/qr_code.dart';
 
 import '../../business/services/business_firestore_service.dart';
+import 'url_service.dart';
 
 class QRService {
   static final QRService _instance = QRService._internal();
@@ -22,8 +23,11 @@ class QRService {
   final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Base URL for QR codes - updated to actual deployment URL
-  static const String baseUrl = 'https://menumebak.web.app';
+  // URL Service for dynamic base URL
+  final UrlService _urlService = UrlService();
+
+  // Get dynamic base URL
+  String get baseUrl => _urlService.getCurrentBaseUrl();
 
   // =============================================================================
   // QR CODE CRUD OPERATIONS
@@ -216,12 +220,18 @@ class QRService {
 
   /// Generates a unique QR code URL for a business
   String generateBusinessQRUrl(String businessId) {
-    return '$baseUrl/qr-menu/$businessId';
+    // Use /menu/ path for compatibility with existing QR codes
+    final url = '$baseUrl/menu/$businessId';
+    print('📱 QR URL Generated: $url (base: $baseUrl)');
+    return url;
   }
 
   /// Generates a QR code URL for a specific table
   String generateTableQRUrl(String businessId, int tableNumber) {
-    return '$baseUrl/qr-menu/$businessId?table=$tableNumber';
+    // Use /menu/ path for compatibility with existing QR codes
+    final url = '$baseUrl/menu/$businessId?table=$tableNumber';
+    print('📱 QR Table URL Generated: $url (base: $baseUrl)');
+    return url;
   }
 
   /// Generates a QR code URL for a specific table with additional parameters

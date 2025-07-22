@@ -105,6 +105,11 @@ class UrlServiceWeb extends UrlServiceBase {
     return html.window.location.pathname ?? '/';
   }
 
+  /// Gets the current base URL (protocol + host)
+  String getCurrentBaseUrl() {
+    return '${html.window.location.protocol}//${html.window.location.host}';
+  }
+
   @override
   Map<String, String> getCurrentParams() {
     final uri = Uri.parse(html.window.location.href);

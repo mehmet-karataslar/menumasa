@@ -28,6 +28,9 @@ abstract class UrlServiceBase {
   /// Gets the current URL path
   String getCurrentPath();
 
+  /// Gets the current base URL (protocol + host)
+  String getCurrentBaseUrl();
+
   /// Gets the current URL parameters
   Map<String, String> getCurrentParams();
 
@@ -129,6 +132,11 @@ class UrlService extends UrlServiceBase {
   @override
   String getCurrentPath() {
     return _implementation.getCurrentPath();
+  }
+
+  @override
+  String getCurrentBaseUrl() {
+    return _implementation.getCurrentBaseUrl();
   }
 
   @override
