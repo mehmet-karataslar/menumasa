@@ -88,6 +88,56 @@ class StorageService {
   }
 
   // =============================================================================
+  // WAITER IMAGE OPERATIONS
+  // =============================================================================
+
+  /// Uploads a waiter profile photo to Firebase Storage
+  Future<String> uploadWaiterPhoto({
+    required String businessId,
+    required String waiterId,
+    required dynamic imageFile,
+  }) async {
+    try {
+      final fileName = 'waiter_${waiterId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage
+          .ref()
+          .child('businesses')
+          .child(businessId)
+          .child('waiters')
+          .child(waiterId)
+          .child(fileName);
+
+      UploadTask uploadTask;
+      
+      if (kIsWeb) {
+        // Web platform - use putData with Uint8List
+        uploadTask = ref.putData(imageFile as Uint8List);
+      } else {
+        // Mobile platform - use putFile with File
+        uploadTask = ref.putFile(imageFile as File);
+      }
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Garson fotoğrafı yüklenirken hata oluştu: $e');
+    }
+  }
+
+  /// Deletes a waiter profile photo from Firebase Storage
+  Future<void> deleteWaiterPhoto(String imageUrl) async {
+    try {
+      final ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+    } catch (e) {
+      print('Error deleting waiter photo: $e');
+      // Don't throw error for image deletion failures
+    }
+  }
+
+  // =============================================================================
   // BUSINESS IMAGE OPERATIONS
   // =============================================================================
 

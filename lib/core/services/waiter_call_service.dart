@@ -625,4 +625,23 @@ class WaiterCallService {
             .map((doc) => WaiterCall.fromFirestore(doc))
             .toList());
   }
+
+  /// İşletmenin çağrı geçmişini getir
+  Future<List<WaiterCall>> getBusinessCallHistory(String businessId, {int limit = 50}) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => WaiterCall.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('❌ İşletme çağrı geçmişi getirme hatası: $e');
+      return [];
+    }
+  }
 } 

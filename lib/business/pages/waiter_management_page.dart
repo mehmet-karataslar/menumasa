@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/services/storage_service.dart';
 import '../models/waiter.dart';
 import '../services/waiter_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
@@ -735,9 +738,13 @@ class _AddWaiterDialogState extends State<_AddWaiterDialog> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final StorageService _storageService = StorageService();
+  final ImagePicker _imagePicker = ImagePicker();
   
   WaiterRank _selectedRank = WaiterRank.trainee;
   bool _isLoading = false;
+  File? _selectedImage;
+  String? _profileImageUrl;
 
   @override
   void dispose() {
@@ -761,6 +768,10 @@ class _AddWaiterDialogState extends State<_AddWaiterDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Profile photo section
+              _buildProfilePhotoSection(),
+              const SizedBox(height: 20),
+              
               TextFormField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(
@@ -837,12 +848,107 @@ class _AddWaiterDialogState extends State<_AddWaiterDialog> {
     );
   }
 
+  Widget _buildProfilePhotoSection() {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.greyLighter,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.greyLight, width: 2),
+              image: _selectedImage != null
+                  ? DecorationImage(
+                      image: FileImage(_selectedImage!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: _selectedImage == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.camera_alt_rounded,
+                        size: 32,
+                        color: AppColors.greyDark,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Fotoğraf\nEkle',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.greyDark,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_selectedImage != null)
+          TextButton.icon(
+            onPressed: () => setState(() => _selectedImage = null),
+            icon: const Icon(Icons.delete_outline_rounded, size: 16),
+            label: const Text('Kaldır'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.error,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fotoğraf seçilirken hata: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _addWaiter() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
+      String? profileImageUrl;
+      
+      // Eğer fotoğraf seçildiyse Firebase Storage'a yükle
+      if (_selectedImage != null) {
+        final fileName = 'waiter_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        profileImageUrl = await _storageService.uploadWaiterPhoto(
+          businessId: widget.businessId,
+          waiterId: fileName,
+          imageFile: _selectedImage!,
+        );
+      }
+
       final waiter = Waiter.create(
         businessId: widget.businessId,
         firstName: _firstNameController.text.trim(),
@@ -850,6 +956,7 @@ class _AddWaiterDialogState extends State<_AddWaiterDialog> {
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
         rank: _selectedRank,
+        profileImageUrl: profileImageUrl,
       );
 
       final waiterService = WaiterService();

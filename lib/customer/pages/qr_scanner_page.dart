@@ -154,7 +154,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     // QR kod formatları:
     // 1. "masamenu_{businessId}_table_{tableNumber}"
     // 2. "{businessId}"
-    // 3. URL formatı: "https://menumebak.web.app/qr-menu/{businessId}"
+    // 3. URL formatı: "https://menumebak.web.app/menu/{businessId}?table={tableNumber}"
     
     if (qrCode.startsWith('masamenu_')) {
       // Format: masamenu_businessId_table_5
@@ -165,7 +165,12 @@ class _QRScannerPageState extends State<QRScannerPage>
     } else if (qrCode.startsWith('http')) {
       // URL formatı
       final uri = Uri.tryParse(qrCode);
-      if (uri != null && uri.pathSegments.isNotEmpty) {
+      if (uri != null && uri.pathSegments.length >= 2) {
+        // /menu/{businessId} formatı
+        if (uri.pathSegments[0] == 'menu') {
+          return uri.pathSegments[1];
+        }
+        // Eski format için son segment
         final lastSegment = uri.pathSegments.last;
         if (lastSegment.isNotEmpty) {
           return lastSegment;
@@ -177,6 +182,26 @@ class _QRScannerPageState extends State<QRScannerPage>
     }
     
     throw Exception('Geçersiz QR kod formatı');
+  }
+
+  int? _extractTableNumberFromQR(String qrCode) {
+    try {
+      if (qrCode.contains('table_')) {
+        final parts = qrCode.split('_');
+        final tableIndex = parts.indexOf('table');
+        if (tableIndex >= 0 && tableIndex + 1 < parts.length) {
+          return int.tryParse(parts[tableIndex + 1]);
+        }
+      } else if (qrCode.contains('table=')) {
+        final uri = Uri.tryParse(qrCode);
+        if (uri != null && uri.queryParameters.containsKey('table')) {
+          return int.tryParse(uri.queryParameters['table']!);
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<void> _toggleFlash() async {
@@ -205,7 +230,8 @@ class _QRScannerPageState extends State<QRScannerPage>
     
     if (mounted) {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final dynamicRoute = '/qr-menu/$businessId?t=$timestamp&qr=$qrCode';
+      final tableNumber = _extractTableNumberFromQR(qrCode);
+      final dynamicRoute = '/qr-menu/$businessId?t=$timestamp&qr=$qrCode${tableNumber != null ? '&table=$tableNumber' : ''}';
       
       Navigator.pushReplacement(
         context,
@@ -214,6 +240,7 @@ class _QRScannerPageState extends State<QRScannerPage>
             businessId: businessId,
             userId: widget.userId,
             qrCode: qrCode,
+            tableNumber: tableNumber,
           ),
           settings: RouteSettings(
             name: dynamicRoute,
@@ -221,6 +248,7 @@ class _QRScannerPageState extends State<QRScannerPage>
               'businessId': businessId,
               'userId': widget.userId,
               'qrCode': qrCode,
+              'tableNumber': tableNumber,
               'timestamp': timestamp,
               'referrer': 'qr_scanner',
             },
