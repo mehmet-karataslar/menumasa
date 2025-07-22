@@ -87,6 +87,35 @@ class _RouterPageState extends State<RouterPage> {
 
   @override
   Widget build(BuildContext context) {
+    // URL'den QR menü kontrolü
+    final routeName = ModalRoute.of(context)?.settings.name;
+    if (routeName != null && routeName.startsWith('/qr-menu/')) {
+      // QR menü URL'si tespit edildi, direkt QR menü sayfasına yönlendir
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, routeName);
+        }
+      });
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppColors.primary),
+              const SizedBox(height: 16),
+              Text(
+                'Menü yükleniyor...',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.background,

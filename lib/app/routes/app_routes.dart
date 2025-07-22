@@ -101,6 +101,11 @@ class AppRoutes {
   
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
+    
+    // Debug: URL routing'i logla
+    print('🔗 Route Debug: ${settings.name}');
+    print('🔗 URI path: ${uri.path}');
+    print('🔗 URI query: ${uri.query}');
 
     // Admin route'ları - AdminModule'a yönlendir
     if (AdminModule.isAdminRoute(settings.name ?? '')) {
@@ -144,6 +149,7 @@ class AppRoutes {
 
     // QR Menü route'ları
     if (settings.name?.startsWith('/qr-menu/') == true) {
+      print('🎯 QR Menu route tespit edildi: ${settings.name}');
       return _handleMenuRoutes(settings);
     }
 
@@ -348,16 +354,27 @@ class AppRoutes {
   static Route<dynamic>? _handleMenuRoutes(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
     final pathSegments = uri.pathSegments;
+    
+    print('🍽️ Menu Routes Handler:');
+    print('   🔗 URL: ${settings.name}');
+    print('   📂 Path segments: $pathSegments');
+    print('   🔍 Query params: ${uri.queryParameters}');
 
     if (pathSegments.length >= 2) {
       final businessId = pathSegments[1];
       final isQRMenu = pathSegments[0] == 'qr-menu';
+      
+      print('   🏢 Business ID: $businessId');
+      print('   📱 Is QR Menu: $isQRMenu');
       
       if (isQRMenu) {
         // QR Menü route'u için QRMenuPage'e yönlendir
         final tableNumber = uri.queryParameters['table'] != null 
             ? int.tryParse(uri.queryParameters['table']!) 
             : null;
+        
+        print('   🪑 Table number: $tableNumber');
+        print('   ✅ Yönlendiriliyor QRMenuPage\'e');
         
         return MaterialPageRoute(
           builder: (context) => QRMenuPage(
@@ -369,6 +386,7 @@ class AppRoutes {
         );
       } else {
         // Normal menü route'u için MenuPage'e yönlendir
+        print('   ✅ Yönlendiriliyor MenuPage\'e');
         return MaterialPageRoute(
           builder: (context) => MenuPage(businessId: businessId),
           settings: settings,
@@ -376,6 +394,7 @@ class AppRoutes {
       }
     }
 
+    print('   ❌ Route handle edilemedi');
     return null;
   }
 
