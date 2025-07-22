@@ -44,9 +44,10 @@ class QRCode {
     String? customDescription,
     QRCodeStyle? style,
     String? createdBy,
+    String? customUrl, // QR Service'ten URL geçirebilmek için
   }) {
     final qrId = 'qr_business_${businessId}_${DateTime.now().millisecondsSinceEpoch}';
-    final url = 'https://menumebak.web.app/menu/$businessId';
+    final url = customUrl ?? 'https://menumebak.web.app/menu/$businessId'; // Fallback URL
     
     return QRCode(
       qrCodeId: qrId,
@@ -75,9 +76,10 @@ class QRCode {
     String? tableName,
     QRCodeStyle? style,
     String? createdBy,
+    String? customUrl, // QR Service'ten URL geçirebilmek için
   }) {
     final qrId = 'qr_table_${businessId}_$tableNumber${DateTime.now().millisecondsSinceEpoch}';
-    final url = 'https://menumebak.web.app/menu/$businessId?table=$tableNumber';
+    final url = customUrl ?? 'https://menumebak.web.app/menu/$businessId?table=$tableNumber'; // Fallback URL
     final displayName = tableName ?? 'Masa $tableNumber';
     
     return QRCode(

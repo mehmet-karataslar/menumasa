@@ -28,16 +28,40 @@ class _QRScannerPageState extends State<QRScannerPage>
   late Animation<double> _scanAnimation;
   late Animation<double> _pulseAnimation;
   
-  MobileScannerController _qrController = MobileScannerController();
+  MobileScannerController? _qrController;
   bool _isScanning = false;
   String? _scannedCode;
   bool _flashOn = false;
+  bool _hasPermission = false;
+  String? _permissionError;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
     _updateURL();
+    _initializeCamera();
+  }
+  
+  Future<void> _initializeCamera() async {
+    try {
+      _qrController = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        facing: CameraFacing.back,
+        torchEnabled: _flashOn,
+      );
+      
+      setState(() {
+        _hasPermission = true;
+        _permissionError = null;
+      });
+    } catch (e) {
+      print('Kamera başlatma hatası: $e');
+      setState(() {
+        _hasPermission = false;
+        _permissionError = 'Kamera erişimi sağlanamadı: $e';
+      });
+    }
   }
 
   void _initializeAnimations() {
@@ -77,9 +101,59 @@ class _QRScannerPageState extends State<QRScannerPage>
     _urlService.updateUrl(dynamicRoute, customTitle: 'QR Tarayıcı | MasaMenu');
   }
 
+  Widget _buildPermissionError() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: AppColors.greyDark,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.camera_alt_outlined,
+            size: 64,
+            color: AppColors.white.withOpacity(0.7),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Kamera Erişimi Gerekli',
+            style: AppTypography.h6.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _permissionError ?? 'QR kod tarayabilmek için kamera erişimi gereklidir.',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.white.withOpacity(0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _initializeCamera,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Tekrar Dene'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _qrController.dispose();
+    _qrController?.dispose();
     _scanAnimationController.dispose();
     _pulseAnimationController.dispose();
     super.dispose();
@@ -93,7 +167,9 @@ class _QRScannerPageState extends State<QRScannerPage>
     HapticFeedback.mediumImpact();
     
     // Kamera erişimini başlat
-    await _qrController.start();
+    if (_qrController != null && _hasPermission) {
+      await _qrController!.start();
+    }
   }
 
   void _onQRCodeDetected(BarcodeCapture barcodeCapture) {
@@ -111,7 +187,9 @@ class _QRScannerPageState extends State<QRScannerPage>
     HapticFeedback.heavyImpact();
     
     // Kamera taramayı durdur
-    await _qrController.stop();
+    if (_qrController != null) {
+      await _qrController!.stop();
+    }
 
     try {
       // QR kodundan business ID'sini çıkar
@@ -146,7 +224,9 @@ class _QRScannerPageState extends State<QRScannerPage>
       });
       
       // Kamera taramayı tekrar başlat
-      await _qrController.start();
+      if (_qrController != null && _hasPermission) {
+        await _qrController!.start();
+      }
     }
   }
 
@@ -216,16 +296,28 @@ class _QRScannerPageState extends State<QRScannerPage>
   }
 
   Future<void> _toggleFlash() async {
-    await _qrController.toggleTorch();
-    setState(() {
-      _flashOn = !_flashOn;
-    });
-    HapticFeedback.lightImpact();
+    if (_qrController == null || !_hasPermission) return;
+    
+    try {
+      await _qrController!.toggleTorch();
+      setState(() {
+        _flashOn = !_flashOn;
+      });
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      print('Flash toggle hatası: $e');
+    }
   }
 
   Future<void> _flipCamera() async {
-    await _qrController.switchCamera();
-    HapticFeedback.lightImpact();
+    if (_qrController == null || !_hasPermission) return;
+    
+    try {
+      await _qrController!.switchCamera();
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      print('Kamera değiştirme hatası: $e');
+    }
   }
 
   Future<void> _handleQRCodeDetected(String qrCode, String businessId) async {
@@ -531,10 +623,13 @@ class _QRScannerPageState extends State<QRScannerPage>
                       color: AppColors.success,
                     ),
                   )
-                : MobileScanner(
-                    controller: _qrController,
-                    onDetect: _onQRCodeDetected,
-                  ),
+                : _qrController == null || !_hasPermission
+                    ? _buildPermissionError()
+                    : MobileScanner(
+                        controller: _qrController!,
+                        onDetect: _onQRCodeDetected,
+                        overlay: Container(), // Kendi overlay'imizi kullanıyoruz
+                      ),
           ),
         ),
         

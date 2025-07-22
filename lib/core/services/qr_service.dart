@@ -120,11 +120,13 @@ class QRService {
       return updatedQR;
     } else {
       // Create new business QR code
+      final dynamicUrl = generateBusinessQRUrl(businessId);
       final newQR = QRCode.businessQR(
         businessId: businessId,
         businessName: businessName,
         style: style,
         createdBy: createdBy,
+        customUrl: dynamicUrl,
       );
       final qrId = await saveQRCode(newQR);
       return newQR.copyWith(qrCodeId: qrId);
@@ -156,12 +158,14 @@ class QRService {
     try {
       for (int i = 1; i <= tableCount; i++) {
         print('📋 QR Service: Creating QR code for table $i');
+        final dynamicUrl = generateTableQRUrl(businessId, i);
         final tableQR = QRCode.tableQR(
           businessId: businessId,
           businessName: businessName,
           tableNumber: i,
           style: style,
           createdBy: createdBy,
+          customUrl: dynamicUrl,
         );
         
         final qrId = await saveQRCode(tableQR);
