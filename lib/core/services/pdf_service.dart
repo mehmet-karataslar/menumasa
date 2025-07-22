@@ -50,19 +50,8 @@ class PdfService {
     required String businessName,
     required List<QRCode> tableQRs,
   }) async {
-    // Türkçe karakterler için font yükle
-    pw.Font? font;
-    try {
-      print('🔍 PDF Service: Font yükleme denenecek...');
-      final fontData = await rootBundle.load('assets/fonts/Poppins-Regular.ttf');
-      font = pw.Font.ttf(fontData);
-      print('✅ PDF Service: Poppins font başarıyla yüklendi');
-    } catch (e) {
-      print('❌ PDF Service: Poppins font yüklenemedi: $e');
-      // Fallback olarak basit ASCII karakterler kullan
-      font = null;
-      print('⚠️ PDF Service: Font olmadan devam edilecek (sadece ASCII karakterler)');
-    }
+    // Built-in font kullan, güvenli ve basit
+    print('📄 PDF Service: Default font kullanılarak PDF oluşturuluyor...');
     
     final pdf = pw.Document();
     
@@ -70,8 +59,16 @@ class PdfService {
     const int qrPerPage = 6;
     const int qrPerRow = 2;
     
+    print('🔢 PDF Service: Toplam ${tableQRs.length} QR kod, ${(tableQRs.length / qrPerPage).ceil()} sayfa oluşturulacak');
+    
     for (int i = 0; i < tableQRs.length; i += qrPerPage) {
       final pageQRs = tableQRs.skip(i).take(qrPerPage).toList();
+      final pageNumber = (i / qrPerPage).floor() + 1;
+      
+      print('📄 PDF Service: Sayfa $pageNumber oluşturuluyor - ${pageQRs.length} QR kod');
+      for (final qr in pageQRs) {
+        print('   - Masa ${qr.data.tableNumber}: ${qr.url}');
+      }
       
       pdf.addPage(
         pw.Page(
@@ -96,7 +93,6 @@ class PdfService {
                            fontSize: 24,
                            fontWeight: pw.FontWeight.bold,
                            color: PdfColors.blue900,
-                           font: font,
                          ),
                          textAlign: pw.TextAlign.center,
                        ),
@@ -106,7 +102,6 @@ class PdfService {
                          style: pw.TextStyle(
                            fontSize: 16,
                            color: PdfColors.blue700,
-                           font: font,
                          ),
                          textAlign: pw.TextAlign.center,
                        ),
@@ -116,11 +111,11 @@ class PdfService {
                 pw.SizedBox(height: 30),
                 
                                   // QR kodları grid
-                  pw.Expanded(
-                    child: pw.Column(
-                      children: _buildQRGrid(pageQRs, qrPerRow, font: font),
-                    ),
+                pw.Expanded(
+                  child: pw.Column(
+                    children: _buildQRGrid(pageQRs, qrPerRow),
                   ),
+                ),
                 
                 // Footer
                 pw.Container(
@@ -132,7 +127,7 @@ class PdfService {
                   ),
                                      child: pw.Text(
                      'Place QR codes on tables. Customers can scan these codes to access your menu.',
-                     style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700, font: font),
+                     style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                      textAlign: pw.TextAlign.center,
                    ),
                 ),
@@ -152,17 +147,19 @@ class PdfService {
     }
   }
 
-  static List<pw.Widget> _buildQRGrid(List<QRCode> qrCodes, int qrPerRow, {pw.Font? font}) {
+  static List<pw.Widget> _buildQRGrid(List<QRCode> qrCodes, int qrPerRow) {
     final List<pw.Widget> rows = [];
     
     for (int i = 0; i < qrCodes.length; i += qrPerRow) {
       final rowQRs = qrCodes.skip(i).take(qrPerRow).toList();
       
+      print('📋 PDF Service: Grid satırı oluşturuluyor - ${rowQRs.length} QR kod');
+      
       rows.add(
         pw.Expanded(
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-            children: rowQRs.map((qr) => _buildPDFQRCard(qr, font: font)).toList(),
+            children: rowQRs.map((qr) => _buildPDFQRCard(qr)).toList(),
           ),
         ),
       );
@@ -172,11 +169,14 @@ class PdfService {
       }
     }
     
+    print('✅ PDF Service: Toplam ${rows.length} satır oluşturuldu');
     return rows;
   }
 
-  static pw.Widget _buildPDFQRCard(QRCode qrCode, {pw.Font? font}) {
+  static pw.Widget _buildPDFQRCard(QRCode qrCode) {
     final tableNumber = qrCode.data.tableNumber ?? 1;
+    
+    print('🎯 PDF Service: QR card oluşturuluyor - Masa $tableNumber, URL: ${qrCode.url}');
     
     return pw.Expanded(
       child: pw.Container(
@@ -202,7 +202,6 @@ class PdfService {
                    fontSize: 16,
                    fontWeight: pw.FontWeight.bold,
                    color: PdfColors.white,
-                   font: font,
                  ),
                ),
             ),
@@ -235,15 +234,14 @@ class PdfService {
                       border: pw.Border.all(color: PdfColors.blue600, width: 2),
                     ),
                     child: pw.Center(
-                      child: pw.Text(
-                        '$tableNumber',
-                                                 style: pw.TextStyle(
+                                             child: pw.Text(
+                         '$tableNumber',
+                         style: pw.TextStyle(
                            fontSize: 14,
                            fontWeight: pw.FontWeight.bold,
                            color: PdfColors.blue900,
-                           font: font,
                          ),
-                      ),
+                       ),
                     ),
                   ),
                 ],
@@ -263,7 +261,6 @@ class PdfService {
                  style: pw.TextStyle(
                    fontSize: 10,
                    color: PdfColors.grey700,
-                   font: font,
                  ),
                  textAlign: pw.TextAlign.center,
                ),

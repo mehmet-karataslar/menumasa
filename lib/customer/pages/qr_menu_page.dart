@@ -354,6 +354,13 @@ class _QRMenuPageState extends State<QRMenuPage>
   }
 
   Widget _buildMenuContent() {
+    // Business null kontrolü
+    if (_business == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -482,12 +489,11 @@ class _QRMenuPageState extends State<QRMenuPage>
                   ],
       ),
       const SizedBox(height: 16),
-      Expanded(
-        child: ProductGrid(
-          products: _filteredProducts,
-          onProductTap: _handleProductTap,
-          isQRMenu: true, // QR menü modu
-        ),
+      // Expanded kaldırıldı, ProductGrid kendi height'ını hesaplayacak
+      ProductGrid(
+        products: _filteredProducts,
+        onProductTap: _handleProductTap,
+        isQRMenu: true, // QR menü modu
       ),
     ],
   );

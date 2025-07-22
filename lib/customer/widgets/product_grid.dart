@@ -28,11 +28,24 @@ class ProductGrid extends StatelessWidget {
     this.isQRMenu = false,
   }) : super(key: key);
 
+  double _calculateGridHeight() {
+    if (products.isEmpty) return 200;
+    
+    final rows = (products.length / crossAxisCount).ceil();
+    final itemHeight = 200 / childAspectRatio; // Ortalama item height
+    final spacingHeight = (rows - 1) * 20; // mainAxisSpacing
+    final paddingHeight = 40; // padding top + bottom
+    
+    return (rows * itemHeight) + spacingHeight + paddingHeight;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: padding ?? const EdgeInsets.all(20),
-      child: GridView.builder(
+      child: SizedBox(
+        height: _calculateGridHeight(),
+        child: GridView.builder(
           physics: const BouncingScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
@@ -52,6 +65,7 @@ class ProductGrid extends StatelessWidget {
             );
           },
         ),
+      ),
     );
   }
 }
