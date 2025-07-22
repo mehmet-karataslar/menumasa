@@ -479,16 +479,18 @@ class _QRMenuPageState extends State<QRMenuPage>
                 ),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        ProductGrid(
+                  ],
+      ),
+      const SizedBox(height: 16),
+      Expanded(
+        child: ProductGrid(
           products: _filteredProducts,
           onProductTap: _handleProductTap,
           isQRMenu: true, // QR menü modu
         ),
-      ],
-    );
+      ),
+    ],
+  );
   }
 
   Widget _buildQRMenuActionBar() {

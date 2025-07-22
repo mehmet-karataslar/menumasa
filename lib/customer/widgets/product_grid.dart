@@ -33,25 +33,25 @@ class ProductGrid extends StatelessWidget {
     return Padding(
       padding: padding ?? const EdgeInsets.all(20),
       child: GridView.builder(
-        physics: const BouncingScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 20,
-          childAspectRatio: childAspectRatio,
+          physics: const BouncingScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 20,
+            childAspectRatio: childAspectRatio,
+          ),
+          itemCount: products.length,
+          itemBuilder: (context, index) {
+            final product = products[index];
+            return ModernProductCard(
+              product: product,
+              onTap: onProductTap != null ? () => onProductTap!(product) : null,
+              onAddToCart: onAddToCart != null ? () => onAddToCart!(product) : null,
+              index: index,
+              isQRMenu: isQRMenu,
+            );
+          },
         ),
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          final product = products[index];
-          return ModernProductCard(
-            product: product,
-            onTap: onProductTap != null ? () => onProductTap!(product) : null,
-            onAddToCart: onAddToCart != null ? () => onAddToCart!(product) : null,
-            index: index,
-            isQRMenu: isQRMenu,
-          );
-        },
-      ),
     );
   }
 }
