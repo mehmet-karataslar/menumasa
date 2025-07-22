@@ -9,6 +9,23 @@ import 'dart:typed_data';
 import 'pdf_download_stub.dart' if (dart.library.html) 'pdf_download_web.dart';
 
 class PdfService {
+  /// Türkçe karakterleri ASCII karşılıklarına çevirir
+  static String _sanitizeText(String text) {
+    return text
+        .replaceAll('ğ', 'g')
+        .replaceAll('Ğ', 'G')
+        .replaceAll('ü', 'u')
+        .replaceAll('Ü', 'U')
+        .replaceAll('ş', 's')
+        .replaceAll('Ş', 'S')
+        .replaceAll('ı', 'i')
+        .replaceAll('İ', 'I')
+        .replaceAll('ö', 'o')
+        .replaceAll('Ö', 'O')
+        .replaceAll('ç', 'c')
+        .replaceAll('Ç', 'C');
+  }
+
   /// Downloads table QR codes as a PDF file
   static Future<void> downloadTableQRsPDF({
     required String businessId,
@@ -36,19 +53,15 @@ class PdfService {
     // Türkçe karakterler için font yükle
     pw.Font? font;
     try {
+      print('🔍 PDF Service: Font yükleme denenecek...');
       final fontData = await rootBundle.load('assets/fonts/Poppins-Regular.ttf');
       font = pw.Font.ttf(fontData);
-      print('✅ PDF Service: Font başarıyla yüklendi');
+      print('✅ PDF Service: Poppins font başarıyla yüklendi');
     } catch (e) {
-      print('❌ PDF Service: Font yüklenemedi: $e');
-      // Fallback font kullan
-      try {
-        font = pw.Font.helvetica();
-        print('✅ PDF Service: Helvetica font kullanılıyor');
-      } catch (e2) {
-        print('❌ PDF Service: Helvetica font de yüklenemedi: $e2');
-        font = null;
-      }
+      print('❌ PDF Service: Poppins font yüklenemedi: $e');
+      // Fallback olarak basit ASCII karakterler kullan
+      font = null;
+      print('⚠️ PDF Service: Font olmadan devam edilecek (sadece ASCII karakterler)');
     }
     
     final pdf = pw.Document();
@@ -78,7 +91,7 @@ class PdfService {
                   child: pw.Column(
                     children: [
                                              pw.Text(
-                         businessName,
+                         _sanitizeText(businessName),
                          style: pw.TextStyle(
                            fontSize: 24,
                            fontWeight: pw.FontWeight.bold,
@@ -89,7 +102,7 @@ class PdfService {
                        ),
                        pw.SizedBox(height: 8),
                        pw.Text(
-                         'Masa QR Kodlari',
+                         'Table QR Codes',
                          style: pw.TextStyle(
                            fontSize: 16,
                            color: PdfColors.blue700,
@@ -118,7 +131,7 @@ class PdfService {
                     borderRadius: pw.BorderRadius.circular(5),
                   ),
                                      child: pw.Text(
-                     'QR kodlarini masalarin uzerine yapistiriniz. Musteriler bu kodlari tarayarak menuye ulasabilir.',
+                     'Place QR codes on tables. Customers can scan these codes to access your menu.',
                      style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700, font: font),
                      textAlign: pw.TextAlign.center,
                    ),
@@ -134,7 +147,8 @@ class PdfService {
     
     if (kIsWeb) {
       // Web için indirme
-      PdfDownloadWeb.downloadPdf(Uint8List.fromList(pdfBytes), '${businessName}_Masa_QR_Kodlari.pdf');
+      final sanitizedName = _sanitizeText(businessName);
+      PdfDownloadWeb.downloadPdf(Uint8List.fromList(pdfBytes), '${sanitizedName}_Table_QR_Codes.pdf');
     }
   }
 
@@ -183,7 +197,7 @@ class PdfService {
                 borderRadius: pw.BorderRadius.circular(20),
               ),
                              child: pw.Text(
-                 'MASA $tableNumber',
+                 'TABLE $tableNumber',
                  style: pw.TextStyle(
                    fontSize: 16,
                    fontWeight: pw.FontWeight.bold,
@@ -245,7 +259,7 @@ class PdfService {
                 borderRadius: pw.BorderRadius.circular(8),
               ),
                              child: pw.Text(
-                 'Menu icin\nQR kodu tarayin',
+                 'Scan QR code\nfor menu',
                  style: pw.TextStyle(
                    fontSize: 10,
                    color: PdfColors.grey700,
