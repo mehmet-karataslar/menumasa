@@ -7,6 +7,8 @@ import '../../business/models/category.dart';
 import '../../business/models/product.dart';
 import '../../business/models/detailed_nutrition_info.dart';
 import '../models/allergen_profile.dart';
+import '../models/review_rating.dart';
+import '../models/customer_feedback.dart';
 
 class CustomerFirestoreService {
   static final CustomerFirestoreService _instance = CustomerFirestoreService._internal();
@@ -787,6 +789,32 @@ class CustomerFirestoreService {
           .set(nutritionInfo.toFirestore());
     } catch (e) {
       print('Beslenme bilgisi kaydedilirken hata: $e');
+      rethrow;
+    }
+  }
+
+  /// Değerlendirme kaydet
+  Future<void> saveReview(ReviewRating review) async {
+    try {
+      await _firestore
+          .collection('reviews')
+          .doc(review.reviewId)
+          .set(review.toFirestore());
+    } catch (e) {
+      print('Değerlendirme kaydedilirken hata: $e');
+      rethrow;
+    }
+  }
+
+  /// Geri bildirim kaydet
+  Future<void> saveFeedback(CustomerFeedback feedback) async {
+    try {
+      await _firestore
+          .collection('customer_feedback')
+          .doc(feedback.feedbackId)
+          .set(feedback.toFirestore());
+    } catch (e) {
+      print('Geri bildirim kaydedilirken hata: $e');
       rethrow;
     }
   }

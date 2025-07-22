@@ -621,32 +621,95 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
   }
 
   Widget _buildOrderFooter(app_order.Order order) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(
-              Icons.receipt_rounded,
-              size: 16,
-              color: AppColors.textSecondary,
+            Row(
+              children: [
+                Icon(
+                  Icons.receipt_rounded,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
+                SizedBox(width: 4),
+                Text(
+                  '${order.items.length} ürün',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(width: 4),
             Text(
-              '${order.items.length} ürün',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textSecondary,
+              'Toplam: ${order.totalAmount.toStringAsFixed(2)} ₺',
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
               ),
             ),
           ],
         ),
-        Text(
-          'Toplam: ${order.totalAmount.toStringAsFixed(2)} ₺',
-          style: AppTypography.bodyMedium.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
+        // Değerlendirme butonu (sadece tamamlanmış siparişler için)
+        if (order.status == 'completed' || order.status == 'delivered') ...[
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showReviewDialog(order),
+                  icon: Icon(
+                    Icons.star_rate_rounded,
+                    size: 16,
+                    color: AppColors.warning,
+                  ),
+                  label: Text(
+                    'Değerlendir',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.warning,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.warning.withOpacity(0.3)),
+                    backgroundColor: AppColors.warning.withOpacity(0.05),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showFeedbackDialog(order),
+                  icon: Icon(
+                    Icons.feedback_rounded,
+                    size: 16,
+                    color: AppColors.info,
+                  ),
+                  label: Text(
+                    'Geri Bildirim',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.info,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.info.withOpacity(0.3)),
+                    backgroundColor: AppColors.info.withOpacity(0.05),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
+        ],
       ],
     );
   }
@@ -1029,5 +1092,617 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     ];
     
     return '${date.day} ${months[date.month - 1]} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  // ============================================================================
+  // REVIEW & FEEDBACK METHODS
+  // ============================================================================
+
+  void _showReviewDialog(app_order.Order order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildReviewSheet(order),
+    );
+  }
+
+  Widget _buildReviewSheet(app_order.Order order) {
+    double rating = 5.0;
+    final commentController = TextEditingController();
+    final business = _businessCache[order.businessId];
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.star_rate_rounded,
+                        color: AppColors.warning,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Değerlendirme Yap',
+                            style: AppTypography.h5.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            business?.businessName ?? 'İşletme',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Sipariş bilgisi
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.greyLighter,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.greyLight),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sipariş #${order.orderId.substring(0, 8)}',
+                              style: AppTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${order.items.length} ürün - ${order.totalAmount.toStringAsFixed(2)} ₺',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Puanlama
+                      Text(
+                        'Genel Memnuniyetiniz',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      Center(
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(5, (index) {
+                                return GestureDetector(
+                                  onTap: () => setState(() => rating = index + 1.0),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Icon(
+                                      Icons.star_rounded,
+                                      size: 40,
+                                      color: index < rating 
+                                          ? AppColors.warning 
+                                          : AppColors.greyLight,
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _getRatingText(rating),
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.warning,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Yorum
+                      Text(
+                        'Yorumunuz (Opsiyonel)',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      TextField(
+                        controller: commentController,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: 'Deneyiminizi bizimle paylaşın...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Submit button
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _submitReview(order, rating, commentController.text),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Değerlendirmeyi Gönder',
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFeedbackDialog(app_order.Order order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildFeedbackSheet(order),
+    );
+  }
+
+  Widget _buildFeedbackSheet(app_order.Order order) {
+    final subjectController = TextEditingController();
+    final messageController = TextEditingController();
+    FeedbackType selectedType = FeedbackType.general;
+    FeedbackCategory selectedCategory = FeedbackCategory.service;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.9,
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.feedback_rounded,
+                        color: AppColors.info,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Geri Bildirim',
+                            style: AppTypography.h5.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            'Görüşleriniz bizim için değerli',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Geri bildirim türü
+                      Text(
+                        'Geri Bildirim Türü',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      Wrap(
+                        spacing: 8,
+                        children: FeedbackType.values.map((type) {
+                          final isSelected = selectedType == type;
+                          return FilterChip(
+                            label: Text(type.displayName),
+                            selected: isSelected,
+                            onSelected: (selected) => setState(() => selectedType = type),
+                            selectedColor: AppColors.primary.withOpacity(0.2),
+                            checkmarkColor: AppColors.primary,
+                          );
+                        }).toList(),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Kategori
+                      Text(
+                        'Kategori',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      DropdownButtonFormField<FeedbackCategory>(
+                        value: selectedCategory,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: FeedbackCategory.values.map((category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Text(category.displayName),
+                          );
+                        }).toList(),
+                        onChanged: (value) => setState(() => selectedCategory = value!),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Konu
+                      Text(
+                        'Konu',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      TextField(
+                        controller: subjectController,
+                        decoration: InputDecoration(
+                          hintText: 'Geri bildirim konusu...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Mesaj
+                      Text(
+                        'Mesajınız',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      TextField(
+                        controller: messageController,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          hintText: 'Detayları buraya yazın...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Submit button
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _submitFeedback(
+                      order, 
+                      selectedType, 
+                      selectedCategory, 
+                      subjectController.text, 
+                      messageController.text,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.info,
+                      foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Geri Bildirimi Gönder',
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getRatingText(double rating) {
+    switch (rating.toInt()) {
+      case 1:
+        return 'Çok Kötü';
+      case 2:
+        return 'Kötü';
+      case 3:
+        return 'Orta';
+      case 4:
+        return 'İyi';
+      case 5:
+        return 'Mükemmel';
+      default:
+        return 'Mükemmel';
+    }
+  }
+
+  Future<void> _submitReview(app_order.Order order, double rating, String comment) async {
+    try {
+      // Loading göster
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const LoadingIndicator(),
+      );
+
+      final userId = widget.customerPhone ?? 'anonymous';
+      final business = _businessCache[order.businessId];
+
+      final review = ReviewRating.create(
+        customerId: userId,
+        customerName: 'Müşteri', // Gerçek isim alınabilir
+        businessId: order.businessId,
+        orderId: order.orderId,
+        overallRating: rating,
+        comment: comment.isNotEmpty ? comment : null,
+        isVerified: true, // Sipariş vermiş müşteri
+      );
+
+      await _customerFirestoreService.saveReview(review);
+
+      Navigator.pop(context); // Loading kapat
+      Navigator.pop(context); // Dialog kapat
+
+      // Başarı mesajı
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: AppColors.white),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Değerlendirmeniz başarıyla gönderildi!'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Loading kapat
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Değerlendirme gönderilirken hata: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _submitFeedback(
+    app_order.Order order,
+    FeedbackType type,
+    FeedbackCategory category,
+    String subject,
+    String message,
+  ) async {
+    if (subject.isEmpty || message.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen konu ve mesaj alanlarını doldurun'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Loading göster
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const LoadingIndicator(),
+      );
+
+      final userId = widget.customerPhone ?? 'anonymous';
+
+      final feedback = CustomerFeedback.create(
+        customerId: userId,
+        customerName: 'Müşteri',
+        businessId: order.businessId,
+        orderId: order.orderId,
+        type: type,
+        category: category,
+        subject: subject,
+        message: message,
+      );
+
+      await _customerFirestoreService.saveFeedback(feedback);
+
+      Navigator.pop(context); // Loading kapat
+      Navigator.pop(context); // Dialog kapat
+
+      // Başarı mesajı
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: AppColors.white),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Geri bildiriminiz başarıyla gönderildi!'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Loading kapat
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Geri bildirim gönderilirken hata: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
