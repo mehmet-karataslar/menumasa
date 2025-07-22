@@ -246,7 +246,9 @@ class _QRMenuPageState extends State<QRMenuPage>
   }
 
   List<Product> get _filteredProducts {
-    if (_selectedCategoryId == null) return _products.where((p) => p.isAvailable).toList();
+    if (_selectedCategoryId == null || _selectedCategoryId == 'all') {
+      return _products.where((p) => p.isAvailable).toList();
+    }
     return _products.where((product) => 
       product.categoryId == _selectedCategoryId && product.isAvailable
     ).toList();
@@ -502,50 +504,82 @@ class _QRMenuPageState extends State<QRMenuPage>
   Widget _buildQRMenuActionBar() {
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.white,
+            AppColors.white.withOpacity(0.95),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: AppColors.primary.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.03),
+            blurRadius: 5,
+            offset: const Offset(0, 1),
           ),
         ],
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
           // Info banner
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.info.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withOpacity(0.08),
+                  AppColors.primary.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.qr_code_rounded, color: AppColors.info, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'QR Menü',
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.info,
+                          child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.qr_code_2_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'QR Menü',
+                          style: AppTypography.bodyLarge.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-                      Text(
-                        _currentTableNumber != null 
-                            ? 'Masa ${_currentTableNumber!} - Sipariş için garson çağırın'
-                            : 'Sipariş için garson çağırın veya mobil uygulamayı indirin',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.info,
-                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _currentTableNumber != null 
+                              ? 'Masa ${_currentTableNumber!} • Garson çağırmak için sağ alttaki butonu kullanın'
+                              : 'Garson çağırmak için sağ alttaki butonu kullanın',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            height: 1.3,
+                          ),
                       ),
                     ],
                   ),

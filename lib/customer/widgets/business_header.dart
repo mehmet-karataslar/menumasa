@@ -261,6 +261,7 @@ class _BusinessHeaderState extends State<BusinessHeader>
           flex: 3,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Business logo with pulse animation
               AnimatedBuilder(
