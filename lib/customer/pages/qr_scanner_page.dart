@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
 import 'qr_menu_page.dart';
+import '../../shared/pages/universal_qr_menu_page.dart';
 
 /// QR Kod Tarayıcı Sayfası
 class QRScannerPage extends StatefulWidget {
@@ -231,36 +232,57 @@ class _QRScannerPageState extends State<QRScannerPage>
   }
 
   String _extractBusinessIdFromQR(String qrCode) {
+    print('🔍 QR Kod analiz ediliyor: $qrCode');
+    
     // QR kod formatları:
     // 1. "masamenu_{businessId}_table_{tableNumber}"
     // 2. "{businessId}"
-    // 3. URL formatı: "https://menumebak.web.app/menu/{businessId}?table={tableNumber}"
+    // 3. Eski URL formatı: "https://menumebak.web.app/menu/{businessId}?table={tableNumber}"
+    // 4. YENİ URL formatı: "https://menumebak.web.app/qr?business={businessId}&table={tableNumber}"
     
     if (qrCode.startsWith('masamenu_')) {
       // Format: masamenu_businessId_table_5
       final parts = qrCode.split('_');
       if (parts.length >= 2) {
+        print('✅ Eski masamenu formatı - Business ID: ${parts[1]}');
         return parts[1];
       }
     } else if (qrCode.startsWith('http')) {
       // URL formatı
       final uri = Uri.tryParse(qrCode);
-      if (uri != null && uri.pathSegments.length >= 2) {
-        // /menu/{businessId} formatı
-        if (uri.pathSegments[0] == 'menu') {
-          return uri.pathSegments[1];
+      if (uri != null) {
+        print('🔍 URI analiz ediliyor: ${uri.toString()}');
+        print('🔍 Path: ${uri.path}');
+        print('🔍 Query params: ${uri.queryParameters}');
+        
+        // YENİ FORMAT: /qr?business=businessId&table=tableNumber
+        if (uri.path == '/qr' && uri.queryParameters.containsKey('business')) {
+          final businessId = uri.queryParameters['business']!;
+          print('✅ Yeni QR formatı - Business ID: $businessId');
+          return businessId;
         }
-        // Eski format için son segment
-        final lastSegment = uri.pathSegments.last;
-        if (lastSegment.isNotEmpty) {
-          return lastSegment;
+        
+        // ESKİ FORMAT: /menu/businessId?table=tableNumber
+        if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'menu') {
+          final businessId = uri.pathSegments[1];
+          print('✅ Eski menu formatı - Business ID: $businessId');
+          return businessId;
+        }
+        
+        // /qr-menu/businessId formatı
+        if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'qr-menu') {
+          final businessId = uri.pathSegments[1];
+          print('✅ QR menu formatı - Business ID: $businessId');
+          return businessId;
         }
       }
     } else {
       // Direkt business ID
+      print('✅ Direkt business ID formatı: $qrCode');
       return qrCode;
     }
     
+    print('❌ Geçersiz QR kod formatı: $qrCode');
     throw Exception('Geçersiz QR kod formatı');
   }
 
@@ -328,23 +350,22 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     HapticFeedback.heavyImpact();
 
-    // QR kod başarıyla tarandı, menü sayfasına yönlendir
+    // QR kod başarıyla tarandı, evrensel menü sayfasına yönlendir
     await Future.delayed(const Duration(milliseconds: 500));
     
     if (mounted) {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final tableNumber = _extractTableNumberFromQR(qrCode);
-      final dynamicRoute = '/qr-menu/$businessId?t=$timestamp&qr=$qrCode${tableNumber != null ? '&table=$tableNumber' : ''}';
+      
+      // Yeni evrensel QR format: /qr?business=businessId&table=tableNumber
+      final dynamicRoute = '/qr?business=$businessId${tableNumber != null ? '&table=$tableNumber' : ''}&t=$timestamp';
+      
+      print('🚀 QR Scanner navigating to: $dynamicRoute');
       
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => QRMenuPage(
-            businessId: businessId,
-            userId: widget.userId,
-            qrCode: qrCode,
-            tableNumber: tableNumber,
-          ),
+          builder: (context) => const UniversalQRMenuPage(),
           settings: RouteSettings(
             name: dynamicRoute,
             arguments: {

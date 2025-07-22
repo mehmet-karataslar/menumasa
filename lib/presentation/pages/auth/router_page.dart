@@ -91,7 +91,11 @@ class _RouterPageState extends State<RouterPage> {
   Widget build(BuildContext context) {
     // URL'den QR menü kontrolü
     final routeName = ModalRoute.of(context)?.settings.name;
+    print('🔍 RouterPage - Route name: $routeName');
+    print('🔍 RouterPage - Current URL: ${UrlService().getCurrentPath()}');
+    
     if (routeName != null && (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/') || routeName == '/qr')) {
+      print('✅ RouterPage - QR menu URL detected, redirecting...');
       // QR menü URL'si tespit edildi, direkt QR menü sayfasına yönlendir
       return _buildQRMenuRedirect(routeName);
     }
@@ -416,12 +420,22 @@ class _RouterPageState extends State<RouterPage> {
   }
 
   Widget _buildQRMenuRedirect(String routeName) {
+    print('🔄 _buildQRMenuRedirect called with: $routeName');
+    
     // URL'i parse et
     final uri = Uri.parse(routeName);
     final pathSegments = uri.pathSegments;
+    final currentUrl = _urlService.getCurrentPath();
+    final currentParams = _urlService.getCurrentParams();
+    
+    print('🔍 Current URL path: $currentUrl');
+    print('🔍 Current URL params: $currentParams');
+    print('🔍 Parsed URI: $uri');
+    print('🔍 Path segments: $pathSegments');
     
     // Yeni evrensel QR format kontrol et (/qr?business=X&table=Y)
     if (routeName == '/qr' || routeName.startsWith('/qr?')) {
+      print('✅ Redirecting to UniversalQRMenuPage');
       // Evrensel QR menü sayfasını döndür
       return const UniversalQRMenuPage();
     }

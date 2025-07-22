@@ -59,7 +59,15 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   void initState() {
     super.initState();
     _initializeAnimations();
-    _parseUrlAndLoadData();
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // URL parsing'i burada yap çünkü context artık kullanılabilir
+    if (_businessId == null) {
+      _parseUrlAndLoadData();
+    }
   }
 
   void _initializeAnimations() {
@@ -97,8 +105,37 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     });
 
     try {
-      // URL parametrelerini oku
-      final params = _urlService.getCurrentParams();
+      // URL parametrelerini oku - Navigator route'undan ve URL service'ten
+      Map<String, String> params = {};
+      
+      // 1. Navigator route settings'lerinden URL'i oku
+      final routeSettings = ModalRoute.of(context)?.settings;
+      if (routeSettings?.name != null) {
+        final uri = Uri.parse(routeSettings!.name!);
+        params.addAll(uri.queryParameters);
+        print('🔍 Route name: ${routeSettings.name}');
+        print('🔍 Route URI params: ${uri.queryParameters}');
+      }
+      
+      // 2. URL Service'ten de dene
+      final urlParams = _urlService.getCurrentParams();
+      if (urlParams.isNotEmpty) {
+        params.addAll(urlParams);
+        print('🔍 URL Service params: $urlParams');
+      }
+      
+      // 3. Route arguments'tan da dene
+      final arguments = routeSettings?.arguments as Map<String, dynamic>?;
+      if (arguments != null) {
+        if (arguments['businessId'] != null) {
+          params['business'] = arguments['businessId'].toString();
+        }
+        if (arguments['tableNumber'] != null) {
+          params['table'] = arguments['tableNumber'].toString();
+        }
+        print('🔍 Route arguments: $arguments');
+      }
+      
       _businessId = params['business'];
       final tableParam = params['table'];
       
@@ -106,7 +143,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         _tableNumber = int.tryParse(tableParam);
       }
 
-      print('🔍 Universal QR Menu - Business ID: $_businessId, Table: $_tableNumber');
+      print('🔍 Universal QR Menu - Final Business ID: $_businessId, Table: $_tableNumber');
+      print('🔍 All params: $params');
 
       if (_businessId == null || _businessId!.isEmpty) {
         throw Exception('İşletme ID\'si bulunamadı');
@@ -436,12 +474,14 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           // Product Grid
           SliverPadding(
             padding: const EdgeInsets.all(16),
-            sliver: SlideTransition(
-              position: _slideAnimation,
-              child: ProductGrid(
-                products: _filteredProducts,
-                onAddToCart: _addToCart,
-                isQRMenu: true,
+            sliver: SliverToBoxAdapter(
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: ProductGrid(
+                  products: _filteredProducts,
+                  onAddToCart: _addToCart,
+                  isQRMenu: true,
+                ),
               ),
             ),
           ),
