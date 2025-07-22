@@ -689,20 +689,32 @@ class CustomerFirestoreService {
   /// Get products by business ID
   Future<List<Product>> getProductsByBusiness(String businessId) async {
     try {
+      print('🔍 Ürünler sorgulanıyor: businessId=$businessId');
+      
+      // Önce sadece businessId ile sorgula (index gerektirmez)
       final snapshot = await _productsRef
           .where('businessId', isEqualTo: businessId)
-          .where('isAvailable', isEqualTo: true)
-          .orderBy('sortOrder')
           .get();
       
-      return snapshot.docs
+      print('📦 Ham sorgu sonucu: ${snapshot.docs.length} döküman');
+      
+      // Client-side filtering ve sorting
+      final products = snapshot.docs
           .map((doc) => Product.fromJson({
                 ...doc.data() as Map<String, dynamic>,
                 'id': doc.id,
               }))
           .toList();
+      
+      print('🥘 Tüm ürünler: ${products.length}');
+      print('✅ Mevcut ürünler: ${products.where((p) => p.isAvailable).length}');
+      
+      // Client-side sorting by sortOrder
+      products.sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
+      
+      return products;
     } catch (e) {
-      print('Error getting products by business: $e');
+      print('❌ Ürün yükleme hatası: $e');
       return [];
     }
   }

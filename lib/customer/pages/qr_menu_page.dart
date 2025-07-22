@@ -162,7 +162,9 @@ class _QRMenuPageState extends State<QRMenuPage>
       final categories = await _firestoreService.getCategoriesByBusiness(widget.businessId);
       
       // Ürünleri yükle
+      print('🔄 Ürünler yükleniyor: ${widget.businessId}');
       final products = await _firestoreService.getProductsByBusiness(widget.businessId);
+      print('✅ Ürün yükleme tamamlandı: ${products.length} ürün');
 
       // Garsonları yükle
       final waiters = await _waiterService.getWaitersByBusiness(widget.businessId);
@@ -180,9 +182,24 @@ class _QRMenuPageState extends State<QRMenuPage>
         _categories = categories;
         _products = products;
         _waiters = waiters;
-        _selectedCategoryId = categories.isNotEmpty ? categories.first.id : null;
+        // Mevcut ürünlere sahip ilk kategoriyi seç
+        _selectedCategoryId = _findFirstCategoryWithProducts(categories, products);
         _isLoading = false;
       });
+
+      // Debug bilgileri
+      print('🍽️ İşletme yüklendi: ${business.businessName}');
+      print('📂 Kategori sayısı: ${categories.length}');
+      print('🥘 Toplam ürün sayısı: ${products.length}');
+      print('🥘 Mevcut ürün sayısı: ${products.where((p) => p.isAvailable).length}');
+      print('🎯 Seçili kategori ID: $_selectedCategoryId');
+      print('🔍 Filtrelenmiş ürün sayısı: ${_filteredProducts.length}');
+      if (categories.isNotEmpty) {
+        print('📂 Kategoriler: ${categories.map((c) => '${c.name} (${c.id})').join(', ')}');
+      }
+      if (products.isNotEmpty) {
+        print('🥘 İlk 3 ürün: ${products.take(3).map((p) => '${p.name} - Kategori: ${p.categoryId} - Mevcut: ${p.isAvailable}').join(' | ')}');
+      }
 
       // Animasyonları başlat
       _fadeController.forward();
@@ -229,10 +246,29 @@ class _QRMenuPageState extends State<QRMenuPage>
   }
 
   List<Product> get _filteredProducts {
-    if (_selectedCategoryId == null) return _products;
+    if (_selectedCategoryId == null) return _products.where((p) => p.isAvailable).toList();
     return _products.where((product) => 
       product.categoryId == _selectedCategoryId && product.isAvailable
     ).toList();
+  }
+
+  String? _findFirstCategoryWithProducts(List<Category> categories, List<Product> products) {
+    if (categories.isEmpty) return null;
+    
+    // Her kategori için mevcut ürün sayısını kontrol et
+    for (final category in categories) {
+      final hasProducts = products.any((product) => 
+        product.categoryId == category.id && product.isAvailable
+      );
+      if (hasProducts) {
+        print('🎯 Mevcut ürünlere sahip kategori bulundu: ${category.name} (${category.id})');
+        return category.id;
+      }
+    }
+    
+    // Hiçbir kategoride mevcut ürün yoksa ilk kategoriyi döndür
+    print('⚠️ Hiçbir kategoride mevcut ürün yok, ilk kategori seçildi');
+    return categories.first.id;
   }
 
   @override
@@ -324,16 +360,19 @@ class _QRMenuPageState extends State<QRMenuPage>
         position: _slideAnimation,
         child: CustomScrollView(
           slivers: [
-            // Business Header
+            // Business Header (sadece işletme bilgileri)
             SliverToBoxAdapter(
               child: BusinessHeader(
                 business: _business!,
                 isCompact: false,
-                cartItemCount: 0, // QR menüde sepet yok
-                onSharePressed: _handleShare,
-                onCallPressed: () => _handleCall(_business!.phone ?? ''),
-                onLocationPressed: () => _handleLocation(_business!.businessAddress),
+                cartItemCount: 0,
+                showActions: false, // QR menüde action butonları gizle
               ),
+            ),
+            
+            // QR Menu özel action bar
+            SliverToBoxAdapter(
+              child: _buildQRMenuActionBar(),
             ),
             
             // Kategori Listesi
@@ -449,6 +488,120 @@ class _QRMenuPageState extends State<QRMenuPage>
           isQRMenu: true, // QR menü modu
         ),
       ],
+    );
+  }
+
+  Widget _buildQRMenuActionBar() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Info banner
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.qr_code_rounded, color: AppColors.info, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'QR Menü',
+                        style: AppTypography.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.info,
+                        ),
+                      ),
+                      Text(
+                        _currentTableNumber != null 
+                            ? 'Masa ${_currentTableNumber!} - Sipariş için garson çağırın'
+                            : 'Sipariş için garson çağırın veya mobil uygulamayı indirin',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.info,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleShare(),
+                  icon: const Icon(Icons.share_rounded, size: 18),
+                  label: const Text('Paylaş'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleCall(_business!.contactInfo.phone ?? ''),
+                  icon: const Icon(Icons.phone_rounded, size: 18),
+                  label: const Text('Ara'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.success,
+                    side: const BorderSide(color: AppColors.success),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleLocation(_business!.businessAddress),
+                  icon: const Icon(Icons.location_on_rounded, size: 18),
+                  label: const Text('Konum'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.secondary,
+                    side: const BorderSide(color: AppColors.secondary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

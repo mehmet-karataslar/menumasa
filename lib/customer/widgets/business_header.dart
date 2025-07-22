@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../business/models/business.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
 import '../services/customer_service.dart';
 
 class BusinessHeader extends StatefulWidget {
@@ -14,6 +13,7 @@ class BusinessHeader extends StatefulWidget {
   final VoidCallback? onCartPressed;
   final int cartItemCount;
   final bool isCompact;
+  final bool showActions; // Action butonlarını göster/gizle
 
   const BusinessHeader({
     Key? key,
@@ -24,6 +24,7 @@ class BusinessHeader extends StatefulWidget {
     this.onCartPressed,
     this.cartItemCount = 0,
     this.isCompact = false,
+    this.showActions = true,
   }) : super(key: key);
 
   @override
@@ -158,7 +159,7 @@ class _BusinessHeaderState extends State<BusinessHeader>
       animation: _animationController,
       builder: (context, child) {
         return Container(
-          height: widget.isCompact ? 180 : 320,
+          height: widget.isCompact ? 140 : 280,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -191,8 +192,8 @@ class _BusinessHeaderState extends State<BusinessHeader>
                 ),
               ),
 
-              // Action buttons overlay
-              _buildActionButtons(),
+              // Action buttons overlay (sadece gerektiğinde göster)
+              if (widget.showActions) _buildActionButtons(),
             ],
           ),
         );
@@ -308,30 +309,24 @@ class _BusinessHeaderState extends State<BusinessHeader>
           ),
         ),
 
-        // Info section
-        Expanded(
-          flex: 2,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.white.withOpacity(0.2),
-                width: 1,
+        // Basit bilgi bölümü
+        if (widget.showActions)
+          Expanded(
+            flex: 1,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.white.withOpacity(0.2),
+                  width: 1,
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(child: _buildDetailedInfo()),
-                const SizedBox(height: 16),
-                Flexible(child: _buildQuickActions()),
-              ],
+              child: _buildQuickInfo(),
             ),
           ),
-        ),
       ],
     );
   }
