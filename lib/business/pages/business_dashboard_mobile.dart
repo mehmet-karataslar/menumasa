@@ -143,6 +143,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     final currentTab = _tabRoutes[_currentIndex];
     final businessName = _business?.businessName;
 
+    print('🌐 Updating URL to: $currentTab (index: $_currentIndex)');
+
     _urlService.updateBusinessUrl(
       widget.businessId,
       currentTab,
@@ -368,9 +370,13 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   void _navigateToTab(int index) {
     if (_currentIndex == index) return;
 
+    print('🚀 Navigating to tab: $index (${_tabTitles[index]})');
+    
     setState(() {
       _currentIndex = index;
     });
+    
+    print('✅ Current index updated to: $_currentIndex');
     _updateUrl();
   }
 
@@ -425,7 +431,10 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 children: [
                   _buildCustomHeader(),
                   Expanded(
-                    child: _buildCurrentPage(),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildCurrentPage(),
+                    ),
                   ),
                 ],
               ),
@@ -790,21 +799,37 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
+            print('🖱️ Drawer item tapped: $index (${_tabTitles[index]})');
             _navigateToTab(index);
+            
+            // Drawer'ı kapat ve biraz bekle
             _closeDrawer();
+            
+            // Sayfa değişimi için ekstra setState
+            await Future.delayed(const Duration(milliseconds: 50));
+            if (mounted) {
+              setState(() {});
+            }
           },
           borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+              color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? AppColors.primary.withOpacity(0.3) : Colors.transparent,
-                width: 1,
+                color: isSelected ? AppColors.primary.withOpacity(0.5) : Colors.transparent,
+                width: 2,
               ),
+              boxShadow: isSelected ? [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ] : null,
             ),
             child: Row(
               children: [
@@ -914,25 +939,63 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   }
 
   Widget _buildCurrentPage() {
+    print('📱 Building current page for index: $_currentIndex (${_tabTitles[_currentIndex]})');
+    
     switch (_currentIndex) {
       case 0:
-        return _buildOverviewPage();
+        print('🏠 Loading Overview Page');
+        return Container(
+          key: const ValueKey('overview'),
+          child: _buildOverviewPage(),
+        );
       case 1:
-        return OrderManagementPage(businessId: widget.businessId);
+        print('📋 Loading Orders Page');
+        return Container(
+          key: const ValueKey('orders'),
+          child: OrderManagementPage(businessId: widget.businessId),
+        );
       case 2:
-        return CategoryManagementPage(businessId: widget.businessId);
+        print('📂 Loading Categories Page');
+        return Container(
+          key: const ValueKey('categories'),
+          child: CategoryManagementPage(businessId: widget.businessId),
+        );
       case 3:
-        return ProductManagementPage(businessId: widget.businessId);
+        print('🍽️ Loading Products Page');
+        return Container(
+          key: const ValueKey('products'),
+          child: ProductManagementPage(businessId: widget.businessId),
+        );
       case 4:
-        return WaiterManagementPage(businessId: widget.businessId);
+        print('👥 Loading Waiters Page');
+        return Container(
+          key: const ValueKey('waiters'),
+          child: WaiterManagementPage(businessId: widget.businessId),
+        );
       case 5:
-        return DiscountManagementPage(businessId: widget.businessId);
+        print('🎯 Loading Discounts Page');
+        return Container(
+          key: const ValueKey('discounts'),
+          child: DiscountManagementPage(businessId: widget.businessId),
+        );
       case 6:
-        return QRManagementPage(businessId: widget.businessId);
+        print('📱 Loading QR Page');
+        return Container(
+          key: const ValueKey('qr'),
+          child: QRManagementPage(businessId: widget.businessId),
+        );
       case 7:
-        return BusinessProfilePage(businessId: widget.businessId);
+        print('⚙️ Loading Profile Page');
+        return Container(
+          key: const ValueKey('profile'),
+          child: BusinessProfilePage(businessId: widget.businessId),
+        );
       default:
-        return _buildOverviewPage();
+        print('🏠 Loading Default Overview Page');
+        return Container(
+          key: const ValueKey('overview'),
+          child: _buildOverviewPage(),
+        );
     }
   }
 

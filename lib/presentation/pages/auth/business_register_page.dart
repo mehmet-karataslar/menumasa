@@ -308,6 +308,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
           city: city,
           district: district,
           postalCode: postalCode,
+          country: 'Türkiye',
           coordinates: null,
         ),
         contactInfo: ContactInfo(
