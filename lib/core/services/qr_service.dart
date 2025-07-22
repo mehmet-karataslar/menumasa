@@ -129,9 +129,12 @@ class QRService {
     String? createdBy,
     bool replaceExisting = false,
   }) async {
+    print('🔧 QR Service: Creating $tableCount table QR codes for business $businessId');
+    
     if (replaceExisting) {
       // Delete existing table QR codes
       final existingCodes = await getTableQRCodes(businessId);
+      print('🗑️ QR Service: Deleting ${existingCodes.length} existing QR codes');
       for (final qr in existingCodes) {
         await deleteQRCode(qr.qrCodeId);
       }
@@ -139,19 +142,27 @@ class QRService {
 
     final tableQRs = <QRCode>[];
     
-    for (int i = 1; i <= tableCount; i++) {
-      final tableQR = QRCode.tableQR(
-        businessId: businessId,
-        businessName: businessName,
-        tableNumber: i,
-        style: style,
-        createdBy: createdBy,
-      );
-      
-      final qrId = await saveQRCode(tableQR);
-      tableQRs.add(tableQR.copyWith(qrCodeId: qrId));
+    try {
+      for (int i = 1; i <= tableCount; i++) {
+        print('📋 QR Service: Creating QR code for table $i');
+        final tableQR = QRCode.tableQR(
+          businessId: businessId,
+          businessName: businessName,
+          tableNumber: i,
+          style: style,
+          createdBy: createdBy,
+        );
+        
+        final qrId = await saveQRCode(tableQR);
+        print('✅ QR Service: Table $i QR code saved with ID: $qrId');
+        tableQRs.add(tableQR.copyWith(qrCodeId: qrId));
+      }
+    } catch (e) {
+      print('❌ QR Service: Error creating table QR codes: $e');
+      throw e;
     }
 
+    print('🎉 QR Service: Successfully created ${tableQRs.length} table QR codes');
     return tableQRs;
   }
 
@@ -554,6 +565,46 @@ class QRService {
       );
     } catch (e) {
       throw Exception('PDF oluşturulurken hata: $e');
+    }
+  }
+
+  /// Deletes all QR codes for a business
+  Future<void> deleteAllBusinessQRCodes(String businessId) async {
+    try {
+      print('🗑️ QR Service: Deleting all QR codes for business $businessId');
+      
+      final allQRCodes = await getBusinessQRCodes(businessId);
+      print('🗑️ QR Service: Found ${allQRCodes.length} QR codes to delete');
+      
+      for (final qr in allQRCodes) {
+        await deleteQRCode(qr.qrCodeId);
+        print('🗑️ QR Service: Deleted QR code ${qr.qrCodeId}');
+      }
+      
+      print('✅ QR Service: All QR codes deleted successfully');
+    } catch (e) {
+      print('❌ QR Service: Error deleting QR codes: $e');
+      throw Exception('QR kodları silinirken hata: $e');
+    }
+  }
+
+  /// Deletes all table QR codes for a business
+  Future<void> deleteAllTableQRCodes(String businessId) async {
+    try {
+      print('🗑️ QR Service: Deleting all table QR codes for business $businessId');
+      
+      final tableQRCodes = await getTableQRCodes(businessId);
+      print('🗑️ QR Service: Found ${tableQRCodes.length} table QR codes to delete');
+      
+      for (final qr in tableQRCodes) {
+        await deleteQRCode(qr.qrCodeId);
+        print('🗑️ QR Service: Deleted table QR code ${qr.qrCodeId}');
+      }
+      
+      print('✅ QR Service: All table QR codes deleted successfully');
+    } catch (e) {
+      print('❌ QR Service: Error deleting table QR codes: $e');
+      throw Exception('Masa QR kodları silinirken hata: $e');
     }
   }
 }

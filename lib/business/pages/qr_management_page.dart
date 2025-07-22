@@ -55,6 +55,103 @@ class _QRManagementPageState extends State<QRManagementPage>
     super.dispose();
   }
 
+  // QR kodları silme metodu
+  Future<void> _deleteAllQRCodes() async {
+    // Onay dialogu göster
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: AppColors.error),
+            SizedBox(width: 8),
+            Text('QR Kodları Sil'),
+          ],
+        ),
+        content: Text(
+          'Tüm QR kodları silinecek. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text('Sil', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 8),
+              Text('QR kodları siliniyor...'),
+            ],
+          ),
+          backgroundColor: AppColors.info,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: Duration(seconds: 10),
+        ),
+      );
+
+      await _qrService.deleteAllBusinessQRCodes(widget.businessId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Tüm QR kodları başarıyla silindi'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        
+        // Sayfayı yenile
+        await _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('QR kodları silinirken hata: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
   // PDF indirme metodu
   Future<void> _downloadTableQRsPDF() async {
     if (_tableQRs.isEmpty) {
@@ -1290,24 +1387,48 @@ class _QRManagementPageState extends State<QRManagementPage>
                   ),
                 ],
               ),
-              Container(
-                child: ElevatedButton.icon(
-                  onPressed: _downloadTableQRsPDF,
-                  icon: Icon(Icons.picture_as_pdf_rounded, size: 18),
-                  label: Text(
-                    'PDF İndir',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
-                    foregroundColor: AppColors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              Row(
+                children: [
+                  Container(
+                    child: ElevatedButton.icon(
+                      onPressed: _downloadTableQRsPDF,
+                      icon: Icon(Icons.picture_as_pdf_rounded, size: 18),
+                      label: Text(
+                        'PDF İndir',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: AppColors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
                     ),
-                    elevation: 0,
                   ),
-                ),
+                  SizedBox(width: 12),
+                  Container(
+                    child: ElevatedButton.icon(
+                      onPressed: _tableQRs.isNotEmpty ? _deleteAllQRCodes : null,
+                      icon: Icon(Icons.delete_rounded, size: 18),
+                      label: Text(
+                        'Tümünü Sil',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: AppColors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

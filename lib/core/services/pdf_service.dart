@@ -3,6 +3,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'dart:typed_data';
+
+// Conditional import for web download
+import 'pdf_download_stub.dart' if (dart.library.html) 'pdf_download_web.dart';
 
 class PdfService {
   /// Downloads table QR codes as a PDF file
@@ -76,7 +80,7 @@ class PdfService {
                        ),
                        pw.SizedBox(height: 8),
                        pw.Text(
-                         'Masa QR Kodları',
+                         'Table QR Codes',
                          style: pw.TextStyle(
                            fontSize: 16,
                            color: PdfColors.blue700,
@@ -105,7 +109,7 @@ class PdfService {
                     borderRadius: pw.BorderRadius.circular(5),
                   ),
                                      child: pw.Text(
-                     'QR kodları masa üzerine yapıştırın. Müşteriler bu kodları tarayarak menünüze ulaşabilir.',
+                     'Paste QR codes on tables. Customers can scan these codes to access your menu.',
                      style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700, font: font),
                      textAlign: pw.TextAlign.center,
                    ),
@@ -120,8 +124,8 @@ class PdfService {
     final pdfBytes = await pdf.save();
     
     if (kIsWeb) {
-      // Web için JavaScript kullanarak indirme
-      _downloadPdfWeb(pdfBytes, '${businessName}_Masa_QR_Kodlari.pdf');
+      // Web için indirme
+      PdfDownloadWeb.downloadPdf(Uint8List.fromList(pdfBytes), '${businessName}_Masa_QR_Kodlari.pdf');
     }
   }
 
@@ -170,7 +174,7 @@ class PdfService {
                 borderRadius: pw.BorderRadius.circular(20),
               ),
                              child: pw.Text(
-                 'MASA $tableNumber',
+                 'TABLE $tableNumber',
                  style: pw.TextStyle(
                    fontSize: 16,
                    fontWeight: pw.FontWeight.bold,
@@ -232,7 +236,7 @@ class PdfService {
                 borderRadius: pw.BorderRadius.circular(8),
               ),
                              child: pw.Text(
-                 'Menü için\nQR kodu tarayın',
+                 'Scan QR code\nfor menu',
                  style: pw.TextStyle(
                    fontSize: 10,
                    color: PdfColors.grey700,
@@ -247,46 +251,5 @@ class PdfService {
     );
   }
 
-  // Web platform için JS interop olmadan çalışan indirme
-  static void _downloadPdfWeb(List<int> bytes, String filename) {
-    if (kIsWeb) {
-      // Web için basit base64 download trick kullan
-      final base64 = _base64Encode(bytes);
-      final dataUrl = 'data:application/pdf;base64,$base64';
-      
-      // JS interop olmadan download link oluştur
-      // Bu browser tarafından desteklenecek
-      _triggerDownload(dataUrl, filename);
-    }
-  }
 
-  // Base64 encoding
-  static String _base64Encode(List<int> bytes) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-    String result = '';
-    for (int i = 0; i < bytes.length; i += 3) {
-      int a = bytes[i];
-      int b = i + 1 < bytes.length ? bytes[i + 1] : 0;
-      int c = i + 2 < bytes.length ? bytes[i + 2] : 0;
-      
-      int bitmap = (a << 16) | (b << 8) | c;
-      
-      result += chars[(bitmap >> 18) & 63];
-      result += chars[(bitmap >> 12) & 63];
-      result += i + 1 < bytes.length ? chars[(bitmap >> 6) & 63] : '=';
-      result += i + 2 < bytes.length ? chars[bitmap & 63] : '=';
-    }
-    return result;
-  }
-
-  // Platform generic download trigger
-  static void _triggerDownload(String dataUrl, String filename) {
-    if (kIsWeb) {
-      // JavaScript olmadan çalışan fallback
-      print('PDF hazır: $filename');
-      print('Data URL uzunluğu: ${dataUrl.length}');
-      // Bu noktada kullanıcıya PDF'in hazır olduğunu bildiriyoruz
-      // Browser'da manual download gerekebilir
-    }
-  }
 } 
