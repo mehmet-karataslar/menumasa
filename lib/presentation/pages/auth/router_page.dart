@@ -10,6 +10,7 @@ import 'business_register_page.dart';
 import 'register_page.dart';
 import '../../../business/pages/business_login_page.dart';
 import '../../../customer/pages/qr_menu_page.dart';
+import '../../../shared/pages/universal_qr_menu_page.dart';
 
 class RouterPage extends StatefulWidget {
   const RouterPage({super.key});
@@ -90,7 +91,7 @@ class _RouterPageState extends State<RouterPage> {
   Widget build(BuildContext context) {
     // URL'den QR menü kontrolü
     final routeName = ModalRoute.of(context)?.settings.name;
-    if (routeName != null && (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/'))) {
+    if (routeName != null && (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/') || routeName == '/qr')) {
       // QR menü URL'si tespit edildi, direkt QR menü sayfasına yönlendir
       return _buildQRMenuRedirect(routeName);
     }
@@ -419,13 +420,20 @@ class _RouterPageState extends State<RouterPage> {
     final uri = Uri.parse(routeName);
     final pathSegments = uri.pathSegments;
     
+    // Yeni evrensel QR format kontrol et (/qr?business=X&table=Y)
+    if (routeName == '/qr' || routeName.startsWith('/qr?')) {
+      // Evrensel QR menü sayfasını döndür
+      return const UniversalQRMenuPage();
+    }
+    
+    // Eski format kontrol et (/menu/businessId veya /qr-menu/businessId)
     if (pathSegments.length >= 2) {
       final businessId = pathSegments[1];
       final tableNumber = uri.queryParameters['table'] != null 
           ? int.tryParse(uri.queryParameters['table']!) 
           : null;
       
-      // Direkt QRMenuPage widget'ını döndür
+      // Direkt QRMenuPage widget'ını döndür (eski format uyumluluğu için)
       return QRMenuPage(
         businessId: businessId,
         qrCode: routeName,

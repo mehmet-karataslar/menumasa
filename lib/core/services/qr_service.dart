@@ -224,16 +224,16 @@ class QRService {
 
   /// Generates a unique QR code URL for a business
   String generateBusinessQRUrl(String businessId) {
-    // Use /menu/ path for compatibility with existing QR codes
-    final url = '$baseUrl/menu/$businessId';
+    // Yeni evrensel QR formatı
+    final url = '$baseUrl/qr?business=$businessId';
     print('📱 QR URL Generated: $url (base: $baseUrl)');
     return url;
   }
 
   /// Generates a QR code URL for a specific table
   String generateTableQRUrl(String businessId, int tableNumber) {
-    // Use /menu/ path for compatibility with existing QR codes
-    final url = '$baseUrl/menu/$businessId?table=$tableNumber';
+    // Yeni evrensel QR formatı
+    final url = '$baseUrl/qr?business=$businessId&table=$tableNumber';
     print('📱 QR Table URL Generated: $url (base: $baseUrl)');
     return url;
   }

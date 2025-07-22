@@ -28,7 +28,7 @@ class UrlServiceIO extends UrlServiceBase {
 
   @override
   void updateBusinessUrl(String businessId, String tab, {String? businessName}) {
-    final route = '/business/$businessId/$tab';
+    final route = '/business/$tab'; // Business ID'yi URL'den kaldırdık
     final tabTitle = UrlService.businessTabTitles[tab] ?? tab;
     final title = businessName != null 
         ? '$businessName - $tabTitle | MasaMenu'

@@ -15,6 +15,7 @@ import '../../customer/pages/business_detail_page.dart';
 import '../../customer/pages/search_page.dart';
 import '../../customer/pages/qr_scanner_page.dart';
 import '../../customer/pages/qr_menu_page.dart';
+import '../../shared/pages/universal_qr_menu_page.dart';
 import '../../business/pages/business_dashboard_page.dart';
 import '../../business/models/category.dart' as app_category;
 import '../../business/models/business.dart';
@@ -52,6 +53,9 @@ class AppRoutes {
   static const String search = '/search';
   static const String qrScanner = '/qr-scanner';
   static const String qrMenu = '/qr-menu';
+  
+  // Evrensel QR Menü
+  static const String universalQR = '/qr';
 
   // Business route'ları
   static const String businessHome = '/business/home';
@@ -89,6 +93,9 @@ class AppRoutes {
     search: (context) => const SearchRouterPage(),
     qrScanner: (context) => const QRScannerRouterPage(),
     qrMenu: (context) => const QRMenuRouterPage(),
+    
+    // Evrensel QR Menü
+    universalQR: (context) => const UniversalQRMenuPage(),
 
     // Business route'ları
     businessHome: (context) => const BusinessHomeRouterPage(),
@@ -326,6 +333,14 @@ class AppRoutes {
     if (pathSegments.length >= 2) {
       switch (pathSegments[1]) {
         case 'dashboard':
+        case 'genel-bakis':  // Ana dashboard sayfası
+        case 'siparisler':   // Siparişler sekmesi
+        case 'kategoriler':  // Kategoriler sekmesi
+        case 'urunler':      // Ürünler sekmesi
+        case 'garsonlar':    // Garsonlar sekmesi
+        case 'indirimler':   // İndirimler sekmesi
+        case 'qr-kodlar':    // QR Kodlar sekmesi
+        case 'ayarlar':      // Ayarlar sekmesi
           return MaterialPageRoute(
             builder: (context) => const BusinessDashboardRouterPage(),
             settings: settings,
@@ -585,7 +600,20 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
       );
     }
     
-    return BusinessDashboard(businessId: _businessId!);
+    // URL'den hangi sekmenin açılacağını belirle
+    final routeName = ModalRoute.of(context)?.settings.name;
+    final uri = Uri.parse(routeName ?? '');
+    final pathSegments = uri.pathSegments;
+    String? initialTab;
+    
+    if (pathSegments.length >= 2) {
+      initialTab = pathSegments[1];
+    }
+    
+    return BusinessDashboard(
+      businessId: _businessId!,
+      initialTab: initialTab,
+    );
   }
 }
 
