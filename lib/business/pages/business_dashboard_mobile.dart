@@ -669,15 +669,18 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile> {
                     ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                _getShortLabel(index),
-                style: TextStyle(
-                  fontSize: isSelected ? 11 : 10,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              const SizedBox(height: 2),
+              Flexible(
+                child: Text(
+                  _getShortLabel(index),
+                  style: TextStyle(
+                    fontSize: isSelected ? 10 : 9,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
               ),
             ],
           ),
