@@ -9,7 +9,6 @@ import 'business/pages/business_dashboard_page.dart';
 import 'business/pages/business_profile_page.dart';
 import 'business/pages/category_management_page.dart';
 import 'business/pages/discount_management_page.dart';
-import 'business/pages/menu_settings_page.dart';
 import 'business/pages/order_management_page.dart';
 import 'business/pages/product_management_page.dart';
 import 'business/pages/qr_management_page.dart';
@@ -311,23 +310,7 @@ class BusinessProfileRouterPage extends StatelessWidget {
   }
 }
 
-// Menu Settings router page
-class MenuSettingsRouterPage extends StatelessWidget {
-  const MenuSettingsRouterPage({Key? key}) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final businessId = args?['businessId'] as String?;
-
-    if (businessId == null) {
-      return const NotFoundPage();
-    }
-
-    return MenuSettingsPage(businessId: businessId);
-  }
-}
 
 // QR Management router page
 class QRManagementRouterPage extends StatelessWidget {

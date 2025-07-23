@@ -21,7 +21,7 @@ import 'product_management_page.dart';
 import 'category_management_page.dart';
 import 'order_management_page.dart';
 import 'qr_management_page.dart';
-import 'menu_settings_page.dart';
+import 'menu_management_page.dart';
 import 'discount_management_page.dart';
 import 'waiter_management_page.dart';
 
@@ -82,6 +82,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   final List<String> _tabRoutes = [
     'genel-bakis',
     'siparisler',
+    'menu-yonetimi',
     'kategoriler',
     'urunler',
     'garsonlar',
@@ -93,6 +94,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   final List<String> _tabTitles = [
     'Genel Bakış',
     'Siparişler',
+    'Menü Yönetimi',
     'Kategoriler',
     'Ürünler',
     'Garsonlar',
@@ -104,8 +106,9 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   final List<IconData> _tabIcons = [
     Icons.dashboard_rounded,
     Icons.receipt_long_rounded,
+    Icons.restaurant_menu_outlined,
     Icons.category_rounded,
-    Icons.restaurant_menu_rounded,
+    Icons.inventory_rounded,
     Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
@@ -993,36 +996,42 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           child: OrderManagementPage(businessId: widget.businessId),
         );
       case 2:
+        print('🍽️ Loading Menu Management Page');
+        return Container(
+          key: const ValueKey('menu'),
+          child: MenuManagementPage(businessId: widget.businessId),
+        );
+      case 3:
         print('📂 Loading Categories Page');
         return Container(
           key: const ValueKey('categories'),
           child: CategoryManagementPage(businessId: widget.businessId),
         );
-      case 3:
+      case 4:
         print('🍽️ Loading Products Page');
         return Container(
           key: const ValueKey('products'),
           child: ProductManagementPage(businessId: widget.businessId),
         );
-      case 4:
+      case 5:
         print('👥 Loading Waiters Page');
         return Container(
           key: const ValueKey('waiters'),
           child: WaiterManagementPage(businessId: widget.businessId),
         );
-      case 5:
+      case 6:
         print('🎯 Loading Discounts Page');
         return Container(
           key: const ValueKey('discounts'),
           child: DiscountManagementPage(businessId: widget.businessId),
         );
-      case 6:
+      case 7:
         print('📱 Loading QR Page');
         return Container(
           key: const ValueKey('qr'),
           child: QRManagementPage(businessId: widget.businessId),
         );
-      case 7:
+      case 8:
         print('⚙️ Loading Profile Page');
         return Container(
           key: const ValueKey('profile'),

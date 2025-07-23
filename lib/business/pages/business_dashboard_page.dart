@@ -21,7 +21,7 @@ import 'product_management_page.dart';
 import 'category_management_page.dart';
 import 'order_management_page.dart';
 import 'qr_management_page.dart';
-import 'menu_settings_page.dart';
+import 'menu_management_page.dart';
 import 'discount_management_page.dart';
 import 'waiter_management_page.dart';
 import 'business_dashboard_mobile.dart';
@@ -79,6 +79,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   final List<String> _tabRoutes = [
     'genel-bakis',
     'siparisler',
+    'menu-yonetimi',
     'kategoriler',
     'urunler',
     'garsonlar',
@@ -90,6 +91,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   final List<String> _tabTitles = [
     'Genel Bakış',
     'Siparişler',
+    'Menü Yönetimi',
     'Kategoriler',
     'Ürünler',
     'Garsonlar',
@@ -101,8 +103,9 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   final List<IconData> _tabIcons = [
     Icons.dashboard_rounded,
     Icons.receipt_long_rounded,
+    Icons.restaurant_menu_outlined,
     Icons.category_rounded,
-    Icons.restaurant_menu_rounded,
+    Icons.inventory_rounded,
     Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
@@ -114,7 +117,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _setInitialTab();
     _tabController.addListener(_onTabChanged);
     _loadBusinessData();
@@ -658,6 +661,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
       children: [
         _buildOverviewTab(),
         OrderManagementPage(businessId: widget.businessId),
+        MenuManagementPage(businessId: widget.businessId),
         CategoryManagementPage(businessId: widget.businessId),
         ProductManagementPage(businessId: widget.businessId),
         WaiterManagementPage(businessId: widget.businessId),

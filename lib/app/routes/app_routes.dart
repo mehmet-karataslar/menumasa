@@ -343,6 +343,7 @@ class AppRoutes {
         case 'dashboard':
         case 'genel-bakis':  // Ana dashboard sayfası
         case 'siparisler':   // Siparişler sekmesi
+        case 'menu-yonetimi': // Menü Yönetimi sekmesi
         case 'kategoriler':  // Kategoriler sekmesi
         case 'urunler':      // Ürünler sekmesi
         case 'garsonlar':    // Garsonlar sekmesi
