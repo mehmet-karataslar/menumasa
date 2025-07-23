@@ -40,25 +40,33 @@ class _RouterPageState extends State<RouterPage> {
       // 🔍 ÖNCELİKLE QR URL KONTROLÜ YAP!
       print('🔍 RouterPage: Checking for QR URL...');
       
-      final url = _urlService.getCurrentUrl();
-      print('📍 Current URL: $url');
+      final path = _urlService.getCurrentPath();
+      final fullUrl = '${_urlService.getCurrentBaseUrl()}$path';
+      final params = _urlService.getCurrentParams();
+      
+      print('📍 Current Path: $path');
+      print('📍 Current URL: $fullUrl');
+      print('📍 Current Params: $params');
       
       // QR URL kontrolü - çeşitli formatları destekle
       bool isQrUrl = false;
       String? businessId;
       String? tableId;
       
-      if (url.contains('/qr') || 
-          url.contains('business=') || 
-          url.contains('table=') ||
-          url.contains('businessId=') ||
-          url.contains('tableId=')) {
+      if (path.contains('/qr') || 
+          fullUrl.contains('business=') || 
+          fullUrl.contains('table=') ||
+          fullUrl.contains('businessId=') ||
+          fullUrl.contains('tableId=') ||
+          params.containsKey('business') ||
+          params.containsKey('businessId') ||
+          params.containsKey('table') ||
+          params.containsKey('tableId')) {
         
         print('✅ QR URL detected! Redirecting to UniversalQRMenuPage...');
         isQrUrl = true;
         
         // URL parametrelerini parse et
-        final params = _urlService.getQueryParameters();
         businessId = params['business'] ?? params['businessId'];
         tableId = params['table'] ?? params['tableId'];
         
