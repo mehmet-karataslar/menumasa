@@ -175,33 +175,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         }
       }
       
-      // 2. Route name'den parse et
-      if (businessId == null && routeSettings?.name != null) {
-        try {
-          final uri = Uri.parse(routeSettings!.name!);
-          final queryParams = uri.queryParameters;
-          
-          businessId = queryParams['business'];
-          if (queryParams['table'] != null) {
-            tableNumber = int.tryParse(queryParams['table']!);
-          }
-          print('🔍 Route name\'den alindi - business: $businessId, table: $tableNumber');
-          
-          // Eski format desteği (/menu/businessId veya /qr-menu/businessId)
-          if (businessId == null) {
-            final pathSegments = uri.pathSegments;
-            if (pathSegments.length >= 2 && 
-                (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu')) {
-              businessId = pathSegments[1];
-              print('🔍 Eski format\'tan alindi - business: $businessId');
-            }
-          }
-        } catch (e) {
-          print('❌ Route name parsing error: $e');
-        }
-      }
-      
-      // 3. Son seçenek: URL Service'ten dene
+      // 2. URL Service'den dene (Mobil Browser destekli)
       if (businessId == null) {
         final urlParams = _urlService.getCurrentParams();
         businessId = urlParams['business'];
@@ -210,8 +184,65 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         }
         print('🔍 URL Service\'ten alindi - business: $businessId, table: $tableNumber');
       }
+      
+      // 3. Manuel URL parsing (Mobil Browser fallback)
+      if (businessId == null) {
+        try {
+          final currentUrl = _urlService.getCurrentPath();
+          final currentParams = _urlService.getCurrentParams();
+          
+          print('🔍 Manual parsing - URL: $currentUrl, Params: $currentParams');
+          
+          // Web browser URL'den manuel parsing
+          if (currentUrl.contains('?')) {
+            final parts = currentUrl.split('?');
+            if (parts.length > 1) {
+              final queryString = parts[1];
+              final params = Uri.splitQueryString(queryString);
+              businessId = params['business'];
+              if (params['table'] != null) {
+                tableNumber = int.tryParse(params['table']!);
+              }
+              print('🔍 Manuel parsing\'den alindi - business: $businessId, table: $tableNumber');
+            }
+          }
+        } catch (e) {
+          print('❌ Manuel URL parsing error: $e');
+        }
+      }
+      
+      // 4. Route name'den parsing (Eski formatlar için)
+      if (businessId == null && routeSettings?.name != null) {
+        try {
+          final routeName = routeSettings!.name!;
+          print('🔍 Route name parsing: $routeName');
+          
+          if (routeName.isNotEmpty && routeName != '/') {
+            final uri = Uri.parse(routeName);
+            final pathSegments = uri.pathSegments;
+            
+            // Eski format: /menu/businessId veya /qr-menu/businessId
+            if (pathSegments.length >= 2 && 
+                (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu')) {
+              businessId = pathSegments[1];
+              print('🔍 Eski format\'tan alindi - business: $businessId');
+            }
+            
+            // Query parametrelerini de kontrol et
+            if (uri.queryParameters.isNotEmpty) {
+              businessId = businessId ?? uri.queryParameters['business'];
+              if (uri.queryParameters['table'] != null) {
+                tableNumber = int.tryParse(uri.queryParameters['table']!);
+              }
+              print('🔍 Route query params\'tan alindi - business: $businessId, table: $tableNumber');
+            }
+          }
+        } catch (e) {
+          print('❌ Route name parsing error: $e');
+        }
+      }
 
-      // 4. Validation
+      // 5. Validation
       if (businessId == null || businessId.isEmpty) {
         print('❌ Business ID validation failed - businessId: $businessId');
         print('❌ Arguments: $arguments');

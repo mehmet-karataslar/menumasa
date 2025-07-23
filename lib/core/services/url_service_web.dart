@@ -100,9 +100,84 @@ class UrlServiceWeb extends UrlServiceBase {
     updateUrl(route, customTitle: title);
   }
 
+  /// Gets the current URL path
   @override
   String getCurrentPath() {
-    return html.window.location.pathname ?? '/';
+    try {
+      // Önce window.location'dan dene
+      String path = html.window.location.pathname ?? '/';
+      
+      // Hash routing varsa ekle
+      if (html.window.location.hash?.isNotEmpty == true) {
+        final hash = html.window.location.hash!;
+        if (hash.startsWith('#/')) {
+          path = hash.substring(1); // # karakterini kaldır
+        }
+      }
+      
+      // Query string varsa ekle
+      if (html.window.location.search?.isNotEmpty == true) {
+        path += html.window.location.search!;
+      }
+      
+      print('🌐 Web getCurrentPath: $path');
+      print('🌐 Window location: ${html.window.location.href}');
+      print('🌐 Pathname: ${html.window.location.pathname}');
+      print('🌐 Search: ${html.window.location.search}');
+      print('🌐 Hash: ${html.window.location.hash}');
+      
+      return path;
+    } catch (e) {
+      print('❌ Web getCurrentPath error: $e');
+      return '/';
+    }
+  }
+
+  /// Gets current URL parameters
+  @override
+  Map<String, String> getCurrentParams() {
+    try {
+      final params = <String, String>{};
+      
+      // 1. URL Search params
+      final search = html.window.location.search;
+      if (search?.isNotEmpty == true) {
+        final queryString = search!.startsWith('?') ? search.substring(1) : search;
+        final uri = Uri(query: queryString);
+        params.addAll(uri.queryParameters);
+        print('🌐 Search params: ${uri.queryParameters}');
+      }
+      
+      // 2. Hash routing params (mobil browser için)
+      final hash = html.window.location.hash;
+      if (hash?.isNotEmpty == true && hash!.contains('?')) {
+        try {
+          final hashUri = Uri.parse(hash.substring(1)); // # karakterini kaldır
+          params.addAll(hashUri.queryParameters);
+          print('🌐 Hash params: ${hashUri.queryParameters}');
+        } catch (e) {
+          print('❌ Hash parsing error: $e');
+        }
+      }
+      
+      // 3. Fallback: URL'den manuel parsing
+      final href = html.window.location.href;
+      if (href?.contains('?') == true) {
+        try {
+          final uri = Uri.parse(href!);
+          params.addAll(uri.queryParameters);
+          print('🌐 Manual params: ${uri.queryParameters}');
+        } catch (e) {
+          print('❌ Manual parsing error: $e');
+        }
+      }
+      
+      print('🌐 Final Web getCurrentParams: $params');
+      return params;
+    } catch (e) {
+      print('❌ Web getCurrentParams error: $e');
+      return {};
+    }
   }
 
   /// Gets the current base URL (protocol + host)
@@ -119,12 +194,6 @@ class UrlServiceWeb extends UrlServiceBase {
       // Fallback
       return 'https://menumebak.web.app';
     }
-  }
-
-  @override
-  Map<String, String> getCurrentParams() {
-    final uri = Uri.parse(html.window.location.href);
-    return uri.queryParameters;
   }
 
   @override
