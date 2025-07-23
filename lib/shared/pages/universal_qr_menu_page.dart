@@ -5,6 +5,8 @@ import '../../core/constants/app_typography.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
+import '../../core/services/qr_service.dart';
+import '../../core/services/qr_validation_service.dart';
 import '../../business/services/business_firestore_service.dart';
 import '../../business/models/business.dart';
 import '../../business/models/product.dart';
@@ -15,6 +17,7 @@ import '../../customer/widgets/business_header.dart';
 import '../../customer/widgets/search_bar.dart' as custom_search;
 import '../../customer/widgets/filter_bottom_sheet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Evrensel QR Menü Sayfası - Tüm İşletmeler İçin Ortak (Misafir Modu Destekli)
 class UniversalQRMenuPage extends StatefulWidget {
@@ -31,6 +34,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   final AuthService _authService = AuthService();
   final CartService _cartService = CartService();
   final UrlService _urlService = UrlService();
+  final QRService _qrService = QRService();
   final BusinessFirestoreService _businessService = BusinessFirestoreService();
 
   // Animation Controllers
@@ -132,17 +136,27 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     });
 
     try {
-      String? businessId;
-      int? tableNumber;
-      
-      print('🔍 UniversalQRMenuPage - URL parsing başlıyor...');
+      print('🔍 UniversalQRMenuPage - Enhanced URL parsing başlıyor...');
       
       // User feedback - POST FRAME
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('🔍 QR kod analiz ediliyor...'),
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text('🔍 QR kod doğrulanıyor...'),
+                ],
+              ),
               duration: Duration(seconds: 2),
               backgroundColor: AppColors.primary,
             ),
@@ -150,46 +164,101 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         }
       });
 
-      // Basitleştirilmiş parametre çıkarma - öncelik sırasına göre
-      final parseResult = _extractBusinessParameters();
-      businessId = parseResult['businessId'];
-      if (parseResult['tableNumber'] != null) {
-        tableNumber = int.tryParse(parseResult['tableNumber']!);
-      }
+      // Mevcut URL'yi al
+      final currentUrl = _getCurrentUrlForValidation();
+      print('📱 Current URL for validation: $currentUrl');
+
+      // Enhanced QR validation
+      final validationResult = await _qrService.validateAndParseQRUrl(currentUrl);
       
-      print('✅ Parsed parameters - Business: $businessId, Table: $tableNumber');
-
-      // Validation
-      if (businessId == null || businessId.isEmpty) {
-        print('❌ Business ID validation failed - businessId: $businessId');
-        throw Exception('İşletme ID\'si bulunamadı. QR kodunuz geçerli değil.');
+      if (!validationResult.isValid) {
+        print('❌ QR Validation failed: ${validationResult.errorMessage}');
+        throw QRValidationException(
+          validationResult.errorMessage ?? 'QR kod doğrulama hatası',
+          errorCode: validationResult.errorCode,
+        );
       }
 
-      // Final assignment
-      _businessId = businessId;
-      _tableNumber = tableNumber;
+      // Validation başarılı - değerleri al
+      _businessId = validationResult.businessId!;
+      _tableNumber = validationResult.tableNumber;
+      
+      print('✅ Enhanced validation successful - Business: $_businessId, Table: $_tableNumber');
 
-      print('✅ Final - Business ID: $_businessId, Table: $_tableNumber');
+      // Eğer business bilgisi validation'dan geldi ise direkt kullan
+      if (validationResult.business != null) {
+        setState(() {
+          _business = validationResult.business;
+        });
+        print('🚀 Business loaded from validation cache: ${_business!.businessName}');
+      }
 
-      // İşletme verilerini yükle
-      print('🔄 Starting _loadBusinessData...');
-      await _loadBusinessData();
-      print('✅ _loadBusinessData completed successfully');
+      // Diğer verileri yükle (kategoriler, ürünler)
+      await _loadMenuData();
       
       // Animasyonları başlat
       _slideController.forward();
       _fadeController.forward();
       
     } catch (e) {
-      print('❌ Universal QR Menu Error: $e');
+      print('❌ Enhanced Universal QR Menu Error: $e');
+      
+      String userFriendlyMessage;
+      String? errorCode;
+      
+      if (e is QRValidationException) {
+        userFriendlyMessage = e.message;
+        errorCode = e.errorCode;
+      } else {
+        userFriendlyMessage = _getUserFriendlyErrorMessage(e.toString());
+        errorCode = 'GENERAL_ERROR';
+      }
+      
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = userFriendlyMessage;
       });
+      
+             // Hata durumunu logla
+       final currentUrl = _getCurrentUrlForValidation();
+       final validationService = QRValidationService();
+       await validationService.logQRCodeError(
+         currentUrl,
+         userFriendlyMessage,
+         errorCode,
+       );
+      
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  /// Mevcut URL'yi validation için hazırlar
+  String _getCurrentUrlForValidation() {
+    // Önce basit parametre çıkarımı dene
+    final parseResult = _extractBusinessParameters();
+    final businessId = parseResult['businessId'];
+    final tableNumber = parseResult['tableNumber'];
+    
+    if (businessId != null) {
+      // URL'yi yeniden oluştur
+      final baseUrl = _qrService.baseUrl;
+      if (tableNumber != null) {
+        return '$baseUrl/qr?business=$businessId&table=$tableNumber';
+      } else {
+        return '$baseUrl/qr?business=$businessId';
+      }
+    }
+    
+    // Fallback: Mevcut route'dan URL oluştur
+    final routeSettings = ModalRoute.of(context)?.settings;
+    if (routeSettings?.name != null) {
+      return '${_qrService.baseUrl}${routeSettings!.name!}';
+    }
+    
+    // Son çare: boş URL
+    return '';
   }
 
   /// Basitleştirilmiş parametre çıkarma metodu
@@ -230,16 +299,29 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     return {'businessId': null, 'tableNumber': null};
   }
 
-  Future<void> _loadBusinessData() async {
+  Future<void> _loadMenuData() async {
     try {
-      print('🔄 Loading business data for ID: $_businessId');
+      print('🔄 Loading menu data for business ID: $_businessId');
       
       // User feedback - POST FRAME
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('📍 İşletme bilgileri yükleniyor...'),
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text('📍 Menü yükleniyor...'),
+                ],
+              ),
               duration: Duration(seconds: 2),
               backgroundColor: AppColors.info,
             ),
@@ -247,59 +329,33 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         }
       });
       
-      // İşletme bilgilerini al - detaylı logging ile
-      print('🔄 Calling BusinessFirestoreService.getBusiness($_businessId)');
-      
-      Business? business;
-      try {
-        business = await _businessService.getBusiness(_businessId!);
-        print('🔄 BusinessFirestoreService.getBusiness response: ${business != null ? "SUCCESS" : "NULL"}');
-        
-        if (business != null) {
-          print('✅ Business found - Name: ${business.businessName}, ID: ${business.id}, Active: ${business.isActive}');
-        } else {
-          print('❌ Business NULL - ID $_businessId not found in businesses collection');
-          
-          // Firebase connection test
-          try {
-            print('🔄 Testing Firebase connection...');
-            final testQuery = await FirebaseFirestore.instance.collection('businesses').limit(1).get();
-            print('✅ Firebase connection OK, businesses collection has ${testQuery.docs.length} docs');
-            
-            // Bu ID ile business var mı direkt kontrol et
-            print('🔄 Direct Firestore check for ID: $_businessId');
-            final directDoc = await FirebaseFirestore.instance.collection('businesses').doc(_businessId!).get();
-            print('📄 Direct document exists: ${directDoc.exists}');
-            if (directDoc.exists) {
-              print('📄 Document data: ${directDoc.data()}');
-            }
-          } catch (e) {
-            print('❌ Firebase connection error: $e');
-          }
-        }
+      // Eğer business bilgisi henüz yüklenmemişse, şimdi yükle
+      if (_business == null) {
+        print('🔄 Loading business data from Firestore...');
+        final business = await _businessService.getBusiness(_businessId!);
         
         if (business == null) {
-          // User-friendly error message - POST FRAME
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('❌ İşletme bulunamadı (ID: $_businessId)'),
-                  duration: Duration(seconds: 4),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            }
-          });
-          
-          throw Exception('İşletme bulunamadı - ID: $_businessId businesses collection\'ında mevcut değil');
+          throw QRValidationException(
+            'İşletme bulunamadı (ID: $_businessId)',
+            errorCode: 'BUSINESS_NOT_FOUND',
+          );
         }
-      } catch (e) {
-        print('❌ BusinessFirestoreService.getBusiness error: $e');
-        rethrow;
+        
+        if (!business.isActive) {
+          throw QRValidationException(
+            'İşletme şu anda hizmet vermiyor',
+            errorCode: 'BUSINESS_INACTIVE',
+          );
+        }
+        
+        setState(() {
+          _business = business;
+        });
+        
+        print('✅ Business loaded: ${business.businessName}');
+      } else {
+        print('✅ Business already loaded from cache: ${_business!.businessName}');
       }
-
-      print('✅ Business found: ${business.businessName}');
       
       // Kategorileri al
       print('🔄 Loading categories...');
@@ -313,7 +369,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       print('✅ Products loaded: ${activeProducts.length} active out of ${products.length} total');
 
       setState(() {
-        _business = business;
+        _business = _business; // Business zaten yukarıda set edilmiş
         _categories = [
           Category(
             categoryId: 'all',
@@ -335,13 +391,21 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       // URL'i güncelle
       _updateUrl();
       
-      print('✅ Business data loaded: ${business.businessName}');
+      print('✅ Menu data loaded: ${_business!.businessName}');
       print('📊 Categories: ${categories.length}, Products: ${activeProducts.length}');
       
     } catch (e) {
-      print('❌ Error in _loadBusinessData: $e');
+      print('❌ Error in _loadMenuData: $e');
       print('❌ Stack trace: ${StackTrace.current}');
-      throw Exception('Veriler yüklenirken hata: $e');
+      
+      if (e is QRValidationException) {
+        rethrow;
+      } else {
+        throw QRValidationException(
+          'Menü verileri yüklenirken hata: $e',
+          errorCode: 'MENU_LOAD_ERROR',
+        );
+      }
     }
   }
 
@@ -619,6 +683,538 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     );
   }
 
+  /// Destek dialog'unu gösterir
+  void _showSupportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.support_agent_rounded, color: AppColors.primary),
+            const SizedBox(width: 12),
+            const Text('Müşteri Desteği'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'QR kod problemi mi yaşıyorsunuz? Size nasıl yardımcı olabiliriz?',
+              style: AppTypography.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            
+            // Hata detayları göster
+            if (_errorMessage != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hata Detayı:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _errorMessage!,
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            
+            // Destek seçenekleri
+            _buildSupportOption(
+              Icons.phone_rounded,
+              'Telefonla Destek',
+              'İşletmeyi arayın',
+              () {
+                Navigator.pop(context);
+                _contactBusinessSupport();
+              },
+            ),
+            
+            _buildSupportOption(
+              Icons.qr_code_scanner_rounded,
+              'QR Kod Tarayıcı',
+              'Manuel QR tarama',
+              () {
+                Navigator.pop(context);
+                _showQRScannerHelp();
+              },
+            ),
+            
+            _buildSupportOption(
+              Icons.refresh_rounded,
+              'Sayfa Yenile',
+              'Tekrar deneyin',
+              () {
+                Navigator.pop(context);
+                setState(() {
+                  _errorMessage = null;
+                  _isLoading = true;
+                });
+                _parseUrlAndLoadData();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// QR Scanner yardım dialog'unu gösterir
+  void _showQRScannerHelp() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.qr_code_scanner_rounded, color: AppColors.info),
+            const SizedBox(width: 12),
+            const Text('QR Kod Tarayıcı'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'QR kodunuzu manuel olarak tarayabilirsiniz:',
+              style: AppTypography.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.qr_code_2_rounded, size: 48, color: AppColors.info),
+                  const SizedBox(height: 12),
+                  Text(
+                    'QR kod tarayıcıya yönlendirileceksiniz. QR kodunuzu kameranızla taratın.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/qr-scanner');
+            },
+            icon: Icon(Icons.qr_code_scanner_rounded),
+            label: Text('QR Tarayıcı Aç'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.info,
+              foregroundColor: AppColors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// İşletme desteği ile iletişime geçme
+  void _contactBusinessSupport() {
+    // Eğer business bilgisi varsa, işletmeye özel destek göster
+    if (_business != null) {
+      _showBusinessContactDialog();
+    } else {
+      _showGeneralSupportDialog();
+    }
+  }
+
+  /// İşletme iletişim dialog'u
+  void _showBusinessContactDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.store_rounded, color: AppColors.secondary),
+            const SizedBox(width: 12),
+            Text('${_business!.businessName}'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'İşletme ile iletişime geçin:',
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            if (_business!.phone != null && _business!.phone!.isNotEmpty) ...[
+              _buildContactOption(
+                Icons.phone_rounded,
+                'Telefon',
+                _business!.phone!,
+                () => _makePhoneCall(_business!.phone!),
+              ),
+              const SizedBox(height: 8),
+            ],
+            
+            if (_business!.email != null && _business!.email!.isNotEmpty) ...[
+              _buildContactOption(
+                Icons.email_rounded,
+                'E-posta',
+                _business!.email!,
+                () => _sendEmail(_business!.email!),
+              ),
+              const SizedBox(height: 8),
+            ],
+            
+            _buildContactOption(
+              Icons.location_on_rounded,
+              'Adres',
+              '${_business!.address.street}, ${_business!.address.city}',
+              () => _showAddressDialog(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Genel destek dialog'u
+  void _showGeneralSupportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.help_center_rounded, color: AppColors.primary),
+            const SizedBox(width: 12),
+            const Text('Genel Destek'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'QR kod problemi için aşağıdaki adımları deneyin:',
+              style: AppTypography.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            
+            _buildHelpStep('1', 'QR kodun net ve hasarsız olduğundan emin olun'),
+            _buildHelpStep('2', 'İnternet bağlantınızı kontrol edin'),
+            _buildHelpStep('3', 'Uygulamayı yeniden başlatın'),
+            _buildHelpStep('4', 'İşletmeden yeni bir QR kod isteyin'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Anladım'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =============================================================================
+  // YARDIMCI WIDGET'LAR ve METODLAR
+  // =============================================================================
+
+  /// Destek seçeneği widget'ı
+  Widget _buildSupportOption(IconData icon, String title, String subtitle, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// İletişim seçeneği widget'ı
+  Widget _buildContactOption(IconData icon, String title, String value, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.secondary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Yardım adımı widget'ı
+  Widget _buildHelpStep(String number, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: TextStyle(
+                  color: AppColors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              description,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Telefon arama
+  void _makePhoneCall(String phoneNumber) async {
+    try {
+      final Uri phoneUri = Uri.parse('tel:$phoneNumber');
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        throw 'Telefon uygulaması açılamadı';
+      }
+    } catch (e) {
+      print('❌ Phone call error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Telefon açılamadı: $phoneNumber'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// E-posta gönderme
+  void _sendEmail(String email) async {
+    try {
+      final Uri emailUri = Uri.parse('mailto:$email?subject=QR Menü Desteği');
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        throw 'E-posta uygulaması açılamadı';
+      }
+    } catch (e) {
+      print('❌ Email error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('E-posta açılamadı: $email'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Adres detay dialog'u
+  void _showAddressDialog() {
+    if (_business == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.location_on_rounded, color: AppColors.secondary),
+            const SizedBox(width: 12),
+            const Text('Adres Bilgisi'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _business!.businessName,
+              style: AppTypography.bodyLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_business!.address.street}\n${_business!.address.district}\n${_business!.address.city} ${_business!.address.postalCode}',
+              style: AppTypography.bodyMedium,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _openMaps();
+            },
+            icon: Icon(Icons.map_rounded),
+            label: Text('Haritada Aç'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              foregroundColor: AppColors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Harita uygulamasını açma
+  void _openMaps() async {
+    if (_business == null) return;
+    
+    try {
+      final address = '${_business!.address.street}, ${_business!.address.district}, ${_business!.address.city}';
+      final Uri mapsUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+      
+      if (await canLaunchUrl(mapsUri)) {
+        await launchUrl(mapsUri);
+      } else {
+        throw 'Harita uygulaması açılamadı';
+      }
+    } catch (e) {
+      print('❌ Maps error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Harita açılamadı'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _slideController.dispose();
@@ -875,38 +1471,74 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               
               const SizedBox(height: 32),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              
+              // Ana eylem butonları
+              Column(
                 children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _errorMessage = null;
-                        _isLoading = true;
-                      });
-                      _parseUrlAndLoadData();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _errorMessage = null;
+                            _isLoading = true;
+                          });
+                          _parseUrlAndLoadData();
+                        },
+                        icon: Icon(Icons.refresh_rounded),
+                        label: Text('Tekrar Dene'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: const Text('Tekrar Dene'),
+                      const SizedBox(width: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+                        icon: Icon(Icons.home_rounded),
+                        label: Text('Ana Sayfa'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  OutlinedButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Destek ve yardım butonları
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _showSupportDialog,
+                        icon: Icon(Icons.support_agent_rounded, size: 18),
+                        label: Text('Destek Al'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.secondary,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
                       ),
-                    ),
-                    child: const Text('Ana Sayfa'),
+                      const SizedBox(width: 12),
+                      TextButton.icon(
+                        onPressed: _showQRScannerHelp,
+                        icon: Icon(Icons.qr_code_scanner_rounded, size: 18),
+                        label: Text('QR Tarayıcı'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.info,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1082,3 +1714,14 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     }
   }
 } 
+
+/// QR doğrulama hata sınıfı
+class QRValidationException implements Exception {
+  final String message;
+  final String? errorCode;
+  
+  QRValidationException(this.message, {this.errorCode});
+  
+  @override
+  String toString() => 'QRValidationException: $message${errorCode != null ? ' (Code: $errorCode)' : ''}';
+}

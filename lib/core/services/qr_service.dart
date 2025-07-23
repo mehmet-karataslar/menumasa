@@ -14,6 +14,7 @@ import '../../business/models/qr_code.dart';
 
 import '../../business/services/business_firestore_service.dart';
 import 'url_service.dart';
+import 'qr_validation_service.dart';
 
 class QRService {
   static final QRService _instance = QRService._internal();
@@ -22,6 +23,7 @@ class QRService {
 
   final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final QRValidationService _validationService = QRValidationService();
 
   // URL Service for dynamic base URL
   final UrlService _urlService = UrlService();
@@ -237,32 +239,49 @@ class QRService {
   // QR CODE URL GENERATION
   // =============================================================================
 
-  /// Generates a unique QR code URL for a business
+  /// Generates a unique QR code URL for a business with enhanced validation
   String generateBusinessQRUrl(String businessId) {
-    // Validasyon ekle
+    // Gelişmiş validasyon
     if (businessId.isEmpty) {
       throw Exception('Business ID boş olamaz');
     }
     
-    // Dinamik base URL kullan
-    final url = '$baseUrl/qr?business=$businessId';
-    print('📱 QR URL Generated: $url (base: $baseUrl)');
+    // Business ID format kontrolü (örneğin sadece alfanumerik karakterler)
+    if (!RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(businessId)) {
+      throw Exception('Geçersiz Business ID formatı: $businessId');
+    }
+    
+    // Dinamik base URL kullan ve güvenlik parametreleri ekle
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final url = '$baseUrl/qr?business=$businessId&t=$timestamp';
+    
+    print('📱 Enhanced QR URL Generated: $url (base: $baseUrl)');
     return url;
   }
 
-  /// Generates a QR code URL for a specific table
+  /// Generates a QR code URL for a specific table with enhanced validation
   String generateTableQRUrl(String businessId, int tableNumber) {
-    // Validasyon ekle
+    // Gelişmiş validasyon
     if (businessId.isEmpty) {
       throw Exception('Business ID boş olamaz');
     }
     if (tableNumber <= 0) {
-      throw Exception('Masa numarası pozitif olmalı');
+      throw Exception('Masa numarası pozitif olmalı (girilen: $tableNumber)');
+    }
+    if (tableNumber > 9999) {
+      throw Exception('Masa numarası çok büyük (maksimum: 9999, girilen: $tableNumber)');
     }
     
-    // Dinamik base URL kullan
-    final url = '$baseUrl/qr?business=$businessId&table=$tableNumber';
-    print('📱 QR Table URL Generated: $url (base: $baseUrl)');
+    // Business ID format kontrolü
+    if (!RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(businessId)) {
+      throw Exception('Geçersiz Business ID formatı: $businessId');
+    }
+    
+    // Dinamik base URL kullan ve güvenlik parametreleri ekle
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final url = '$baseUrl/qr?business=$businessId&table=$tableNumber&t=$timestamp';
+    
+    print('📱 Enhanced QR Table URL Generated: $url (base: $baseUrl)');
     return url;
   }
 
@@ -282,6 +301,107 @@ class QRService {
     if (extraParams != null) queryParams.addAll(extraParams);
 
     return uri.replace(queryParameters: queryParams).toString();
+  }
+
+  // =============================================================================
+  // QR CODE VALIDATION - YENİ ÖZELLİKLER
+  // =============================================================================
+
+  /// QR kod URL'sini doğrular ve business bilgilerini getirir
+  Future<QRCodeValidationResult> validateAndParseQRUrl(String url) async {
+    try {
+      print('🔍 QR Service: Validating URL: $url');
+      
+      // Validation service kullanarak doğrula
+      final validationResult = await _validationService.validateQRCodeUrl(url);
+      
+      if (!validationResult.isValid) {
+        // Hata durumunu logla
+        await _validationService.logQRCodeError(
+          url, 
+          validationResult.errorMessage ?? 'Bilinmeyen hata',
+          validationResult.errorCode,
+        );
+      }
+      
+      return validationResult;
+    } catch (e) {
+      print('❌ QR Service: Validation error: $e');
+      
+      // Hata durumunu logla
+      await _validationService.logQRCodeError(
+        url, 
+        'QR validation exception: $e',
+        'VALIDATION_EXCEPTION',
+      );
+      
+      return QRCodeValidationResult.error('QR kod doğrulama hatası: $e');
+    }
+  }
+
+  /// Belirli bir business ID'nin aktif olup olmadığını kontrol eder
+  Future<bool> isBusinessActive(String businessId) async {
+    try {
+      final business = await _businessFirestoreService.getBusiness(businessId);
+      return business?.isActive ?? false;
+    } catch (e) {
+      print('❌ QR Service: Business check error: $e');
+      return false;
+    }
+  }
+
+  /// QR kod analitiklerini getirir
+  Future<QRCodeAnalytics> getQRAnalytics(String businessId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    return await _validationService.getQRCodeAnalytics(
+      businessId,
+      startDate: startDate,
+      endDate: endDate,
+    );
+  }
+
+  /// QR kod güvenlik kontrolü - kötüye kullanım tespit etme
+  Future<bool> checkQRCodeSecurity(String url) async {
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri == null) return false;
+      
+      // Geçerli domain kontrolü
+      final validDomains = [
+        _urlService.getCurrentBaseUrl(),
+        'localhost',
+        '127.0.0.1',
+        // Üretim domain'lerini ekleyebilirsiniz
+      ];
+      
+      final urlDomain = uri.host;
+      final isValidDomain = validDomains.any((domain) => 
+        urlDomain.contains(domain.replaceAll('https://', '').replaceAll('http://', ''))
+      );
+      
+      if (!isValidDomain) {
+        print('⚠️ QR Security: Invalid domain detected: $urlDomain');
+        return false;
+      }
+      
+      // Şüpheli parametreler kontrolü
+      final suspiciousParams = ['javascript:', 'data:', 'vbscript:'];
+      for (final param in uri.queryParameters.values) {
+        for (final suspicious in suspiciousParams) {
+          if (param.toLowerCase().contains(suspicious)) {
+            print('⚠️ QR Security: Suspicious parameter detected: $param');
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    } catch (e) {
+      print('❌ QR Security check error: $e');
+      return false;
+    }
   }
 
   // =============================================================================

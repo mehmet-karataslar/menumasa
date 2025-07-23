@@ -180,6 +180,8 @@ class AppRoutes {
     return null;
   }
 
+
+
   // =============================================================================
   // CUSTOMER ROUTE HANDLER
   // =============================================================================
@@ -424,23 +426,24 @@ class AppRoutes {
   // =============================================================================
   
   static bool _isQRMenuRoute(String routeName, Uri uri) {
-    // 1. /qr ile başlayan route'lar
-    if (routeName.startsWith('/qr')) {
+    // 1. /qr ile başlayan route'lar (evrensel QR)
+    if (routeName == universalQR || routeName.startsWith('/qr?')) {
       return true;
     }
     
-    // 2. business parametresi olan URL'ler
-    if (uri.queryParameters.containsKey('business')) {
+    // 2. /qr-menu/{businessId} formatı
+    if (routeName.startsWith('/qr-menu/')) {
       return true;
     }
     
-    // 3. Eski format destekler: /menu/ veya /qr-menu/
-    if (routeName.contains('/menu/') || routeName.contains('/qr-menu/')) {
+    // 3. Query parametrelerinde business var mı?
+    if (uri.queryParameters.containsKey('business') || 
+        uri.queryParameters.containsKey('businessId')) {
       return true;
     }
     
-    // 4. URL'de business= olan durumlar
-    if (routeName.contains('business=') || routeName.contains('table=')) {
+    // 4. Eski format desteği: /menu/ içeren URL'ler
+    if (routeName.contains('/menu/') && uri.queryParameters.isNotEmpty) {
       return true;
     }
     
@@ -448,53 +451,64 @@ class AppRoutes {
   }
   
   /// QR menü route'unu handle eder
-  static Route<dynamic>? _handleQRMenuRoute(RouteSettings settings, Uri uri) {
-    print('🔧 QR Route Handler çalışıyor...');
+  static Route<dynamic> _handleQRMenuRoute(RouteSettings settings, Uri uri) {
+    print('🔗 QR Menu Route Handler - Processing: ${settings.name}');
     
-    String? businessId;
-    int? tableNumber;
-    
-    // Business ID ve table number'ı parse et
-    final queryParams = uri.queryParameters;
-    businessId = queryParams['business'];
-    if (queryParams['table'] != null) {
-      tableNumber = int.tryParse(queryParams['table']!);
-    }
-    
-    // Eski format'tan da dene
-    if (businessId == null) {
-      final pathSegments = uri.pathSegments;
-      if (pathSegments.length >= 2 && 
-          (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu')) {
-        businessId = pathSegments[1];
-        // Query'den table number al
-        if (queryParams['table'] != null) {
-          tableNumber = int.tryParse(queryParams['table']!);
+    try {
+      // Business ID ve table number çıkar
+      String? businessId;
+      int? tableNumber;
+      
+      // Query parametrelerinden
+      businessId = uri.queryParameters['business'] ?? 
+                  uri.queryParameters['businessId'];
+      final tableString = uri.queryParameters['table'] ?? 
+                         uri.queryParameters['tableNumber'];
+      if (tableString != null) {
+        tableNumber = int.tryParse(tableString);
+      }
+      
+      // Path'den çıkar (/qr-menu/{businessId} formatı)
+      if (businessId == null && uri.pathSegments.isNotEmpty) {
+        if (uri.pathSegments.contains('qr-menu') && uri.pathSegments.length > 1) {
+          final index = uri.pathSegments.indexOf('qr-menu');
+          if (index + 1 < uri.pathSegments.length) {
+            businessId = uri.pathSegments[index + 1];
+          }
         }
       }
+      
+      print('✅ QR Parameters extracted - Business: $businessId, Table: $tableNumber');
+      
+      // UniversalQRMenuPage'e yönlendir
+      return MaterialPageRoute(
+        builder: (context) => const UniversalQRMenuPage(),
+        settings: RouteSettings(
+          name: settings.name,
+          arguments: {
+            'businessId': businessId,
+            'tableNumber': tableNumber,
+            'isQRRoute': true,
+            'originalUrl': settings.name,
+          },
+        ),
+      );
+      
+    } catch (e) {
+      print('❌ QR Menu Route Error: $e');
+      
+      // Hata durumunda da UniversalQRMenuPage'e git (kendi hata yönetimi var)
+      return MaterialPageRoute(
+        builder: (context) => const UniversalQRMenuPage(),
+        settings: RouteSettings(
+          name: settings.name,
+          arguments: {
+            'routeError': e.toString(),
+            'originalUrl': settings.name,
+          },
+        ),
+      );
     }
-    
-    print('🔍 QR Route parsed - business: $businessId, table: $tableNumber');
-    
-    // Business ID yoksa null döndür (RouterPage handle edecek)
-    if (businessId == null || businessId.isEmpty) {
-      print('❌ QR Route - Business ID bulunamadı');
-      return null;
-    }
-    
-    // UniversalQRMenuPage'e yönlendir
-    return MaterialPageRoute(
-      builder: (context) => const UniversalQRMenuPage(),
-      settings: RouteSettings(
-        name: '/qr',
-        arguments: {
-          'businessId': businessId,
-          'tableNumber': tableNumber,
-          'source': 'app_routes',
-          'originalUrl': settings.name,
-        },
-      ),
-    );
   }
 
   // =============================================================================
@@ -502,6 +516,7 @@ class AppRoutes {
   // =============================================================================
   
   static Route<dynamic> onUnknownRoute(RouteSettings settings) {
+    print('❓ Unknown route: ${settings.name}');
     return MaterialPageRoute(
       builder: (context) => const RouterPage(),
       settings: settings,
