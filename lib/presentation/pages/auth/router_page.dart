@@ -37,9 +37,47 @@ class _RouterPageState extends State<RouterPage> {
 
   Future<void> _checkAuthenticationState() async {
     try {
-      final currentUser = _authService.currentUser;
+      // 🔍 ÖNCELİKLE QR URL KONTROLÜ YAP!
+      print('🔍 RouterPage: Checking for QR URL...');
       
-
+      final url = _urlService.getCurrentUrl();
+      print('📍 Current URL: $url');
+      
+      // QR URL kontrolü - çeşitli formatları destekle
+      bool isQrUrl = false;
+      String? businessId;
+      String? tableId;
+      
+      if (url.contains('/qr') || 
+          url.contains('business=') || 
+          url.contains('table=') ||
+          url.contains('businessId=') ||
+          url.contains('tableId=')) {
+        
+        print('✅ QR URL detected! Redirecting to UniversalQRMenuPage...');
+        isQrUrl = true;
+        
+        // URL parametrelerini parse et
+        final params = _urlService.getQueryParameters();
+        businessId = params['business'] ?? params['businessId'];
+        tableId = params['table'] ?? params['tableId'];
+        
+        print('📊 QR Params - Business: $businessId, Table: $tableId');
+        
+        // Hemen QR menü sayfasına yönlendir
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const UniversalQRMenuPage(),
+            ),
+          );
+          return; // Erken çık, auth kontrolü yapma
+        }
+      }
+      
+      print('📍 Not a QR URL, continuing with auth check...');
+      
+      final currentUser = _authService.currentUser;
       
       // Sadece auth durumunu kontrol et, otomatik yönlendirme yapma
       if (currentUser != null) {
