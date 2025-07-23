@@ -17,8 +17,6 @@ import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../widgets/notification_dialog.dart';
 import 'business_profile_page.dart';
-import 'product_management_page.dart';
-import 'category_management_page.dart';
 import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_management_page.dart';
@@ -80,8 +78,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     'genel-bakis',
     'siparisler',
     'menu-yonetimi',
-    'kategoriler',
-    'urunler',
     'garsonlar',
     'indirimler',
     'qr-kodlar',
@@ -92,8 +88,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     'Genel Bakış',
     'Siparişler',
     'Menü Yönetimi',
-    'Kategoriler',
-    'Ürünler',
     'Garsonlar',
     'İndirimler',
     'QR Kodlar',
@@ -104,8 +98,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     Icons.dashboard_rounded,
     Icons.receipt_long_rounded,
     Icons.restaurant_menu_outlined,
-    Icons.category_rounded,
-    Icons.inventory_rounded,
     Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
@@ -117,7 +109,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 9, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     _setInitialTab();
     _tabController.addListener(_onTabChanged);
     _loadBusinessData();
@@ -127,7 +119,14 @@ class _BusinessDashboardState extends State<BusinessDashboard>
 
   void _setInitialTab() {
     if (widget.initialTab != null) {
-      final tabIndex = _tabRoutes.indexOf(widget.initialTab!);
+      String initialTab = widget.initialTab!;
+      
+      // Eski tab route'larını yeni route'lara yönlendir
+      if (initialTab == 'kategoriler' || initialTab == 'urunler') {
+        initialTab = 'menu-yonetimi';
+      }
+      
+      final tabIndex = _tabRoutes.indexOf(initialTab);
       if (tabIndex != -1) {
         _tabController.index = tabIndex;
         _currentIndex = tabIndex;
@@ -662,8 +661,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         _buildOverviewTab(),
         OrderManagementPage(businessId: widget.businessId),
         MenuManagementPage(businessId: widget.businessId),
-        CategoryManagementPage(businessId: widget.businessId),
-        ProductManagementPage(businessId: widget.businessId),
         WaiterManagementPage(businessId: widget.businessId),
         DiscountManagementPage(businessId: widget.businessId),
         QRManagementPage(businessId: widget.businessId),

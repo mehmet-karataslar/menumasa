@@ -92,8 +92,8 @@ class UrlService extends UrlServiceBase {
   static const Map<String, String> businessTabTitles = {
     'genel-bakis': 'Genel Bakış',
     'siparisler': 'Siparişler',
-    'kategoriler': 'Kategoriler',
-    'urunler': 'Ürünler',
+    'menu-yonetimi': 'Menü Yönetimi',
+    'garsonlar': 'Garsonlar',
     'indirimler': 'İndirimler',
     'qr-kodlar': 'QR Kodlar',
     'ayarlar': 'Ayarlar',

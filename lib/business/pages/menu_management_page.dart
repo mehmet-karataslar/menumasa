@@ -193,98 +193,12 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.white,
-      foregroundColor: AppColors.textPrimary,
-      elevation: 0,
-      toolbarHeight: 80,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.restaurant_menu_rounded,
-              color: AppColors.secondary,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Menü Yönetimi',
-                  style: AppTypography.h4.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _business?.businessName ?? 'İşletme',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        // Menü yenileme butonu
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.refresh_rounded, color: AppColors.primary),
-            ),
-            onPressed: _refreshData,
-            tooltip: 'Yenile',
-          ),
-        ),
-        
-        // Menü ayarları butonu  
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.settings_rounded, color: AppColors.info),
-            ),
-            onPressed: _showMenuSettings,
-            tooltip: 'Menü Ayarları',
-          ),
-        ),
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          height: 1,
-          color: AppColors.divider.withOpacity(0.3),
-        ),
+    PreferredSizeWidget _buildAppBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(1),
+      child: Container(
+        height: 1,
+        color: AppColors.divider.withOpacity(0.3),
       ),
     );
   }
@@ -563,7 +477,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             crossAxisCount: _isMobile ? 1 : 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: _isMobile ? 4 : 3,
+            childAspectRatio: _isMobile ? 5 : 4,
             children: [
               _buildActionButton(
                 'Yeni Kategori',
@@ -639,12 +553,16 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     subtitle,
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

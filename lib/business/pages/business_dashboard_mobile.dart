@@ -17,8 +17,6 @@ import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../widgets/notification_dialog.dart';
 import 'business_profile_page.dart';
-import 'product_management_page.dart';
-import 'category_management_page.dart';
 import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_management_page.dart';
@@ -83,8 +81,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     'genel-bakis',
     'siparisler',
     'menu-yonetimi',
-    'kategoriler',
-    'urunler',
     'garsonlar',
     'indirimler',
     'qr-kodlar',
@@ -95,8 +91,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     'Genel Bakış',
     'Siparişler',
     'Menü Yönetimi',
-    'Kategoriler',
-    'Ürünler',
     'Garsonlar',
     'İndirimler',
     'QR Kodlar',
@@ -107,8 +101,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     Icons.dashboard_rounded,
     Icons.receipt_long_rounded,
     Icons.restaurant_menu_outlined,
-    Icons.category_rounded,
-    Icons.inventory_rounded,
     Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
@@ -139,7 +131,14 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
 
   void _setInitialTab() {
     if (widget.initialTab != null) {
-      final tabIndex = _tabRoutes.indexOf(widget.initialTab!);
+      String initialTab = widget.initialTab!;
+      
+      // Eski tab route'larını yeni route'lara yönlendir
+      if (initialTab == 'kategoriler' || initialTab == 'urunler') {
+        initialTab = 'menu-yonetimi';
+      }
+      
+      final tabIndex = _tabRoutes.indexOf(initialTab);
       if (tabIndex != -1) {
         _currentIndex = tabIndex;
       }
@@ -1002,36 +1001,24 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           child: MenuManagementPage(businessId: widget.businessId),
         );
       case 3:
-        print('📂 Loading Categories Page');
-        return Container(
-          key: const ValueKey('categories'),
-          child: CategoryManagementPage(businessId: widget.businessId),
-        );
-      case 4:
-        print('🍽️ Loading Products Page');
-        return Container(
-          key: const ValueKey('products'),
-          child: ProductManagementPage(businessId: widget.businessId),
-        );
-      case 5:
         print('👥 Loading Waiters Page');
         return Container(
           key: const ValueKey('waiters'),
           child: WaiterManagementPage(businessId: widget.businessId),
         );
-      case 6:
+      case 4:
         print('🎯 Loading Discounts Page');
         return Container(
           key: const ValueKey('discounts'),
           child: DiscountManagementPage(businessId: widget.businessId),
         );
-      case 7:
+      case 5:
         print('📱 Loading QR Page');
         return Container(
           key: const ValueKey('qr'),
           child: QRManagementPage(businessId: widget.businessId),
         );
-      case 8:
+      case 6:
         print('⚙️ Loading Profile Page');
         return Container(
           key: const ValueKey('profile'),
