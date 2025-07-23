@@ -135,9 +135,9 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       String? businessId;
       int? tableNumber;
       
-      print('🔍 UniversalQRMenuPage - URL parsing basliyor...');
+      print('🔍 UniversalQRMenuPage - URL parsing başlıyor...');
       
-      // Show debug info to user - POST FRAME
+      // User feedback - POST FRAME
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -150,107 +150,19 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         }
       });
 
-      // 1. ÖNCE: Route arguments'tan kontrol et (en güvenilir)
-      final routeSettings = ModalRoute.of(context)?.settings;
-      final arguments = routeSettings?.arguments as Map<String, dynamic>?;
-      
-      if (arguments != null) {
-        businessId = arguments['businessId']?.toString();
-        if (arguments['tableNumber'] != null) {
-          tableNumber = int.tryParse(arguments['tableNumber'].toString());
-        }
-        print('🔍 Arguments\'tan alindi - business: $businessId, table: $tableNumber');
-        
-        if (mounted && businessId != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('✅ QR kod başarıyla okundu'),
-                  duration: Duration(seconds: 1),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            }
-          });
-        }
+      // Basitleştirilmiş parametre çıkarma - öncelik sırasına göre
+      final parseResult = _extractBusinessParameters();
+      businessId = parseResult['businessId'];
+      if (parseResult['tableNumber'] != null) {
+        tableNumber = int.tryParse(parseResult['tableNumber']!);
       }
       
-      // 2. URL Service'den dene (Mobil Browser destekli)
-      if (businessId == null) {
-        final urlParams = _urlService.getCurrentParams();
-        businessId = urlParams['business'];
-        if (urlParams['table'] != null) {
-          tableNumber = int.tryParse(urlParams['table']!);
-        }
-        print('🔍 URL Service\'ten alindi - business: $businessId, table: $tableNumber');
-      }
-      
-      // 3. Manuel URL parsing (Mobil Browser fallback)
-      if (businessId == null) {
-        try {
-          final currentUrl = _urlService.getCurrentPath();
-          final currentParams = _urlService.getCurrentParams();
-          
-          print('🔍 Manual parsing - URL: $currentUrl, Params: $currentParams');
-          
-          // Web browser URL'den manuel parsing
-          if (currentUrl.contains('?')) {
-            final parts = currentUrl.split('?');
-            if (parts.length > 1) {
-              final queryString = parts[1];
-              final params = Uri.splitQueryString(queryString);
-              businessId = params['business'];
-              if (params['table'] != null) {
-                tableNumber = int.tryParse(params['table']!);
-              }
-              print('🔍 Manuel parsing\'den alindi - business: $businessId, table: $tableNumber');
-            }
-          }
-        } catch (e) {
-          print('❌ Manuel URL parsing error: $e');
-        }
-      }
-      
-      // 4. Route name'den parsing (Eski formatlar için)
-      if (businessId == null && routeSettings?.name != null) {
-        try {
-          final routeName = routeSettings!.name!;
-          print('🔍 Route name parsing: $routeName');
-          
-          if (routeName.isNotEmpty && routeName != '/') {
-            final uri = Uri.parse(routeName);
-            final pathSegments = uri.pathSegments;
-            
-            // Eski format: /menu/businessId veya /qr-menu/businessId
-            if (pathSegments.length >= 2 && 
-                (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu')) {
-              businessId = pathSegments[1];
-              print('🔍 Eski format\'tan alindi - business: $businessId');
-            }
-            
-            // Query parametrelerini de kontrol et
-            if (uri.queryParameters.isNotEmpty) {
-              businessId = businessId ?? uri.queryParameters['business'];
-              if (uri.queryParameters['table'] != null) {
-                tableNumber = int.tryParse(uri.queryParameters['table']!);
-              }
-              print('🔍 Route query params\'tan alindi - business: $businessId, table: $tableNumber');
-            }
-          }
-        } catch (e) {
-          print('❌ Route name parsing error: $e');
-        }
-      }
+      print('✅ Parsed parameters - Business: $businessId, Table: $tableNumber');
 
-      // 5. Validation
+      // Validation
       if (businessId == null || businessId.isEmpty) {
         print('❌ Business ID validation failed - businessId: $businessId');
-        print('❌ Arguments: $arguments');
-        print('❌ Route name: ${routeSettings?.name}');
-        print('❌ Current URL: ${_urlService.getCurrentPath()}');
-        print('❌ Current params: ${_urlService.getCurrentParams()}');
-        throw Exception('Isletme ID\'si bulunamadi. QR kodunuz gecerli degil.');
+        throw Exception('İşletme ID\'si bulunamadı. QR kodunuz geçerli değil.');
       }
 
       // Final assignment
@@ -270,7 +182,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       
     } catch (e) {
       print('❌ Universal QR Menu Error: $e');
-      print('❌ Stack trace in parseUrlAndLoadData: ${StackTrace.current}');
       setState(() {
         _errorMessage = e.toString();
       });
@@ -279,6 +190,44 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         _isLoading = false;
       });
     }
+  }
+
+  /// Basitleştirilmiş parametre çıkarma metodu
+  Map<String, String?> _extractBusinessParameters() {
+    String? businessId;
+    String? tableNumber;
+    
+    // 1. Route arguments (en güvenilir)
+    final routeSettings = ModalRoute.of(context)?.settings;
+    final arguments = routeSettings?.arguments as Map<String, dynamic>?;
+    
+    if (arguments != null) {
+      businessId = arguments['businessId']?.toString();
+      tableNumber = arguments['tableNumber']?.toString();
+      print('🔍 Arguments\'tan alındı - business: $businessId, table: $tableNumber');
+      if (businessId != null) return {'businessId': businessId, 'tableNumber': tableNumber};
+    }
+    
+    // 2. URL Service (Web destekli)
+    final urlParams = _urlService.getCurrentParams();
+    businessId = urlParams['business'];
+    tableNumber = urlParams['table'];
+    print('🔍 URL Service\'ten alındı - business: $businessId, table: $tableNumber');
+    if (businessId != null) return {'businessId': businessId, 'tableNumber': tableNumber};
+    
+    // 3. Route name parsing (fallback)
+    if (routeSettings?.name != null) {
+      final uri = Uri.tryParse(routeSettings!.name!);
+      if (uri != null) {
+        businessId = uri.queryParameters['business'];
+        tableNumber = uri.queryParameters['table'];
+        print('🔍 Route parsing\'den alındı - business: $businessId, table: $tableNumber');
+        if (businessId != null) return {'businessId': businessId, 'tableNumber': tableNumber};
+      }
+    }
+    
+    print('❌ Hiçbir yöntemden parametre alınamadı');
+    return {'businessId': null, 'tableNumber': null};
   }
 
   Future<void> _loadBusinessData() async {
@@ -874,7 +823,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               const SizedBox(height: 24),
               Text(
-                'Bir Hata Oluştu',
+                'QR Kod Okuma Hatası',
                 style: AppTypography.h2.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
@@ -883,69 +832,44 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               const SizedBox(height: 12),
               Text(
-                _errorMessage ?? 'Bilinmeyen bir hata oluştu',
+                _getUserFriendlyErrorMessage(_errorMessage ?? 'Bilinmeyen hata'),
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
               
-              // Debug Information Container
+              // Kullanıcı dostu çözüm önerileri
               const SizedBox(height: 20),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.info.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.info.withOpacity(0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Debug Bilgileri:',
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_businessId != null) ...[
-                      Text(
-                        '• İşletme ID: $_businessId',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                    Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline, color: AppColors.info, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Çözüm Önerileri:',
+                          style: AppTypography.bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                      ),
-                    ] else ...[
-                      Text(
-                        '• İşletme ID: Bulunamadı ❌',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.error,
-                        ),
-                      ),
-                    ],
-                    if (_tableNumber != null) ...[
-                      Text(
-                        '• Masa Numarası: $_tableNumber',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    Text(
-                      '• Mevcut URL: ${_urlService.getCurrentPath()}',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      ],
                     ),
-                    Text(
-                      '• URL Parametreleri: ${_urlService.getCurrentParams()}',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
+                    const SizedBox(height: 12),
+                    _buildSolutionItem('• QR kodu tekrar tarayın'),
+                    _buildSolutionItem('• İnternet bağlantınızı kontrol edin'),
+                    _buildSolutionItem('• QR kodun net ve hasarsız olduğundan emin olun'),
+                    _buildSolutionItem('• İşletmeden yeni bir QR kod isteyin'),
                   ],
                 ),
               ),
@@ -1128,5 +1052,33 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         ),
       ],
     );
+  }
+
+  Widget _buildSolutionItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text,
+        style: AppTypography.bodySmall.copyWith(
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  String _getUserFriendlyErrorMessage(String originalError) {
+    if (originalError.contains('İşletme ID\'si bulunamadı')) {
+      return 'Bu QR kod geçerli değil veya hasarlı. Lütfen işletmeden yeni bir QR kod isteyin.';
+    } else if (originalError.contains('İşletme bulunamadı')) {
+      return 'Bu işletme sistemde bulunamıyor. İşletme hesabı kapatılmış olabilir.';
+    } else if (originalError.contains('İşletme aktif değil')) {
+      return 'Bu işletme şu anda hizmet vermiyor. Lütfen daha sonra tekrar deneyin.';
+    } else if (originalError.contains('Veriler yüklenirken hata')) {
+      return 'Menü bilgileri yüklenemiyor. İnternet bağlantınızı kontrol edin.';
+    } else if (originalError.contains('businesses collection')) {
+      return 'Sistemde bir teknik sorun var. Lütfen daha sonra tekrar deneyin.';
+    } else {
+      return 'QR kod okunamadı. Lütfen tekrar deneyin veya işletmeden yardım isteyin.';
+    }
   }
 } 

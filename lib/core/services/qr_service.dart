@@ -106,6 +106,21 @@ class QRService {
     QRCodeStyle? style,
     String? createdBy,
   }) async {
+    // Business validation ekle
+    try {
+      final business = await _businessFirestoreService.getBusiness(businessId);
+      if (business == null) {
+        throw Exception('İşletme bulunamadı - ID: $businessId');
+      }
+      if (!business.isActive) {
+        throw Exception('İşletme aktif değil - ID: $businessId');
+      }
+      print('✅ Business validation passed: ${business.businessName}');
+    } catch (e) {
+      print('❌ Business validation failed: $e');
+      rethrow;
+    }
+    
     // Check if business QR already exists
     final existingQR = await getBusinessQRCode(businessId);
     
@@ -224,7 +239,12 @@ class QRService {
 
   /// Generates a unique QR code URL for a business
   String generateBusinessQRUrl(String businessId) {
-    // Yeni evrensel QR formatı
+    // Validasyon ekle
+    if (businessId.isEmpty) {
+      throw Exception('Business ID boş olamaz');
+    }
+    
+    // Dinamik base URL kullan
     final url = '$baseUrl/qr?business=$businessId';
     print('📱 QR URL Generated: $url (base: $baseUrl)');
     return url;
@@ -232,7 +252,15 @@ class QRService {
 
   /// Generates a QR code URL for a specific table
   String generateTableQRUrl(String businessId, int tableNumber) {
-    // Yeni evrensel QR formatı
+    // Validasyon ekle
+    if (businessId.isEmpty) {
+      throw Exception('Business ID boş olamaz');
+    }
+    if (tableNumber <= 0) {
+      throw Exception('Masa numarası pozitif olmalı');
+    }
+    
+    // Dinamik base URL kullan
     final url = '$baseUrl/qr?business=$businessId&table=$tableNumber';
     print('📱 QR Table URL Generated: $url (base: $baseUrl)');
     return url;
@@ -569,43 +597,92 @@ class QRService {
   }
 
   // =============================================================================
-  // PDF GENERATION
+  // QR CODE MANAGEMENT OPERATIONS
   // =============================================================================
-
-  /// Downloads table QR codes as a PDF file
-  Future<void> downloadTableQRsPDF({
-    required String businessId,
-    required String businessName,
-    required List<QRCode> tableQRs,
-  }) async {
-    try {
-      await PdfService.downloadTableQRsPDF(
-        businessId: businessId,
-        businessName: businessName,
-        tableQRs: tableQRs,
-      );
-    } catch (e) {
-      throw Exception('PDF oluşturulurken hata: $e');
-    }
-  }
 
   /// Deletes all QR codes for a business
   Future<void> deleteAllBusinessQRCodes(String businessId) async {
     try {
       print('🗑️ QR Service: Deleting all QR codes for business $businessId');
       
-      final allQRCodes = await getBusinessQRCodes(businessId);
-      print('🗑️ QR Service: Found ${allQRCodes.length} QR codes to delete');
+      final allQRs = await getBusinessQRCodes(businessId);
+      print('🗑️ Found ${allQRs.length} QR codes to delete');
       
-      for (final qr in allQRCodes) {
+      for (final qr in allQRs) {
         await deleteQRCode(qr.qrCodeId);
-        print('🗑️ QR Service: Deleted QR code ${qr.qrCodeId}');
+        print('🗑️ Deleted QR code: ${qr.qrCodeId}');
       }
       
-      print('✅ QR Service: All QR codes deleted successfully');
+      print('✅ All QR codes deleted successfully');
     } catch (e) {
-      print('❌ QR Service: Error deleting QR codes: $e');
+      print('❌ Error deleting QR codes: $e');
       throw Exception('QR kodları silinirken hata: $e');
+    }
+  }
+
+  /// Gets business QR statistics
+  Future<Map<String, dynamic>> getBusinessQRStats(String businessId) async {
+    try {
+      final qrCodes = await getBusinessQRCodes(businessId);
+      
+      int totalScans = 0;
+      int todayScans = 0;
+      int weeklyScans = 0;
+      int monthlyScans = 0;
+      
+      for (final qr in qrCodes) {
+        totalScans += qr.stats.totalScans;
+        todayScans += qr.stats.todayScans;
+        weeklyScans += qr.stats.weeklyScans;
+        monthlyScans += qr.stats.monthlyScans;
+      }
+      
+      return {
+        'totalQRCodes': qrCodes.length,
+        'totalScans': totalScans,
+        'todayScans': todayScans,
+        'weeklyScans': weeklyScans,
+        'monthlyScans': monthlyScans,
+        'averageScansPerQR': qrCodes.isNotEmpty ? totalScans / qrCodes.length : 0,
+        'businessQRCount': qrCodes.where((qr) => qr.type == QRCodeType.business).length,
+        'tableQRCount': qrCodes.where((qr) => qr.type == QRCodeType.table).length,
+      };
+    } catch (e) {
+      print('❌ Error getting QR stats: $e');
+      return {
+        'totalQRCodes': 0,
+        'totalScans': 0,
+        'todayScans': 0,
+        'weeklyScans': 0,
+        'monthlyScans': 0,
+        'averageScansPerQR': 0,
+        'businessQRCount': 0,
+        'tableQRCount': 0,
+      };
+    }
+  }
+
+  /// Downloads table QRs as PDF
+  Future<void> downloadTableQRsPDF({
+    required String businessId,
+    required String businessName,
+    required List<QRCode> tableQRs,
+  }) async {
+    try {
+      print('📄 Starting PDF generation for ${tableQRs.length} table QRs');
+      
+      // PDF service import ve kullanım
+      final pdfService = PDFService();
+      await pdfService.generateTableQRsPDF(
+        businessId: businessId,
+        businessName: businessName,
+        tableQRs: tableQRs,
+      );
+      
+      print('✅ PDF generated successfully');
+    } catch (e) {
+      print('❌ Error generating PDF: $e');
+      throw Exception('PDF oluşturulurken hata: $e');
     }
   }
 

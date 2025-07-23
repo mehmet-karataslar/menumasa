@@ -419,20 +419,28 @@ class AppRoutes {
   // QR MENU ROUTE HELPERS
   // =============================================================================
   
-  /// QR menü route'u olup olmadığını kontrol eder
+  // =============================================================================
+  // QR MENU ROUTE CHECKER - Geliştirilmiş QR URL Tanıma
+  // =============================================================================
+  
   static bool _isQRMenuRoute(String routeName, Uri uri) {
-    // 1. Evrensel QR format (/qr)
-    if (routeName == '/qr' || uri.path == '/qr') {
+    // 1. /qr ile başlayan route'lar
+    if (routeName.startsWith('/qr')) {
       return true;
     }
     
-    // 2. Query parametrelerinde business var mı?
+    // 2. business parametresi olan URL'ler
     if (uri.queryParameters.containsKey('business')) {
       return true;
     }
     
-    // 3. Eski QR formatları (/qr-menu/X veya /menu/X)
-    if (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/')) {
+    // 3. Eski format destekler: /menu/ veya /qr-menu/
+    if (routeName.contains('/menu/') || routeName.contains('/qr-menu/')) {
+      return true;
+    }
+    
+    // 4. URL'de business= olan durumlar
+    if (routeName.contains('business=') || routeName.contains('table=')) {
       return true;
     }
     

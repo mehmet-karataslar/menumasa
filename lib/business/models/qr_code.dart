@@ -47,7 +47,11 @@ class QRCode {
     String? customUrl, // QR Service'ten URL geçirebilmek için
   }) {
     final qrId = 'qr_business_${businessId}_${DateTime.now().millisecondsSinceEpoch}';
-    final url = customUrl ?? 'https://menumebak.web.app/qr?business=$businessId'; // Fallback URL
+    
+    // customUrl zorunlu hale getir - hardcoded URL kaldır
+    if (customUrl == null || customUrl.isEmpty) {
+      throw Exception('QR kod URL\'i belirtilmeli - QRService.generateBusinessQRUrl() kullanın');
+    }
     
     return QRCode(
       qrCodeId: qrId,
@@ -55,7 +59,7 @@ class QRCode {
       type: QRCodeType.business,
       title: customTitle ?? '$businessName - Menü',
       description: customDescription ?? 'İşletme menüsünü görüntülemek için QR kodu tarayın',
-      url: url,
+      url: customUrl,
       data: QRCodeData.business(
         businessId: businessId,
         businessName: businessName,
@@ -79,8 +83,12 @@ class QRCode {
     String? customUrl, // QR Service'ten URL geçirebilmek için
   }) {
     final qrId = 'qr_table_${businessId}_$tableNumber${DateTime.now().millisecondsSinceEpoch}';
-    final url = customUrl ?? 'https://menumebak.web.app/qr?business=$businessId&table=$tableNumber'; // Fallback URL
     final displayName = tableName ?? 'Masa $tableNumber';
+    
+    // customUrl zorunlu hale getir - hardcoded URL kaldır
+    if (customUrl == null || customUrl.isEmpty) {
+      throw Exception('QR kod URL\'i belirtilmeli - QRService.generateTableQRUrl() kullanın');
+    }
     
     return QRCode(
       qrCodeId: qrId,
@@ -88,7 +96,7 @@ class QRCode {
       type: QRCodeType.table,
       title: '$businessName - $displayName',
       description: '$displayName için menüyü görüntülemek için QR kodu tarayın',
-      url: url,
+      url: customUrl,
       data: QRCodeData.table(
         businessId: businessId,
         businessName: businessName,
