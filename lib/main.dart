@@ -22,7 +22,7 @@ import 'admin/admin.dart';
 import 'core/services/data_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/location_service.dart';
-import 'app/routes/app_routes.dart';
+import 'core/routing/app_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() async {
@@ -60,6 +60,9 @@ void main() async {
   // Initialize Admin Module
   await AdminModule.initialize();
 
+  // Initialize App Router
+  final appRouter = AppRouter();
+
   // System UI configuration
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -71,11 +74,13 @@ void main() async {
   );
 
   // Run the app
-  runApp(const MasaMenuApp());
+  runApp(MasaMenuApp(router: appRouter));
 }
 
 class MasaMenuApp extends StatelessWidget {
-  const MasaMenuApp({Key? key}) : super(key: key);
+  final AppRouter router;
+  
+  const MasaMenuApp({Key? key, required this.router}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -89,14 +94,14 @@ class MasaMenuApp extends StatelessWidget {
       // Direct auth router page
       initialRoute: '/',
 
-      // Route configuration
-      routes: AppRoutes.routes,
+      // Route configuration - Yeni modüler routing sistemi
+      routes: router.staticRoutes,
 
-      // Dynamic route generator
-      onGenerateRoute: AppRoutes.onGenerateRoute,
+      // Dynamic route generator - Yeni router ile
+      onGenerateRoute: router.onGenerateRoute,
 
-      // Unknown route handler
-      onUnknownRoute: AppRoutes.onUnknownRoute,
+      // Unknown route handler - Yeni router ile
+      onUnknownRoute: router.onUnknownRoute,
 
       // App title
       builder: (context, child) {
