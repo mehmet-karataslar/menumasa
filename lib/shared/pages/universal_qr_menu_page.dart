@@ -301,8 +301,9 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       // İşletme bilgilerini al - detaylı logging ile
       print('🔄 Calling BusinessFirestoreService.getBusiness($_businessId)');
       
+      Business? business;
       try {
-        final business = await _businessService.getBusiness(_businessId!);
+        business = await _businessService.getBusiness(_businessId!);
         print('🔄 BusinessFirestoreService.getBusiness response: ${business != null ? "SUCCESS" : "NULL"}');
         
         if (business != null) {
