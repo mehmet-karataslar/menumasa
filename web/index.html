@@ -47,13 +47,24 @@
     (function() {
       const currentPath = window.location.pathname;
       const currentSearch = window.location.search;
+      const searchParams = new URLSearchParams(currentSearch);
       
       // Check if this is a QR menu URL
-      const isQRMenuURL = currentPath.includes('/menu/') || currentPath.includes('/qr-menu/');
+      const isQRMenuURL = currentPath.includes('/menu/') || 
+                          currentPath.includes('/qr-menu/') || 
+                          currentPath === '/qr' ||
+                          searchParams.has('business');
+      
+      console.log('🔍 URL Check:', {
+        path: currentPath,
+        search: currentSearch,
+        isQRMenu: isQRMenuURL,
+        hasBusiness: searchParams.has('business')
+      });
       
       // Don't redirect QR menu URLs
       if (isQRMenuURL) {
-        console.log('QR Menu URL detected, preserving route:', currentPath + currentSearch);
+        console.log('✅ QR Menu URL detected, preserving route:', currentPath + currentSearch);
         return;
       }
       
@@ -71,7 +82,7 @@
         const path = window.location.hash.substring(1);
         if (path && path !== '/') {
           // Check if hash contains QR menu path
-          if (path.includes('/menu/') || path.includes('/qr-menu/')) {
+          if (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr')) {
             window.history.replaceState(null, null, path);
             return; // Don't redirect QR menu paths
           }
@@ -89,7 +100,7 @@
       const path = window.location.hash.substring(1);
       
       // Don't interfere with QR menu URLs
-      if (path && (path.includes('/menu/') || path.includes('/qr-menu/'))) {
+      if (path && (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr'))) {
         window.history.replaceState(null, null, path);
         return;
       }

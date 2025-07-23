@@ -106,8 +106,19 @@ class UrlServiceWeb extends UrlServiceBase {
   }
 
   /// Gets the current base URL (protocol + host)
+  @override
   String getCurrentBaseUrl() {
-    return '${html.window.location.protocol}//${html.window.location.host}';
+    try {
+      final protocol = html.window.location.protocol;
+      final host = html.window.location.host;
+      final baseUrl = '$protocol//$host';
+      print('🌐 Web Base URL: $baseUrl');
+      return baseUrl;
+    } catch (e) {
+      print('❌ Web Base URL error: $e');
+      // Fallback
+      return 'https://menumebak.web.app';
+    }
   }
 
   @override

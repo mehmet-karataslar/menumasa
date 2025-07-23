@@ -119,6 +119,12 @@ class AppRoutes {
       return AdminRoutes.generateRoute(settings);
     }
 
+    // QR Menü route'ları - özel handling
+    if (_isQRMenuRoute(settings.name ?? '', uri)) {
+      print('🎯 QR Menu route tespit edildi: ${settings.name}');
+      return _handleQRMenuRoute(settings, uri);
+    }
+
     // Login route - userType parametresi ile
     if (settings.name == login) {
       final args = settings.arguments as Map<String, dynamic>?;
@@ -407,6 +413,80 @@ class AppRoutes {
 
     print('   ❌ Route handle edilemedi');
     return null;
+  }
+
+  // =============================================================================
+  // QR MENU ROUTE HELPERS
+  // =============================================================================
+  
+  /// QR menü route'u olup olmadığını kontrol eder
+  static bool _isQRMenuRoute(String routeName, Uri uri) {
+    // 1. Evrensel QR format (/qr)
+    if (routeName == '/qr' || uri.path == '/qr') {
+      return true;
+    }
+    
+    // 2. Query parametrelerinde business var mı?
+    if (uri.queryParameters.containsKey('business')) {
+      return true;
+    }
+    
+    // 3. Eski QR formatları (/qr-menu/X veya /menu/X)
+    if (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/')) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /// QR menü route'unu handle eder
+  static Route<dynamic>? _handleQRMenuRoute(RouteSettings settings, Uri uri) {
+    print('🔧 QR Route Handler çalışıyor...');
+    
+    String? businessId;
+    int? tableNumber;
+    
+    // Business ID ve table number'ı parse et
+    final queryParams = uri.queryParameters;
+    businessId = queryParams['business'];
+    if (queryParams['table'] != null) {
+      tableNumber = int.tryParse(queryParams['table']!);
+    }
+    
+    // Eski format'tan da dene
+    if (businessId == null) {
+      final pathSegments = uri.pathSegments;
+      if (pathSegments.length >= 2 && 
+          (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu')) {
+        businessId = pathSegments[1];
+        // Query'den table number al
+        if (queryParams['table'] != null) {
+          tableNumber = int.tryParse(queryParams['table']!);
+        }
+      }
+    }
+    
+    print('🔍 QR Route parsed - business: $businessId, table: $tableNumber');
+    
+    // Business ID yoksa null döndür (RouterPage handle edecek)
+    if (businessId == null || businessId.isEmpty) {
+      print('❌ QR Route - Business ID bulunamadı');
+      return null;
+    }
+    
+    // UniversalQRMenuPage'e yönlendir
+    return MaterialPageRoute(
+      builder: (context) => const UniversalQRMenuPage(),
+      settings: RouteSettings(
+        name: '/qr',
+        arguments: {
+          'businessId': businessId,
+          'tableNumber': tableNumber,
+          'source': 'app_routes',
+          'originalUrl': settings.name,
+        },
+      ),
+    );
   }
 
   // =============================================================================

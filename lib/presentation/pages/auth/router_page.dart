@@ -89,17 +89,40 @@ class _RouterPageState extends State<RouterPage> {
 
   @override
   Widget build(BuildContext context) {
-    // URL'den QR menü kontrolü
+    // URL'den QR menü kontrolü - ÖNCE bu kontrolü yap
     final routeName = ModalRoute.of(context)?.settings.name;
-    print('🔍 RouterPage - Route name: $routeName');
-    print('🔍 RouterPage - Current URL: ${UrlService().getCurrentPath()}');
+    final currentUrl = _urlService.getCurrentPath();
+    final currentParams = _urlService.getCurrentParams();
     
-    if (routeName != null && (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/') || routeName == '/qr')) {
-      print('✅ RouterPage - QR menu URL detected, redirecting...');
-      // QR menü URL'si tespit edildi, direkt QR menü sayfasına yönlendir
-      return _buildQRMenuRedirect(routeName);
+    print('🔍 RouterPage - Route name: $routeName');
+    print('🔍 RouterPage - Current URL: $currentUrl');
+    print('🔍 RouterPage - Current params: $currentParams');
+    
+    // QR URL formatları kontrolü (öncelik sırasıyla)
+    bool isQRUrl = false;
+    
+    // 1. Yeni evrensel QR format (/qr veya /qr?business=X)
+    if (routeName == '/qr' || 
+        currentUrl == '/qr' || 
+        currentParams.containsKey('business')) {
+      isQRUrl = true;
+      print('✅ RouterPage - Evrensel QR URL tespit edildi');
+    }
+    
+    // 2. Eski QR formatları (/qr-menu/X veya /menu/X)
+    if (!isQRUrl && routeName != null && 
+        (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/'))) {
+      isQRUrl = true;
+      print('✅ RouterPage - Eski format QR URL tespit edildi');
+    }
+    
+    // QR URL tespit edilirse loading kontrolünü bypass et ve direkt yönlendir
+    if (isQRUrl) {
+      print('🎯 RouterPage - QR URL tespit edildi, direkt yönlendiriliyor...');
+      return _buildQRMenuRedirect(routeName ?? currentUrl);
     }
 
+    // QR URL değilse normal loading ve authentication kontrollerini yap
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.background,
@@ -422,41 +445,141 @@ class _RouterPageState extends State<RouterPage> {
   Widget _buildQRMenuRedirect(String routeName) {
     print('🔄 _buildQRMenuRedirect called with: $routeName');
     
-    // URL'i parse et
-    final uri = Uri.parse(routeName);
-    final pathSegments = uri.pathSegments;
-    final currentUrl = _urlService.getCurrentPath();
+    // URL parsing için birden fazla kaynak kullan
+    String? businessId;
+    int? tableNumber;
+    
+    // 1. Current URL parameters'dan dene
     final currentParams = _urlService.getCurrentParams();
-    
-    print('🔍 Current URL path: $currentUrl');
-    print('🔍 Current URL params: $currentParams');
-    print('🔍 Parsed URI: $uri');
-    print('🔍 Path segments: $pathSegments');
-    
-    // Yeni evrensel QR format kontrol et (/qr?business=X&table=Y)
-    if (routeName == '/qr' || routeName.startsWith('/qr?')) {
-      print('✅ Redirecting to UniversalQRMenuPage');
-      // Evrensel QR menü sayfasını döndür
-      return const UniversalQRMenuPage();
+    businessId = currentParams['business'];
+    if (currentParams['table'] != null) {
+      tableNumber = int.tryParse(currentParams['table']!);
     }
     
-    // Eski format kontrol et (/menu/businessId veya /qr-menu/businessId)
-    if (pathSegments.length >= 2) {
-      final businessId = pathSegments[1];
-      final tableNumber = uri.queryParameters['table'] != null 
-          ? int.tryParse(uri.queryParameters['table']!) 
-          : null;
-      
-      // Direkt QRMenuPage widget'ını döndür (eski format uyumluluğu için)
-      return QRMenuPage(
-        businessId: businessId,
-        qrCode: routeName,
-        tableNumber: tableNumber,
+    print('🔍 URL Service params - business: $businessId, table: $tableNumber');
+    
+    // 2. Route name'den parse etmeye çalış
+    if (businessId == null && routeName.isNotEmpty) {
+      try {
+        final uri = Uri.parse(routeName);
+        final pathSegments = uri.pathSegments;
+        final queryParams = uri.queryParameters;
+        
+        print('🔍 Parsing route: $routeName');
+        print('🔍 Path segments: $pathSegments');
+        print('🔍 Query params: $queryParams');
+        
+        // Query parameters'dan business ID al
+        businessId = queryParams['business'];
+        if (queryParams['table'] != null) {
+          tableNumber = int.tryParse(queryParams['table']!);
+        }
+        
+        // Eski format (/menu/businessId veya /qr-menu/businessId)
+        if (businessId == null && pathSegments.length >= 2) {
+          if (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu') {
+            businessId = pathSegments[1];
+          }
+        }
+        
+        print('🔍 Parsed - business: $businessId, table: $tableNumber');
+      } catch (e) {
+        print('❌ URL parsing error: $e');
+      }
+    }
+    
+    // 3. Business ID bulunamadıysa hata sayfası göster
+    if (businessId == null || businessId.isEmpty) {
+      print('❌ Business ID bulunamadı, hata sayfası gösteriliyor');
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(
+                    Icons.qr_code_scanner,
+                    size: 64,
+                    color: AppColors.error,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Geçersiz QR Kod',
+                  style: AppTypography.h5.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'QR kodunda işletme bilgisi bulunamadı. Lütfen geçerli bir QR kod tarayın.',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Ana Sayfaya Dön'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
     
-    // Geçersiz URL ise normal router'ı göster
-    return _buildWelcomePage();
+    // 4. Business ID bulundu, UniversalQRMenuPage'e yönlendir
+    print('✅ Business ID bulundu: $businessId, table: $tableNumber');
+    print('✅ UniversalQRMenuPage\'e yönlendiriliyor');
+    
+    // Widget olarak direkt UniversalQRMenuPage döndür
+    // ModalRoute.of(context) içinde parametreleri taşımak için arguments kullan
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Route settings'i güncelle ki UniversalQRMenuPage parametreleri okuyabilsin
+      final routeSettings = ModalRoute.of(context)?.settings;
+      if (routeSettings != null && mounted) {
+        // Manuel olarak arguments set et
+        final newSettings = RouteSettings(
+          name: '/qr',
+          arguments: {
+            'businessId': businessId,
+            'tableNumber': tableNumber,
+            'source': 'qr_redirect',
+          },
+        );
+        
+        // URL'i güncelle
+        final urlParams = <String, String>{'business': businessId!};
+        if (tableNumber != null) {
+          urlParams['table'] = tableNumber.toString();
+        }
+        _urlService.updateUrl('/qr', 
+          customTitle: 'QR Menü | MasaMenu',
+          params: urlParams,
+        );
+      }
+    });
+    
+    return const UniversalQRMenuPage();
   }
 
   Widget _buildFeatureHighlights() {

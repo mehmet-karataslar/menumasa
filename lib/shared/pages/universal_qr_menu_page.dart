@@ -105,50 +105,69 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     });
 
     try {
-      // URL parametrelerini oku - Navigator route'undan ve URL service'ten
-      Map<String, String> params = {};
+      String? businessId;
+      int? tableNumber;
       
-      // 1. Navigator route settings'lerinden URL'i oku
+      print('🔍 UniversalQRMenuPage - URL parsing basliyor...');
+
+      // 1. ÖNCE: Route arguments'tan kontrol et (en güvenilir)
       final routeSettings = ModalRoute.of(context)?.settings;
-      if (routeSettings?.name != null) {
-        final uri = Uri.parse(routeSettings!.name!);
-        params.addAll(uri.queryParameters);
-        print('🔍 Route name: ${routeSettings.name}');
-        print('🔍 Route URI params: ${uri.queryParameters}');
-      }
-      
-      // 2. URL Service'ten de dene
-      final urlParams = _urlService.getCurrentParams();
-      if (urlParams.isNotEmpty) {
-        params.addAll(urlParams);
-        print('🔍 URL Service params: $urlParams');
-      }
-      
-      // 3. Route arguments'tan da dene
       final arguments = routeSettings?.arguments as Map<String, dynamic>?;
+      
       if (arguments != null) {
-        if (arguments['businessId'] != null) {
-          params['business'] = arguments['businessId'].toString();
-        }
+        businessId = arguments['businessId']?.toString();
         if (arguments['tableNumber'] != null) {
-          params['table'] = arguments['tableNumber'].toString();
+          tableNumber = int.tryParse(arguments['tableNumber'].toString());
         }
-        print('🔍 Route arguments: $arguments');
+        print('🔍 Arguments\'tan alindi - business: $businessId, table: $tableNumber');
       }
       
-      _businessId = params['business'];
-      final tableParam = params['table'];
+      // 2. Route name'den parse et
+      if (businessId == null && routeSettings?.name != null) {
+        try {
+          final uri = Uri.parse(routeSettings!.name!);
+          final queryParams = uri.queryParameters;
+          
+          businessId = queryParams['business'];
+          if (queryParams['table'] != null) {
+            tableNumber = int.tryParse(queryParams['table']!);
+          }
+          print('🔍 Route name\'den alindi - business: $businessId, table: $tableNumber');
+          
+          // Eski format desteği (/menu/businessId veya /qr-menu/businessId)
+          if (businessId == null) {
+            final pathSegments = uri.pathSegments;
+            if (pathSegments.length >= 2 && 
+                (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu')) {
+              businessId = pathSegments[1];
+              print('🔍 Eski format\'tan alindi - business: $businessId');
+            }
+          }
+        } catch (e) {
+          print('❌ Route name parsing error: $e');
+        }
+      }
       
-      if (tableParam != null) {
-        _tableNumber = int.tryParse(tableParam);
+      // 3. Son seçenek: URL Service'ten dene
+      if (businessId == null) {
+        final urlParams = _urlService.getCurrentParams();
+        businessId = urlParams['business'];
+        if (urlParams['table'] != null) {
+          tableNumber = int.tryParse(urlParams['table']!);
+        }
+        print('🔍 URL Service\'ten alindi - business: $businessId, table: $tableNumber');
       }
 
-      print('🔍 Universal QR Menu - Final Business ID: $_businessId, Table: $_tableNumber');
-      print('🔍 All params: $params');
-
-      if (_businessId == null || _businessId!.isEmpty) {
-        throw Exception('İşletme ID\'si bulunamadı');
+      // 4. Validation
+      if (businessId == null || businessId.isEmpty) {
+        throw Exception('Isletme ID\'si bulunamadi. QR kodunuz gecerli degil.');
       }
+
+      // Final assignment
+      _businessId = businessId;
+      _tableNumber = tableNumber;
+
+      print('✅ Final - Business ID: $_businessId, Table: $_tableNumber');
 
       // İşletme verilerini yükle
       await _loadBusinessData();

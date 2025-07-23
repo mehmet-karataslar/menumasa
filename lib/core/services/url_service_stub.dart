@@ -77,7 +77,7 @@ class UrlServiceStub extends UrlServiceBase {
 
   @override
   String getCurrentBaseUrl() {
-    return 'https://your-app.com'; // Stub implementation
+    return 'https://menumebak.web.app'; // Stub implementation
   }
 
   @override

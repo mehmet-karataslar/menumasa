@@ -77,7 +77,8 @@ class UrlServiceIO extends UrlServiceBase {
 
   @override
   String getCurrentBaseUrl() {
-    return 'https://your-app.com'; // Default for mobile (not used for QR codes)
+    // Mobile/Desktop platformlarda web base URL kullan
+    return 'https://menumebak.web.app';
   }
 
   @override

@@ -254,67 +254,65 @@ class _BusinessHeaderState extends State<BusinessHeader>
   }
 
   Widget _buildFullLayout() {
-    return Column(
-      children: [
-        // Header section
-        Expanded(
-          flex: 3,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Business logo with pulse animation
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: _buildModernBusinessLogo(),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              // Business name with gradient text
-              ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: [AppColors.white, AppColors.white.withOpacity(0.8)],
-                ).createShader(bounds),
-                child: Text(
-                  widget.business.businessName,
-                  style: AppTypography.h3.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Header section
+          SizedBox(
+            height: 200, // Fixed height for header section
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Business logo with pulse animation
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: _buildModernBusinessLogo(),
+                      ),
+                    );
+                  },
                 ),
-              ),
 
-              const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
-              // Business type badge
-              _buildBusinessTypeBadge(),
+                // Business name with gradient text
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: [AppColors.white, AppColors.white.withOpacity(0.8)],
+                  ).createShader(bounds),
+                  child: Text(
+                    widget.business.businessName,
+                    style: AppTypography.h3.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 6),
 
-              // Status indicator
-              _buildStatusIndicator(),
-            ],
+                // Business type badge
+                _buildBusinessTypeBadge(),
+
+                const SizedBox(height: 8),
+
+                // Status indicator
+                _buildStatusIndicator(),
+              ],
+            ),
           ),
-        ),
 
-        // Basit bilgi bölümü
-        if (widget.showActions)
-          Expanded(
-            flex: 1,
-            child: Container(
+          // Basit bilgi bölümü
+          if (widget.showActions)
+            Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -327,8 +325,8 @@ class _BusinessHeaderState extends State<BusinessHeader>
               ),
               child: _buildQuickInfo(),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
