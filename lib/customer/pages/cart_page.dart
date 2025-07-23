@@ -295,12 +295,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       return;
     }
 
-    // Auth kontrolü - sipariş vermek için giriş yapma zorunluluğu
-    final user = await _checkAuthenticationForOrder();
-    if (user == null) {
-      return; // Auth dialog gösterildi, işlem iptal edildi
-    }
-
+    // Form validation
     if (!_formKey.currentState!.validate()) {
       _showErrorSnackBar('Lütfen gerekli alanları doldurun');
       return;
@@ -312,19 +307,30 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       return;
     }
 
+    // Misafir modunda sipariş verme işlemi - kullanıcı bilgileri kontrol et
+    final result = await _validateOrderInfo();
+    if (!result) {
+      return; // Bilgiler eksik veya işlem iptal edildi
+    }
+
     try {
       setState(() {
         _isPlacingOrder = true;
       });
 
       final customerName = _customerNameController.text.trim();
+      final customerPhone = _customerPhoneController.text.trim();
+      
+      // Misafir modu için temporary user ID oluştur
+      final authService = AuthService();
+      final currentUser = authService.currentUser;
+      final customerId = currentUser?.uid ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+      
       final order = app_order.Order.fromCart(
         _cart!,
-        customerId: widget.userId ?? customerName, // Use userId if available, fallback to customerName
+        customerId: customerId,
         customerName: customerName,
-        customerPhone: _customerPhoneController.text.trim().isNotEmpty
-            ? _customerPhoneController.text.trim()
-            : null,
+        customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
         tableNumber: tableNumber,
         notes: _notesController.text.trim().isNotEmpty
             ? _notesController.text.trim()
@@ -1234,5 +1240,130 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               ),
       ),
     );
+  }
+
+  Future<bool> _validateOrderInfo() async {
+    final authService = AuthService();
+    final currentUser = authService.currentUser;
+    
+    if (currentUser != null) {
+      // Kayıtlı kullanıcı - direkt sipariş verebilir
+      return true;
+    }
+    
+    // Misafir modu - gerekli bilgileri kontrol et
+    final customerName = _customerNameController.text.trim();
+    final customerPhone = _customerPhoneController.text.trim();
+    
+    if (customerName.isEmpty) {
+      _showErrorSnackBar('Misafir modunda ad-soyad zorunludur');
+      return false;
+    }
+    
+    if (customerPhone.isEmpty) {
+      _showErrorSnackBar('Misafir modunda telefon numarası zorunludur');
+      return false;
+    }
+    
+    // Telefon numarası format kontrolü
+    if (customerPhone.length < 10) {
+      _showErrorSnackBar('Geçerli bir telefon numarası girin');
+      return false;
+    }
+    
+    // Misafir modu bilgilendirme dialog'u göster
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.warning, AppColors.warning.withOpacity(0.8)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.info_outline, color: AppColors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Misafir Siparişi',
+                style: AppTypography.h6.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Siparişiniz misafir modu ile verilecek.',
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '• Sipariş durumunu telefon numaranızdan takip edebilirsiniz\n'
+                    '• Gelecekte daha kolay sipariş için üye olabilirsiniz\n'
+                    '• Sipariş geçmişinize kayıt olmadan erişemezsiniz',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context, false);
+                      Navigator.pushNamed(context, '/register');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Kayıt Ol'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.warning,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('Misafir Olarak Devam'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    return result ?? false;
   }
 }

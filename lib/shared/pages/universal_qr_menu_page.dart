@@ -15,7 +15,7 @@ import '../../customer/widgets/business_header.dart';
 import '../../customer/widgets/search_bar.dart' as custom_search;
 import '../../customer/widgets/filter_bottom_sheet.dart';
 
-/// Evrensel QR Menü Sayfası - Tüm İşletmeler İçin Ortak
+/// Evrensel QR Menü Sayfası - Tüm İşletmeler İçin Ortak (Misafir Modu Destekli)
 class UniversalQRMenuPage extends StatefulWidget {
   const UniversalQRMenuPage({super.key});
 
@@ -54,11 +54,16 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   String _selectedCategoryId = 'all';
   String _searchQuery = '';
   bool _isSearching = false;
+  
+  // Guest Mode State
+  bool _isGuestMode = false;
+  String? _guestUserId;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+    _initializeGuestMode();
   }
   
   @override
@@ -96,6 +101,27 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       parent: _fadeController,
       curve: Curves.easeOut,
     ));
+  }
+
+  void _initializeGuestMode() {
+    // Kullanıcı giriş yapmış mı kontrol et
+    final currentUser = _authService.currentUser;
+    
+    if (currentUser == null) {
+      // Kullanıcı giriş yapmamış, misafir modu başlat
+      setState(() {
+        _isGuestMode = true;
+        _guestUserId = 'guest_${DateTime.now().millisecondsSinceEpoch}';
+      });
+      print('🎭 Misafir modu aktif - Guest ID: $_guestUserId');
+    } else {
+      // Kullanıcı giriş yapmış
+      setState(() {
+        _isGuestMode = false;
+        _guestUserId = null;
+      });
+      print('👤 Kayıtlı kullanıcı - ID: ${currentUser.uid}');
+    }
   }
 
   Future<void> _parseUrlAndLoadData() async {
@@ -290,6 +316,9 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     if (_businessId == null) return;
 
     try {
+      // Misafir modu için guest user ID kullan
+      final userId = _isGuestMode ? _guestUserId : _authService.currentUser?.uid;
+      
       await _cartService.addToCart(product, _businessId!, quantity: quantity);
       
       HapticFeedback.heavyImpact();
@@ -317,19 +346,12 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 3),
             action: SnackBarAction(
-              label: _authService.currentUser != null ? 'Sepete Git' : 'Kayıt Ol',
+              label: _isGuestMode ? 'Sepete Git' : 'Sepete Git',
               textColor: AppColors.white,
               onPressed: () {
-                if (_authService.currentUser != null) {
-                  Navigator.pushNamed(context, '/customer/cart', arguments: {
-                    'businessId': _businessId,
-                    'userId': _authService.currentUser?.uid,
-                  });
-                } else {
-                  Navigator.pushNamed(context, '/register');
-                }
+                _handleCartAction();
               },
             ),
           ),
@@ -363,27 +385,31 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   }
 
   void _handleCartAction() {
-    final currentUser = _authService.currentUser;
-    
-    Navigator.pushNamed(
-      context, 
-      '/customer/cart',
-      arguments: {
-        'businessId': _businessId,
-        'userId': currentUser?.uid,
-      },
-    );
+    if (_isGuestMode) {
+      // Misafir modunda sepet erişimi için kayıt teşviki göster
+      _showGuestCartDialog();
+    } else {
+      // Kayıtlı kullanıcı - direkt sepete git
+      final currentUser = _authService.currentUser;
+      Navigator.pushNamed(
+        context, 
+        '/customer/cart',
+        arguments: {
+          'businessId': _businessId,
+          'userId': currentUser?.uid,
+        },
+      );
+    }
   }
 
   void _handleWaiterCall() {
-    final currentUser = _authService.currentUser;
-    if (currentUser == null) {
-      _showAuthDialog('Garson çağırmak için giriş yapmanız gerekir.');
-      return;
+    if (_isGuestMode) {
+      // Misafir modunda garson çağırma için kayıt teşviki göster
+      _showGuestWaiterDialog();
+    } else {
+      // Kayıtlı kullanıcı - direkt garson çağırma
+      _showWaiterCallDialog();
     }
-    
-    // Garson çağırma işlemi
-    _showWaiterCallDialog();
   }
 
   void _showAuthDialog(String message) {
@@ -428,6 +454,84 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   void _showWaiterCallDialog() {
     // Garson çağırma dialog implementasyonu
     // Gerektiğinde eklenebilir
+  }
+
+  void _showGuestCartDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.shopping_cart_rounded, color: AppColors.secondary),
+            const SizedBox(width: 8),
+            const Text('Sepete Gitmek İçin Giriş Yapın'),
+          ],
+        ),
+        content: Text('Misafir modunda sepete erişim için giriş yapmanız gerekmektedir.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/login');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Giriş Yap', style: TextStyle(color: AppColors.white)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/register');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Kayıt Ol', style: TextStyle(color: AppColors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGuestWaiterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.room_service_rounded, color: AppColors.primary),
+            const SizedBox(width: 8),
+            const Text('Garson Çağırma İçin Giriş Yapın'),
+          ],
+        ),
+        content: Text('Misafir modunda garson çağırma işlemi için giriş yapmanız gerekmektedir.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/login');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Giriş Yap', style: TextStyle(color: AppColors.white)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/register');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Kayıt Ol', style: TextStyle(color: AppColors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -650,11 +754,66 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   }
 
   Widget _buildFloatingActionButtons() {
-    final currentUser = _authService.currentUser;
-    
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        // Misafir modu için opsiyonel giriş/kayıt butonları
+        if (_isGuestMode) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary.withOpacity(0.9), AppColors.secondary.withOpacity(0.9)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.person_outline_rounded, color: AppColors.white, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  'Misafir Modu',
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                onPressed: () => Navigator.pushNamed(context, '/login'),
+                backgroundColor: AppColors.primary,
+                heroTag: "login",
+                child: const Icon(Icons.login_rounded, color: AppColors.white, size: 18),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton.small(
+                onPressed: () => Navigator.pushNamed(context, '/register'),
+                backgroundColor: AppColors.secondary,
+                heroTag: "register",
+                child: const Icon(Icons.person_add_rounded, color: AppColors.white, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+        
+        // Ana aksiyonlar
         // Garson Çağır
         FloatingActionButton(
           onPressed: _handleWaiterCall,
