@@ -135,6 +135,17 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       int? tableNumber;
       
       print('🔍 UniversalQRMenuPage - URL parsing basliyor...');
+      
+      // Show debug info to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🔍 QR kod analiz ediliyor...'),
+            duration: Duration(seconds: 2),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
 
       // 1. ÖNCE: Route arguments'tan kontrol et (en güvenilir)
       final routeSettings = ModalRoute.of(context)?.settings;
@@ -146,6 +157,16 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           tableNumber = int.tryParse(arguments['tableNumber'].toString());
         }
         print('🔍 Arguments\'tan alindi - business: $businessId, table: $tableNumber');
+        
+        if (mounted && businessId != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ QR kod başarıyla okundu'),
+              duration: Duration(seconds: 1),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
       }
       
       // 2. Route name'den parse et
@@ -186,6 +207,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
       // 4. Validation
       if (businessId == null || businessId.isEmpty) {
+        print('❌ Business ID validation failed - businessId: $businessId');
+        print('❌ Arguments: $arguments');
+        print('❌ Route name: ${routeSettings?.name}');
+        print('❌ Current URL: ${_urlService.getCurrentPath()}');
+        print('❌ Current params: ${_urlService.getCurrentParams()}');
         throw Exception('Isletme ID\'si bulunamadi. QR kodunuz gecerli degil.');
       }
 
@@ -196,7 +222,9 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       print('✅ Final - Business ID: $_businessId, Table: $_tableNumber');
 
       // İşletme verilerini yükle
+      print('🔄 Starting _loadBusinessData...');
       await _loadBusinessData();
+      print('✅ _loadBusinessData completed successfully');
       
       // Animasyonları başlat
       _slideController.forward();
@@ -204,6 +232,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       
     } catch (e) {
       print('❌ Universal QR Menu Error: $e');
+      print('❌ Stack trace in parseUrlAndLoadData: ${StackTrace.current}');
       setState(() {
         _errorMessage = e.toString();
       });
@@ -216,18 +245,63 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
   Future<void> _loadBusinessData() async {
     try {
+      print('🔄 Loading business data for ID: $_businessId');
+      
+      // User feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('📍 İşletme bilgileri yükleniyor...'),
+            duration: Duration(seconds: 2),
+            backgroundColor: AppColors.info,
+          ),
+        );
+      }
+      
       // İşletme bilgilerini al
       final business = await _businessService.getBusiness(_businessId!);
+      print('🔄 Business service response: ${business != null ? "SUCCESS" : "NULL"}');
+      
       if (business == null) {
-        throw Exception('İşletme bulunamadı');
+        print('❌ Business not found in database for ID: $_businessId');
+        
+        // User-friendly error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ İşletme bulunamadı (ID: $_businessId)'),
+              duration: Duration(seconds: 4),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        
+        throw Exception('İşletme bulunamadı - Lütfen QR kodunuzu kontrol edin');
+      }
+
+      print('✅ Business found: ${business.businessName}');
+      
+      // Success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ ${business.businessName} bulundu!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
 
       // Kategorileri al
+      print('🔄 Loading categories...');
       final categories = await _businessService.getCategories(businessId: _businessId!);
+      print('✅ Categories loaded: ${categories.length}');
       
       // Ürünleri al
+      print('🔄 Loading products...');
       final products = await _businessService.getProducts(businessId: _businessId!);
       final activeProducts = products.where((p) => p.isActive).toList();
+      print('✅ Products loaded: ${activeProducts.length} active out of ${products.length} total');
 
       setState(() {
         _business = business;
@@ -256,6 +330,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       print('📊 Categories: ${categories.length}, Products: ${activeProducts.length}');
       
     } catch (e) {
+      print('❌ Error in _loadBusinessData: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
       throw Exception('Veriler yüklenirken hata: $e');
     }
   }
@@ -624,16 +700,89 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(color: AppColors.primary),
-            const SizedBox(height: 16),
-            Text(
-              'Menü yükleniyor...',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Loading Animation
+              SizedBox(
+                width: 80,
+                height: 80,
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  strokeWidth: 6,
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              Text(
+                'Menü Yükleniyor...',
+                style: AppTypography.h3.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              
+              // Debug info for user
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'QR Kod Bilgileri:',
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_businessId != null) ...[
+                      Text(
+                        'İşletme ID: $_businessId',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                    if (_tableNumber != null) ...[
+                      Text(
+                        'Masa: $_tableNumber',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                    if (_businessId == null && _tableNumber == null) ...[
+                      Text(
+                        'QR kod analiz ediliyor...',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              Text(
+                'Lütfen bekleyin, veriler yükleniyor.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -649,10 +798,10 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: AppColors.error.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   Icons.error_outline_rounded,
@@ -662,32 +811,117 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               const SizedBox(height: 24),
               Text(
-                'Bir Sorun Oluştu',
-                style: AppTypography.h5.copyWith(
+                'Bir Hata Oluştu',
+                style: AppTypography.h2.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
-                _errorMessage ?? 'Bilinmeyen hata',
+                _errorMessage ?? 'Bilinmeyen bir hata oluştu',
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _parseUrlAndLoadData,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              
+              // Debug Information Container
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.error.withOpacity(0.3)),
                 ),
-                child: const Text('Tekrar Dene'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Debug Bilgileri:',
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_businessId != null) ...[
+                      Text(
+                        '• İşletme ID: $_businessId',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        '• İşletme ID: Bulunamadı ❌',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ],
+                    if (_tableNumber != null) ...[
+                      Text(
+                        '• Masa Numarası: $_tableNumber',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                    Text(
+                      '• Mevcut URL: ${_urlService.getCurrentPath()}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '• URL Parametreleri: ${_urlService.getCurrentParams()}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _errorMessage = null;
+                        _isLoading = true;
+                      });
+                      _parseUrlAndLoadData();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Tekrar Dene'),
+                  ),
+                  const SizedBox(width: 16),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Ana Sayfa'),
+                  ),
+                ],
               ),
             ],
           ),

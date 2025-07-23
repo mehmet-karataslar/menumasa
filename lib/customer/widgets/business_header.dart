@@ -282,7 +282,7 @@ class _BusinessHeaderState extends State<BusinessHeader>
                 
                 // Business name
                 Text(
-                  widget.business?.name ?? 'İşletme Adı',
+                  widget.business?.businessName ?? 'İşletme Adı',
                   style: AppTypography.h2.copyWith(
                     color: AppColors.white,
                     fontWeight: FontWeight.bold,
