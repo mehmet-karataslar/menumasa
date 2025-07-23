@@ -542,32 +542,7 @@ class QRService {
     }
   }
 
-  /// Gets QR code statistics for a business
-  Future<Map<String, dynamic>> getBusinessQRStats(String businessId) async {
-    final qrCodes = await getBusinessQRCodes(businessId);
-    
-    int totalScans = 0;
-    int todayScans = 0;
-    int weeklyScans = 0;
-    int monthlyScans = 0;
-    
-    for (final qr in qrCodes) {
-      totalScans += qr.stats.totalScans;
-      todayScans += qr.stats.todayScans;
-      weeklyScans += qr.stats.weeklyScans;
-      monthlyScans += qr.stats.monthlyScans;
-    }
-    
-    return {
-      'totalQRCodes': qrCodes.length,
-      'totalScans': totalScans,
-      'todayScans': todayScans,
-      'weeklyScans': weeklyScans,
-      'monthlyScans': monthlyScans,
-      'businessQRCount': qrCodes.where((qr) => qr.type == QRCodeType.business).length,
-      'tableQRCount': qrCodes.where((qr) => qr.type == QRCodeType.table).length,
-    };
-  }
+
 
   // =============================================================================
   // HELPER METHODS
@@ -671,9 +646,8 @@ class QRService {
     try {
       print('📄 Starting PDF generation for ${tableQRs.length} table QRs');
       
-      // PDF service import ve kullanım
-      final pdfService = PDFService();
-      await pdfService.generateTableQRsPDF(
+      // PDF service static metodlarını kullan
+      await PdfService.downloadTableQRsPDF(
         businessId: businessId,
         businessName: businessName,
         tableQRs: tableQRs,
