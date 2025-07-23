@@ -14,6 +14,7 @@ import '../../customer/widgets/product_grid.dart';
 import '../../customer/widgets/business_header.dart';
 import '../../customer/widgets/search_bar.dart' as custom_search;
 import '../../customer/widgets/filter_bottom_sheet.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Evrensel QR Menü Sayfası - Tüm İşletmeler İçin Ortak (Misafir Modu Destekli)
 class UniversalQRMenuPage extends StatefulWidget {
@@ -297,44 +298,59 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         }
       });
       
-      // İşletme bilgilerini al
-      final business = await _businessService.getBusiness(_businessId!);
-      print('🔄 Business service response: ${business != null ? "SUCCESS" : "NULL"}');
+      // İşletme bilgilerini al - detaylı logging ile
+      print('🔄 Calling BusinessFirestoreService.getBusiness($_businessId)');
       
-      if (business == null) {
-        print('❌ Business not found in database for ID: $_businessId');
+      try {
+        final business = await _businessService.getBusiness(_businessId!);
+        print('🔄 BusinessFirestoreService.getBusiness response: ${business != null ? "SUCCESS" : "NULL"}');
         
-        // User-friendly error message - POST FRAME
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('❌ İşletme bulunamadı (ID: $_businessId)'),
-                duration: Duration(seconds: 4),
-                backgroundColor: AppColors.error,
-              ),
-            );
+        if (business != null) {
+          print('✅ Business found - Name: ${business.businessName}, ID: ${business.id}, Active: ${business.isActive}');
+        } else {
+          print('❌ Business NULL - ID $_businessId not found in businesses collection');
+          
+          // Firebase connection test
+          try {
+            print('🔄 Testing Firebase connection...');
+            final testQuery = await FirebaseFirestore.instance.collection('businesses').limit(1).get();
+            print('✅ Firebase connection OK, businesses collection has ${testQuery.docs.length} docs');
+            
+            // Bu ID ile business var mı direkt kontrol et
+            print('🔄 Direct Firestore check for ID: $_businessId');
+            final directDoc = await FirebaseFirestore.instance.collection('businesses').doc(_businessId!).get();
+            print('📄 Direct document exists: ${directDoc.exists}');
+            if (directDoc.exists) {
+              print('📄 Document data: ${directDoc.data()}');
+            }
+          } catch (e) {
+            print('❌ Firebase connection error: $e');
           }
-        });
+        }
         
-        throw Exception('İşletme bulunamadı - Lütfen QR kodunuzu kontrol edin');
+        if (business == null) {
+          // User-friendly error message - POST FRAME
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('❌ İşletme bulunamadı (ID: $_businessId)'),
+                  duration: Duration(seconds: 4),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          });
+          
+          throw Exception('İşletme bulunamadı - ID: $_businessId businesses collection\'ında mevcut değil');
+        }
+      } catch (e) {
+        print('❌ BusinessFirestoreService.getBusiness error: $e');
+        rethrow;
       }
 
       print('✅ Business found: ${business.businessName}');
       
-      // Success feedback - POST FRAME
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ ${business.businessName} bulundu!'),
-              duration: Duration(seconds: 2),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        }
-      });
-
       // Kategorileri al
       print('🔄 Loading categories...');
       final categories = await _businessService.getCategories(businessId: _businessId!);
