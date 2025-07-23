@@ -136,16 +136,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       
       print('🔍 UniversalQRMenuPage - URL parsing basliyor...');
       
-      // Show debug info to user
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🔍 QR kod analiz ediliyor...'),
-            duration: Duration(seconds: 2),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      }
+      // Show debug info to user - POST FRAME
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('🔍 QR kod analiz ediliyor...'),
+              duration: Duration(seconds: 2),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      });
 
       // 1. ÖNCE: Route arguments'tan kontrol et (en güvenilir)
       final routeSettings = ModalRoute.of(context)?.settings;
@@ -159,13 +161,17 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         print('🔍 Arguments\'tan alindi - business: $businessId, table: $tableNumber');
         
         if (mounted && businessId != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ QR kod başarıyla okundu'),
-              duration: Duration(seconds: 1),
-              backgroundColor: AppColors.success,
-            ),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('✅ QR kod başarıyla okundu'),
+                  duration: Duration(seconds: 1),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            }
+          });
         }
       }
       
@@ -247,16 +253,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     try {
       print('🔄 Loading business data for ID: $_businessId');
       
-      // User feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('📍 İşletme bilgileri yükleniyor...'),
-            duration: Duration(seconds: 2),
-            backgroundColor: AppColors.info,
-          ),
-        );
-      }
+      // User feedback - POST FRAME
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('📍 İşletme bilgileri yükleniyor...'),
+              duration: Duration(seconds: 2),
+              backgroundColor: AppColors.info,
+            ),
+          );
+        }
+      });
       
       // İşletme bilgilerini al
       final business = await _businessService.getBusiness(_businessId!);
@@ -265,32 +273,36 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       if (business == null) {
         print('❌ Business not found in database for ID: $_businessId');
         
-        // User-friendly error message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ İşletme bulunamadı (ID: $_businessId)'),
-              duration: Duration(seconds: 4),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
+        // User-friendly error message - POST FRAME
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('❌ İşletme bulunamadı (ID: $_businessId)'),
+                duration: Duration(seconds: 4),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        });
         
         throw Exception('İşletme bulunamadı - Lütfen QR kodunuzu kontrol edin');
       }
 
       print('✅ Business found: ${business.businessName}');
       
-      // Success feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ ${business.businessName} bulundu!'),
-            duration: Duration(seconds: 2),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
+      // Success feedback - POST FRAME
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ ${business.businessName} bulundu!'),
+              duration: Duration(seconds: 2),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      });
 
       // Kategorileri al
       print('🔄 Loading categories...');
@@ -791,9 +803,12 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   Widget _buildErrorPage() {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - 48,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
