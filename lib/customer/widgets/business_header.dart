@@ -14,6 +14,7 @@ class BusinessHeader extends StatefulWidget {
   final int cartItemCount;
   final bool isCompact;
   final bool showActions; // Action butonlarını göster/gizle
+  final int? tableNumber; // Added for table number display
 
   const BusinessHeader({
     Key? key,
@@ -25,6 +26,7 @@ class BusinessHeader extends StatefulWidget {
     this.cartItemCount = 0,
     this.isCompact = false,
     this.showActions = true,
+    this.tableNumber, // Added to constructor
   }) : super(key: key);
 
   @override
@@ -259,7 +261,7 @@ class _BusinessHeaderState extends State<BusinessHeader>
         children: [
           // Header section
           SizedBox(
-            height: 200, // Fixed height for header section
+            height: 180, // Reduced from 200 to 180
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -276,36 +278,65 @@ class _BusinessHeaderState extends State<BusinessHeader>
                     );
                   },
                 ),
-
-                const SizedBox(height: 12),
-
-                // Business name with gradient text
-                ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: [AppColors.white, AppColors.white.withOpacity(0.8)],
-                  ).createShader(bounds),
-                  child: Text(
-                    widget.business.businessName,
-                    style: AppTypography.h3.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 8), // Reduced from 12
+                
+                // Business name
+                Text(
+                  widget.business?.name ?? 'İşletme Adı',
+                  style: AppTypography.h2.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20, // Reduced from 22
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                        color: AppColors.black.withOpacity(0.5),
+                      ),
+                    ],
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-
-                const SizedBox(height: 6),
-
-                // Business type badge
-                _buildBusinessTypeBadge(),
-
-                const SizedBox(height: 8),
-
-                // Status indicator
-                _buildStatusIndicator(),
+                const SizedBox(height: 4), // Reduced from 6
+                
+                // Table number with icon
+                if (widget.tableNumber != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // Reduced vertical padding
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.table_restaurant,
+                          size: 16, // Reduced from 18
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Masa ${widget.tableNumber}',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13, // Reduced from 14
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
