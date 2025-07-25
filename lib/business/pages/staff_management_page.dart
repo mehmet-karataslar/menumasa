@@ -290,38 +290,40 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: AppColors.white,
-      child:                     Column(
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildRoleFilter(),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildStatusFilter(),
-                  ),
-                ],
+              Expanded(
+                child: _buildRoleFilter(),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  IconButton(
-            icon: Icon(
-              Icons.filter_list_off,
-              color: (_roleFilter != null || _statusFilter != null) 
-                  ? AppColors.primary 
-                  : AppColors.textSecondary,
-            ),
-            onPressed: () {
-              setState(() {
-                _roleFilter = null;
-                _statusFilter = null;
-                _applyFilters();
-              });
-            },
-            tooltip: 'Filtreleri Temizle',
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatusFilter(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.filter_list_off,
+                  color: (_roleFilter != null || _statusFilter != null) 
+                      ? AppColors.primary 
+                      : AppColors.textSecondary,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _roleFilter = null;
+                    _statusFilter = null;
+                    _applyFilters();
+                  });
+                },
+                tooltip: 'Filtreleri Temizle',
+              ),
+            ],
           ),
         ],
       ),
