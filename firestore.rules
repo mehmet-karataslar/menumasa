@@ -140,6 +140,53 @@ service cloud.firestore {
       allow read, write: if request.auth != null; // Authenticated kullanıcılar
     }
     
+    // Customer users collection - müşteri kullanıcıları
+    match /customer_users/{customerId} {
+      allow read: if true; // Müşteri girişi için public read gerekli
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      allow list: if request.auth != null; // Liste için authentication gerekli
+    }
+    
+    // Customer sessions collection - müşteri oturumları
+    match /customer_sessions/{sessionId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Customer activity logs collection - müşteri aktivite logları
+    match /customer_activity_logs/{logId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Customer favorites collection - müşteri favorileri
+    match /customer_favorites/{favoriteId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Customer orders collection - müşteri siparişleri
+    match /customer_orders/{orderId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Customer profiles collection - müşteri profilleri
+    match /customer_profiles/{profileId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Cart collection - sepet verileri
+    match /carts/{cartId} {
+      allow read, write: if true; // Sepet için public erişim (guest kullanıcılar için)
+    }
+    
+    // Sessions collection - genel oturum yönetimi
+    match /sessions/{sessionId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Guest sessions collection - misafir oturumları
+    match /guest_sessions/{sessionId} {
+      allow read, write: if true; // Misafir kullanıcılar için public erişim
+    }
+    
     // Allow authenticated users to read/write to any collection for development
     // TODO: Make this more restrictive in production
     match /{document=**} {
