@@ -365,8 +365,8 @@ class _ModernCustomerDashboardState extends State<ModernCustomerDashboard>
       ),
       child: SafeArea(
         child: Container(
-          height: 70, // 80'den 70'e düşürüldü
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6), // Padding azaltıldı
+          height: 60, // 70'den 60'a düşürüldü
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4), // Padding daha da azaltıldı
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: _tabs.asMap().entries.map((entry) {
@@ -382,13 +382,13 @@ class _ModernCustomerDashboardState extends State<ModernCustomerDashboard>
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 2), // 4'ten 2'ye düşürüldü
-                    padding: const EdgeInsets.symmetric(vertical: 4), // 8'den 4'e düşürüldü
+                    margin: const EdgeInsets.symmetric(horizontal: 1), // 2'den 1'e düşürüldü
+                    padding: const EdgeInsets.symmetric(vertical: 2), // 4'ten 2'ye düşürüldü
                     decoration: BoxDecoration(
                       color: isSelected 
                           ? AppColors.primary.withOpacity(0.1)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12), // 16'dan 12'ye düşürüldü
+                      borderRadius: BorderRadius.circular(8), // 12'den 8'e düşürüldü
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -399,16 +399,16 @@ class _ModernCustomerDashboardState extends State<ModernCustomerDashboard>
                             isSelected ? tab.selectedIcon : tab.icon,
                             key: ValueKey(isSelected),
                             color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                            size: 20, // 24'ten 20'ye düşürüldü
+                            size: 18, // 20'den 18'e düşürüldü
                           ),
                         ),
-                        const SizedBox(height: 2), // 4'ten 2'ye düşürüldü
+                        const SizedBox(height: 1), // 2'den 1'e düşürüldü
                         AnimatedDefaultTextStyle(
                           duration: const Duration(milliseconds: 200),
                           style: AppTypography.caption.copyWith(
                             color: isSelected ? AppColors.primary : AppColors.textSecondary,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                            fontSize: 10, // Yazı boyutu küçültüldü
+                            fontSize: 9, // 10'dan 9'a düşürüldü
                           ),
                           child: Text(
                             tab.title,
