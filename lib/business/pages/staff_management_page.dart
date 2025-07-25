@@ -290,17 +290,19 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: AppColors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildRoleFilter(),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatusFilter(),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
+      child:           Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _buildRoleFilter(),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: _buildStatusFilter(),
+              ),
+                        const SizedBox(width: 8),
+              IconButton(
             icon: Icon(
               Icons.filter_list_off,
               color: (_roleFilter != null || _statusFilter != null) 
