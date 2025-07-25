@@ -290,19 +290,24 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: AppColors.white,
-      child:           Row(
+      child:                     Column(
             children: [
-              Expanded(
-                flex: 2,
-                child: _buildRoleFilter(),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildRoleFilter(),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatusFilter(),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: _buildStatusFilter(),
-              ),
-                        const SizedBox(width: 8),
-              IconButton(
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
             icon: Icon(
               Icons.filter_list_off,
               color: (_roleFilter != null || _statusFilter != null) 
@@ -327,11 +332,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     return DropdownButtonFormField<StaffRole?>(
       value: _roleFilter,
       decoration: InputDecoration(
-        labelText: 'Rol Filtresi',
+        labelText: 'Rol',
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         isDense: true,
       ),
       items: [
@@ -357,11 +362,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     return DropdownButtonFormField<StaffStatus?>(
       value: _statusFilter,
       decoration: InputDecoration(
-        labelText: 'Durum Filtresi',
+        labelText: 'Durum',
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         isDense: true,
       ),
       items: [
