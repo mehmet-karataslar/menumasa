@@ -297,7 +297,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               Expanded(
                 child: _buildRoleFilter(),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               Expanded(
                 child: _buildStatusFilter(),
               ),
@@ -338,7 +338,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         isDense: true,
       ),
       items: [
@@ -368,7 +368,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         isDense: true,
       ),
       items: [
