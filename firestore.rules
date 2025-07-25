@@ -106,6 +106,40 @@ service cloud.firestore {
       allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
     }
     
+    // Staff collection - personel yönetimi
+    match /staff/{staffId} {
+      allow read: if true; // Personel girişi için public read gerekli
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      allow list: if request.auth != null; // Liste için authentication gerekli
+    }
+    
+    // Admin users collection - admin kullanıcıları
+    match /admin_users/{adminId} {
+      allow read: if true; // Admin girişi için public read gerekli
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      allow list: if request.auth != null; // Liste için authentication gerekli
+    }
+    
+    // Admin sessions collection - admin oturumları
+    match /admin_sessions/{sessionId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Admin activity logs collection - admin aktivite logları
+    match /admin_activity_logs/{logId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Business sessions collection - business oturumları
+    match /business_sessions/{sessionId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
+    // Business activity logs collection - business aktivite logları
+    match /business_activity_logs/{logId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+    }
+    
     // Allow authenticated users to read/write to any collection for development
     // TODO: Make this more restrictive in production
     match /{document=**} {
