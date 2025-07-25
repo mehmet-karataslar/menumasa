@@ -4,8 +4,7 @@ import 'dart:ui';
 import '../../business/models/business.dart';
 import '../../business/models/category.dart';
 import '../../business/models/product.dart';
-import '../../business/models/waiter.dart';
-import '../../business/services/waiter_service.dart';
+import '../../business/models/staff.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
@@ -15,6 +14,7 @@ import '../../core/services/auth_service.dart';
 import '../services/customer_firestore_service.dart';
 import '../services/customer_service.dart';
 import '../models/waiter_call.dart';
+import 'customer_waiter_call_page.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 
@@ -43,7 +43,7 @@ class _QRMenuPageState extends State<QRMenuPage>
   final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
   final WaiterCallService _waiterCallService = WaiterCallService();
-  final WaiterService _waiterService = WaiterService();
+
   final CartService _cartService = CartService();
   final AuthService _authService = AuthService();
   
@@ -51,7 +51,7 @@ class _QRMenuPageState extends State<QRMenuPage>
   Business? _business;
   List<Category> _categories = [];
   List<Product> _products = [];
-  List<Waiter> _waiters = [];
+
   int? _currentTableNumber;
   
   // State
@@ -129,7 +129,7 @@ class _QRMenuPageState extends State<QRMenuPage>
 
       final categories = await _firestoreService.getCategoriesByBusiness(widget.businessId);
       final products = await _firestoreService.getProductsByBusiness(widget.businessId);
-      final waiters = await _waiterService.getWaitersByBusiness(widget.businessId);
+
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final dynamicRoute = '/qr-menu/${widget.businessId}?t=$timestamp&qr=${widget.qrCode ?? ''}';
@@ -140,7 +140,7 @@ class _QRMenuPageState extends State<QRMenuPage>
           _business = business;
           _categories = categories;
           _products = products;
-          _waiters = waiters;
+
           _selectedCategoryId = _findFirstCategoryWithProducts(categories, products);
           _isLoading = false;
         });
@@ -1124,13 +1124,20 @@ class _QRMenuPageState extends State<QRMenuPage>
       _showWaiterAuthDialog();
       return;
     }
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildWaiterCallSheet(),
-    );
+
+    if (_business != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CustomerWaiterCallPage(
+            businessId: widget.businessId,
+            customerId: currentUser.uid,
+            customerName: currentUser.displayName ?? 'Müşteri',
+            tableNumber: _currentTableNumber?.toString(),
+          ),
+        ),
+      );
+    }
   }
 
   void _showWaiterAuthDialog() {
@@ -1712,7 +1719,8 @@ class _QRMenuPageState extends State<QRMenuPage>
     );
   }
 
-  Future<void> _makeWaiterCall(WaiterCallType callType, Waiter? selectedWaiter) async {
+  // DEPRECATED: Artık CustomerWaiterCallPage kullanılıyor
+  Future<void> _makeWaiterCall(WaiterCallType callType, Staff? selectedWaiter) async {
     if (_currentTableNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1742,8 +1750,8 @@ class _QRMenuPageState extends State<QRMenuPage>
         metadata: {
           'source': 'qr_menu',
           'qr_code': widget.qrCode,
-          'selected_waiter_id': selectedWaiter?.waiterId,
-          'selected_waiter_name': selectedWaiter != null ? '${selectedWaiter.firstName} ${selectedWaiter.lastName}' : null,
+          'selected_waiter_id': selectedWaiter?.staffId,
+          'selected_waiter_name': selectedWaiter?.fullName,
           'table_number_from_qr': _currentTableNumber,
         },
       );
@@ -1762,7 +1770,7 @@ class _QRMenuPageState extends State<QRMenuPage>
     }
   }
 
-  void _showSuccessDialog(WaiterCallType callType, int tableNumber, Waiter? selectedWaiter) {
+  void _showSuccessDialog(WaiterCallType callType, int tableNumber, Staff? selectedWaiter) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

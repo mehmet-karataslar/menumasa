@@ -21,7 +21,7 @@ import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_management_page.dart';
 import 'discount_management_page.dart';
-import 'waiter_management_page.dart';
+import 'staff_management_page.dart';
 import 'table_management_page.dart';
 import 'kitchen_integration_page.dart';
 import 'delivery_management_page.dart';
@@ -97,7 +97,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     'genel-bakis',
     'siparisler',
     'menu-yonetimi',
-    'garsonlar',
     'indirimler',
     'qr-kodlar',
     'masa-yonetimi',
@@ -123,7 +122,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     'Genel Bakış',
     'Siparişler',
     'Menü Yönetimi',
-    'Garsonlar',
     'İndirimler',
     'QR Kodlar',
     'Masa Yönetimi',
@@ -1065,120 +1063,114 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           child: MenuManagementPage(businessId: widget.businessId),
         );
       case 3:
-        print('👥 Loading Waiters Page');
-        return Container(
-          key: const ValueKey('waiters'),
-          child: WaiterManagementPage(businessId: widget.businessId),
-        );
-      case 4:
         print('🎯 Loading Discounts Page');
         return Container(
           key: const ValueKey('discounts'),
           child: DiscountManagementPage(businessId: widget.businessId),
         );
-      case 5:
+      case 4:
         print('📱 Loading QR Page');
         return Container(
           key: const ValueKey('qr'),
           child: QRManagementPage(businessId: widget.businessId),
         );
-      case 6:
+      case 5:
         print('🍽️ Loading Table Management Page');
         return Container(
           key: const ValueKey('table-management'),
           child: TableManagementPage(businessId: widget.businessId),
         );
-      case 7:
+      case 6:
         print('👨‍🍳 Loading Kitchen Integration Page');
         return Container(
           key: const ValueKey('kitchen-integration'),
           child: KitchenIntegrationPage(businessId: widget.businessId),
         );
-      case 8:
+      case 7:
         print('🚚 Loading Delivery Management Page');
         return Container(
           key: const ValueKey('delivery-management'),
           child: DeliveryManagementPage(businessId: widget.businessId),
         );
-      case 9:
+      case 8:
         print('💳 Loading Payment Management Page');
         return Container(
           key: const ValueKey('payment-management'),
           child: PaymentManagementPage(businessId: widget.businessId),
         );
-      case 10:
-        print('👥 Loading Staff Tracking Page');
+      case 9:
+        print('👥 Loading Staff Management Page');
         return Container(
-          key: const ValueKey('staff-tracking'),
-          child: StaffTrackingPage(businessId: widget.businessId),
+          key: const ValueKey('staff-management'),
+          child: StaffManagementPage(businessId: widget.businessId),
         );
-      case 11:
+      case 10:
         print('📊 Loading CRM Management Page');
         return Container(
           key: const ValueKey('crm-management'),
           child: CRMManagementPage(businessId: widget.businessId),
         );
-      case 12:
+      case 11:
         print('🖥️ Loading Hardware Integration Page');
         return Container(
           key: const ValueKey('hardware-integration'),
           child: HardwareIntegrationPage(businessId: widget.businessId),
         );
-      case 13:
+      case 12:
         print('🏪 Loading Multi Branch Page');
         return Container(
           key: const ValueKey('multi-branch'),
           child: MultiBranchPage(businessId: widget.businessId),
         );
-      case 14:
+      case 13:
         print('☁️ Loading Remote Access Page');
         return Container(
           key: const ValueKey('remote-access'),
           child: RemoteAccessPage(businessId: widget.businessId),
         );
-      case 15:
+      case 14:
         print('⚖️ Loading Legal Compliance Page');
         return Container(
           key: const ValueKey('legal-compliance'),
           child: LegalCompliancePage(businessId: widget.businessId),
         );
-      case 16:
+      case 15:
         print('💰 Loading Cost Control Page');
         return Container(
           key: const ValueKey('cost-control'),
           child: CostControlPage(businessId: widget.businessId),
         );
-      case 17:
+      case 16:
         print('🤖 Loading AI Prediction Page');
         return Container(
           key: const ValueKey('ai-prediction'),
           child: AIPredictionPage(businessId: widget.businessId),
         );
-      case 18:
+      case 17:
         print('📢 Loading Digital Marketing Page');
         return Container(
           key: const ValueKey('digital-marketing'),
           child: DigitalMarketingPage(businessId: widget.businessId),
         );
-      case 19:
+      case 18:
         print('🔒 Loading Data Security Page');
         return Container(
           key: const ValueKey('data-security'),
           child: DataSecurityPage(businessId: widget.businessId),
         );
-      case 20:
+      case 19:
         print('📊 Loading Analytics Page');
         return Container(
           key: const ValueKey('analytics'),
           child: AnalyticsPage(),
         );
-      case 21:
+      case 20:
         print('📦 Loading Stock Management Page');
         return Container(
           key: const ValueKey('stock-management'),
           child: StockManagementPage(),
         );
-      case 22:
+      case 21:
         print('⚙️ Loading Profile Page');
         return Container(
           key: const ValueKey('profile'),

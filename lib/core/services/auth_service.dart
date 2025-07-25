@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../business/models/business.dart';
+import '../../business/models/staff.dart';
+import '../../business/services/staff_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -10,6 +12,7 @@ class AuthService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final StaffService _staffService = StaffService();
 
   // Auth state stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -24,6 +27,39 @@ class AuthService {
   ) async {
     try {
       print('🔥 AuthService: Attempting login with email: $email');
+      
+      // Önce personel tablosunda kontrol et
+      print('🔥 AuthService: Checking staff credentials...');
+      final staff = await _staffService.authenticateStaff(email, password);
+      
+      if (staff != null) {
+        print('🔥 AuthService: Staff login successful: ${staff.fullName} (${staff.role.displayName})');
+        
+        // Personel için özel User objesi oluştur
+        final staffUser = app_user.User(
+          id: staff.staffId,
+          email: staff.email,
+          name: staff.fullName,
+          phone: staff.phone,
+          userType: app_user.UserType.business,
+          createdAt: staff.createdAt,
+          updatedAt: staff.updatedAt,
+          isActive: staff.isActive,
+          isEmailVerified: true,
+          lastLoginAt: DateTime.now(),
+          businessData: app_user.BusinessData(
+            role: _mapStaffRoleToBusinessRole(staff.role),
+            businessIds: [staff.businessId],
+            stats: BusinessStats.empty(),
+            settings: BusinessSettings.defaultRestaurant(),
+          ),
+        );
+        
+        print('🔥 AuthService: Staff user created successfully');
+        return staffUser;
+      }
+      
+      print('🔥 AuthService: No staff found, trying Firebase Auth...');
       
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -433,6 +469,19 @@ class AuthService {
         return 'Bu işlem için yetkiniz yok';
       default:
         return 'Bir hata oluştu: $code';
+    }
+  }
+
+  /// Staff Role'ü Business Role'e map et
+  app_user.BusinessRole _mapStaffRoleToBusinessRole(StaffRole staffRole) {
+    switch (staffRole) {
+      case StaffRole.manager:
+        return app_user.BusinessRole.manager;
+      case StaffRole.cashier:
+        return app_user.BusinessRole.cashier;
+      case StaffRole.waiter:
+      case StaffRole.kitchen:
+        return app_user.BusinessRole.staff;
     }
   }
 }

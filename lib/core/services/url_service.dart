@@ -104,7 +104,7 @@ class UrlService extends UrlServiceBase {
     'genel-bakis': 'Genel Bakış',
     'siparisler': 'Siparişler',
     'menu-yonetimi': 'Menü Yönetimi',
-    'garsonlar': 'Garsonlar',
+    
     'indirimler': 'İndirimler',
     'qr-kodlar': 'QR Kodlar',
     'ayarlar': 'Ayarlar',

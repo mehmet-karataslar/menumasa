@@ -21,7 +21,7 @@ import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_management_page.dart';
 import 'discount_management_page.dart';
-import 'waiter_management_page.dart';
+import 'staff_management_page.dart';
 import 'business_dashboard_mobile.dart';
 import 'table_management_page.dart';
 import 'kitchen_integration_page.dart';
@@ -94,7 +94,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     'genel-bakis',
     'siparisler',
     'menu-yonetimi',
-    'garsonlar',
     'indirimler',
     'qr-kodlar',
     'masa-yonetimi',
@@ -120,7 +119,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     'Genel Bakış',
     'Siparişler',
     'Menü Yönetimi',
-    'Garsonlar',
     'İndirimler',
     'QR Kodlar',
     'Masa Yönetimi',
@@ -734,14 +732,13 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         _buildOverviewTab(),
         OrderManagementPage(businessId: widget.businessId),
         MenuManagementPage(businessId: widget.businessId),
-        WaiterManagementPage(businessId: widget.businessId),
         DiscountManagementPage(businessId: widget.businessId),
         QRManagementPage(businessId: widget.businessId),
         TableManagementPage(businessId: widget.businessId),
         KitchenIntegrationPage(businessId: widget.businessId),
         DeliveryManagementPage(businessId: widget.businessId),
         PaymentManagementPage(businessId: widget.businessId),
-        StaffTrackingPage(businessId: widget.businessId),
+        StaffManagementPage(businessId: widget.businessId),
         CRMManagementPage(businessId: widget.businessId),
         HardwareIntegrationPage(businessId: widget.businessId),
         MultiBranchPage(businessId: widget.businessId),

@@ -16,6 +16,7 @@ import '../../customer/widgets/product_grid.dart';
 import '../../customer/widgets/business_header.dart';
 import '../../customer/widgets/search_bar.dart' as custom_search;
 import '../../customer/widgets/filter_bottom_sheet.dart';
+import '../../customer/pages/customer_waiter_call_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -681,8 +682,45 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   }
 
   void _showWaiterCallDialog() {
-    // Garson çağırma dialog implementasyonu
-    // Gerektiğinde eklenebilir
+    if (_business == null || _businessId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İşletme bilgileri yüklenemedi'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Müşteri bilgilerini al
+    final currentUser = _authService.currentUser;
+    String customerId;
+    String customerName;
+
+    if (_isGuestMode) {
+      customerId = _guestUserId ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+      customerName = 'Misafir Kullanıcı';
+    } else if (currentUser != null) {
+      customerId = currentUser.uid;
+      customerName = currentUser.displayName ?? 'Müşteri';
+    } else {
+      _showAuthDialog('Garson çağırmak için giriş yapmanız gerekmektedir.');
+      return;
+    }
+
+    // Garson çağırma sayfasına git
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CustomerWaiterCallPage(
+          businessId: _businessId!,
+          customerId: customerId,
+          customerName: customerName,
+          tableNumber: _tableNumber?.toString(),
+          floorNumber: null, // QR'dan kat bilgisi gelmiyorsa null
+        ),
+      ),
+    );
   }
 
   void _showGuestCartDialog() {
@@ -733,10 +771,10 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           children: [
             Icon(Icons.room_service_rounded, color: AppColors.primary),
             const SizedBox(width: 8),
-            const Text('Garson Çağırma İçin Giriş Yapın'),
+            const Text('Garson Çağırma'),
           ],
         ),
-        content: Text('Misafir modunda garson çağırma işlemi için giriş yapmanız gerekmektedir.'),
+        content: Text('Misafir modunda da garson çağırabilirsiniz. Daha iyi hizmet için giriş yapmanızı öneririz.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -745,9 +783,16 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/login');
+              _showWaiterCallDialog(); // Direkt garson çağırma sayfasına git
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Garson Çağır', style: TextStyle(color: AppColors.white)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/login');
+            },
             child: const Text('Giriş Yap', style: TextStyle(color: AppColors.white)),
           ),
           ElevatedButton(

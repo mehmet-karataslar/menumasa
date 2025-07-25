@@ -248,6 +248,54 @@ class Order {
     );
   }
 
+  // Create order from staff (waiter/cashier creating order for customer)
+  static Order createStaffOrder({
+    required String businessId,
+    required List<CartItem> items,
+    required String customerName,
+    required String tableNumber,
+    required String staffId,
+    required String staffName,
+    String? notes,
+  }) {
+    final orderItems = items
+        .map(
+          (cartItem) => OrderItem(
+            orderItemId:
+                'order_item_${DateTime.now().millisecondsSinceEpoch}_${cartItem.productId}',
+            productId: cartItem.productId,
+            productName: cartItem.productName,
+            productPrice: cartItem.productPrice,
+            productImage: cartItem.productImage,
+            quantity: cartItem.quantity,
+            notes: null,
+          ),
+        )
+        .toList();
+
+    final totalAmount = items.fold<double>(
+      0,
+      (sum, item) => sum + (item.productPrice * item.quantity),
+    );
+
+    return Order(
+      orderId: 'staff_order_${DateTime.now().millisecondsSinceEpoch}',
+      businessId: businessId,
+      customerId: 'staff_$staffId', // Personel tarafından oluşturulan sipariş
+      customerName: customerName,
+      customerPhone: null,
+      tableNumber: int.tryParse(tableNumber) ?? 0,
+      items: orderItems,
+      totalAmount: totalAmount,
+      status: OrderStatus.pending,
+      notes: notes != null && notes.isNotEmpty 
+          ? 'Personel: $staffName | $notes'
+          : 'Personel: $staffName tarafından oluşturuldu',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
   @override
   String toString() {
     return 'Order(orderId: $orderId, tableNumber: $tableNumber, status: ${status.displayName}, totalAmount: $totalAmount)';
