@@ -70,30 +70,89 @@ class QRRouteHandler implements BaseRouteHandler {
 
   /// QR menü route'u mu kontrol eder
   bool _isQRMenuRoute(String routeName) {
-    final uri = Uri.parse(routeName);
-    
-    // 1. /qr ile başlayan route'lar (evrensel QR)
-    if (routeName == AppRouteConstants.universalQR || routeName.startsWith('/qr?')) {
-      return true;
+    try {
+      print('🔍 QR Route Detection: Checking route: $routeName');
+      
+      final uri = Uri.parse(routeName);
+      
+      // 1. Direct QR routes
+      if (routeName == AppRouteConstants.universalQR || routeName == '/qr') {
+        print('✅ Direct QR route detected');
+        return true;
+      }
+      
+      // 2. QR with query parameters: /qr?business=...
+      if (routeName.startsWith('/qr?')) {
+        print('✅ QR query route detected');
+        return true;
+      }
+      
+      // 3. QR menu paths: /qr-menu/{businessId}
+      if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'qr-menu') {
+        print('✅ QR menu path detected');
+        return true;
+      }
+      
+      // 4. Legacy menu paths: /menu/{businessId} with query params
+      if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'menu' && 
+          uri.queryParameters.isNotEmpty) {
+        print('✅ Legacy menu route detected');
+        return true;
+      }
+      
+      // 5. Query parametrelerinde business var mı?
+      if (uri.queryParameters.containsKey('business') || 
+          uri.queryParameters.containsKey('businessId')) {
+        print('✅ Business parameter route detected');
+        return true;
+      }
+      
+      // 6. Complex QR URL formats (external camera scanning)
+      if (_isExternalQRUrl(routeName)) {
+        print('✅ External QR URL detected');
+        return true;
+      }
+      
+      print('❌ Not a QR route');
+      return false;
+      
+    } catch (e) {
+      print('❌ QR route detection error: $e');
+      // If parsing fails, assume it's not a QR route
+      return false;
     }
-    
-    // 2. /qr-menu/{businessId} formatı
-    if (routeName.startsWith('/qr-menu/')) {
-      return true;
+  }
+
+  /// External QR URL detection (from camera scanning)
+  bool _isExternalQRUrl(String routeName) {
+    try {
+      // Check if URL contains typical QR patterns
+      if (routeName.contains('business=') || 
+          routeName.contains('businessId=') ||
+          routeName.contains('table=') ||
+          routeName.contains('tableNumber=')) {
+        return true;
+      }
+      
+      // Check if URL has QR-like structure
+      if (routeName.contains('/menu/') && routeName.contains('?')) {
+        return true;
+      }
+      
+      // Check for base64 or encoded QR data
+      if (routeName.contains('%') && routeName.length > 20) {
+        try {
+          final decoded = Uri.decodeFull(routeName);
+          return decoded.contains('business') || decoded.contains('menu');
+        } catch (e) {
+          return false;
+        }
+      }
+      
+      return false;
+    } catch (e) {
+      return false;
     }
-    
-    // 3. Query parametrelerinde business var mı?
-    if (uri.queryParameters.containsKey('business') || 
-        uri.queryParameters.containsKey('businessId')) {
-      return true;
-    }
-    
-    // 4. Eski format desteği: /menu/ içeren URL'ler
-    if (routeName.contains('/menu/') && uri.queryParameters.isNotEmpty) {
-      return true;
-    }
-    
-    return false;
   }
 
   /// QR menü route'unu handle eder
@@ -102,76 +161,39 @@ class QRRouteHandler implements BaseRouteHandler {
     print('🔗 QR Menu Route Handler - Processing: $routeName');
     
     try {
-      final uri = Uri.parse(routeName);
-      String? businessId;
-      int? tableNumber;
-      
-      // Business ID ve table number çıkar
-      businessId = uri.queryParameters['business'] ?? 
-                  uri.queryParameters['businessId'];
-      final tableString = uri.queryParameters['table'] ?? 
-                         uri.queryParameters['tableNumber'];
-      if (tableString != null) {
-        tableNumber = int.tryParse(tableString);
-      }
-      
-      // Path'den çıkar (/qr-menu/{businessId} formatı)
-      if (businessId == null && uri.pathSegments.isNotEmpty) {
-        if (uri.pathSegments.contains('qr-menu') && uri.pathSegments.length > 1) {
-          final index = uri.pathSegments.indexOf('qr-menu');
-          if (index + 1 < uri.pathSegments.length) {
-            businessId = uri.pathSegments[index + 1];
-          }
-        } else if (uri.pathSegments.contains('menu') && uri.pathSegments.length > 1) {
-          final index = uri.pathSegments.indexOf('menu');
-          if (index + 1 < uri.pathSegments.length) {
-            businessId = uri.pathSegments[index + 1];
-          }
-        }
-      }
+      // Enhanced URL parsing with fallback mechanisms
+      final parsedData = _parseQRUrl(routeName);
+      final businessId = parsedData['businessId'];
+      final tableNumber = parsedData['tableNumber'];
       
       print('✅ QR Parameters extracted - Business: $businessId, Table: $tableNumber');
       
-      // Eğer belirli bir business ID varsa QRMenuPage'e yönlendir
-      if (businessId != null && businessId.isNotEmpty) {
-        return RouteUtils.createRoute(
-          (context) => QRMenuPage(
-            businessId: businessId!,
-            qrCode: routeName,
-            tableNumber: tableNumber,
-          ),
-          RouteSettings(
-            name: routeName,
-            arguments: {
-              'businessId': businessId,
-              'tableNumber': tableNumber,
-              'isQRRoute': true,
-              'originalUrl': routeName,
-              ...?settings.arguments as Map<String, dynamic>?,
-            },
-          ),
-        );
-      }
+      // Create enhanced arguments
+      final enhancedArguments = <String, dynamic>{
+        'businessId': businessId,
+        'tableNumber': tableNumber,
+        'isQRRoute': true,
+        'originalUrl': routeName,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'source': 'qr_route_handler',
+        // Merge existing arguments if any
+        ...?settings.arguments as Map<String, dynamic>?,
+      };
       
-      // Genel QR sayfasına yönlendir
+      // Always route to UniversalQRMenuPage for consistency
+      // It can handle both specific business and general QR cases
       return RouteUtils.createRoute(
         (context) => const UniversalQRMenuPage(),
         RouteSettings(
           name: routeName,
-          arguments: {
-            'businessId': businessId,
-            'tableNumber': tableNumber,
-            'isQRRoute': true,
-            'originalUrl': routeName,
-            ...?settings.arguments as Map<String, dynamic>?,
-          },
+          arguments: enhancedArguments,
         ),
       );
       
     } catch (e) {
       print('❌ QR Menu Route Error: $e');
       
-      // Hata durumunda da UniversalQRMenuPage'e git
+      // Fallback: Always route to UniversalQRMenuPage with error info
       return RouteUtils.createRoute(
         (context) => const UniversalQRMenuPage(),
         RouteSettings(
@@ -179,10 +201,152 @@ class QRRouteHandler implements BaseRouteHandler {
           arguments: {
             'routeError': e.toString(),
             'originalUrl': routeName,
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+            'source': 'qr_route_handler_error',
             ...?settings.arguments as Map<String, dynamic>?,
           },
         ),
       );
+    }
+  }
+
+  /// Enhanced QR URL parsing with multiple fallback mechanisms
+  Map<String, dynamic> _parseQRUrl(String routeName) {
+    String? businessId;
+    int? tableNumber;
+    
+    try {
+      print('🔍 Parsing QR URL: $routeName');
+      
+      // Decode URL if needed
+      String decodedUrl = routeName;
+      if (routeName.contains('%')) {
+        try {
+          decodedUrl = Uri.decodeFull(routeName);
+          print('🔄 Decoded URL: $decodedUrl');
+        } catch (e) {
+          print('⚠️ URL decode failed, using original: $e');
+        }
+      }
+      
+      final uri = Uri.parse(decodedUrl);
+      
+      // Method 1: Query parameters (most reliable)
+      businessId = uri.queryParameters['business'] ?? 
+                  uri.queryParameters['businessId'] ?? 
+                  uri.queryParameters['business_id'];
+                  
+      final tableString = uri.queryParameters['table'] ?? 
+                         uri.queryParameters['tableNumber'] ?? 
+                         uri.queryParameters['table_number'];
+      if (tableString != null) {
+        tableNumber = int.tryParse(tableString);
+      }
+      
+      print('📋 Method 1 - Query params: business=$businessId, table=$tableNumber');
+      
+      // Method 2: Path segments
+      if (businessId == null && uri.pathSegments.isNotEmpty) {
+        // /qr-menu/{businessId} format
+        if (uri.pathSegments.contains('qr-menu')) {
+          final index = uri.pathSegments.indexOf('qr-menu');
+          if (index + 1 < uri.pathSegments.length) {
+            businessId = uri.pathSegments[index + 1];
+            print('📋 Method 2a - QR menu path: $businessId');
+          }
+        }
+        
+        // /menu/{businessId} format
+        if (businessId == null && uri.pathSegments.contains('menu')) {
+          final index = uri.pathSegments.indexOf('menu');
+          if (index + 1 < uri.pathSegments.length) {
+            businessId = uri.pathSegments[index + 1];
+            print('📋 Method 2b - Menu path: $businessId');
+          }
+        }
+        
+        // Direct path format /{businessId}
+        if (businessId == null && uri.pathSegments.length == 1) {
+          final potentialBusinessId = uri.pathSegments[0];
+          // Validate it looks like a business ID (not a common route)
+          if (!_isCommonRoute(potentialBusinessId)) {
+            businessId = potentialBusinessId;
+            print('📋 Method 2c - Direct path: $businessId');
+          }
+        }
+      }
+      
+      // Method 3: Fragment/hash parsing (fallback)
+      if (businessId == null && uri.fragment.isNotEmpty) {
+        try {
+          final fragmentUri = Uri.parse(uri.fragment);
+          businessId = fragmentUri.queryParameters['business'] ?? 
+                      fragmentUri.queryParameters['businessId'];
+          print('📋 Method 3 - Fragment: $businessId');
+        } catch (e) {
+          print('⚠️ Fragment parsing failed: $e');
+        }
+      }
+      
+      // Method 4: String pattern matching (last resort)
+      if (businessId == null) {
+        businessId = _extractBusinessIdFromString(decodedUrl);
+        if (businessId != null) {
+          print('📋 Method 4 - Pattern matching: $businessId');
+        }
+      }
+      
+    } catch (e) {
+      print('❌ QR URL parsing error: $e');
+    }
+    
+    final result = {
+      'businessId': businessId,
+      'tableNumber': tableNumber,
+    };
+    
+    print('🎯 Final parsing result: $result');
+    return result;
+  }
+
+  /// Check if a path segment is a common route (not a business ID)
+  bool _isCommonRoute(String path) {
+    const commonRoutes = [
+      'login', 'register', 'admin', 'business', 'customer', 
+      'qr', 'menu', 'search', 'cart', 'profile', 'settings',
+      'about', 'contact', 'help', 'terms', 'privacy'
+    ];
+    return commonRoutes.contains(path.toLowerCase());
+  }
+
+  /// Extract business ID using string pattern matching
+  String? _extractBusinessIdFromString(String url) {
+    try {
+      // Pattern 1: business=VALUE
+      RegExp businessPattern = RegExp(r'business[=:]([^&?#]+)', caseSensitive: false);
+      var match = businessPattern.firstMatch(url);
+      if (match != null) {
+        return match.group(1);
+      }
+      
+      // Pattern 2: businessId=VALUE
+      RegExp businessIdPattern = RegExp(r'businessId[=:]([^&?#]+)', caseSensitive: false);
+      match = businessIdPattern.firstMatch(url);
+      if (match != null) {
+        return match.group(1);
+      }
+      
+      // Pattern 3: /menu/BUSINESS_ID or /qr-menu/BUSINESS_ID
+      RegExp menuPattern = RegExp(r'/(?:qr-)?menu/([^/?#]+)', caseSensitive: false);
+      match = menuPattern.firstMatch(url);
+      if (match != null) {
+        return match.group(1);
+      }
+      
+      return null;
+    } catch (e) {
+      print('❌ Pattern matching error: $e');
+      return null;
     }
   }
 

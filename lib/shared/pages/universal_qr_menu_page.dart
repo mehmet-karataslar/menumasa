@@ -164,11 +164,25 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         }
       });
 
-      // Mevcut URL'yi al
-      final currentUrl = _getCurrentUrlForValidation();
+      // Enhanced parameter extraction with multiple fallback methods
+      final parseResult = _extractBusinessParametersEnhanced();
+      _businessId = parseResult['businessId'];
+      _tableNumber = parseResult['tableNumber'];
+      
+      print('✅ Enhanced parsing result - Business: $_businessId, Table: $_tableNumber');
+
+      // Validate that we have a business ID
+      if (_businessId == null || _businessId!.isEmpty) {
+        throw QRValidationException(
+          'QR kod geçersiz: İşletme bilgisi bulunamadı',
+          errorCode: 'MISSING_BUSINESS_ID',
+        );
+      }
+
+      // Enhanced QR validation using QR Service
+      final currentUrl = _buildValidationUrl();
       print('📱 Current URL for validation: $currentUrl');
 
-      // Enhanced QR validation
       final validationResult = await _qrService.validateAndParseQRUrl(currentUrl);
       
       if (!validationResult.isValid) {
@@ -179,13 +193,17 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         );
       }
 
-      // Validation başarılı - değerleri al
-      _businessId = validationResult.businessId!;
-      _tableNumber = validationResult.tableNumber;
+      // Update with validated data
+      if (validationResult.businessId != null) {
+        _businessId = validationResult.businessId;
+      }
+      if (validationResult.tableNumber != null) {
+        _tableNumber = validationResult.tableNumber;
+      }
       
       print('✅ Enhanced validation successful - Business: $_businessId, Table: $_tableNumber');
 
-      // Eğer business bilgisi validation'dan geldi ise direkt kullan
+      // Use business from validation if available
       if (validationResult.business != null) {
         setState(() {
           _business = validationResult.business;
@@ -193,10 +211,10 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         print('🚀 Business loaded from validation cache: ${_business!.businessName}');
       }
 
-      // Diğer verileri yükle (kategoriler, ürünler)
+      // Load remaining data
       await _loadMenuData();
       
-      // Animasyonları başlat
+      // Start animations
       _slideController.forward();
       _fadeController.forward();
       
@@ -218,14 +236,14 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         _errorMessage = userFriendlyMessage;
       });
       
-             // Hata durumunu logla
-       final currentUrl = _getCurrentUrlForValidation();
-       final validationService = QRValidationService();
-       await validationService.logQRCodeError(
-         currentUrl,
-         userFriendlyMessage,
-         errorCode,
-       );
+      // Log error for analytics
+      final currentUrl = _buildValidationUrl();
+      final validationService = QRValidationService();
+      await validationService.logQRCodeError(
+        currentUrl,
+        userFriendlyMessage,
+        errorCode,
+      );
       
     } finally {
       setState(() {
@@ -234,69 +252,131 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     }
   }
 
-  /// Mevcut URL'yi validation için hazırlar
-  String _getCurrentUrlForValidation() {
-    // Önce basit parametre çıkarımı dene
-    final parseResult = _extractBusinessParameters();
-    final businessId = parseResult['businessId'];
-    final tableNumber = parseResult['tableNumber'];
-    
-    if (businessId != null) {
-      // URL'yi yeniden oluştur
-      final baseUrl = _qrService.baseUrl;
-      if (tableNumber != null) {
-        return '$baseUrl/qr?business=$businessId&table=$tableNumber';
-      } else {
-        return '$baseUrl/qr?business=$businessId';
-      }
-    }
-    
-    // Fallback: Mevcut route'dan URL oluştur
-    final routeSettings = ModalRoute.of(context)?.settings;
-    if (routeSettings?.name != null) {
-      return '${_qrService.baseUrl}${routeSettings!.name!}';
-    }
-    
-    // Son çare: boş URL
-    return '';
-  }
-
-  /// Basitleştirilmiş parametre çıkarma metodu
-  Map<String, String?> _extractBusinessParameters() {
+  /// Enhanced business parameter extraction with multiple fallback methods
+  Map<String, dynamic> _extractBusinessParametersEnhanced() {
     String? businessId;
-    String? tableNumber;
+    int? tableNumber;
     
-    // 1. Route arguments (en güvenilir)
+    print('🔍 Starting enhanced parameter extraction...');
+    
+    // Method 1: Route arguments (highest priority - most reliable)
     final routeSettings = ModalRoute.of(context)?.settings;
     final arguments = routeSettings?.arguments as Map<String, dynamic>?;
     
     if (arguments != null) {
       businessId = arguments['businessId']?.toString();
-      tableNumber = arguments['tableNumber']?.toString();
-      print('🔍 Arguments\'tan alındı - business: $businessId, table: $tableNumber');
-      if (businessId != null) return {'businessId': businessId, 'tableNumber': tableNumber};
-    }
-    
-    // 2. URL Service (Web destekli)
-    final urlParams = _urlService.getCurrentParams();
-    businessId = urlParams['business'];
-    tableNumber = urlParams['table'];
-    print('🔍 URL Service\'ten alındı - business: $businessId, table: $tableNumber');
-    if (businessId != null) return {'businessId': businessId, 'tableNumber': tableNumber};
-    
-    // 3. Route name parsing (fallback)
-    if (routeSettings?.name != null) {
-      final uri = Uri.tryParse(routeSettings!.name!);
-      if (uri != null) {
-        businessId = uri.queryParameters['business'];
-        tableNumber = uri.queryParameters['table'];
-        print('🔍 Route parsing\'den alındı - business: $businessId, table: $tableNumber');
-        if (businessId != null) return {'businessId': businessId, 'tableNumber': tableNumber};
+      final tableString = arguments['tableNumber']?.toString();
+      if (tableString != null) {
+        tableNumber = int.tryParse(tableString);
+      }
+      print('📋 Method 1 - Route arguments: business=$businessId, table=$tableNumber');
+      if (businessId != null && businessId.isNotEmpty) {
+        return {'businessId': businessId, 'tableNumber': tableNumber};
       }
     }
     
-    print('❌ Hiçbir yöntemden parametre alınamadı');
+    // Method 2: URL Service (web-compatible)
+    try {
+      final urlParams = _urlService.getCurrentParams();
+      businessId = urlParams['business'] ?? urlParams['businessId'];
+      final tableString = urlParams['table'] ?? urlParams['tableNumber'];
+      if (tableString != null) {
+        tableNumber = int.tryParse(tableString);
+      }
+      print('📋 Method 2 - URL Service: business=$businessId, table=$tableNumber');
+      if (businessId != null && businessId.isNotEmpty) {
+        return {'businessId': businessId, 'tableNumber': tableNumber};
+      }
+    } catch (e) {
+      print('⚠️ URL Service method failed: $e');
+    }
+    
+    // Method 3: Direct route name parsing
+    try {
+      if (routeSettings?.name != null) {
+        final uri = Uri.tryParse(routeSettings!.name!);
+        if (uri != null) {
+          businessId = uri.queryParameters['business'] ?? 
+                      uri.queryParameters['businessId'];
+          final tableString = uri.queryParameters['table'] ?? 
+                             uri.queryParameters['tableNumber'];
+          if (tableString != null) {
+            tableNumber = int.tryParse(tableString);
+          }
+          print('📋 Method 3 - Route parsing: business=$businessId, table=$tableNumber');
+          if (businessId != null && businessId.isNotEmpty) {
+            return {'businessId': businessId, 'tableNumber': tableNumber};
+          }
+        }
+      }
+    } catch (e) {
+      print('⚠️ Route parsing method failed: $e');
+    }
+    
+    // Method 4: Web-specific QR route info (from enhanced web routing)
+    try {
+      // This would be populated by the enhanced web routing system
+      final webQRInfo = _getWebQRRouteInfo();
+      if (webQRInfo != null) {
+        businessId = webQRInfo['businessId'];
+        final tableString = webQRInfo['tableNumber']?.toString();
+        if (tableString != null) {
+          tableNumber = int.tryParse(tableString);
+        }
+        print('📋 Method 4 - Web QR info: business=$businessId, table=$tableNumber');
+        if (businessId != null && businessId.isNotEmpty) {
+          return {'businessId': businessId, 'tableNumber': tableNumber};
+        }
+      }
+    } catch (e) {
+      print('⚠️ Web QR info method failed: $e');
+    }
+    
+    print('❌ No valid business ID found through any method');
     return {'businessId': null, 'tableNumber': null};
+  }
+
+  /// Get QR route info from web platform (if available)
+  Map<String, dynamic>? _getWebQRRouteInfo() {
+    // This would interface with the JavaScript QR route info
+    // For now, return null as this requires platform-specific implementation
+    return null;
+  }
+
+  /// Build validation URL for QR service
+  String _buildValidationUrl() {
+    if (_businessId != null) {
+      final baseUrl = _qrService.baseUrl;
+      if (_tableNumber != null) {
+        return '$baseUrl/qr?business=$_businessId&table=$_tableNumber';
+      } else {
+        return '$baseUrl/qr?business=$_businessId';
+      }
+    }
+    
+    // Fallback: try to construct from route
+    final routeSettings = ModalRoute.of(context)?.settings;
+    if (routeSettings?.name != null) {
+      return '${_qrService.baseUrl}${routeSettings!.name!}';
+    }
+    
+    // Last resort: empty URL (will cause validation to fail appropriately)
+    return '';
+  }
+
+  /// Mevcut URL'yi validation için hazırlar
+  String _getCurrentUrlForValidation() {
+    return _buildValidationUrl();
+  }
+
+  /// Basitleştirilmiş parametre çıkarma metodu (legacy fallback)
+  Map<String, String?> _extractBusinessParameters() {
+    // Use the enhanced method and convert to legacy format
+    final enhanced = _extractBusinessParametersEnhanced();
+    return {
+      'businessId': enhanced['businessId']?.toString(),
+      'tableNumber': enhanced['tableNumber']?.toString(),
+    };
   }
 
   Future<void> _loadMenuData() async {

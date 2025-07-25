@@ -43,78 +43,120 @@
   
   <!-- QR Menu compatible routing script -->
   <script>
-    // QR Menu and normal route handler
-    (function() {
-      const currentPath = window.location.pathname;
-      const currentSearch = window.location.search;
-      const searchParams = new URLSearchParams(currentSearch);
-      
-      // Check if this is a QR menu URL
-      const isQRMenuURL = currentPath.includes('/menu/') || 
-                          currentPath.includes('/qr-menu/') || 
-                          currentPath === '/qr' ||
-                          searchParams.has('business');
-      
-      console.log('🔍 URL Check:', {
-        path: currentPath,
-        search: currentSearch,
-        isQRMenu: isQRMenuURL,
-        hasBusiness: searchParams.has('business')
-      });
-      
-      // Don't redirect QR menu URLs
-      if (isQRMenuURL) {
-        console.log('✅ QR Menu URL detected, preserving route:', currentPath + currentSearch);
-        return;
-      }
-      
-      // Clear cache for non-QR URLs
-      if ('caches' in window) {
-        caches.keys().then(function(names) {
-          for (let name of names) {
-            caches.delete(name);
-          }
-        });
-      }
-      
-      // Handle hash routing only for non-QR URLs
-      if (window.location.hash && !isQRMenuURL) {
-        const path = window.location.hash.substring(1);
-        if (path && path !== '/') {
-          // Check if hash contains QR menu path
-          if (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr')) {
-            window.history.replaceState(null, null, path);
-            return; // Don't redirect QR menu paths
-          }
-          window.history.replaceState(null, null, path);
-          window.location.replace(path);
-        } else {
-          window.history.replaceState(null, null, '/');
-          window.location.replace('/');
-        }
-      }
-    })();
-    
-    // Intercept hash changes for non-QR URLs
-    window.addEventListener('hashchange', function(e) {
-      const path = window.location.hash.substring(1);
-      
-      // Don't interfere with QR menu URLs
-      if (path && (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr'))) {
-        window.history.replaceState(null, null, path);
-        return;
-      }
-      
-      e.preventDefault();
-      if (path && path !== '/') {
-        window.history.replaceState(null, null, path);
-        window.location.replace(path);
-      } else {
-        window.history.replaceState(null, null, '/');
-        window.location.replace('/');
+// Enhanced QR Menu and normal route handler
+window.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Enhanced QR Route Handler initialized');
+  
+  // Get current URL info
+  const currentPath = window.location.pathname;
+  const currentSearch = window.location.search;
+  const searchParams = new URLSearchParams(currentSearch);
+  
+  console.log('📍 Current path:', currentPath);
+  console.log('📍 Current search:', currentSearch);
+  
+  // Enhanced QR menu URL detection
+  const isQRMenuURL = currentPath.includes('/menu/') ||
+                     currentPath.includes('/qr-menu/') ||
+                     currentPath === '/qr' ||
+                     currentPath.startsWith('/qr?') ||
+                     searchParams.has('business') ||
+                     searchParams.has('businessId');
+  
+  console.log('🔍 QR Detection Result:', {
+    path: currentPath,
+    search: currentSearch,
+    isQRMenu: isQRMenuURL,
+    hasBusiness: searchParams.has('business'),
+    hasBusinessId: searchParams.has('businessId')
+  });
+  
+  // Don't redirect QR menu URLs - let Flutter handle them
+  if (isQRMenuURL) {
+    console.log('✅ QR Menu URL detected, preserving route:', currentPath + currentSearch);
+    // Ensure Flutter can access the QR parameters
+    window.qrRouteInfo = {
+      originalPath: currentPath,
+      originalSearch: currentSearch,
+      businessId: searchParams.get('business') || searchParams.get('businessId'),
+      tableNumber: searchParams.get('table') || searchParams.get('tableNumber'),
+      timestamp: Date.now()
+    };
+    return; // Don't interfere with QR routes
+  }
+  
+  // Clear cache for non-QR URLs
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for(let registration of registrations) {
+        registration.update();
       }
     });
-  </script>
+  }
+  
+  // Handle hash routing only for non-QR URLs
+  if (window.location.hash && !isQRMenuURL) {
+    const hash = window.location.hash.substring(1);
+    const path = hash.split('?')[0];
+    
+    // Check if hash contains QR menu path
+    if (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr')) {
+      console.log('✅ QR Menu hash detected, preserving:', hash);
+      return; // Don't redirect QR menu paths
+    }
+    
+    // Only redirect non-QR hash routes
+    if (path && path !== '/') {
+      console.log('🔄 Redirecting hash route to:', path);
+      window.history.replaceState(null, '', path + window.location.search);
+    }
+  }
+});
+
+// Enhanced hash change handler
+window.addEventListener('hashchange', function() {
+  const hash = window.location.hash.substring(1);
+  const path = hash.split('?')[0];
+  
+  // Don't interfere with QR menu URLs
+  if (path && (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr'))) {
+    console.log('✅ QR Menu hash change detected, preserving:', hash);
+    return;
+  }
+  
+  // Handle normal hash changes
+  if (path && path !== window.location.pathname) {
+    console.log('🔄 Hash change redirect to:', path);
+    window.history.replaceState(null, '', path + window.location.search);
+  }
+});
+
+// QR URL helper function for Flutter
+window.getQRRouteInfo = function() {
+  return window.qrRouteInfo || null;
+};
+
+// Enhanced QR URL validator
+window.validateQRUrl = function(url) {
+  try {
+    const uri = new URL(url, window.location.origin);
+    const hasBusinessParam = uri.searchParams.has('business') || uri.searchParams.has('businessId');
+    const hasQRPath = uri.pathname.includes('/menu/') || 
+                     uri.pathname.includes('/qr-menu/') || 
+                     uri.pathname === '/qr';
+    
+    return {
+      isValid: hasBusinessParam || hasQRPath,
+      businessId: uri.searchParams.get('business') || uri.searchParams.get('businessId'),
+      tableNumber: uri.searchParams.get('table') || uri.searchParams.get('tableNumber'),
+      originalUrl: url
+    };
+  } catch (e) {
+    console.error('QR URL validation error:', e);
+    return { isValid: false, error: e.message };
+  }
+};
+</script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

@@ -6,6 +6,7 @@ import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
 import 'qr_menu_page.dart';
 import '../../shared/pages/universal_qr_menu_page.dart';
+import 'dart:convert'; // Added for jsonDecode
 
 /// QR Kod Tarayıcı Sayfası
 class QRScannerPage extends StatefulWidget {
@@ -193,21 +194,51 @@ class _QRScannerPageState extends State<QRScannerPage>
     }
 
     try {
-      // QR kodundan business ID'sini çıkar
-      String businessId = _extractBusinessIdFromQR(qrCode);
+      print('📱 QR Scanner: Processing external camera QR code: $qrCode');
       
-      await _handleQRCodeDetected(qrCode, businessId);
+      // Enhanced QR kod analizi ve business ID çıkarımı
+      final analysisResult = _analyzeQRCode(qrCode);
+      
+      if (!analysisResult['isValid']) {
+        throw Exception(analysisResult['error'] ?? 'Geçersiz QR kod formatı');
+      }
+      
+      final businessId = analysisResult['businessId'] as String;
+      final tableNumber = analysisResult['tableNumber'] as int?;
+      
+      print('✅ QR Analysis successful - Business: $businessId, Table: $tableNumber');
+      
+      await _handleQRCodeDetected(qrCode, businessId, tableNumber: tableNumber);
+      
     } catch (e) {
-      // Hatalı QR kod durumu
+      print('❌ QR Scanner Error: $e');
+      
+      // Enhanced error handling with user-friendly messages
+      String userMessage = _getQRErrorMessage(e.toString());
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text('Geçersiz QR kod. Lütfen tekrar deneyin.'),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(userMessage),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'QR Kod: ${qrCode.length > 50 ? qrCode.substring(0, 50) + '...' : qrCode}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
                 ),
               ],
             ),
@@ -215,6 +246,12 @@ class _QRScannerPageState extends State<QRScannerPage>
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Manuel Giriş',
+              textColor: Colors.white,
+              onPressed: () => _handleManualEntry(),
             ),
           ),
         );
@@ -226,93 +263,244 @@ class _QRScannerPageState extends State<QRScannerPage>
       
       // Kamera taramayı tekrar başlat
       if (_qrController != null && _hasPermission) {
-        await _qrController!.start();
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          await _qrController!.start();
+        }
       }
+    }
+  }
+
+  /// Enhanced QR code analysis with detailed logging
+  Map<String, dynamic> _analyzeQRCode(String qrCode) {
+    print('🔍 QR Analysis starting for: $qrCode');
+    
+    try {
+      // Method 1: URL-based QR codes
+      if (qrCode.startsWith('http://') || qrCode.startsWith('https://')) {
+        return _analyzeUrlQRCode(qrCode);
+      }
+      
+      // Method 2: Custom format QR codes (masamenu_businessId_table_X)
+      if (qrCode.startsWith('masamenu_')) {
+        return _analyzeCustomFormatQRCode(qrCode);
+      }
+      
+      // Method 3: Direct business ID format
+      if (_isDirectBusinessId(qrCode)) {
+        return {
+          'isValid': true,
+          'businessId': qrCode.trim(),
+          'tableNumber': null,
+          'format': 'direct_business_id'
+        };
+      }
+      
+      // Method 4: JSON format QR codes
+      if (qrCode.startsWith('{') && qrCode.endsWith('}')) {
+        return _analyzeJsonQRCode(qrCode);
+      }
+      
+      return {
+        'isValid': false,
+        'error': 'QR kod formatı tanımlanamadı',
+        'details': 'Supported formats: URL, masamenu_*, direct business ID, JSON'
+      };
+      
+    } catch (e) {
+      print('❌ QR Analysis error: $e');
+      return {
+        'isValid': false,
+        'error': 'QR kod analiz hatası: $e',
+      };
+    }
+  }
+
+  /// Analyze URL-based QR codes
+  Map<String, dynamic> _analyzeUrlQRCode(String qrCode) {
+    try {
+      print('🔗 Analyzing URL QR code');
+      final uri = Uri.parse(qrCode);
+      
+      // Extract business ID from query parameters
+      String? businessId = uri.queryParameters['business'] ?? 
+                          uri.queryParameters['businessId'];
+      
+      // Extract from path if not in query params
+      if (businessId == null) {
+        if (uri.pathSegments.contains('qr-menu') && uri.pathSegments.length > 1) {
+          final index = uri.pathSegments.indexOf('qr-menu');
+          if (index + 1 < uri.pathSegments.length) {
+            businessId = uri.pathSegments[index + 1];
+          }
+        } else if (uri.pathSegments.contains('menu') && uri.pathSegments.length > 1) {
+          final index = uri.pathSegments.indexOf('menu');
+          if (index + 1 < uri.pathSegments.length) {
+            businessId = uri.pathSegments[index + 1];
+          }
+        }
+      }
+      
+      // Extract table number
+      int? tableNumber;
+      final tableString = uri.queryParameters['table'] ?? 
+                         uri.queryParameters['tableNumber'];
+      if (tableString != null) {
+        tableNumber = int.tryParse(tableString);
+      }
+      
+      if (businessId == null || businessId.isEmpty) {
+        return {
+          'isValid': false,
+          'error': 'URL\'de işletme bilgisi bulunamadı',
+        };
+      }
+      
+      return {
+        'isValid': true,
+        'businessId': businessId,
+        'tableNumber': tableNumber,
+        'format': 'url',
+        'originalUrl': qrCode,
+      };
+      
+    } catch (e) {
+      return {
+        'isValid': false,
+        'error': 'URL parse hatası: $e',
+      };
+    }
+  }
+
+  /// Analyze custom format QR codes (masamenu_*)
+  Map<String, dynamic> _analyzeCustomFormatQRCode(String qrCode) {
+    try {
+      print('🏷️ Analyzing custom format QR code');
+      final parts = qrCode.split('_');
+      
+      if (parts.length < 2) {
+        return {
+          'isValid': false,
+          'error': 'Geçersiz masamenu formatı',
+        };
+      }
+      
+      final businessId = parts[1];
+      int? tableNumber;
+      
+      // Look for table number
+      if (parts.length >= 4 && parts[2] == 'table') {
+        tableNumber = int.tryParse(parts[3]);
+      }
+      
+      return {
+        'isValid': true,
+        'businessId': businessId,
+        'tableNumber': tableNumber,
+        'format': 'masamenu_custom',
+      };
+      
+    } catch (e) {
+      return {
+        'isValid': false,
+        'error': 'Custom format parse hatası: $e',
+      };
+    }
+  }
+
+  /// Analyze JSON format QR codes
+  Map<String, dynamic> _analyzeJsonQRCode(String qrCode) {
+    try {
+      print('📋 Analyzing JSON QR code');
+      final Map<String, dynamic> jsonData = jsonDecode(qrCode);
+      
+      final businessId = jsonData['businessId'] ?? jsonData['business'];
+      final tableNumber = jsonData['tableNumber'] ?? jsonData['table'];
+      
+      if (businessId == null) {
+        return {
+          'isValid': false,
+          'error': 'JSON\'da işletme bilgisi bulunamadı',
+        };
+      }
+      
+      return {
+        'isValid': true,
+        'businessId': businessId.toString(),
+        'tableNumber': tableNumber is int ? tableNumber : int.tryParse(tableNumber?.toString() ?? ''),
+        'format': 'json',
+      };
+      
+    } catch (e) {
+      return {
+        'isValid': false,
+        'error': 'JSON parse hatası: $e',
+      };
+    }
+  }
+
+  /// Check if QR code is a direct business ID
+  bool _isDirectBusinessId(String qrCode) {
+    // Business ID should be alphanumeric, 3-50 characters
+    if (qrCode.length < 3 || qrCode.length > 50) return false;
+    
+    // Should not contain spaces or special characters (except _ and -)
+    if (!RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(qrCode)) return false;
+    
+    // Should not be a common word
+    const commonWords = ['test', 'demo', 'admin', 'user', 'guest'];
+    if (commonWords.contains(qrCode.toLowerCase())) return false;
+    
+    return true;
+  }
+
+  /// Get user-friendly error message
+  String _getQRErrorMessage(String error) {
+    if (error.contains('URL\'de işletme bilgisi bulunamadı')) {
+      return 'QR kodunda işletme bilgisi eksik. Lütfen işletmeden yeni bir QR kod isteyin.';
+    } else if (error.contains('Geçersiz QR kod formatı')) {
+      return 'Bu QR kod desteklenmeyen bir formatta. Manuel kod girişini deneyin.';
+    } else if (error.contains('parse hatası')) {
+      return 'QR kod okunamadı. Kodu temiz ve düz bir yüzeyde tekrar taratın.';
+    } else if (error.contains('formatı tanımlanamadı')) {
+      return 'QR kod formatı tanınmıyor. Lütfen işletmeden yeni bir QR kod isteyin.';
+    } else {
+      return 'QR kod okunamadı. Lütfen tekrar deneyin veya manuel kod girişi yapın.';
     }
   }
 
   String _extractBusinessIdFromQR(String qrCode) {
     print('🔍 QR Kod analiz ediliyor: $qrCode');
     
-    // QR kod formatları:
-    // 1. "masamenu_{businessId}_table_{tableNumber}"
-    // 2. "{businessId}"
-    // 3. Eski URL formatı: "https://menumebak.web.app/menu/{businessId}?table={tableNumber}"
-    // 4. YENİ URL formatı: "https://menumebak.web.app/qr?business={businessId}&table={tableNumber}"
+    // Use the enhanced analysis method
+    final analysis = _analyzeQRCode(qrCode);
     
-    if (qrCode.startsWith('masamenu_')) {
-      // Format: masamenu_businessId_table_5
-      final parts = qrCode.split('_');
-      if (parts.length >= 2) {
-        print('✅ Eski masamenu formatı - Business ID: ${parts[1]}');
-        return parts[1];
-      }
-    } else if (qrCode.startsWith('http')) {
-      // URL formatı
-      final uri = Uri.tryParse(qrCode);
-      if (uri != null) {
-        print('🔍 URI analiz ediliyor: ${uri.toString()}');
-        print('🔍 Path: ${uri.path}');
-        print('🔍 Query params: ${uri.queryParameters}');
-        
-        // YENİ FORMAT: /qr?business=businessId&table=tableNumber
-        if (uri.path == '/qr' && uri.queryParameters.containsKey('business')) {
-          final businessId = uri.queryParameters['business']!;
-          print('✅ Yeni QR formatı - Business ID: $businessId');
-          return businessId;
-        }
-        
-        // ESKİ FORMAT: /menu/businessId?table=tableNumber
-        if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'menu') {
-          final businessId = uri.pathSegments[1];
-          print('✅ Eski menu formatı - Business ID: $businessId');
-          return businessId;
-        }
-        
-        // /qr-menu/businessId formatı
-        if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'qr-menu') {
-          final businessId = uri.pathSegments[1];
-          print('✅ QR menu formatı - Business ID: $businessId');
-          return businessId;
-        }
-      }
+    if (analysis['isValid']) {
+      final businessId = analysis['businessId'] as String;
+      print('✅ Business ID extracted: $businessId');
+      return businessId;
     } else {
-      // Direkt business ID
-      print('✅ Direkt business ID formatı: $qrCode');
-      return qrCode;
+      print('❌ ${analysis['error']}');
+      throw Exception(analysis['error']);
     }
-    
-    print('❌ Geçersiz QR kod formatı: $qrCode');
-    throw Exception('Geçersiz QR kod formatı');
   }
 
   int? _extractTableNumberFromQR(String qrCode) {
     try {
-      print('🔍 QR Kod analiz ediliyor: $qrCode');
+      print('🔍 Table number extraction: $qrCode');
       
-      if (qrCode.contains('table_')) {
-        print('📋 Eski format tespit edildi: table_');
-        final parts = qrCode.split('_');
-        final tableIndex = parts.indexOf('table');
-        if (tableIndex >= 0 && tableIndex + 1 < parts.length) {
-          final tableNumber = int.tryParse(parts[tableIndex + 1]);
-          print('📋 Masa numarasi bulundu: $tableNumber');
-          return tableNumber;
-        }
-      } else if (qrCode.contains('table=')) {
-        print('🔗 URL format tespit edildi: table=');
-        final uri = Uri.tryParse(qrCode);
-        if (uri != null && uri.queryParameters.containsKey('table')) {
-          final tableNumber = int.tryParse(uri.queryParameters['table']!);
-          print('🔗 URL den masa numarasi: $tableNumber');
-          return tableNumber;
-        }
+      // Use the enhanced analysis method
+      final analysis = _analyzeQRCode(qrCode);
+      
+      if (analysis['isValid']) {
+        final tableNumber = analysis['tableNumber'] as int?;
+        print('📋 Table number extracted: $tableNumber');
+        return tableNumber;
       }
       
-      print('❌ Masa numarasi bulunamadi');
       return null;
     } catch (e) {
-      print('❌ Masa numarasi parse hatasi: $e');
+      print('❌ Table number extraction error: $e');
       return null;
     }
   }
@@ -342,7 +530,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     }
   }
 
-  Future<void> _handleQRCodeDetected(String qrCode, String businessId) async {
+  Future<void> _handleQRCodeDetected(String qrCode, String businessId, {int? tableNumber}) async {
     setState(() {
       _scannedCode = qrCode;
       _isScanning = false;
@@ -355,12 +543,12 @@ class _QRScannerPageState extends State<QRScannerPage>
     
     if (mounted) {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final tableNumber = _extractTableNumberFromQR(qrCode);
       
-      // Yeni evrensel QR format: /qr?business=businessId&table=tableNumber
+      // Enhanced route construction with debugging
       final dynamicRoute = '/qr?business=$businessId${tableNumber != null ? '&table=$tableNumber' : ''}&t=$timestamp';
       
       print('🚀 QR Scanner navigating to: $dynamicRoute');
+      print('📋 Navigation arguments: businessId=$businessId, tableNumber=$tableNumber, userId=${widget.userId}');
       
       Navigator.pushReplacement(
         context,
@@ -375,6 +563,7 @@ class _QRScannerPageState extends State<QRScannerPage>
               'tableNumber': tableNumber,
               'timestamp': timestamp,
               'referrer': 'qr_scanner',
+              'scanMethod': 'external_camera',
             },
           ),
         ),
