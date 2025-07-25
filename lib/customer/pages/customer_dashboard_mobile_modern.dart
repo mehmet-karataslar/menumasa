@@ -288,8 +288,8 @@ class _ModernCustomerDashboardMobileState extends State<ModernCustomerDashboardM
       ),
       child: SafeArea(
         child: Container(
-          height: 85,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          height: 75, // 85'ten 75'e düşürüldü
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Padding azaltıldı
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: _tabs.asMap().entries.map((entry) {
@@ -305,17 +305,17 @@ class _ModernCustomerDashboardMobileState extends State<ModernCustomerDashboardM
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    margin: const EdgeInsets.symmetric(horizontal: 2), // 4'ten 2'ye düşürüldü
+                    padding: const EdgeInsets.symmetric(vertical: 4), // 8'den 4'e düşürüldü
                     decoration: BoxDecoration(
                       gradient: isSelected ? tab.gradient : null,
                       color: isSelected ? null : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16), // 20'den 16'ya düşürüldü
                       boxShadow: isSelected ? [
                         BoxShadow(
                           color: tab.color.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          blurRadius: 8, // 12'den 8'e düşürüldü
+                          offset: const Offset(0, 2), // 4'ten 2'ye düşürüldü
                         ),
                       ] : null,
                     ),
@@ -324,26 +324,26 @@ class _ModernCustomerDashboardMobileState extends State<ModernCustomerDashboardM
                       children: [
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(4), // 6'dan 4'e düşürüldü
                           decoration: BoxDecoration(
                             color: isSelected 
                                 ? AppColors.white.withOpacity(0.3)
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10), // 12'den 10'a düşürüldü
                           ),
                           child: Icon(
                             isSelected ? tab.selectedIcon : tab.icon,
                             color: isSelected ? AppColors.white : AppColors.textSecondary,
-                            size: 24,
+                            size: 20, // 24'ten 20'ye düşürüldü
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2), // 4'ten 2'ye düşürüldü
                         AnimatedDefaultTextStyle(
                           duration: const Duration(milliseconds: 300),
                           style: AppTypography.caption.copyWith(
                             color: isSelected ? AppColors.white : AppColors.textSecondary,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            fontSize: 12,
+                            fontSize: 10, // 12'den 10'a düşürüldü
                           ),
                           child: Text(
                             tab.shortTitle,
