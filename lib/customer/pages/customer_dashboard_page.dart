@@ -44,6 +44,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   int _cartItemCount = 0;
   bool _hasNewOrders = false;
 
+  // Tab management
   late TabController _tabController;
   late AnimationController _animationController;
   late AnimationController _fabAnimationController;
@@ -58,10 +59,10 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   @override
   void initState() {
     super.initState();
-    _initAnimations();
     _loadUserData();
     _initCartTracking();
-
+    _initAnimations();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateCustomerUrl();
       _animationController.forward();
@@ -189,6 +190,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     final title = '${_tabTitles[_selectedTabIndex]} | MasaMenu';
     _urlService.updateCustomerUrl(widget.userId, route, customTitle: title);
   }
+
+
 
   @override
   void onUrlChanged(String newPath) {

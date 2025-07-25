@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/routing/base_route_handler.dart';
 import '../../core/routing/route_constants.dart';
+import '../../core/routing/route_utils.dart' as route_utils;
 import '../../core/services/auth_service.dart';
 import '../../presentation/pages/auth/router_page.dart';
 import '../pages/business_login_page.dart';
 import '../pages/business_dashboard_page.dart';
+
 
 /// Business Route Handler - Business modülü route'larını yönetir
 class BusinessRouteHandler implements BaseRouteHandler {
@@ -30,6 +32,22 @@ class BusinessRouteHandler implements BaseRouteHandler {
     AppRouteConstants.businessWaiters,
     AppRouteConstants.businessDiscounts,
     AppRouteConstants.businessQR,
+    AppRouteConstants.businessTableManagement,
+    AppRouteConstants.businessKitchenIntegration,
+    AppRouteConstants.businessDeliveryManagement,
+    AppRouteConstants.businessPaymentManagement,
+    AppRouteConstants.businessStaffTracking,
+    AppRouteConstants.businessCRMManagement,
+    AppRouteConstants.businessHardwareIntegration,
+    AppRouteConstants.businessMultiBranch,
+    AppRouteConstants.businessRemoteAccess,
+    AppRouteConstants.businessLegalCompliance,
+    AppRouteConstants.businessCostControl,
+    AppRouteConstants.businessAIPrediction,
+    AppRouteConstants.businessDigitalMarketing,
+    AppRouteConstants.businessDataSecurity,
+    AppRouteConstants.businessAnalytics,
+    AppRouteConstants.businessStockManagement,
     AppRouteConstants.businessSettings,
   ];
 
@@ -44,6 +62,22 @@ class BusinessRouteHandler implements BaseRouteHandler {
     AppRouteConstants.businessWaiters: (context) => const BusinessDashboardRouterPage(),
     AppRouteConstants.businessDiscounts: (context) => const BusinessDashboardRouterPage(),
     AppRouteConstants.businessQR: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessTableManagement: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessKitchenIntegration: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessDeliveryManagement: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessPaymentManagement: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessStaffTracking: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessCRMManagement: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessHardwareIntegration: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessMultiBranch: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessRemoteAccess: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessLegalCompliance: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessCostControl: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessAIPrediction: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessDigitalMarketing: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessDataSecurity: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessAnalytics: (context) => const BusinessDashboardRouterPage(),
+    AppRouteConstants.businessStockManagement: (context) => const BusinessDashboardRouterPage(),
     AppRouteConstants.businessSettings: (context) => const BusinessDashboardRouterPage(),
   };
 
@@ -76,7 +110,46 @@ class BusinessRouteHandler implements BaseRouteHandler {
     final routeName = settings.name!;
     final pathSegments = RouteUtils.getPathSegments(routeName);
     
-    // /business/{businessId} format için
+    // /business/{businessId}/{tabId} format için
+    if (pathSegments.length >= 3) {
+      final businessId = pathSegments[1];
+      final tabId = pathSegments[2];
+      
+      // dashboard tab route'ları
+      if (_isModernDashboardTab(tabId)) {
+        return RouteUtils.createRoute(
+          (context) => BusinessDashboard(
+            businessId: businessId,
+            initialTab: tabId, // tabId zaten string olarak geliyor
+          ),
+          RouteSettings(
+            name: routeName,
+            arguments: {
+              'businessId': businessId,
+              'tabId': tabId,
+              ...?settings.arguments as Map<String, dynamic>?,
+            },
+          ),
+        );
+      }
+      
+      // Legacy dashboard tab route'ları
+      if (_isDashboardTab(tabId)) {
+        return RouteUtils.createRoute(
+          (context) => const BusinessDashboardRouterPage(),
+          RouteSettings(
+            name: routeName,
+            arguments: {
+              'businessId': businessId,
+              'initialTab': tabId,
+              ...?settings.arguments as Map<String, dynamic>?,
+            },
+          ),
+        );
+      }
+    }
+    
+    // /business/{businessId} format için (legacy support)
     if (pathSegments.length >= 2) {
       final segment = pathSegments[1];
       
@@ -98,7 +171,19 @@ class BusinessRouteHandler implements BaseRouteHandler {
     return null;
   }
 
-  /// Dashboard tab'ı mı kontrol eder
+  /// Modern dashboard tab'ı mı kontrol eder (şimdi kullanmıyoruz ama ileride gerekebilir)
+  bool _isModernDashboardTab(String tabId) {
+    // Modern dashboard devre dışı, her zaman false döner
+    return false;
+  }
+
+  /// Tab ID'den tab index'i döner (modern dashboard için - kullanılmıyor)
+  int _getTabIndex(String tabId) {
+    // Modern dashboard devre dışı
+    return 0;
+  }
+
+  /// Legacy dashboard tab'ı mı kontrol eder
   bool _isDashboardTab(String segment) {
     const dashboardTabs = [
       'genel-bakis',
@@ -107,6 +192,22 @@ class BusinessRouteHandler implements BaseRouteHandler {
       'garsonlar',
       'indirimler',
       'qr-kodlar',
+      'masa-yonetimi',
+      'mutfak-entegrasyonu',
+      'teslimat-yonetimi',
+      'odeme-yonetimi',
+      'personel-takibi',
+      'crm-yonetimi',
+      'donanim-entegrasyonu',
+      'sube-yonetimi',
+      'uzaktan-erisim',
+      'yasal-uyumluluk',
+      'maliyet-kontrolu',
+      'ai-tahminleme',
+      'dijital-pazarlama',
+      'veri-guvenligi',
+      'analitikler',
+      'stok-yonetimi',
       'ayarlar',
     ];
     return dashboardTabs.contains(segment);
@@ -250,6 +351,62 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
       businessId: _businessId!,
       initialTab: initialTab,
     );
+  }
+
+  int _getTabIndexFromName(String? tabName) {
+    if (tabName == null) return 0;
+    
+    const tabMap = {
+      'genel-bakis': 0,
+      'dashboard': 0,
+      'siparisler': 1,
+      'orders': 1,
+      'menu-yonetimi': 2,
+      'menu': 2,
+      'garsonlar': 3,
+      'staff': 3,
+      'indirimler': 4,
+      'discounts': 4,
+      'qr-kodlar': 5,
+      'qr': 5,
+      'masa-yonetimi': 6,
+      'table-management': 6,
+      'mutfak-entegrasyonu': 7,
+      'kitchen-integration': 7,
+      'teslimat-yonetimi': 8,
+      'delivery-management': 8,
+      'odeme-yonetimi': 9,
+      'payment-management': 9,
+      'personel-takibi': 10,
+      'staff-tracking': 10,
+      'crm-yonetimi': 11,
+      'crm-management': 11,
+      'donanim-entegrasyonu': 12,
+      'hardware-integration': 12,
+      'sube-yonetimi': 13,
+      'multi-branch': 13,
+      'uzaktan-erisim': 14,
+      'remote-access': 14,
+      'yasal-uyumluluk': 15,
+      'legal-compliance': 15,
+      'maliyet-kontrolu': 16,
+      'cost-control': 16,
+      'ai-tahminleme': 17,
+      'ai-prediction': 17,
+      'dijital-pazarlama': 18,
+      'digital-marketing': 18,
+      'veri-guvenligi': 19,
+      'data-security': 19,
+      'analitikler': 20,
+      'analytics': 20,
+      'stok-yonetimi': 21,
+      'stock-management': 21,
+      'ayarlar': 22,
+      'settings': 22,
+      'profile': 22,
+    };
+    
+    return tabMap[tabName] ?? 0;
   }
 }
 

@@ -22,6 +22,22 @@ import 'qr_management_page.dart';
 import 'menu_management_page.dart';
 import 'discount_management_page.dart';
 import 'waiter_management_page.dart';
+import 'table_management_page.dart';
+import 'kitchen_integration_page.dart';
+import 'delivery_management_page.dart';
+import 'payment_management_page.dart';
+import 'staff_tracking_page.dart';
+import 'crm_management_page.dart';
+import 'hardware_integration_page.dart';
+import 'multi_branch_page.dart';
+import 'remote_access_page.dart';
+import 'legal_compliance_page.dart';
+import 'cost_control_page.dart';
+import 'ai_prediction_page.dart';
+import 'digital_marketing_page.dart';
+import 'data_security_page.dart';
+import 'analytics_page.dart';
+import 'stock_management_page.dart';
 
 class BusinessDashboardMobile extends StatefulWidget {
   final String businessId;
@@ -84,6 +100,22 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     'garsonlar',
     'indirimler',
     'qr-kodlar',
+    'masa-yonetimi',
+    'mutfak-entegrasyonu',
+    'teslimat-yonetimi',
+    'odeme-yonetimi',
+    'personel-takibi',
+    'crm-yonetimi',
+    'donanim-entegrasyonu',
+    'sube-yonetimi',
+    'uzaktan-erisim',
+    'yasal-uyumluluk',
+    'maliyet-kontrolu',
+    'ai-tahminleme',
+    'dijital-pazarlama',
+    'veri-guvenligi',
+    'analitikler',
+    'stok-yonetimi',
     'ayarlar',
   ];
 
@@ -94,6 +126,22 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     'Garsonlar',
     'İndirimler',
     'QR Kodlar',
+    'Masa Yönetimi',
+    'Mutfak Entegrasyonu',
+    'Teslimat Yönetimi',
+    'Ödeme Yönetimi',
+    'Personel Takibi',
+    'CRM Yönetimi',
+    'Donanım Entegrasyonu',
+    'Şube Yönetimi',
+    'Uzaktan Erişim',
+    'Yasal Uyumluluk',
+    'Maliyet Kontrolü',
+    'AI Tahminleme',
+    'Dijital Pazarlama',
+    'Veri Güvenliği',
+    'Analitikler',
+    'Stok Yönetimi',
     'Ayarlar',
   ];
 
@@ -104,6 +152,22 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
+    Icons.table_restaurant_rounded,
+    Icons.kitchen_rounded,
+    Icons.delivery_dining_rounded,
+    Icons.payment_rounded,
+    Icons.group_rounded,
+    Icons.people_rounded,
+    Icons.devices_rounded,
+    Icons.store_mall_directory_rounded,
+    Icons.cloud_rounded,
+    Icons.gavel_rounded,
+    Icons.trending_up_rounded,
+    Icons.psychology_rounded,
+    Icons.campaign_rounded,
+    Icons.security_rounded,
+    Icons.analytics_rounded,
+    Icons.inventory_rounded,
     Icons.settings_rounded,
   ];
 
@@ -1019,6 +1083,102 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           child: QRManagementPage(businessId: widget.businessId),
         );
       case 6:
+        print('🍽️ Loading Table Management Page');
+        return Container(
+          key: const ValueKey('table-management'),
+          child: TableManagementPage(businessId: widget.businessId),
+        );
+      case 7:
+        print('👨‍🍳 Loading Kitchen Integration Page');
+        return Container(
+          key: const ValueKey('kitchen-integration'),
+          child: KitchenIntegrationPage(businessId: widget.businessId),
+        );
+      case 8:
+        print('🚚 Loading Delivery Management Page');
+        return Container(
+          key: const ValueKey('delivery-management'),
+          child: DeliveryManagementPage(businessId: widget.businessId),
+        );
+      case 9:
+        print('💳 Loading Payment Management Page');
+        return Container(
+          key: const ValueKey('payment-management'),
+          child: PaymentManagementPage(businessId: widget.businessId),
+        );
+      case 10:
+        print('👥 Loading Staff Tracking Page');
+        return Container(
+          key: const ValueKey('staff-tracking'),
+          child: StaffTrackingPage(businessId: widget.businessId),
+        );
+      case 11:
+        print('📊 Loading CRM Management Page');
+        return Container(
+          key: const ValueKey('crm-management'),
+          child: CRMManagementPage(businessId: widget.businessId),
+        );
+      case 12:
+        print('🖥️ Loading Hardware Integration Page');
+        return Container(
+          key: const ValueKey('hardware-integration'),
+          child: HardwareIntegrationPage(businessId: widget.businessId),
+        );
+      case 13:
+        print('🏪 Loading Multi Branch Page');
+        return Container(
+          key: const ValueKey('multi-branch'),
+          child: MultiBranchPage(businessId: widget.businessId),
+        );
+      case 14:
+        print('☁️ Loading Remote Access Page');
+        return Container(
+          key: const ValueKey('remote-access'),
+          child: RemoteAccessPage(businessId: widget.businessId),
+        );
+      case 15:
+        print('⚖️ Loading Legal Compliance Page');
+        return Container(
+          key: const ValueKey('legal-compliance'),
+          child: LegalCompliancePage(businessId: widget.businessId),
+        );
+      case 16:
+        print('💰 Loading Cost Control Page');
+        return Container(
+          key: const ValueKey('cost-control'),
+          child: CostControlPage(businessId: widget.businessId),
+        );
+      case 17:
+        print('🤖 Loading AI Prediction Page');
+        return Container(
+          key: const ValueKey('ai-prediction'),
+          child: AIPredictionPage(businessId: widget.businessId),
+        );
+      case 18:
+        print('📢 Loading Digital Marketing Page');
+        return Container(
+          key: const ValueKey('digital-marketing'),
+          child: DigitalMarketingPage(businessId: widget.businessId),
+        );
+      case 19:
+        print('🔒 Loading Data Security Page');
+        return Container(
+          key: const ValueKey('data-security'),
+          child: DataSecurityPage(businessId: widget.businessId),
+        );
+      case 20:
+        print('📊 Loading Analytics Page');
+        return Container(
+          key: const ValueKey('analytics'),
+          child: AnalyticsPage(),
+        );
+      case 21:
+        print('📦 Loading Stock Management Page');
+        return Container(
+          key: const ValueKey('stock-management'),
+          child: StockManagementPage(),
+        );
+      case 22:
         print('⚙️ Loading Profile Page');
         return Container(
           key: const ValueKey('profile'),
@@ -1348,13 +1508,13 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               title: 'Ürün Ekle',
               icon: Icons.add_circle_rounded,
               color: const Color(0xFF1DD1A1),
-              onTap: () => _navigateToTab(3),
+              onTap: () => _navigateToTab(2), // Menu Management
             ),
             _buildQuickActionCard(
-              title: 'Kategori',
-              icon: Icons.category_rounded,
+              title: 'Garson',
+              icon: Icons.people_rounded,
               color: const Color(0xFF6C63FF),
-              onTap: () => _navigateToTab(2),
+              onTap: () => _navigateToTab(3), // Waiters
             ),
             _buildQuickActionCard(
               title: 'İndirim',
@@ -1674,7 +1834,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               ],
             ),
             TextButton(
-              onPressed: () => _navigateToTab(3),
+              onPressed: () => _navigateToTab(2), // Menu Management
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1742,7 +1902,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => _navigateToTab(3),
+          onTap: () => _navigateToTab(2), // Menu Management
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(

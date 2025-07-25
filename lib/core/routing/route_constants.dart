@@ -37,14 +37,41 @@ class AppRouteConstants {
   static const String businessDashboard = '/business/dashboard';
   static const String businessHome = '/business/home';
   
-  // Business Dashboard Tabs
+  // Business Dashboard Tabs (Legacy + New Features)
   static const String businessOverview = '/business/genel-bakis';
   static const String businessOrders = '/business/siparisler';
   static const String businessMenu = '/business/menu-yonetimi';
   static const String businessWaiters = '/business/garsonlar';
   static const String businessDiscounts = '/business/indirimler';
   static const String businessQR = '/business/qr-kodlar';
+  static const String businessTableManagement = '/business/masa-yonetimi';
+  static const String businessKitchenIntegration = '/business/mutfak-entegrasyonu';
+  static const String businessDeliveryManagement = '/business/teslimat-yonetimi';
+  static const String businessPaymentManagement = '/business/odeme-yonetimi';
+  static const String businessStaffTracking = '/business/personel-takibi';
+  static const String businessCRMManagement = '/business/crm-yonetimi';
+  static const String businessHardwareIntegration = '/business/donanim-entegrasyonu';
+  static const String businessMultiBranch = '/business/sube-yonetimi';
+  static const String businessRemoteAccess = '/business/uzaktan-erisim';
+  static const String businessLegalCompliance = '/business/yasal-uyumluluk';
+  static const String businessCostControl = '/business/maliyet-kontrolu';
+  static const String businessAIPrediction = '/business/ai-tahminleme';
+  static const String businessDigitalMarketing = '/business/dijital-pazarlama';
+  static const String businessDataSecurity = '/business/veri-guvenligi';
+  static const String businessAnalytics = '/business/analitikler';
+  static const String businessStockManagement = '/business/stok-yonetimi';
   static const String businessSettings = '/business/ayarlar';
+
+  // Modern Business Dashboard Tabs
+  static const String businessModernDashboard = '/business/:businessId/dashboard';
+  static const String businessModernOrders = '/business/:businessId/orders';
+  static const String businessModernMenu = '/business/:businessId/menu';
+  static const String businessModernQRCodes = '/business/:businessId/qr';
+  static const String businessModernAnalytics = '/business/:businessId/analytics';
+  static const String businessModernStock = '/business/:businessId/stock';
+  static const String businessModernStaff = '/business/:businessId/staff';
+  static const String businessModernFeatures = '/business/:businessId/features';
+  static const String businessModernProfile = '/business/:businessId/profile';
 
   // =============================================================================
   // CUSTOMER ROUTES (Prefix: /customer)
@@ -56,6 +83,13 @@ class AppRouteConstants {
   static const String customerCart = '/customer/cart';
   static const String customerSearch = '/customer/search';
   static const String customerQRScanner = '/customer/qr-scanner';
+
+  // Modern Customer Dashboard Tabs
+  static const String customerModernHome = '/customer/:userId/home';
+  static const String customerModernOrders = '/customer/:userId/orders';
+  static const String customerModernFavorites = '/customer/:userId/favorites';
+  static const String customerModernServices = '/customer/:userId/services';
+  static const String customerModernProfile = '/customer/:userId/profile';
 
   // =============================================================================
   // PUBLIC ROUTES

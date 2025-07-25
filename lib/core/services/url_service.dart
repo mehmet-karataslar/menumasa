@@ -88,8 +88,19 @@ class UrlService extends UrlServiceBase {
     '/search': 'İşletme Ara | MasaMenu',
   };
 
-  // Business tab route mappings
+  // Business tab route mappings - Modern Dashboard için güncellenmiş
   static const Map<String, String> businessTabTitles = {
+    'dashboard': 'Dashboard',
+    'orders': 'Siparişler',
+    'menu': 'Menü Yönetimi',
+    'qr': 'QR Kodlar',
+    'analytics': 'Analitikler',
+    'stock': 'Stok Yönetimi',
+    'staff': 'Personel',
+    'features': 'Gelişmiş Özellikler',
+    'profile': 'İşletme Profili',
+    
+    // Legacy support
     'genel-bakis': 'Genel Bakış',
     'siparisler': 'Siparişler',
     'menu-yonetimi': 'Menü Yönetimi',
@@ -97,6 +108,18 @@ class UrlService extends UrlServiceBase {
     'indirimler': 'İndirimler',
     'qr-kodlar': 'QR Kodlar',
     'ayarlar': 'Ayarlar',
+  };
+
+  // Customer tab route mappings - Modern Dashboard için yeni
+  static const Map<String, String> customerTabTitles = {
+    'home': 'Ana Sayfa',
+    'orders': 'Siparişler',
+    'favorites': 'Favoriler',
+    'services': 'Hizmetler',
+    'profile': 'Profil',
+    
+    // Legacy support
+    'dashboard': 'Dashboard',
   };
 
   @override
@@ -122,6 +145,22 @@ class UrlService extends UrlServiceBase {
   @override
   void updateCustomerUrl(String userId, String page, {String? customTitle}) {
     _implementation.updateCustomerUrl(userId, page, customTitle: customTitle);
+  }
+
+  /// Modern Customer Dashboard için URL güncelleme
+  void updateModernCustomerUrl(String userId, String tabId, {String? customTitle}) {
+    final tabTitle = customerTabTitles[tabId] ?? tabId;
+    final title = customTitle ?? '$tabTitle | MasaMenu';
+    final route = '/customer/$userId/$tabId';
+    updateUrl(route, customTitle: title);
+  }
+
+  /// Modern Business Dashboard için URL güncelleme
+  void updateModernBusinessUrl(String businessId, String tabId, {String? customTitle}) {
+    final tabTitle = businessTabTitles[tabId] ?? tabId;
+    final title = customTitle ?? '$tabTitle | İşletme Paneli';
+    final route = '/business/$businessId/$tabId';
+    updateUrl(route, customTitle: title);
   }
 
   @override

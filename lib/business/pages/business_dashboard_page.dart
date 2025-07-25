@@ -23,6 +23,22 @@ import 'menu_management_page.dart';
 import 'discount_management_page.dart';
 import 'waiter_management_page.dart';
 import 'business_dashboard_mobile.dart';
+import 'table_management_page.dart';
+import 'kitchen_integration_page.dart';
+import 'delivery_management_page.dart';
+import 'payment_management_page.dart';
+import 'staff_tracking_page.dart';
+import 'crm_management_page.dart';
+import 'hardware_integration_page.dart';
+import 'multi_branch_page.dart';
+import 'remote_access_page.dart';
+import 'legal_compliance_page.dart';
+import 'cost_control_page.dart';
+import 'ai_prediction_page.dart';
+import 'digital_marketing_page.dart';
+import 'data_security_page.dart';
+import 'analytics_page.dart';
+import 'stock_management_page.dart';
 
 class BusinessDashboard extends StatefulWidget {
   final String businessId;
@@ -81,6 +97,22 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     'garsonlar',
     'indirimler',
     'qr-kodlar',
+    'masa-yonetimi',
+    'mutfak-entegrasyonu',
+    'teslimat-yonetimi',
+    'odeme-yonetimi',
+    'personel-takibi',
+    'crm-yonetimi',
+    'donanim-entegrasyonu',
+    'sube-yonetimi',
+    'uzaktan-erisim',
+    'yasal-uyumluluk',
+    'maliyet-kontrolu',
+    'ai-tahminleme',
+    'dijital-pazarlama',
+    'veri-guvenligi',
+    'analitikler',
+    'stok-yonetimi',
     'ayarlar',
   ];
 
@@ -91,6 +123,22 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     'Garsonlar',
     'İndirimler',
     'QR Kodlar',
+    'Masa Yönetimi',
+    'Mutfak Entegrasyonu',
+    'Teslimat Yönetimi',
+    'Ödeme Yönetimi',
+    'Personel Takibi',
+    'CRM Yönetimi',
+    'Donanım Entegrasyonu',
+    'Şube Yönetimi',
+    'Uzaktan Erişim',
+    'Yasal Uyumluluk',
+    'Maliyet Kontrolü',
+    'AI Tahminleme',
+    'Dijital Pazarlama',
+    'Veri Güvenliği',
+    'Analitikler',
+    'Stok Yönetimi',
     'Ayarlar',
   ];
 
@@ -101,6 +149,22 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
+    Icons.table_restaurant_rounded,
+    Icons.kitchen_rounded,
+    Icons.delivery_dining_rounded,
+    Icons.payment_rounded,
+    Icons.group_rounded,
+    Icons.people_rounded,
+    Icons.devices_rounded,
+    Icons.store_mall_directory_rounded,
+    Icons.cloud_rounded,
+    Icons.gavel_rounded,
+    Icons.trending_up_rounded,
+    Icons.psychology_rounded,
+    Icons.campaign_rounded,
+    Icons.security_rounded,
+    Icons.analytics_rounded,
+    Icons.inventory_rounded,
     Icons.settings_rounded,
   ];
 
@@ -109,7 +173,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 23, vsync: this);
     _setInitialTab();
     _tabController.addListener(_onTabChanged);
     _loadBusinessData();
@@ -592,7 +656,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
       ),
       child: TabBar(
         controller: _tabController,
-        isScrollable: false,
+        isScrollable: true, // Çok sayıda tab olduğu için kaydırılabilir yapıldı
         labelColor: AppColors.white,
         unselectedLabelColor: AppColors.textSecondary,
         indicatorSize: TabBarIndicatorSize.tab,
@@ -616,36 +680,45 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         tabs: List.generate(
           _tabTitles.length,
               (index) => Tab(
-            height: 56,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            height: 72, // Artırıldı çünkü dikey layout daha fazla yer kaplıyor
+            child: Stack(
               children: [
-                Icon(_tabIcons[index], size: 20),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    _tabTitles[index],
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (index == 1 && _pendingOrders > 0) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(10),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(_tabIcons[index], size: 22),
+                    const SizedBox(height: 6),
+                    Flexible(
+                      child: Text(
+                        _tabTitles[index],
+                        style: const TextStyle(fontSize: 11),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
-                    child: Text(
-                      '$_pendingOrders',
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                  ],
+                ),
+                if (index == 1 && _pendingOrders > 0)
+                  Positioned(
+                    top: 2,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$_pendingOrders',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ],
               ],
             ),
           ),
@@ -664,6 +737,22 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         WaiterManagementPage(businessId: widget.businessId),
         DiscountManagementPage(businessId: widget.businessId),
         QRManagementPage(businessId: widget.businessId),
+        TableManagementPage(businessId: widget.businessId),
+        KitchenIntegrationPage(businessId: widget.businessId),
+        DeliveryManagementPage(businessId: widget.businessId),
+        PaymentManagementPage(businessId: widget.businessId),
+        StaffTrackingPage(businessId: widget.businessId),
+        CRMManagementPage(businessId: widget.businessId),
+        HardwareIntegrationPage(businessId: widget.businessId),
+        MultiBranchPage(businessId: widget.businessId),
+        RemoteAccessPage(businessId: widget.businessId),
+        LegalCompliancePage(businessId: widget.businessId),
+        CostControlPage(businessId: widget.businessId),
+        AIPredictionPage(businessId: widget.businessId),
+        DigitalMarketingPage(businessId: widget.businessId),
+        DataSecurityPage(businessId: widget.businessId),
+        AnalyticsPage(),
+        StockManagementPage(),
         BusinessProfilePage(businessId: widget.businessId),
       ],
     );

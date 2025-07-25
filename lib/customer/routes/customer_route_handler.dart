@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/routing/base_route_handler.dart';
 import '../../core/routing/route_constants.dart';
+import '../../core/routing/route_utils.dart' as route_utils;
 import '../../presentation/pages/auth/router_page.dart';
 import '../pages/customer_dashboard_page.dart';
+import '../pages/customer_dashboard_modern.dart'; // Modern dashboard import
 import '../pages/customer_orders_page.dart';
 import '../pages/customer_profile_page.dart';
 import '../pages/cart_page.dart';
@@ -37,7 +39,7 @@ class CustomerRouteHandler implements BaseRouteHandler {
 
   @override
   Map<String, WidgetBuilder> get staticRoutes => {
-    AppRouteConstants.customerDashboard: (context) => const CustomerDashboardRouterPage(),
+    AppRouteConstants.customerDashboard: (context) => const ModernCustomerDashboardRouterPage(),
     AppRouteConstants.customerOrders: (context) => const CustomerOrdersRouterPage(),
     AppRouteConstants.customerProfile: (context) => const CustomerProfileRouterPage(),
     AppRouteConstants.customerCart: (context) => const CustomerCartRouterPage(),
@@ -80,7 +82,7 @@ class CustomerRouteHandler implements BaseRouteHandler {
           final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
           final userId = args['userId'] as String? ?? 'guest';
           return RouteUtils.createRoute(
-            (context) => CustomerDashboardPage(userId: userId),
+            (context) => ModernCustomerDashboard(userId: userId),
             settings,
           );
 
@@ -112,53 +114,72 @@ class CustomerRouteHandler implements BaseRouteHandler {
 
         // Handle dynamic routes like /customer/{userId}/business/{businessId}
         default:
-          if (pathSegments.length >= 4) {
-            final userId = pathSegments[1];
-            final actionType = pathSegments[2];
-            final targetId = pathSegments[3];
-
-            switch (actionType) {
-              case 'business':
-                final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
-                final business = args['business'];
-                final customerData = args['customerData'];
-                if (business == null) return null;
-                return RouteUtils.createRoute(
-                  (context) => BusinessDetailPage(
-                    business: business,
-                    customerData: customerData,
-                  ),
-                  settings,
-                );
-
-              case 'menu':
-                return RouteUtils.createRoute(
-                  (context) => MenuPage(businessId: targetId),
-                  settings,
-                );
-
-              case 'cart':
-                return RouteUtils.createRoute(
-                  (context) => CartPage(businessId: targetId),
-                  settings,
-                );
-
-              case 'orders':
-                return RouteUtils.createRoute(
-                  (context) => CustomerOrdersPage(
-                    businessId: targetId,
-                    customerId: userId,
-                  ),
-                  settings,
-                );
-            }
-          }
-          
-          // Handle /customer/{userId}/search and /customer/{userId}/profile
           if (pathSegments.length >= 3) {
             final userId = pathSegments[1];
             final actionType = pathSegments[2];
 
+            // Modern dashboard tab routes: /customer/{userId}/{tabId}
+            if (_isModernDashboardTab(actionType)) {
+              final tabIndex = _getTabIndex(actionType);
+              return RouteUtils.createRoute(
+                (context) => ModernCustomerDashboard(
+                  userId: userId,
+                  initialTabIndex: tabIndex,
+                ),
+                RouteSettings(
+                  name: routeName,
+                  arguments: {
+                    'userId': userId,
+                    'tabId': actionType,
+                    'tabIndex': tabIndex,
+                    ...?settings.arguments as Map<String, dynamic>?,
+                  },
+                ),
+              );
+            }
+
+            // Multi-segment routes
+            if (pathSegments.length >= 4) {
+              final targetId = pathSegments[3];
+
+              switch (actionType) {
+                case 'business':
+                  final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
+                  final business = args['business'];
+                  final customerData = args['customerData'];
+                  if (business == null) return null;
+                  return RouteUtils.createRoute(
+                    (context) => BusinessDetailPage(
+                      business: business,
+                      customerData: customerData,
+                    ),
+                    settings,
+                  );
+
+                case 'menu':
+                  return RouteUtils.createRoute(
+                    (context) => MenuPage(businessId: targetId),
+                    settings,
+                  );
+
+                case 'cart':
+                  return RouteUtils.createRoute(
+                    (context) => CartPage(businessId: targetId),
+                    settings,
+                  );
+
+                case 'orders':
+                  return RouteUtils.createRoute(
+                    (context) => CustomerOrdersPage(
+                      businessId: targetId,
+                      customerId: userId,
+                    ),
+                    settings,
+                  );
+              }
+            }
+            
+            // Single segment routes
             switch (actionType) {
               case 'qr-scanner':
                 return RouteUtils.createRoute(
@@ -191,18 +212,36 @@ class CustomerRouteHandler implements BaseRouteHandler {
 
     return null;
   }
+
+  /// Modern dashboard tab'ı mı kontrol eder
+  bool _isModernDashboardTab(String tabId) {
+    const modernTabs = ['home', 'orders', 'favorites', 'services', 'profile'];
+    return modernTabs.contains(tabId);
+  }
+
+  /// Tab ID'den tab index'i döner
+  int _getTabIndex(String tabId) {
+    const tabMap = {
+      'home': 0,
+      'orders': 1,
+      'favorites': 2,
+      'services': 3,
+      'profile': 4,
+    };
+    return tabMap[tabId] ?? 0;
+  }
 }
 
 /// Router Page Classes - Parameter handling için
-class CustomerDashboardRouterPage extends StatelessWidget {
-  const CustomerDashboardRouterPage({super.key});
+class ModernCustomerDashboardRouterPage extends StatelessWidget {
+  const ModernCustomerDashboardRouterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final userId = args?['userId'] as String? ?? 'guest';
 
-    return CustomerDashboardPage(userId: userId);
+    return ModernCustomerDashboard(userId: userId);
   }
 }
 

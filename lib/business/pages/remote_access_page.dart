@@ -1,0 +1,64 @@
+import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_typography.dart';
+
+/// Uzaktan Erişim ve Mobil Yönetim Sayfası
+class RemoteAccessPage extends StatefulWidget {
+  final String businessId;
+
+  const RemoteAccessPage({
+    super.key,
+    required this.businessId,
+  });
+
+  @override
+  State<RemoteAccessPage> createState() => _RemoteAccessPageState();
+}
+
+class _RemoteAccessPageState extends State<RemoteAccessPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded),
+          color: AppColors.textPrimary,
+        ),
+        title: Text(
+          'Uzaktan Erişim',
+          style: AppTypography.h6.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.cloud_rounded,
+              size: 64,
+              color: AppColors.secondary,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Bulut Tabanlı Yönetim',
+              style: AppTypography.h5,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Uzaktan erişim ve mobil yönetim sistemi yakında kullanılabilir olacak.',
+              style: AppTypography.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+} 
