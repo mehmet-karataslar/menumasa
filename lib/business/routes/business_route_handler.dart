@@ -171,10 +171,10 @@ class BusinessRouteHandler implements BaseRouteHandler {
     return null;
   }
 
-  /// Modern dashboard tab'ı mı kontrol eder (şimdi kullanmıyoruz ama ileride gerekebilir)
+  /// Modern dashboard tab'ı mı kontrol eder
   bool _isModernDashboardTab(String tabId) {
-    // Modern dashboard devre dışı, her zaman false döner
-    return false;
+    // Modern dashboard'ı etkinleştir
+    return _isDashboardTab(tabId);
   }
 
   /// Tab ID'den tab index'i döner (modern dashboard için - kullanılmıyor)

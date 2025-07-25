@@ -338,7 +338,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
         isDense: true,
       ),
       items: [

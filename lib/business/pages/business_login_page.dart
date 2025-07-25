@@ -318,8 +318,24 @@ class _BusinessLoginPageState extends State<BusinessLoginPage> {
           // Check if user is business type
           if (user.userType.value == 'business') {
             print('🔐 Redirecting to business dashboard...');
-            // Başarılı giriş - Business dashboard'a yönlendir
-            Navigator.pushReplacementNamed(context, '/business/dashboard');
+            
+            // BusinessData'dan businessId'yi al
+            final businessData = user.businessData;
+            if (businessData != null && businessData.businessIds.isNotEmpty) {
+              final businessId = businessData.businessIds.first;
+              print('🔐 Business ID: $businessId');
+              
+              // Business dashboard'a businessId ile yönlendir
+              Navigator.pushReplacementNamed(
+                context, 
+                '/business/$businessId/genel-bakis',
+              );
+            } else {
+              print('🔐 No businessId found in user data');
+              setState(() {
+                _errorMessage = 'İşletme bilgisi bulunamadı. Lütfen tekrar giriş yapın.';
+              });
+            }
           } else {
             print('🔐 User is not business type: ${user.userType.value}');
             setState(() {
