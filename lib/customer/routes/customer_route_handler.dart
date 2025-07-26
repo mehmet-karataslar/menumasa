@@ -4,7 +4,6 @@ import '../../core/routing/route_constants.dart';
 import '../../core/routing/route_utils.dart' as route_utils;
 import '../../presentation/pages/auth/router_page.dart';
 import '../pages/customer_dashboard_page.dart';
-import '../pages/customer_dashboard_modern.dart'; // Modern dashboard import
 import '../pages/customer_orders_page.dart';
 import '../pages/customer_profile_page.dart';
 import '../pages/cart_page.dart';
@@ -39,7 +38,7 @@ class CustomerRouteHandler implements BaseRouteHandler {
 
   @override
   Map<String, WidgetBuilder> get staticRoutes => {
-    AppRouteConstants.customerDashboard: (context) => const ModernCustomerDashboardRouterPage(),
+    AppRouteConstants.customerDashboard: (context) => const CustomerDashboardRouterPage(),
     AppRouteConstants.customerOrders: (context) => const CustomerOrdersRouterPage(),
     AppRouteConstants.customerProfile: (context) => const CustomerProfileRouterPage(),
     AppRouteConstants.customerCart: (context) => const CustomerCartRouterPage(),
@@ -82,7 +81,7 @@ class CustomerRouteHandler implements BaseRouteHandler {
           final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
           final userId = args['userId'] as String? ?? 'guest';
           return RouteUtils.createRoute(
-            (context) => ModernCustomerDashboard(userId: userId),
+            (context) => CustomerDashboardPage(userId: userId),
             settings,
           );
 
@@ -122,7 +121,7 @@ class CustomerRouteHandler implements BaseRouteHandler {
             if (_isModernDashboardTab(actionType)) {
               final tabIndex = _getTabIndex(actionType);
               return RouteUtils.createRoute(
-                (context) => ModernCustomerDashboard(
+                (context) => CustomerDashboardPage(
                   userId: userId,
                   initialTabIndex: tabIndex,
                 ),
@@ -233,15 +232,19 @@ class CustomerRouteHandler implements BaseRouteHandler {
 }
 
 /// Router Page Classes - Parameter handling için
-class ModernCustomerDashboardRouterPage extends StatelessWidget {
-  const ModernCustomerDashboardRouterPage({super.key});
+class CustomerDashboardRouterPage extends StatelessWidget {
+  const CustomerDashboardRouterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final userId = args?['userId'] as String? ?? 'guest';
+    final tabIndex = args?['tabIndex'] as int? ?? 0;
 
-    return ModernCustomerDashboard(userId: userId);
+    return CustomerDashboardPage(
+      userId: userId,
+      initialTabIndex: tabIndex,
+    );
   }
 }
 

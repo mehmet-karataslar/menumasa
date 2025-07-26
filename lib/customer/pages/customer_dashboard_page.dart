@@ -23,7 +23,12 @@ import 'multi_business_cart_page.dart'; // Added import for MultiBusinessCartPag
 /// Müşteri ana dashboard sayfası - modern tab navigation
 class CustomerDashboardPage extends StatefulWidget {
   final String userId;
-  const CustomerDashboardPage({super.key, required this.userId});
+  final int initialTabIndex;
+  const CustomerDashboardPage({
+    super.key, 
+    required this.userId,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<CustomerDashboardPage> createState() => _CustomerDashboardPageState();
@@ -53,12 +58,13 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   late Animation<double> _fabScaleAnimation;
 
   // Tab route mappings
-  final List<String> _tabRoutes = ['dashboard', 'orders', 'favorites', 'profile'];
-  final List<String> _tabTitles = ['Ana Sayfa', 'Siparişlerim', 'Favorilerim', 'Profil'];
+  final List<String> _tabRoutes = ['dashboard', 'orders', 'favorites', 'carts', 'services', 'profile'];
+  final List<String> _tabTitles = ['Ana Sayfa', 'Siparişlerim', 'Favorilerim', 'Sepetlerim', 'Hizmetler', 'Profil'];
 
   @override
   void initState() {
     super.initState();
+    _selectedTabIndex = widget.initialTabIndex;
     _loadUserData();
     _initCartTracking();
     _initAnimations();
@@ -127,7 +133,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   }
 
   void _initAnimations() {
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 5, 
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
     _tabController.addListener(_onTabChanged);
 
     _animationController = AnimationController(
@@ -505,6 +515,9 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                                   _tabController.animateTo(tabIndex);
                                 },
                               ),
+                              MultiBusinessCartPage(
+                                userId: widget.userId,
+                              ),
                               CustomerProfileTab(
                                 userId: widget.userId,
                                 user: _user,
@@ -702,6 +715,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       {'icon': Icons.dashboard_rounded, 'label': 'Ana Sayfa', 'activeColor': AppColors.primary},
       {'icon': Icons.receipt_long_rounded, 'label': 'Siparişler', 'activeColor': AppColors.secondary},
       {'icon': Icons.favorite_rounded, 'label': 'Favoriler', 'activeColor': AppColors.accent},
+      {'icon': Icons.shopping_cart_rounded, 'label': 'Sepetlerim', 'activeColor': AppColors.warning},
       {'icon': Icons.person_rounded, 'label': 'Profil', 'activeColor': AppColors.primaryLight},
     ];
 
@@ -727,7 +741,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         ],
       ),
       child: Row(
-        children: List.generate(4, (index) {
+        children: List.generate(5, (index) {
           final item = tabItems[index];
           final isSelected = _selectedTabIndex == index;
 
