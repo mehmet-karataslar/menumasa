@@ -841,17 +841,20 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    product.name,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                  Flexible(
+                    child: Text(
+                      product.name,
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 4),
                   Text(
                     '${product.price.toStringAsFixed(2)} ₺',
                     style: AppTypography.bodyMedium.copyWith(
@@ -872,7 +875,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
     return Center(
       child: Icon(
         Icons.restaurant_menu_rounded,
-        size: 40,
+        size: 35,
         color: AppColors.primary.withOpacity(0.3),
       ),
     );
