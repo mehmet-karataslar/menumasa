@@ -535,9 +535,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ),
           );
         },
@@ -918,85 +915,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 ),
               );
             }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppBarActionButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    bool badge = false,
-    int? badgeCount,
-  }) {
-    final showBadge = badge || (badgeCount != null && badgeCount > 0);
-    final badgeText = badgeCount != null && badgeCount > 0 
-        ? badgeCount.toString() 
-        : '!';
-
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Stack(
-              children: [
-                Icon(
-                  icon,
-                  color: AppColors.white,
-                  size: 24,
-                ),
-                if (showBadge)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.error.withOpacity(0.3),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      child: Text(
-                        badgeText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
           ),
         ),
       ),
