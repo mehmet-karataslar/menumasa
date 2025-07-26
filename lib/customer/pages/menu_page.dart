@@ -89,6 +89,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     _initControllers();
     _initAnimations();
     _determineUserLanguage();
+    _initializeCustomerService();
     _loadMenuData();
     _initializeCart();
   }
@@ -145,6 +146,30 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     _fabAnimationController.dispose();
     _cartService.removeCartListener(_onCartChanged);
     super.dispose();
+  }
+
+  Future<void> _initializeCustomerService() async {
+    try {
+      final currentUser = _authService.currentUser;
+      if (currentUser != null) {
+        print('🔐 MenuPage: Initializing CustomerService with user: ${currentUser.uid}');
+        await _customerService.createOrGetCustomer(
+          email: currentUser.email,
+          name: currentUser.displayName,
+          phone: currentUser.phoneNumber,
+          isAnonymous: false,
+        );
+        print('✅ MenuPage: CustomerService initialized successfully');
+      } else {
+        print('⚠️ MenuPage: No authenticated user found');
+        // Anonim kullanıcı olarak devam et
+        await _customerService.createOrGetCustomer(
+          isAnonymous: true,
+        );
+      }
+    } catch (e) {
+      print('❌ MenuPage: CustomerService initialization failed: $e');
+    }
   }
 
   Future<void> _initializeCart() async {

@@ -276,23 +276,23 @@ class _ModernProductCardState extends State<ModernProductCard>
                   if (widget.onToggleFavorite != null)
                     Material(
                       color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       child: InkWell(
                         onTap: () {
                           HapticFeedback.lightImpact();
                           widget.onToggleFavorite!();
                         },
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          width: 24,
-                          height: 24,
+                          width: 28,
+                          height: 28,
                           decoration: BoxDecoration(
-                            color: AppColors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(8),
+                            color: AppColors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.shadow.withOpacity(0.1),
-                                blurRadius: 4,
+                                color: AppColors.shadow.withOpacity(0.15),
+                                blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
                             ],
@@ -304,7 +304,7 @@ class _ModernProductCardState extends State<ModernProductCard>
                             color: widget.isFavorite 
                                 ? AppColors.accent 
                                 : AppColors.textSecondary,
-                            size: 14,
+                            size: 16,
                           ),
                         ),
                       ),
@@ -687,23 +687,23 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                   if (widget.onToggleFavorite != null)
                                     Material(
                                       color: Colors.transparent,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(10),
                                       child: InkWell(
                                         onTap: () {
                                           HapticFeedback.lightImpact();
                                           widget.onToggleFavorite!();
                                         },
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(10),
                                         child: Container(
-                                          width: 28,
-                                          height: 28,
+                                          width: 32,
+                                          height: 32,
                                           decoration: BoxDecoration(
-                                            color: AppColors.white.withOpacity(0.9),
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: AppColors.white.withOpacity(0.95),
+                                            borderRadius: BorderRadius.circular(10),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: AppColors.shadow.withOpacity(0.1),
-                                                blurRadius: 4,
+                                                color: AppColors.shadow.withOpacity(0.15),
+                                                blurRadius: 6,
                                                 offset: const Offset(0, 2),
                                               ),
                                             ],
@@ -715,7 +715,7 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                             color: widget.isFavorite 
                                                 ? AppColors.accent 
                                                 : AppColors.textSecondary,
-                                            size: 16,
+                                            size: 18,
                                           ),
                                         ),
                                       ),
