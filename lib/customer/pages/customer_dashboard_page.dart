@@ -17,6 +17,7 @@ import 'tabs/customer_home_tab.dart';
 import 'tabs/customer_orders_tab.dart';
 import 'tabs/customer_favorites_tab.dart';
 import 'tabs/customer_profile_tab.dart';
+import 'tabs/customer_services_tab.dart';
 import 'cart_page.dart'; // Added import for CartPage
 import 'multi_business_cart_page.dart'; // Added import for MultiBusinessCartPage
 
@@ -134,7 +135,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
   void _initAnimations() {
     _tabController = TabController(
-      length: 5, 
+      length: 6, 
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
@@ -477,62 +478,55 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                 physics: const BouncingScrollPhysics(),
                 slivers: [
                   _buildModernSliverAppBar(screenWidth, screenHeight),
-                  SliverToBoxAdapter(
-                    child: Column(
+                  SliverFillRemaining(
+                    child: TabBarView(
+                      controller: _tabController,
+                      physics: const BouncingScrollPhysics(),
                       children: [
-                        _buildEnhancedTabBar(screenWidth),
-                        Container(
-                          height: screenHeight * 0.75,
-                          child: TabBarView(
-                            controller: _tabController,
-                            physics: const BouncingScrollPhysics(),
-                            children: [
-                              CustomerHomeTab(
-                                userId: widget.userId,
-                                user: _user,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                                onNavigateToTab: (int tabIndex) {
-                                  setState(() {
-                                    _selectedTabIndex = tabIndex;
-                                  });
-                                  _tabController.animateTo(tabIndex);
-                                },
-                              ),
-                              CustomerOrdersTab(
-                                userId: widget.userId,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                              ),
-                              CustomerFavoritesTab(
-                                userId: widget.userId,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                                onNavigateToTab: (int tabIndex) {
-                                  setState(() {
-                                    _selectedTabIndex = tabIndex;
-                                  });
-                                  _tabController.animateTo(tabIndex);
-                                },
-                              ),
-                              MultiBusinessCartPage(
-                                userId: widget.userId,
-                              ),
-                              CustomerProfileTab(
-                                userId: widget.userId,
-                                user: _user,
-                                customerData: _customerData,
-                                onRefresh: _loadUserData,
-                                onLogout: _handleLogout,
-                                onNavigateToTab: (int tabIndex) {
-                                  setState(() {
-                                    _selectedTabIndex = tabIndex;
-                                    _tabController.animateTo(tabIndex);
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
+                        CustomerHomeTab(
+                          userId: widget.userId,
+                          user: _user,
+                          customerData: _customerData,
+                          onRefresh: _loadUserData,
+                          onNavigateToTab: (int tabIndex) {
+                            setState(() {
+                              _selectedTabIndex = tabIndex;
+                            });
+                            _tabController.animateTo(tabIndex);
+                          },
+                        ),
+                        CustomerOrdersTab(
+                          userId: widget.userId,
+                          customerData: _customerData,
+                          onRefresh: _loadUserData,
+                        ),
+                        CustomerFavoritesTab(
+                          userId: widget.userId,
+                          customerData: _customerData,
+                          onRefresh: _loadUserData,
+                          onNavigateToTab: (int tabIndex) {
+                            setState(() {
+                              _selectedTabIndex = tabIndex;
+                            });
+                            _tabController.animateTo(tabIndex);
+                          },
+                        ),
+                        MultiBusinessCartPage(
+                          userId: widget.userId,
+                        ),
+                        CustomerServicesTab(customerId: widget.userId),
+                        CustomerProfileTab(
+                          userId: widget.userId,
+                          user: _user,
+                          customerData: _customerData,
+                          onRefresh: _loadUserData,
+                          onLogout: _handleLogout,
+                          onNavigateToTab: (int tabIndex) {
+                            setState(() {
+                              _selectedTabIndex = tabIndex;
+                              _tabController.animateTo(tabIndex);
+                            });
+                          },
                         ),
                       ],
                     ),
@@ -543,6 +537,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           );
         },
       ),
+      bottomNavigationBar: _buildModernBottomNavigation(),
     );
   }
 
@@ -707,292 +702,266 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     );
   }
 
-  Widget _buildEnhancedTabBar(double screenWidth) {
-    final isCompact = screenWidth < 360;
-    final tabHeight = isCompact ? 45.0 : 64.0;
-    final horizontalPadding = isCompact ? 12.0 : 20.0;
+  /// Modern Bottom Navigation Bar
+  Widget _buildModernBottomNavigation() {
     final tabItems = [
-      {'icon': Icons.dashboard_rounded, 'label': 'Ana Sayfa', 'activeColor': AppColors.primary},
-      {'icon': Icons.receipt_long_rounded, 'label': 'Siparişler', 'activeColor': AppColors.secondary},
-      {'icon': Icons.favorite_rounded, 'label': 'Favoriler', 'activeColor': AppColors.accent},
-      {'icon': Icons.shopping_cart_rounded, 'label': 'Sepetlerim', 'activeColor': AppColors.warning},
-      {'icon': Icons.person_rounded, 'label': 'Profil', 'activeColor': AppColors.primaryLight},
+      {
+        'icon': Icons.home_outlined,
+        'selectedIcon': Icons.home,
+        'label': 'Ana Sayfa',
+        'gradient': [const Color(0xFF6C63FF), const Color(0xFF8B85FF)],
+      },
+      {
+        'icon': Icons.receipt_long_outlined,
+        'selectedIcon': Icons.receipt_long,
+        'label': 'Siparişler',
+        'gradient': [const Color(0xFFFF6B6B), const Color(0xFFFF8787)],
+      },
+      {
+        'icon': Icons.favorite_outline,
+        'selectedIcon': Icons.favorite,
+        'label': 'Favoriler',
+        'gradient': [const Color(0xFFE91E63), const Color(0xFFF06292)],
+      },
+      {
+        'icon': Icons.shopping_cart_outlined,
+        'selectedIcon': Icons.shopping_cart,
+        'label': 'Sepetlerim',
+        'gradient': [const Color(0xFFFF9800), const Color(0xFFFFB74D)],
+      },
+      {
+        'icon': Icons.room_service_outlined,
+        'selectedIcon': Icons.room_service,
+        'label': 'Hizmetler',
+        'gradient': [const Color(0xFF4ECDC4), const Color(0xFF6FE6DD)],
+      },
+      {
+        'icon': Icons.person_outline,
+        'selectedIcon': Icons.person,
+        'label': 'Profil',
+        'gradient': [const Color(0xFF1DD1A1), const Color(0xFF3DDBB7)],
+      },
     ];
 
     return Container(
-      margin: EdgeInsets.fromLTRB(horizontalPadding, 20, horizontalPadding, 12),
-      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadow.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-            spreadRadius: -2,
-          ),
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-            spreadRadius: -8,
+            color: AppColors.black.withOpacity(0.1),
+            blurRadius: 25,
+            offset: const Offset(0, -8),
           ),
         ],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
       ),
-      child: Row(
-        children: List.generate(5, (index) {
-          final item = tabItems[index];
-          final isSelected = _selectedTabIndex == index;
-
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                if (_selectedTabIndex != index) {
-                  _tabController.animateTo(index);
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeInOutCubic,
-                height: tabHeight,
-                decoration: BoxDecoration(
-                  gradient: isSelected
-                      ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      item['activeColor'] as Color,
-                      (item['activeColor'] as Color).withOpacity(0.8),
-                    ],
-                  )
-                      : null,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: isSelected ? [
-                    BoxShadow(
-                      color: (item['activeColor'] as Color).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ] : null,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedScale(
-                      scale: isSelected ? 1.1 : 1.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Icon(
-                        item['icon'] as IconData,
-                        color: isSelected
-                            ? AppColors.white
-                            : AppColors.textSecondary,
-                        size: isCompact ? 20 : 22,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
-                      style: AppTypography.bodySmall.copyWith(
-                        color: isSelected
-                            ? AppColors.white
-                            : AppColors.textSecondary,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        fontSize: isCompact ? 11 : 12,
-                      ),
-                      child: Text(item['label'] as String),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildEnhancedFloatingActionButton() {
-    if (_selectedTabIndex != 0) return const SizedBox.shrink();
-
-    return AnimatedBuilder(
-      animation: _fabScaleAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _fabScaleAnimation.value,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.white,
-                  AppColors.white.withOpacity(0.95),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadow.withOpacity(0.15),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                  spreadRadius: 0,
-                ),
-                BoxShadow(
-                  color: AppColors.shadow.withOpacity(0.1),
-                  blurRadius: 40,
-                  offset: const Offset(0, 16),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Arama Butonu
-                Expanded(
-                  child: _buildFloatingActionButton(
-                    icon: Icons.search_rounded,
-                    label: 'Ara',
-                    color: AppColors.primary,
-                    onTap: _navigateToSearch,
-                  ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Filtre Butonu
-                Expanded(
-                  child: _buildFloatingActionButton(
-                    icon: Icons.tune_rounded,
-                    label: 'Filtre',
-                    color: AppColors.secondary,
-                    onTap: _showFilterOptions,
-                  ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Siparişler Butonu
-                Expanded(
-                  child: _buildFloatingActionButton(
-                    icon: Icons.receipt_long_rounded,
-                    label: 'Siparişler',
-                    color: AppColors.info,
-                    onTap: () => _navigateToTab(1),
-                    badge: _hasNewOrders ? '!' : null,
-                  ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Sepet Butonu
-                Expanded(
-                  child: _buildFloatingActionButton(
-                    icon: Icons.shopping_cart_rounded,
-                    label: 'Sepet',
-                    color: AppColors.accent,
-                    onTap: _navigateToCart,
-                    badge: _cartItemCount > 0 ? _cartItemCount.toString() : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFloatingActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    String? badge,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+      child: SafeArea(
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1.5,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    color: color,
-                    size: 24,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+          height: 75,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: tabItems.asMap().entries.map((entry) {
+              final index = entry.key;
+              final tab = entry.value;
+              final isSelected = index == _selectedTabIndex;
+              final gradientColors = tab['gradient'] as List<Color>;
               
-              // Badge
-              if (badge != null)
-                Positioned(
-                  top: -2,
-                  right: 4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    if (_selectedTabIndex != index) {
+                      _tabController.animateTo(index);
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
+                      gradient: isSelected ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: gradientColors,
+                      ) : null,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: isSelected ? [
                         BoxShadow(
-                          color: AppColors.error.withOpacity(0.3),
-                          blurRadius: 4,
+                          color: gradientColors.first.withOpacity(0.3),
+                          blurRadius: 8,
                           offset: const Offset(0, 2),
+                        ),
+                      ] : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? AppColors.white.withOpacity(0.3)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Stack(
+                            children: [
+                              Icon(
+                                isSelected 
+                                    ? tab['selectedIcon'] as IconData 
+                                    : tab['icon'] as IconData,
+                                color: isSelected 
+                                    ? AppColors.white 
+                                    : AppColors.textSecondary,
+                                size: 22,
+                              ),
+                              // Sepet badge
+                              if (index == 3 && _cartItemCount > 0)
+                                Positioned(
+                                  top: -2,
+                                  right: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error,
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.error.withOpacity(0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 300),
+                          style: AppTypography.caption.copyWith(
+                            color: isSelected 
+                                ? AppColors.white 
+                                : AppColors.textSecondary,
+                            fontWeight: isSelected 
+                                ? FontWeight.w700 
+                                : FontWeight.w500,
+                            fontSize: 10,
+                          ),
+                          child: Text(
+                            tab['label'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
-                    ),
-                    child: Text(
-                      badge,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
                   ),
                 ),
-            ],
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBarActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool badge = false,
+    int? badgeCount,
+  }) {
+    final showBadge = badge || (badgeCount != null && badgeCount > 0);
+    final badgeText = badgeCount != null && badgeCount > 0 
+        ? badgeCount.toString() 
+        : '!';
+
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Icon(
+                  icon,
+                  color: AppColors.white,
+                  size: 24,
+                ),
+                if (showBadge)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.error.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
