@@ -175,6 +175,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   Future<void> _loadMenuData() async {
     try {
+      print('🔄 MenuPage: Loading menu data for business: ${widget.businessId}');
       setState(() {
         _isLoading = true;
         _hasError = false;
@@ -182,10 +183,21 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       });
 
              // Load business, categories, products, and discounts
-       final businessData = await _customerFirestoreService.getBusiness(widget.businessId);
+       print('📊 MenuPage: Loading business data...');
+       final businessData = await _businessFirestoreService.getBusiness(widget.businessId);
+       print('📊 MenuPage: Business data loaded: ${businessData?.name ?? 'null'}');
+       
+       print('📂 MenuPage: Loading categories...');
        final categoriesData = await _businessFirestoreService.getBusinessCategories(widget.businessId);
+       print('📂 MenuPage: Categories loaded: ${categoriesData.length} items');
+       
+       print('🍽️ MenuPage: Loading products...');
        final productsData = await _businessFirestoreService.getBusinessProducts(widget.businessId);
+       print('🍽️ MenuPage: Products loaded: ${productsData.length} items');
+       
+       print('🎯 MenuPage: Loading discounts...');
        final discountsData = await _businessFirestoreService.getDiscountsByBusinessId(widget.businessId);
+       print('🎯 MenuPage: Discounts loaded: ${discountsData.length} items');
 
       // Load favorite products
       List<String> favoriteProductIds = [];
@@ -198,12 +210,14 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       }
 
       if (businessData != null) {
+        print('✅ MenuPage: Business data is valid, processing...');
         // Apply multilingual translations
         final translatedCategories = categoriesData; // .map((category) =>
             // _multilingualService.translateCategory(category, _currentLanguage)).toList();
         final translatedProducts = productsData; // .map((product) =>
             // _multilingualService.translateProduct(product, _currentLanguage)).toList();
 
+        print('🔄 MenuPage: Setting state with loaded data...');
         setState(() {
           _business = businessData;
           _categories = translatedCategories;
@@ -213,6 +227,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           _filterProducts();
           _isLoading = false;
         });
+        print('✅ MenuPage: State updated successfully');
 
         // Initialize tab controller after categories are loaded
         if (_categories.isNotEmpty && _tabController == null) {
@@ -223,6 +238,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         // Log business visit
         // _logBusinessVisit();
       } else {
+        print('❌ MenuPage: Business data is null');
         setState(() {
           _hasError = true;
           _errorMessage = 'İşletme bilgileri yüklenirken bir hata oluştu.';
@@ -230,6 +246,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         });
       }
     } catch (e) {
+      print('❌ MenuPage: Exception occurred: $e');
       setState(() {
         _hasError = true;
         _errorMessage = 'Veriler yüklenirken bir hata oluştu: $e';
