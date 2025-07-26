@@ -466,7 +466,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: _selectedTabIndex == 0, // Sadece ana sayfada extend
+      appBar: _selectedTabIndex != 0 ? _buildSimpleAppBar() : null, // Diğer sekmelerde basit app bar
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -474,16 +475,13 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             offset: Offset(0, _slideAnimation.value),
             child: Opacity(
               opacity: _fadeAnimation.value,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  _buildModernSliverAppBar(screenWidth, screenHeight),
-                  SliverFillRemaining(
-                    child: TabBarView(
-                      controller: _tabController,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        CustomerHomeTab(
+              child: _selectedTabIndex == 0 
+                ? CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      _buildModernSliverAppBar(screenWidth, screenHeight),
+                      SliverFillRemaining(
+                        child: CustomerHomeTab(
                           userId: widget.userId,
                           user: _user,
                           customerData: _customerData,
@@ -495,6 +493,13 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                             _tabController.animateTo(tabIndex);
                           },
                         ),
+                      ),
+                    ],
+                  )
+                : IndexedStack(
+                    index: _selectedTabIndex,
+                    children: [
+                        Container(), // Ana sayfa için placeholder (yukarıda zaten var)
                         CustomerOrdersTab(
                           userId: widget.userId,
                           customerData: _customerData,
@@ -538,6 +543,36 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         },
       ),
       bottomNavigationBar: _buildModernBottomNavigation(),
+    );
+  }
+
+  AppBar _buildSimpleAppBar() {
+    final tabTitles = ['Ana Sayfa', 'Siparişlerim', 'Favorilerim', 'Sepetlerim', 'Hizmetlerim', 'Profilim'];
+    
+    return AppBar(
+      backgroundColor: AppColors.primary,
+      elevation: 0,
+      centerTitle: true,
+      automaticallyImplyLeading: false,
+      title: Text(
+        tabTitles[_selectedTabIndex],
+        style: AppTypography.h6.copyWith(
+          color: AppColors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primary,
+              AppColors.primaryLight,
+            ],
+          ),
+        ),
+      ),
     );
   }
 
