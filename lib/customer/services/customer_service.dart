@@ -833,6 +833,17 @@ class CustomerService {
     }
   }
 
+  /// Favori ürün ID'lerini getir
+  Future<List<String>> getFavoriteProductIds({String? customerId}) async {
+    try {
+      final favoriteProducts = await getFavoriteProducts(customerId: customerId);
+      return favoriteProducts.map((f) => f.productId).toList();
+    } catch (e) {
+      print('Favori ürün ID\'leri alınırken hata: $e');
+      return [];
+    }
+  }
+
   // Private helper methods
   Map<String, dynamic> _parseQRCodeData(String qrCodeData) {
     try {

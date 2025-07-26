@@ -203,23 +203,26 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         return [];
       }
 
+      // CustomerService'den customerId'yi al
+      final customerId = _customerService.currentCustomer?.id;
+      if (customerId == null) {
+        print('🔒 MenuPage: No CustomerService customerId, returning empty favorites');
+        return [];
+      }
+
       // Firebase'den direkt olarak favorileri yükle
-      print('🔥 MenuPage: Loading favorites directly from Firebase for user: ${currentUser.uid}');
+      
       final customerFirestoreService = _customerFirestoreService;
       
-      // Query product_favorites collection directly
+      // Query product_favorites collection directly with correct customerId
       final favoritesSnapshot = await customerFirestoreService.firestore
           .collection('product_favorites')
-          .where('customerId', isEqualTo: currentUser.uid)
+          .where('customerId', isEqualTo: customerId)  // CustomerService'den alınan ID kullan
           .orderBy('createdAt', descending: true)
           .get();
 
-      print('🔥 MenuPage: Found ${favoritesSnapshot.docs.length} favorite documents in Firebase');
-      
       final favorites = favoritesSnapshot.docs.map((doc) {
-        final data = doc.data();
-        print('🔥 MenuPage: Favorite document data: $data');
-        return data;
+        return doc.data();
       }).toList();
 
       return favorites;
@@ -255,68 +258,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _toggleProductFavorite(String productId) async {
-    try {
-      print('🔄 MenuPage: Toggling favorite for product: $productId');
-      await _customerService.toggleProductFavorite(productId, widget.businessId);
-      
-      // Favori listesini güncelle
-      final favoriteIds = await _customerService.getFavoriteProductIds();
-      if (mounted) {
-        setState(() {
-          _favoriteProductIds = favoriteIds;
-        });
-      }
-      
-      // Başarı mesajı
-      final isFavorite = favoriteIds.contains(productId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded, 
-                  color: AppColors.white, 
-                  size: 20
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(isFavorite ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı')
-                ),
-              ],
-            ),
-            backgroundColor: isFavorite ? AppColors.success : AppColors.info,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-      
-      print('✅ MenuPage: Favorite toggled successfully. Is favorite: $isFavorite');
-    } catch (e) {
-      print('❌ MenuPage: Error toggling favorite: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error_outline_rounded, color: AppColors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Favori eklerken hata: $e')),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-          ),
-        );
-      }
-    }
-  }
+
 
   Future<void> _loadMenuData() async {
     try {
@@ -349,11 +291,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       // Load favorite products from Firebase
       List<String> favoriteProductIds = [];
       try {
-        print('💖 MenuPage: Loading favorite product IDs...');
-        favoriteProductIds = await _customerService.getFavoriteProductIds();
-        print('💖 MenuPage: Favorite product IDs loaded: $favoriteProductIds');
+        print('💖 MenuPage: Loading favorite products from Firebase...');
+        final favoriteProducts = await _loadFavoritesFromFirebase();
+        favoriteProductIds = favoriteProducts.map((f) => f['productId'] as String).toList();
+        print('💖 MenuPage: Favorite products loaded from Firebase: ${favoriteProductIds.length} items - $favoriteProductIds');
       } catch (e) {
-        print('❌ MenuPage: Error loading favorite products: $e');
+        print('❌ MenuPage: Error loading favorite products from Firebase: $e');
         favoriteProductIds = [];
       }
 
@@ -1719,7 +1662,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           child: InkWell(
-                            onTap: () => _toggleProductFavorite(product.id),
+                            onTap: () => _toggleProductFavorite(product),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
                               width: 24,

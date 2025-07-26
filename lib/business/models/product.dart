@@ -80,6 +80,11 @@ class Product {
     );
   }
 
+  // Firestore factory method - alias for fromJson
+  factory Product.fromFirestore(Map<String, dynamic> data, String id) {
+    return Product.fromJson(data, id: id);
+  }
+
   static double _parsePrice(dynamic value) {
     if (value == null) return 0.0;
     

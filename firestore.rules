@@ -200,6 +200,32 @@ service cloud.firestore {
     match /businesses/{businessId} {
       allow read: if true; // Public read için QR menü erişimi
       allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      
+      // Business subcollections - işletme alt koleksiyonları
+      match /products/{productId} {
+        allow read: if true; // Public read için menü erişimi
+        allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      }
+      
+      match /categories/{categoryId} {
+        allow read: if true; // Public read için menü erişimi
+        allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      }
+      
+      match /discounts/{discountId} {
+        allow read: if true; // Public read için menü erişimi
+        allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      }
+      
+      match /staff/{staffId} {
+        allow read: if true; // Public read için personel erişimi
+        allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      }
+      
+      match /orders/{orderId} {
+        allow read: if true; // Public read için sipariş erişimi
+        allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+      }
     }
     
     // Waiter calls collection - garson çağrıları
