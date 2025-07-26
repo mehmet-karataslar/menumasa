@@ -133,21 +133,38 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
       final favoriteBusinesses = businesses.where((b) => favoriteBusinessIds.contains(b.id)).toList();
 
       // Favori ürünleri yükle
-      final productFavorites = await _customerService.getFavoriteProducts();
-      final favoriteProductIds = productFavorites.map((f) => f.productId).toSet();
+      List<app_user.ProductFavorite> productFavorites = [];
+      List<Product> favoriteProducts = [];
       
-      // Tüm ürünleri al ve favori olanları filtrele
-      final allProducts = await _dataService.getProducts();
-      final favoriteProducts = allProducts.where((p) => favoriteProductIds.contains(p.productId)).toList();
+      try {
+        // CustomerService'e customer data'yı set et (eğer mevcut değilse)
+        if (_customerService.currentCustomer == null && widget.customerData != null) {
+          // Burada manuel olarak customer'ı oluşturabiliriz
+          // Ancak daha güvenli olan, customer service'in zaten dolu olmasını beklemek
+          print('CustomerService currentCustomer is null, skipping product favorites');
+        } else {
+          productFavorites = await _customerService.getFavoriteProducts(customerId: widget.userId);
+          final favoriteProductIds = productFavorites.map((f) => f.productId).toSet();
+          
+          // Tüm ürünleri al ve favori olanları filtrele
+          final allProducts = await _dataService.getProducts();
+          favoriteProducts = allProducts.where((p) => favoriteProductIds.contains(p.productId)).toList();
+        }
+      } catch (e) {
+        print('Favori ürünler yüklenirken hata: $e');
+        // Hata durumunda boş liste kullan
+        productFavorites = [];
+        favoriteProducts = [];
+      }
 
-             // Kategorileri yükle
-       try {
-         final categories = await _dataService.getCategories();
-         _allCategories = categories;
-       } catch (e) {
-         print('Kategoriler yüklenirken hata: $e');
-         _allCategories = [];
-       }
+      // Kategorileri yükle
+      try {
+        final categories = await _dataService.getCategories();
+        _allCategories = categories;
+      } catch (e) {
+        print('Kategoriler yüklenirken hata: $e');
+        _allCategories = [];
+      }
 
       setState(() {
         _favoriteBusinesses = favoriteBusinesses;

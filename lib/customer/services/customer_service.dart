@@ -798,21 +798,28 @@ class CustomerService {
   }
 
   /// Favori ürünleri getir
-  Future<List<app_user.ProductFavorite>> getFavoriteProducts() async {
+  Future<List<app_user.ProductFavorite>> getFavoriteProducts({String? customerId}) async {
     try {
-      if (_currentCustomer == null) {
-        throw CustomerException('Giriş yapılması gerekli');
+      String? userId;
+      
+      if (customerId != null) {
+        userId = customerId;
+      } else if (_currentCustomer != null) {
+        userId = _currentCustomer!.id;
+      } else {
+        // Eğer customer service'te kullanıcı yoksa boş liste döndür
+        return [];
       }
 
-           // CustomerProfile'dan favori ürünleri al
-     if (_currentProfile?.productFavorites != null) {
-       return _currentProfile!.productFavorites;
-     }
+      // CustomerProfile'dan favori ürünleri al
+      if (_currentProfile?.productFavorites != null && _currentCustomer != null) {
+        return _currentProfile!.productFavorites;
+      }
 
       // Firestore'dan favori ürünleri al
       final query = await _firestore
           .collection('product_favorites')
-          .where('customerId', isEqualTo: _currentCustomer!.id)
+          .where('customerId', isEqualTo: userId)
           .orderBy('createdAt', descending: true)
           .get();
 
@@ -820,7 +827,9 @@ class CustomerService {
           .map((doc) => app_user.ProductFavorite.fromJson(doc.data()))
           .toList();
     } catch (e) {
-      throw CustomerException('Favori ürünler alınırken hata: $e');
+      print('Favori ürünler alınırken hata: $e');
+      // Hata durumunda boş liste döndür
+      return [];
     }
   }
 

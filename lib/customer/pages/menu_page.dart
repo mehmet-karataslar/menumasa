@@ -194,6 +194,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         favoriteProductIds = favoriteProducts.map((f) => f.productId).toList();
       } catch (e) {
         print('Favori ürünler yüklenirken hata: $e');
+        favoriteProductIds = [];
       }
 
       if (businessData != null) {
