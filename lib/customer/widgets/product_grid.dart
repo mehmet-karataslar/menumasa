@@ -7,11 +7,14 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/cart_service.dart';
+import '../../customer/services/customer_service.dart';
 
 class ProductGrid extends StatelessWidget {
   final List<Product> products;
   final Function(Product)? onProductTap;
   final Function(Product)? onAddToCart;
+  final Function(Product)? onToggleFavorite;
+  final List<String>? favoriteProductIds;
   final EdgeInsets? padding;
   final int crossAxisCount;
   final double childAspectRatio;
@@ -22,6 +25,8 @@ class ProductGrid extends StatelessWidget {
     required this.products,
     this.onProductTap,
     this.onAddToCart,
+    this.onToggleFavorite,
+    this.favoriteProductIds,
     this.padding,
     this.crossAxisCount = 2,
     this.childAspectRatio = 0.75,
@@ -56,10 +61,13 @@ class ProductGrid extends StatelessWidget {
           itemCount: products.length,
           itemBuilder: (context, index) {
             final product = products[index];
+            final isFavorite = favoriteProductIds?.contains(product.productId) ?? false;
             return ModernProductCard(
               product: product,
               onTap: onProductTap != null ? () => onProductTap!(product) : null,
               onAddToCart: onAddToCart != null ? () => onAddToCart!(product) : null,
+              onToggleFavorite: onToggleFavorite != null ? () => onToggleFavorite!(product) : null,
+              isFavorite: isFavorite,
               index: index,
               isQRMenu: isQRMenu,
             );
@@ -74,6 +82,8 @@ class ModernProductCard extends StatefulWidget {
   final Product product;
   final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
+  final VoidCallback? onToggleFavorite;
+  final bool isFavorite;
   final int index;
   final bool isQRMenu;
 
@@ -82,6 +92,8 @@ class ModernProductCard extends StatefulWidget {
     required this.product,
     this.onTap,
     this.onAddToCart,
+    this.onToggleFavorite,
+    required this.isFavorite,
     required this.index,
     this.isQRMenu = false,
   }) : super(key: key);
@@ -238,23 +250,67 @@ class _ModernProductCardState extends State<ModernProductCard>
                 children: _buildCompactBadges(),
               ),
               
-              // Discount badge
-              if (hasDiscount)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    widget.product.formattedDiscountPercentage,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
+              // Right side (discount and favorite)
+              Row(
+                children: [
+                  // Discount badge
+                  if (hasDiscount)
+                    Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.product.formattedDiscountPercentage,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  
+                  // Favorite button
+                  if (widget.onToggleFavorite != null)
+                    Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          widget.onToggleFavorite!();
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.shadow.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            widget.isFavorite 
+                                ? Icons.favorite_rounded 
+                                : Icons.favorite_border_rounded,
+                            color: widget.isFavorite 
+                                ? AppColors.accent 
+                                : AppColors.textSecondary,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -440,6 +496,8 @@ class ModernProductList extends StatelessWidget {
   final List<Product> products;
   final Function(Product) onProductTapped;
   final Function(Product)? onAddToCart;
+  final Function(Product)? onToggleFavorite;
+  final List<String>? favoriteProductIds;
   final EdgeInsets? padding;
 
   const ModernProductList({
@@ -447,6 +505,8 @@ class ModernProductList extends StatelessWidget {
     required this.products,
     required this.onProductTapped,
     this.onAddToCart,
+    this.onToggleFavorite,
+    this.favoriteProductIds,
     this.padding,
   }) : super(key: key);
 
@@ -459,10 +519,13 @@ class ModernProductList extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final product = products[index];
+        final isFavorite = favoriteProductIds?.contains(product.productId) ?? false;
         return ModernProductListItem(
           product: product,
           onTap: () => onProductTapped(product),
           onAddToCart: onAddToCart != null ? () => onAddToCart!(product) : null,
+          onToggleFavorite: onToggleFavorite != null ? () => onToggleFavorite!(product) : null,
+          isFavorite: isFavorite,
           index: index,
         );
       },
@@ -474,6 +537,8 @@ class ModernProductListItem extends StatefulWidget {
   final Product product;
   final VoidCallback onTap;
   final VoidCallback? onAddToCart;
+  final VoidCallback? onToggleFavorite;
+  final bool isFavorite;
   final int index;
 
   const ModernProductListItem({
@@ -481,6 +546,8 @@ class ModernProductListItem extends StatefulWidget {
     required this.product,
     required this.onTap,
     this.onAddToCart,
+    this.onToggleFavorite,
+    required this.isFavorite,
     required this.index,
   }) : super(key: key);
 
@@ -587,30 +654,75 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                   : _buildListImagePlaceholder(),
                             ),
                             
-                            // Discount Badge
-                            if (hasDiscount)
-                              Positioned(
-                                top: 6,
-                                left: 6,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.accent,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    widget.product.formattedDiscountPercentage,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
+                            // Top overlays
+                            Positioned(
+                              top: 6,
+                              left: 6,
+                              right: 6,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Discount Badge
+                                  if (hasDiscount)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.accent,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        widget.product.formattedDiscountPercentage,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
+                                  
+                                  // Favorite button
+                                  if (widget.onToggleFavorite != null)
+                                    Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: InkWell(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          widget.onToggleFavorite!();
+                                        },
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.white.withOpacity(0.9),
+                                            borderRadius: BorderRadius.circular(8),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppColors.shadow.withOpacity(0.1),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            widget.isFavorite 
+                                                ? Icons.favorite_rounded 
+                                                : Icons.favorite_border_rounded,
+                                            color: widget.isFavorite 
+                                                ? AppColors.accent 
+                                                : AppColors.textSecondary,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
+                            ),
                           ],
                         ),
                       ),

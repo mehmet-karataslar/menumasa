@@ -491,7 +491,9 @@ class CustomerData {
   final CustomerStats stats;
   final List<String> favoriteBusinessIds;
   final List<String> recentBusinessIds;
+  final List<String> favoriteProductIds;
   final List<CustomerFavorite> favorites;
+  final List<ProductFavorite> productFavorites;
   final List<CustomerOrder> orderHistory;
   final List<CustomerAddress> addresses;
   final List<CustomerPaymentInfo> paymentMethods;
@@ -512,7 +514,9 @@ class CustomerData {
     this.stats = const CustomerStats(),
     this.favoriteBusinessIds = const [],
     this.recentBusinessIds = const [],
+    this.favoriteProductIds = const [],
     this.favorites = const [],
+    this.productFavorites = const [],
     this.orderHistory = const [],
     this.addresses = const [],
     this.paymentMethods = const [],
@@ -535,8 +539,12 @@ class CustomerData {
       stats: CustomerStats.fromJson(json['stats'] ?? {}),
       favoriteBusinessIds: List<String>.from(json['favoriteBusinessIds'] ?? []),
       recentBusinessIds: List<String>.from(json['recentBusinessIds'] ?? []),
+      favoriteProductIds: List<String>.from(json['favoriteProductIds'] ?? []),
       favorites: (json['favorites'] as List<dynamic>? ?? [])
           .map((f) => CustomerFavorite.fromJson(f))
+          .toList(),
+      productFavorites: (json['productFavorites'] as List<dynamic>? ?? [])
+          .map((f) => ProductFavorite.fromJson(f))
           .toList(),
       orderHistory: (json['orderHistory'] as List<dynamic>? ?? [])
           .map((o) => CustomerOrder.fromJson(o))
@@ -570,7 +578,9 @@ class CustomerData {
       'stats': stats.toJson(),
       'favoriteBusinessIds': favoriteBusinessIds,
       'recentBusinessIds': recentBusinessIds,
+      'favoriteProductIds': favoriteProductIds,
       'favorites': favorites.map((f) => f.toJson()).toList(),
+      'productFavorites': productFavorites.map((f) => f.toJson()).toList(),
       'orderHistory': orderHistory.map((o) => o.toJson()).toList(),
       'addresses': addresses.map((a) => a.toJson()).toList(),
       'paymentMethods': paymentMethods.map((p) => p.toJson()).toList(),
@@ -596,7 +606,9 @@ class CustomerData {
     CustomerStats? stats,
     List<String>? favoriteBusinessIds,
     List<String>? recentBusinessIds,
+    List<String>? favoriteProductIds,
     List<CustomerFavorite>? favorites,
+    List<ProductFavorite>? productFavorites,
     List<CustomerOrder>? orderHistory,
     List<CustomerAddress>? addresses,
     List<CustomerPaymentInfo>? paymentMethods,
@@ -617,7 +629,9 @@ class CustomerData {
       stats: stats ?? this.stats,
       favoriteBusinessIds: favoriteBusinessIds ?? this.favoriteBusinessIds,
       recentBusinessIds: recentBusinessIds ?? this.recentBusinessIds,
+      favoriteProductIds: favoriteProductIds ?? this.favoriteProductIds,
       favorites: favorites ?? this.favorites,
+      productFavorites: productFavorites ?? this.productFavorites,
       orderHistory: orderHistory ?? this.orderHistory,
       addresses: addresses ?? this.addresses,
       paymentMethods: paymentMethods ?? this.paymentMethods,
@@ -1362,5 +1376,117 @@ class CustomerPaymentInfo {
 
   // Alias for toJson to match the expected method name
   Map<String, dynamic> toMap() => toJson();
+}
+ 
+class ProductFavorite {
+  final String id;
+  final String productId;
+  final String businessId;
+  final String customerId;
+  final DateTime createdAt;
+  final String? productName;
+  final String? productDescription;
+  final double? productPrice;
+  final String? productImage;
+  final String? businessName;
+  final String? categoryName;
+  final int orderCount;
+  final DateTime? lastOrderedAt;
+  final DateTime? addedDate;
+
+  ProductFavorite({
+    required this.id,
+    required this.productId,
+    required this.businessId,
+    required this.customerId,
+    required this.createdAt,
+    this.productName,
+    this.productDescription,
+    this.productPrice,
+    this.productImage,
+    this.businessName,
+    this.categoryName,
+    this.orderCount = 0,
+    this.lastOrderedAt,
+    this.addedDate,
+  });
+
+  factory ProductFavorite.fromJson(Map<String, dynamic> json) {
+    return ProductFavorite(
+      id: json['id'] ?? '',
+      productId: json['productId'] ?? '',
+      businessId: json['businessId'] ?? '',
+      customerId: json['customerId'] ?? '',
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      productName: json['productName'],
+      productDescription: json['productDescription'],
+      productPrice: json['productPrice']?.toDouble(),
+      productImage: json['productImage'],
+      businessName: json['businessName'],
+      categoryName: json['categoryName'],
+      orderCount: json['orderCount'] ?? 0,
+      lastOrderedAt: json['lastOrderedAt'] != null ? DateTime.parse(json['lastOrderedAt']) : null,
+      addedDate: json['addedDate'] != null ? DateTime.parse(json['addedDate']) : null,
+    );
+  }
+
+  // Alias for fromJson to match the expected method name
+  factory ProductFavorite.fromMap(Map<String, dynamic> map) => ProductFavorite.fromJson(map);
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'productId': productId,
+      'businessId': businessId,
+      'customerId': customerId,
+      'createdAt': createdAt.toIso8601String(),
+      'productName': productName,
+      'productDescription': productDescription,
+      'productPrice': productPrice,
+      'productImage': productImage,
+      'businessName': businessName,
+      'categoryName': categoryName,
+      'orderCount': orderCount,
+      'lastOrderedAt': lastOrderedAt?.toIso8601String(),
+      'addedDate': addedDate?.toIso8601String(),
+    };
+  }
+
+  // Alias for toJson to match the expected method name
+  Map<String, dynamic> toMap() => toJson();
+
+  ProductFavorite copyWith({
+    String? id,
+    String? productId,
+    String? businessId,
+    String? customerId,
+    DateTime? createdAt,
+    String? productName,
+    String? productDescription,
+    double? productPrice,
+    String? productImage,
+    String? businessName,
+    String? categoryName,
+    int? orderCount,
+    DateTime? lastOrderedAt,
+    DateTime? addedDate,
+  }) {
+    return ProductFavorite(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      businessId: businessId ?? this.businessId,
+      customerId: customerId ?? this.customerId,
+      createdAt: createdAt ?? this.createdAt,
+      productName: productName ?? this.productName,
+      productDescription: productDescription ?? this.productDescription,
+      productPrice: productPrice ?? this.productPrice,
+      productImage: productImage ?? this.productImage,
+      businessName: businessName ?? this.businessName,
+      categoryName: categoryName ?? this.categoryName,
+      orderCount: orderCount ?? this.orderCount,
+      lastOrderedAt: lastOrderedAt ?? this.lastOrderedAt,
+      addedDate: addedDate ?? this.addedDate,
+    );
+  }
 }
  

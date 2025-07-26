@@ -8,7 +8,9 @@ import '../models/customer_session.dart';
 import '../models/customer_activity_log.dart';
 import '../models/customer_profile.dart';
 import '../../business/models/business.dart';
+import '../../business/models/product.dart';
 import '../../data/models/order.dart' as app_order;
+import '../../data/models/user.dart' as app_user;
 import '../../core/services/storage_service.dart';
 
 class CustomerService {
@@ -461,6 +463,7 @@ class CustomerService {
           stats: CustomerStats.empty(),
           recentOrders: [],
           favorites: [],
+          productFavorites: [],
           addresses: [],
           paymentMethods: [],
           createdAt: DateTime.now(),
@@ -493,6 +496,7 @@ class CustomerService {
             stats: CustomerStats.empty(),
             recentOrders: [],
             favorites: [],
+            productFavorites: [],
             addresses: [],
             paymentMethods: [],
             createdAt: DateTime.now(),
@@ -666,6 +670,157 @@ class CustomerService {
           .toList();
     } catch (e) {
       throw CustomerException('Siparişler alınırken hata: $e');
+    }
+  }
+
+  /// Ürün favorilerine ekleme/çıkarma
+  Future<void> toggleProductFavorite(String productId, String businessId) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Giriş yapılması gerekli');
+      }
+
+      // Ürün bilgilerini al
+      final product = await _getProduct(productId);
+      if (product == null) {
+        throw CustomerException('Ürün bulunamadı');
+      }
+
+      // İşletme bilgilerini al
+      final business = await _getBusiness(businessId);
+      if (business == null) {
+        throw CustomerException('İşletme bulunamadı');
+      }
+
+      final isFavorite = _currentCustomer!.favoriteProductIds.contains(productId);
+      
+      if (isFavorite) {
+        // Favorilerden çıkar
+        await _removeProductFavorite(productId);
+        
+        await _logActivity(
+          action: CustomerActionType.favoriteRemove,
+          targetType: 'PRODUCT',
+          targetId: productId,
+          targetName: product.productName,
+          details: 'Ürün favorilerden çıkarıldı: ${product.productName} (${business.businessName})',
+          businessId: businessId,
+        );
+      } else {
+        // Favorilere ekle
+        await _addProductFavorite(productId, product, business);
+        
+        await _logActivity(
+          action: CustomerActionType.favoriteAdd,
+          targetType: 'PRODUCT',
+          targetId: productId,
+          targetName: product.productName,
+          details: 'Ürün favorilere eklendi: ${product.productName} (${business.businessName})',
+          businessId: businessId,
+        );
+      }
+    } catch (e) {
+      if (e is CustomerException) rethrow;
+      throw CustomerException('Ürün favori işlemi hatası: $e');
+    }
+  }
+
+  /// Favori ürünlerden sipariş verme
+  Future<String> reorderFromFavorite({
+    required String productId,
+    required String businessId,
+    int quantity = 1,
+    String? notes,
+    String? tableNumber,
+    String? customerName,
+    String? customerPhone,
+  }) async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Giriş yapılması gerekli');
+      }
+
+      // Ürün ve işletme bilgilerini al
+      final product = await _getProduct(productId);
+      if (product == null) {
+        throw CustomerException('Ürün bulunamadı');
+      }
+
+      final business = await _getBusiness(businessId);
+      if (business == null) {
+        throw CustomerException('İşletme bulunamadı');
+      }
+
+      // Sipariş öğesini oluştur
+      final orderItems = [{
+        'productId': productId,
+        'productName': product.productName,
+        'price': product.price,
+        'quantity': quantity,
+        'notes': notes,
+        'businessId': businessId,
+      }];
+
+      // Sipariş ver
+      final orderId = await placeOrder(
+        businessId: businessId,
+        orderItems: orderItems,
+        tableNumber: tableNumber,
+        notes: notes,
+        customerName: customerName,
+        customerPhone: customerPhone,
+      );
+
+      // Ürün favorisini güncelle (sipariş sayısı)
+      await _updateProductFavoriteOrderCount(productId);
+
+      // Activity log
+      await _logActivity(
+        action: CustomerActionType.orderPlace,
+        targetType: 'PRODUCT',
+        targetId: productId,
+        targetName: product.productName,
+        details: 'Favori üründen sipariş verildi: ${product.productName}',
+        businessId: businessId,
+        metadata: {
+          'orderId': orderId,
+          'quantity': quantity,
+          'price': product.price,
+          'reorderFromFavorite': true,
+        },
+      );
+
+      return orderId;
+    } catch (e) {
+      if (e is CustomerException) rethrow;
+      throw CustomerException('Favori üründen sipariş verme hatası: $e');
+    }
+  }
+
+  /// Favori ürünleri getir
+  Future<List<app_user.ProductFavorite>> getFavoriteProducts() async {
+    try {
+      if (_currentCustomer == null) {
+        throw CustomerException('Giriş yapılması gerekli');
+      }
+
+           // CustomerProfile'dan favori ürünleri al
+     if (_currentProfile?.productFavorites != null) {
+       return _currentProfile!.productFavorites;
+     }
+
+      // Firestore'dan favori ürünleri al
+      final query = await _firestore
+          .collection('product_favorites')
+          .where('customerId', isEqualTo: _currentCustomer!.id)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return query.docs
+          .map((doc) => app_user.ProductFavorite.fromJson(doc.data()))
+          .toList();
+    } catch (e) {
+      throw CustomerException('Favori ürünler alınırken hata: $e');
     }
   }
 
@@ -925,6 +1080,147 @@ class CustomerService {
       );
     } catch (e) {
       print('Activity logging error: $e');
+    }
+  }
+
+  // Private helper methods için ürün fonksiyonları
+
+  Future<Product?> _getProduct(String productId) async {
+    try {
+      final doc = await _firestore.collection('products').doc(productId).get();
+      if (doc.exists) {
+        return Product.fromJson(doc.data()!, id: doc.id);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _addProductFavorite(String productId, Product product, Business business) async {
+    if (_currentCustomer == null) return;
+
+    final favoriteId = _firestore.collection('product_favorites').doc().id;
+    final favorite = app_user.ProductFavorite(
+      id: favoriteId,
+      productId: productId,
+      businessId: business.id,
+      customerId: _currentCustomer!.id,
+      createdAt: DateTime.now(),
+      productName: product.productName,
+      productDescription: product.description,
+      productPrice: product.price,
+      productImage: product.imageUrl,
+      businessName: business.businessName,
+             categoryName: null, // product.categoryName yerine null
+      addedDate: DateTime.now(),
+    );
+
+    // Firestore'a kaydet
+    await _firestore
+        .collection('product_favorites')
+        .doc(favoriteId)
+        .set(favorite.toJson());
+
+    // Local customer data güncelle
+    final updatedProductFavorites = [..._currentCustomer!.productFavorites, favorite];
+    final updatedFavoriteProductIds = [..._currentCustomer!.favoriteProductIds, productId];
+
+    final updatedCustomer = _currentCustomer!.copyWith(
+      productFavorites: updatedProductFavorites,
+      favoriteProductIds: updatedFavoriteProductIds,
+      updatedAt: DateTime.now(),
+    );
+
+    await _firestore
+        .collection(_customerCollection)
+        .doc(_currentCustomer!.id)
+        .update(updatedCustomer.toFirestore());
+
+    _currentCustomer = updatedCustomer;
+  }
+
+  Future<void> _removeProductFavorite(String productId) async {
+    if (_currentCustomer == null) return;
+
+    // Firestore'dan sil
+    final query = await _firestore
+        .collection('product_favorites')
+        .where('customerId', isEqualTo: _currentCustomer!.id)
+        .where('productId', isEqualTo: productId)
+        .get();
+
+    for (final doc in query.docs) {
+      await doc.reference.delete();
+    }
+
+    // Local customer data güncelle
+    final updatedProductFavorites = _currentCustomer!.productFavorites
+        .where((f) => f.productId != productId)
+        .toList();
+    final updatedFavoriteProductIds = _currentCustomer!.favoriteProductIds
+        .where((id) => id != productId)
+        .toList();
+
+    final updatedCustomer = _currentCustomer!.copyWith(
+      productFavorites: updatedProductFavorites,
+      favoriteProductIds: updatedFavoriteProductIds,
+      updatedAt: DateTime.now(),
+    );
+
+    await _firestore
+        .collection(_customerCollection)
+        .doc(_currentCustomer!.id)
+        .update(updatedCustomer.toFirestore());
+
+    _currentCustomer = updatedCustomer;
+  }
+
+  Future<void> _updateProductFavoriteOrderCount(String productId) async {
+    if (_currentCustomer == null) return;
+
+    try {
+      // Firestore'daki favoriyi güncelle
+      final query = await _firestore
+          .collection('product_favorites')
+          .where('customerId', isEqualTo: _currentCustomer!.id)
+          .where('productId', isEqualTo: productId)
+          .get();
+
+      for (final doc in query.docs) {
+        final currentData = doc.data();
+        final currentOrderCount = currentData['orderCount'] ?? 0;
+        
+        await doc.reference.update({
+          'orderCount': currentOrderCount + 1,
+          'lastOrderedAt': Timestamp.fromDate(DateTime.now()),
+        });
+      }
+
+      // Local data'yı da güncelle
+      final updatedProductFavorites = _currentCustomer!.productFavorites.map((favorite) {
+        if (favorite.productId == productId) {
+          return favorite.copyWith(
+            orderCount: favorite.orderCount + 1,
+            lastOrderedAt: DateTime.now(),
+          );
+        }
+        return favorite;
+      }).toList();
+
+      final updatedCustomer = _currentCustomer!.copyWith(
+        productFavorites: updatedProductFavorites,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection(_customerCollection)
+          .doc(_currentCustomer!.id)
+          .update(updatedCustomer.toFirestore());
+
+      _currentCustomer = updatedCustomer;
+    } catch (e) {
+      print('Product favorite order count update error: $e');
     }
   }
 } 

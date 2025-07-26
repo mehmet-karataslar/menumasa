@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../data/models/user.dart' as user_models;
 import 'customer_profile.dart';
 
 // Customer Exception for error handling
@@ -58,6 +59,7 @@ class CustomerUser {
   final CustomerStats stats;
   final List<CustomerOrder> recentOrders;
   final List<CustomerFavorite> favorites;
+  final List<user_models.ProductFavorite> productFavorites;
   final List<CustomerAddress> addresses;
   final List<CustomerPaymentMethod> paymentMethods;
   final DateTime createdAt;
@@ -78,6 +80,7 @@ class CustomerUser {
     required this.stats,
     required this.recentOrders,
     required this.favorites,
+    required this.productFavorites,
     required this.addresses,
     required this.paymentMethods,
     required this.createdAt,
@@ -98,6 +101,7 @@ class CustomerUser {
       stats: CustomerStats.empty(),
       recentOrders: [],
       favorites: [],
+      productFavorites: [],
       addresses: [],
       paymentMethods: [],
       createdAt: now,
@@ -134,6 +138,9 @@ class CustomerUser {
       favorites: (data['favorites'] as List?)
           ?.map((fav) => CustomerFavorite.fromMap(fav))
           .toList() ?? [],
+             productFavorites: (data['productFavorites'] as List?)
+           ?.map((pf) => user_models.ProductFavorite.fromMap(pf))
+           .toList() ?? [],
       addresses: (data['addresses'] as List?)
           ?.map((addr) => CustomerAddress.fromMap(addr))
           .toList() ?? [],
@@ -163,6 +170,7 @@ class CustomerUser {
       'stats': stats.toMap(),
       'recentOrders': recentOrders.map((order) => order.toMap()).toList(),
       'favorites': favorites.map((fav) => fav.toMap()).toList(),
+      'productFavorites': productFavorites.map((pf) => pf.toMap()).toList(),
       'addresses': addresses.map((addr) => addr.toMap()).toList(),
       'paymentMethods': paymentMethods.map((pm) => pm.toMap()).toList(),
       'createdAt': Timestamp.fromDate(createdAt),
@@ -187,6 +195,7 @@ class CustomerUser {
     CustomerStats? stats,
     List<CustomerOrder>? recentOrders,
     List<CustomerFavorite>? favorites,
+         List<user_models.ProductFavorite>? productFavorites,
     List<CustomerAddress>? addresses,
     List<CustomerPaymentMethod>? paymentMethods,
     DateTime? updatedAt,
@@ -206,6 +215,7 @@ class CustomerUser {
       stats: stats ?? this.stats,
       recentOrders: recentOrders ?? this.recentOrders,
       favorites: favorites ?? this.favorites,
+      productFavorites: productFavorites ?? this.productFavorites,
       addresses: addresses ?? this.addresses,
       paymentMethods: paymentMethods ?? this.paymentMethods,
       createdAt: createdAt,

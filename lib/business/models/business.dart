@@ -212,6 +212,28 @@ class Business {
     return Business.fromJson({...data, 'id': doc.id});
   }
 
+  factory Business.empty() {
+    return Business(
+      id: '',
+      ownerId: '',
+      businessName: '',
+      businessDescription: '',
+      businessType: '',
+      businessAddress: '',
+      address: Address.empty(),
+      contactInfo: ContactInfo.empty(),
+      menuSettings: MenuSettings.defaults(),
+      settings: BusinessSettings.defaults(),
+      stats: BusinessStats.empty(),
+      isActive: false,
+      isOpen: false,
+      isApproved: false,
+      status: BusinessStatus.pending,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
     
@@ -494,6 +516,10 @@ class ContactInfo {
     this.whatsapp,
   });
 
+  factory ContactInfo.empty() {
+    return ContactInfo();
+  }
+
   // Getter for social media links
   Map<String, String?> get socialMedia => {
     'facebook': facebook,
@@ -501,10 +527,6 @@ class ContactInfo {
     'twitter': twitter,
     'whatsapp': whatsapp,
   };
-
-  factory ContactInfo.empty() {
-    return ContactInfo();
-  }
 
   factory ContactInfo.fromMap(Map<String, dynamic> map) {
     return ContactInfo(
@@ -657,16 +679,13 @@ class MenuSettings {
       showPrices: true,
       showDescriptions: true,
       showImages: true,
-      showAllergens: true,
+      showAllergens: false,
       showNutritionalInfo: false,
       currency: 'TRY',
       language: 'tr',
-      allergens: ['gluten', 'lactose', 'nuts', 'eggs'],
+      allergens: ['lactose'],
       allergenTranslations: {
-        'gluten': 'Gluten',
         'lactose': 'Laktoz',
-        'nuts': 'Kuruyemiş',
-        'eggs': 'Yumurta',
       },
       enableQRCode: true,
       enableOnlineOrdering: true,
@@ -674,17 +693,21 @@ class MenuSettings {
       enableDelivery: false,
       enableTakeaway: true,
       theme: 'light',
-      primaryColor: '#4A90E2',
+      primaryColor: '#8B4513',
       fontFamily: 'Roboto',
       fontSize: 14.0,
-      imageSize: 120.0,
+      imageSize: 100.0,
       showCategories: true,
       showRatings: true,
-      layoutStyle: 'grid',
+      layoutStyle: 'list',
       showNutritionInfo: false,
       showBadges: true,
       showAvailability: true,
     );
+  }
+
+  factory MenuSettings.defaults() {
+    return MenuSettings();
   }
 
   factory MenuSettings.fromMap(Map<String, dynamic> map) {
@@ -883,6 +906,10 @@ class BusinessSettings {
       enableReviews: true,
       enableLoyaltyProgram: false,
     );
+  }
+
+  factory BusinessSettings.defaults() {
+    return BusinessSettings();
   }
 
   factory BusinessSettings.fromMap(Map<String, dynamic> map) {

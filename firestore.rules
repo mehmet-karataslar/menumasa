@@ -187,6 +187,17 @@ service cloud.firestore {
       allow read, write: if true; // Misafir kullanıcılar için public erişim
     }
     
+    // Businesses collection - işletme bilgileri
+    match /businesses/{businessId} {
+      allow read: if true; // Public read için QR menü erişimi
+      allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
+    }
+    
+    // Waiter calls collection - garson çağrıları
+    match /waiter_calls/{callId} {
+      allow read, write: if true; // Public erişim (guest kullanıcılar için)
+    }
+    
     // Allow authenticated users to read/write to any collection for development
     // TODO: Make this more restrictive in production
     match /{document=**} {

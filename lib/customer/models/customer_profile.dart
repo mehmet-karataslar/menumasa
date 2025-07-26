@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../data/models/user.dart' as user_models;
 
 class CustomerProfile {
   final String customerId;
@@ -11,6 +12,7 @@ class CustomerProfile {
   final String? gender; // 'male', 'female', 'other', 'prefer_not_to_say'
   final List<CustomerAddress> addresses;
   final CustomerAddress? defaultAddress;
+  final List<user_models.ProductFavorite> productFavorites;
   final LocationSettings locationSettings;
   final NotificationSettings notificationSettings;
   final PrivacySettings privacySettings;
@@ -29,6 +31,7 @@ class CustomerProfile {
     this.gender,
     required this.addresses,
     this.defaultAddress,
+    required this.productFavorites,
     required this.locationSettings,
     required this.notificationSettings,
     required this.privacySettings,
@@ -77,6 +80,7 @@ class CustomerProfile {
     return CustomerProfile(
       customerId: customerId,
       addresses: [],
+      productFavorites: [],
       locationSettings: LocationSettings.defaultSettings(),
       notificationSettings: NotificationSettings.defaultSettings(),
       privacySettings: PrivacySettings.defaultSettings(),
@@ -107,6 +111,9 @@ class CustomerProfile {
       defaultAddress: data['defaultAddress'] != null
           ? CustomerAddress.fromMap(data['defaultAddress'])
           : null,
+      productFavorites: (data['productFavorites'] as List?)
+          ?.map((fav) => user_models.ProductFavorite.fromMap(fav))
+          .toList() ?? [],
       locationSettings: LocationSettings.fromMap(data['locationSettings'] ?? {}),
       notificationSettings: NotificationSettings.fromMap(data['notificationSettings'] ?? {}),
       privacySettings: PrivacySettings.fromMap(data['privacySettings'] ?? {}),
@@ -128,6 +135,7 @@ class CustomerProfile {
       'gender': gender,
       'addresses': addresses.map((addr) => addr.toMap()).toList(),
       'defaultAddress': defaultAddress?.toMap(),
+      'productFavorites': productFavorites.map((fav) => fav.toMap()).toList(),
       'locationSettings': locationSettings.toMap(),
       'notificationSettings': notificationSettings.toMap(),
       'privacySettings': privacySettings.toMap(),
@@ -148,6 +156,7 @@ class CustomerProfile {
     String? gender,
     List<CustomerAddress>? addresses,
     CustomerAddress? defaultAddress,
+    List<user_models.ProductFavorite>? productFavorites,
     LocationSettings? locationSettings,
     NotificationSettings? notificationSettings,
     PrivacySettings? privacySettings,
@@ -165,6 +174,7 @@ class CustomerProfile {
       gender: gender ?? this.gender,
       addresses: addresses ?? this.addresses,
       defaultAddress: defaultAddress ?? this.defaultAddress,
+      productFavorites: productFavorites ?? this.productFavorites,
       locationSettings: locationSettings ?? this.locationSettings,
       notificationSettings: notificationSettings ?? this.notificationSettings,
       privacySettings: privacySettings ?? this.privacySettings,

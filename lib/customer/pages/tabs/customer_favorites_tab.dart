@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../business/models/business.dart';
+import '../../../business/models/product.dart';
+import '../../../business/models/category.dart';
 import '../../../data/models/user.dart' as app_user;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/url_service.dart';
+import '../../../core/services/data_service.dart';
 import '../../services/customer_firestore_service.dart';
 import '../../services/customer_service.dart';
 import '../../../presentation/widgets/shared/empty_state.dart';
@@ -30,13 +33,20 @@ class CustomerFavoritesTab extends StatefulWidget {
   State<CustomerFavoritesTab> createState() => _CustomerFavoritesTabState();
 }
 
-class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
+class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> 
+    with TickerProviderStateMixin {
   final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
   final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
+  final DataService _dataService = DataService();
 
+  late TabController _tabController;
+  
   List<Business> _favoriteBusinesses = [];
+  List<Product> _favoriteProducts = [];
+  List<app_user.ProductFavorite> _productFavorites = [];
   List<Business> _allBusinesses = [];
+  List<Category> _allCategories = []; // Yeni eklenen kategori listesi
   bool _isLoading = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -44,12 +54,14 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadFavorites();
     _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -60,7 +72,7 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
     });
   }
 
-  List<Business> get _filteredFavorites {
+  List<Business> get _filteredFavoriteBusinesses {
     if (_searchQuery.isEmpty) {
       return _favoriteBusinesses;
     }
@@ -73,6 +85,28 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
     }).toList();
   }
 
+  List<Product> get _filteredFavoriteProducts {
+    if (_searchQuery.isEmpty) {
+      return _favoriteProducts;
+    }
+    
+    return _favoriteProducts.where((product) {
+      final query = _searchQuery.toLowerCase();
+      return product.name.toLowerCase().contains(query) ||
+             (product.description?.toLowerCase().contains(query) ?? false) ||
+             (_getCategoryName(product.categoryId)?.toLowerCase().contains(query) ?? false);
+    }).toList();
+  }
+
+  String? _getCategoryName(String categoryId) {
+    try {
+      final category = _allCategories.firstWhere((c) => c.categoryId == categoryId);
+      return category.name;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> _loadFavorites() async {
     setState(() {
       _isLoading = true;
@@ -83,25 +117,42 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
       final businesses = await _customerFirestoreService.getBusinesses();
       _allBusinesses = businesses;
       
-      // Favori işletme ID'lerini al - hem CustomerData hem CustomerService'den
-      Set<String> favoriteIds = <String>{};
+      // Favori işletme ID'lerini al
+      Set<String> favoriteBusinessIds = <String>{};
       
-      // CustomerData'dan favori ID'leri al
       if (widget.customerData?.favorites != null) {
-        favoriteIds.addAll(widget.customerData!.favorites.map((f) => f.businessId));
+        favoriteBusinessIds.addAll(widget.customerData!.favorites.map((f) => f.businessId));
       }
       
-      // CustomerService'den de favori ID'leri al (daha güncel olabilir)
       final currentCustomer = _customerService.currentCustomer;
       if (currentCustomer?.favoriteBusinessIds != null) {
-        favoriteIds.addAll(currentCustomer!.favoriteBusinessIds);
+        favoriteBusinessIds.addAll(currentCustomer!.favoriteBusinessIds);
       }
       
       // Favori işletmeleri filtrele
-      final favorites = businesses.where((b) => favoriteIds.contains(b.id)).toList();
+      final favoriteBusinesses = businesses.where((b) => favoriteBusinessIds.contains(b.id)).toList();
+
+      // Favori ürünleri yükle
+      final productFavorites = await _customerService.getFavoriteProducts();
+      final favoriteProductIds = productFavorites.map((f) => f.productId).toSet();
+      
+      // Tüm ürünleri al ve favori olanları filtrele
+      final allProducts = await _dataService.getProducts();
+      final favoriteProducts = allProducts.where((p) => favoriteProductIds.contains(p.productId)).toList();
+
+             // Kategorileri yükle
+       try {
+         final categories = await _dataService.getCategories();
+         _allCategories = categories;
+       } catch (e) {
+         print('Kategoriler yüklenirken hata: $e');
+         _allCategories = [];
+       }
 
       setState(() {
-        _favoriteBusinesses = favorites;
+        _favoriteBusinesses = favoriteBusinesses;
+        _favoriteProducts = favoriteProducts;
+        _productFavorites = productFavorites;
       });
     } catch (e) {
       print('Favoriler yükleme hatası: $e');
@@ -117,18 +168,12 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
     widget.onRefresh();
   }
 
-  Future<void> _toggleFavorite(Business business) async {
+  Future<void> _toggleBusinessFavorite(Business business) async {
     try {
-      // CustomerService kullanarak favori durumunu değiştir
       await _customerService.toggleFavorite(business.id);
-      
-      // Favorileri yeniden yükle
       await _loadFavorites();
-      
-      // Üst widget'ı da yenile
       widget.onRefresh();
       
-      // Kullanıcıya bilgi ver
       final isFavorite = _favoriteBusinesses.any((b) => b.id == business.id);
       
       if (mounted) {
@@ -171,6 +216,124 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
                 const Icon(Icons.error_outline_rounded, color: AppColors.white),
                 const SizedBox(width: 12),
                 Expanded(child: Text('Hata: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleProductFavorite(Product product) async {
+    try {
+      await _customerService.toggleProductFavorite(product.productId, product.businessId);
+      await _loadFavorites();
+      widget.onRefresh();
+      
+      final isFavorite = _favoriteProducts.any((p) => p.productId == product.productId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isFavorite 
+                      ? '${product.productName} favorilere eklendi'
+                      : '${product.productName} favorilerden çıkarıldı',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: isFavorite ? AppColors.success : AppColors.warning,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Hata: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _reorderProduct(Product product) async {
+    try {
+      final orderId = await _customerService.reorderFromFavorite(
+        productId: product.productId,
+        businessId: product.businessId,
+        quantity: 1,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${product.productName} sepete eklendi!',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Sipariş hatası: $e')),
               ],
             ),
             backgroundColor: AppColors.error,
@@ -238,54 +401,106 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _handleRefresh,
-      color: AppColors.primary,
-      child: Column(
-        children: [
-          // Arama ve filtre alanı
-          if (_favoriteBusinesses.isNotEmpty) _buildSearchAndFilterSection(),
-          
-          // İçerik alanı
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _favoriteBusinesses.isEmpty
-                    ? SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: _buildEmptyStateCard(
-                            icon: Icons.favorite_rounded,
-                            title: 'Henüz favori işletmeniz yok',
-                            subtitle: 'Beğendiğiniz işletmeleri favorilerinize ekleyin',
+    return Column(
+      children: [
+        // Tab bar
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadow.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TabBar(
+            controller: _tabController,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondary,
+            indicatorColor: AppColors.primary,
+            indicatorWeight: 3,
+            labelStyle: AppTypography.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: AppTypography.bodyMedium,
+            tabs: [
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.business_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    Text('İşletmeler'),
+                    if (_favoriteBusinesses.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${_favoriteBusinesses.length}',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      )
-                    : _filteredFavorites.isEmpty
-                        ? SingleChildScrollView(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: _buildEmptyStateCard(
-                                icon: Icons.search_off_rounded,
-                                title: 'Arama sonucu bulunamadı',
-                                subtitle: 'Farklı kelimeler ile tekrar deneyin',
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredFavorites.length,
-                            itemBuilder: (context, index) {
-                              final business = _filteredFavorites[index];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 16),
-                                child: _buildFavoriteBusinessCard(business),
-                              );
-                            },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.fastfood_rounded, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Ürünler'),
+                    if (_favoriteProducts.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${_favoriteProducts.length}',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        
+        // Arama alanı
+        if (_favoriteBusinesses.isNotEmpty || _favoriteProducts.isNotEmpty)
+          _buildSearchSection(),
+        
+        // Tab view
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // İşletmeler tab'ı
+              _buildBusinessesTab(),
+              // Ürünler tab'ı
+              _buildProductsTab(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -419,7 +634,7 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
                     ),
                     // Favori butonu
                     GestureDetector(
-                      onTap: () => _toggleFavorite(business),
+                      onTap: () => _toggleBusinessFavorite(business),
                       child: Container(
                         width: 40,
                         height: 40,
@@ -462,6 +677,180 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
                         onPressed: () => _navigateToMenu(business),
                         icon: Icon(Icons.restaurant_menu_rounded, size: 18),
                         label: Text('Menü'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFavoriteProductCard(Product product) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+                     onTap: () {
+             // İşletme bilgisini product'tan al ve menüye git
+             final business = _allBusinesses.firstWhere(
+               (b) => b.id == product.businessId,
+               orElse: () => Business.empty(),
+             );
+             if (business.id.isNotEmpty) {
+               _navigateToMenu(business);
+             }
+           },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    // Ürün resmi
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryLight],
+                        ),
+                      ),
+                      child: product.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                product.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Icon(
+                                  Icons.fastfood_rounded,
+                                  color: AppColors.white,
+                                  size: 32,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.fastfood_rounded,
+                              color: AppColors.white,
+                              size: 32,
+                            ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Ürün bilgileri
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                                                     Text(
+                             product.name,
+                             style: AppTypography.bodyLarge.copyWith(
+                               fontWeight: FontWeight.w600,
+                               color: AppColors.textPrimary,
+                             ),
+                           ),
+                          const SizedBox(height: 4),
+                                                     Text(
+                             _getCategoryName(product.categoryId) ?? 'Kategori Belirtilmemiş',
+                             style: AppTypography.caption.copyWith(
+                               color: AppColors.textSecondary,
+                             ),
+                           ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.attach_money_rounded,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${product.price} TL',
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Favori butonu
+                    GestureDetector(
+                      onTap: () => _toggleProductFavorite(product),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.favorite_rounded,
+                          color: AppColors.accent,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Eylem butonları
+                Row(
+                  children: [
+                                         Expanded(
+                       child: OutlinedButton.icon(
+                         onPressed: () {
+                           final business = _allBusinesses.firstWhere(
+                             (b) => b.id == product.businessId,
+                             orElse: () => Business.empty(),
+                           );
+                           if (business.id.isNotEmpty) {
+                             _navigateToBusinessDetail(business);
+                           }
+                         },
+                         icon: Icon(Icons.info_outline_rounded, size: 18),
+                         label: Text('İşletme Detayı'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _reorderProduct(product),
+                        icon: Icon(Icons.shopping_cart_rounded, size: 18),
+                        label: Text('Sepete Ekle'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.white,
@@ -669,7 +1058,7 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${_filteredFavorites.length} sonuç bulundu',
+                  '${_filteredFavoriteBusinesses.length} sonuç bulundu',
                   style: AppTypography.caption.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -679,6 +1068,146 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
           ],
         ],
       ),
+    );
+  }
+
+  // ============================================================================
+  // TAB BUILDING METHODS
+  // ============================================================================
+
+  Widget _buildSearchSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.greyLight),
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Favoriler arasında ara...',
+            hintStyle: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppColors.textSecondary,
+            ),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                    },
+                    icon: const Icon(
+                      Icons.clear_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessesTab() {
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: AppColors.primary,
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _favoriteBusinesses.isEmpty
+              ? SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _buildEmptyStateCard(
+                      icon: Icons.business_rounded,
+                      title: 'Henüz favori işletmeniz yok',
+                      subtitle: 'Beğendiğiniz işletmeleri favorilerinize ekleyin',
+                    ),
+                  ),
+                )
+              : _filteredFavoriteBusinesses.isEmpty
+                  ? SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _buildEmptyStateCard(
+                          icon: Icons.search_off_rounded,
+                          title: 'Arama sonucu bulunamadı',
+                          subtitle: 'Farklı kelimeler ile tekrar deneyin',
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _filteredFavoriteBusinesses.length,
+                      itemBuilder: (context, index) {
+                        final business = _filteredFavoriteBusinesses[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: _buildFavoriteBusinessCard(business),
+                        );
+                      },
+                    ),
+    );
+  }
+
+  Widget _buildProductsTab() {
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: AppColors.accent,
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _favoriteProducts.isEmpty
+              ? SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _buildEmptyStateCard(
+                      icon: Icons.fastfood_rounded,
+                      title: 'Henüz favori ürününüz yok',
+                      subtitle: 'Beğendiğiniz ürünleri favorilerinize ekleyin',
+                    ),
+                  ),
+                )
+              : _filteredFavoriteProducts.isEmpty
+                  ? SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _buildEmptyStateCard(
+                          icon: Icons.search_off_rounded,
+                          title: 'Arama sonucu bulunamadı',
+                          subtitle: 'Farklı kelimeler ile tekrar deneyin',
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _filteredFavoriteProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = _filteredFavoriteProducts[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: _buildFavoriteProductCard(product),
+                        );
+                      },
+                    ),
     );
   }
 
@@ -696,7 +1225,7 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> {
       MaterialPageRoute(
         builder: (context) => SearchPage(
           businesses: _allBusinesses,
-          categories: [], // Kategorileri de yüklemek gerekecek
+          categories: _allCategories, // Kategorileri de yüklemek gerekecek
         ),
         settings: RouteSettings(
           name: '/customer/${widget.userId}/search?t=$timestamp',

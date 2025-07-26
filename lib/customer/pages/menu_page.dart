@@ -28,6 +28,7 @@ import 'cart_page.dart';
 import 'package:shimmer/shimmer.dart';
 import 'customer_orders_page.dart';
 import 'product_detail_page.dart';
+import '../services/customer_service.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
@@ -62,6 +63,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   final _urlService = UrlService();
   final _authService = AuthService();
   final _multilingualService = MultilingualService();
+  final _customerService = CustomerService();
 
   // UI State
   String _searchQuery = '';
@@ -71,6 +73,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   int _cartItemCount = 0;
   double _headerOpacity = 1.0;
   String _currentLanguage = 'tr';
+  List<String> _favoriteProductIds = [];
 
   // Animation controllers
   late AnimationController _fadeAnimationController;
@@ -175,41 +178,61 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       setState(() {
         _isLoading = true;
         _hasError = false;
+        _errorMessage = null;
       });
 
-      // Paralel veri yükleme
-      final futures = await Future.wait([
-        _customerFirestoreService.getBusiness(widget.businessId),
-        _businessFirestoreService.getBusinessCategories(widget.businessId),
-        _businessFirestoreService.getBusinessProducts(widget.businessId, limit: 200),
-        _businessFirestoreService.getDiscountsByBusinessId(widget.businessId),
-      ]);
+             // Load business, categories, products, and discounts
+       final businessData = await _customerFirestoreService.getBusiness(widget.businessId);
+       final categoriesData = await _businessFirestoreService.getBusinessCategories(widget.businessId);
+       final productsData = await _businessFirestoreService.getBusinessProducts(widget.businessId);
+       final discountsData = await _businessFirestoreService.getDiscountsByBusinessId(widget.businessId);
 
-      _business = futures[0] as Business?;
-      _categories = futures[1] as List<Category>;
-      _products = futures[2] as List<Product>;
-      _discounts = futures[3] as List<Discount>;
-
-      if (_business == null) {
-        throw Exception('İşletme bulunamadı');
+      // Load favorite products
+      List<String> favoriteProductIds = [];
+      try {
+        final favoriteProducts = await _customerService.getFavoriteProducts();
+        favoriteProductIds = favoriteProducts.map((f) => f.productId).toList();
+      } catch (e) {
+        print('Favori ürünler yüklenirken hata: $e');
       }
 
-      _filterProducts();
-      _initializeTabs();
+      if (businessData != null) {
+        // Apply multilingual translations
+        final translatedCategories = categoriesData; // .map((category) =>
+            // _multilingualService.translateCategory(category, _currentLanguage)).toList();
+        final translatedProducts = productsData; // .map((product) =>
+            // _multilingualService.translateProduct(product, _currentLanguage)).toList();
 
-      setState(() {
-        _isLoading = false;
-      });
+        setState(() {
+          _business = businessData;
+          _categories = translatedCategories;
+          _products = translatedProducts;
+          _discounts = discountsData;
+          _favoriteProductIds = favoriteProductIds;
+          _filterProducts();
+          _isLoading = false;
+        });
 
-      // Animasyonları başlat
-      _fadeAnimationController.forward();
-      await Future.delayed(const Duration(milliseconds: 100));
-      _slideAnimationController.forward();
+        // Initialize tab controller after categories are loaded
+        if (_categories.isNotEmpty && _tabController == null) {
+          _tabController = TabController(length: _categories.length, vsync: this);
+          _tabController?.addListener(_onTabChanged);
+        }
+
+        // Log business visit
+        // _logBusinessVisit();
+      } else {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'İşletme bilgileri yüklenirken bir hata oluştu.';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
-        _isLoading = false;
         _hasError = true;
-        _errorMessage = 'Menü yüklenirken hata: $e';
+        _errorMessage = 'Veriler yüklenirken bir hata oluştu: $e';
+        _isLoading = false;
       });
     }
   }
@@ -379,6 +402,75 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         settings: RouteSettings(name: dynamicRoute),
       ),
     );
+  }
+
+  Future<void> _toggleProductFavorite(Product product) async {
+    try {
+      await _customerService.toggleProductFavorite(product.productId, product.businessId);
+      
+      // Favori listesini güncelle
+      final favoriteProducts = await _customerService.getFavoriteProducts();
+      final favoriteProductIds = favoriteProducts.map((f) => f.productId).toList();
+      
+      setState(() {
+        _favoriteProductIds = favoriteProductIds;
+      });
+      
+      // Kullanıcıya bilgi ver
+      final isFavorite = favoriteProductIds.contains(product.productId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isFavorite 
+                      ? '${product.name} favorilere eklendi'
+                      : '${product.name} favorilerden çıkarıldı',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: isFavorite ? AppColors.success : AppColors.warning,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Favori işlemi hatası: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _addToCart(Product product, {int quantity = 1}) async {
@@ -1395,30 +1487,71 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     ),
                   ),
 
-                  // Discount Badge
-                  if (hasDiscount)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
+                  // Top buttons row
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    right: 6,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Favorite button
+                        Material(
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '-%$discountPercentage',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+                          child: InkWell(
+                            onTap: () => _toggleProductFavorite(product),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: AppColors.white.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.shadow.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _favoriteProductIds.contains(product.productId)
+                                    ? Icons.favorite_rounded 
+                                    : Icons.favorite_border_rounded,
+                                color: _favoriteProductIds.contains(product.productId)
+                                    ? AppColors.accent 
+                                    : AppColors.textSecondary,
+                                size: 14,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        
+                        // Discount Badge
+                        if (hasDiscount)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '-%$discountPercentage',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
 
                   // Unavailable Overlay
                   if (!product.isAvailable)
