@@ -185,7 +185,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
              // Load business, categories, products, and discounts
        print('📊 MenuPage: Loading business data...');
        final businessData = await _businessFirestoreService.getBusiness(widget.businessId);
-       print('📊 MenuPage: Business data loaded: ${businessData?.name ?? 'null'}');
+       print('📊 MenuPage: Business data loaded: ${businessData?.businessName ?? 'null'}');
        
        print('📂 MenuPage: Loading categories...');
        final categoriesData = await _businessFirestoreService.getBusinessCategories(widget.businessId);
@@ -234,6 +234,11 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           _tabController = TabController(length: _categories.length, vsync: this);
           _tabController?.addListener(_onTabChanged);
         }
+
+        // Start animations after data is loaded
+        print('🎬 MenuPage: Starting animations...');
+        _fadeAnimationController.forward();
+        _slideAnimationController.forward();
 
         // Log business visit
         // _logBusinessVisit();

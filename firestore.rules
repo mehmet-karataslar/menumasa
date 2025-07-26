@@ -41,6 +41,15 @@ service cloud.firestore {
       allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
     }
     
+    // Product Favorites collection - müşteriler kendi favorilerini yönetebilir
+    match /product_favorites/{favoriteId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.customerId;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.customerId;
+      allow list: if request.auth != null; // Kendi favorilerini listeleyebilir
+    }
+    
     // QR codes collection - allow public read for scans, authenticated write
     match /qr_codes/{qrId} {
       allow read: if true; // QR codes need to be publicly readable for scanning
