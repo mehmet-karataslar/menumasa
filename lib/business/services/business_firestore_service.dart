@@ -7,7 +7,8 @@ import '../../data/models/order.dart' as app_order;
 import 'dart:async';
 
 class BusinessFirestoreService {
-  static final BusinessFirestoreService _instance = BusinessFirestoreService._internal();
+  static final BusinessFirestoreService _instance =
+      BusinessFirestoreService._internal();
   factory BusinessFirestoreService() => _instance;
   BusinessFirestoreService._internal();
 
@@ -32,7 +33,7 @@ class BusinessFirestoreService {
   Future<List<Business>> getBusinesses({String? ownerId}) async {
     try {
       Query query = _businessesRef;
-      
+
       if (ownerId != null) {
         query = query.where('ownerId', isEqualTo: ownerId);
       }
@@ -53,9 +54,8 @@ class BusinessFirestoreService {
   /// Gets businesses by owner ID
   Future<List<Business>> getBusinessesByOwnerId(String ownerId) async {
     try {
-      final snapshot = await _businessesRef
-          .where('ownerId', isEqualTo: ownerId)
-          .get();
+      final snapshot =
+          await _businessesRef.where('ownerId', isEqualTo: ownerId).get();
 
       return snapshot.docs
           .map((doc) => Business.fromJson({
@@ -112,22 +112,22 @@ class BusinessFirestoreService {
     try {
       // Start a batch to delete all related data
       final batch = _firestore.batch();
-      
+
       // Delete business document
       batch.delete(_businessesRef.doc(businessId));
-      
+
       // Delete all products of this business
       await _deleteProductsByBusiness(businessId);
-      
+
       // Delete all categories of this business
       await _deleteCategoriesByBusiness(businessId);
-      
+
       // Delete all discounts of this business
       await _deleteDiscountsByBusiness(businessId);
-      
+
       // Note: We don't delete orders as they are historical data
       // but we could mark them as archived
-      
+
       await batch.commit();
     } catch (e) {
       throw Exception('İşletme silinirken hata oluştu: $e');
@@ -146,15 +146,15 @@ class BusinessFirestoreService {
   }) async {
     try {
       Query query = _productsRef;
-      
+
       if (businessId != null) {
         query = query.where('businessId', isEqualTo: businessId);
       }
-      
+
       if (categoryId != null) {
         query = query.where('categoryId', isEqualTo: categoryId);
       }
-      
+
       if (limit != null) {
         query = query.limit(limit);
       }
@@ -178,21 +178,50 @@ class BusinessFirestoreService {
     int? limit,
   }) async {
     try {
+      print(
+          '🔍 BusinessFirestoreService: Getting products for businessId: $businessId');
+
       Query query = _productsRef.where('businessId', isEqualTo: businessId);
-      
+
       if (limit != null) {
         query = query.limit(limit);
+        print(
+            '📊 BusinessFirestoreService: Limiting results to $limit products');
       }
 
       final snapshot = await query.get();
-      return snapshot.docs
+      print(
+          '📦 BusinessFirestoreService: Found ${snapshot.docs.length} products in Firestore');
+
+      // Debug: Print first few product IDs and details
+      if (snapshot.docs.isNotEmpty) {
+        print('📋 BusinessFirestoreService: Sample products:');
+        for (int i = 0;
+            i < (snapshot.docs.length > 3 ? 3 : snapshot.docs.length);
+            i++) {
+          final doc = snapshot.docs[i];
+          final data = doc.data() as Map<String, dynamic>;
+          print(
+              '   - Product ${i + 1}: ${doc.id} | Name: ${data['name'] ?? data['productName'] ?? 'N/A'} | BusinessId: ${data['businessId']} | Active: ${data['isActive'] ?? data['isAvailable'] ?? 'N/A'}');
+        }
+      } else {
+        print(
+            '⚠️ BusinessFirestoreService: No products found for businessId: $businessId');
+      }
+
+      final products = snapshot.docs
           .map((doc) => Product.fromJson(
                 doc.data() as Map<String, dynamic>,
                 id: doc.id,
               ))
           .toList();
+
+      print(
+          '✅ BusinessFirestoreService: Successfully parsed ${products.length} products');
+
+      return products;
     } catch (e) {
-      print('Error getting business products: $e');
+      print('❌ BusinessFirestoreService: Error getting business products: $e');
       return [];
     }
   }
@@ -246,9 +275,8 @@ class BusinessFirestoreService {
 
   /// Deletes all products of a business (private helper)
   Future<void> _deleteProductsByBusiness(String businessId) async {
-    final snapshot = await _productsRef
-        .where('businessId', isEqualTo: businessId)
-        .get();
+    final snapshot =
+        await _productsRef.where('businessId', isEqualTo: businessId).get();
 
     final batch = _firestore.batch();
     for (final doc in snapshot.docs) {
@@ -268,11 +296,11 @@ class BusinessFirestoreService {
   }) async {
     try {
       Query query = _categoriesRef;
-      
+
       if (businessId != null) {
         query = query.where('businessId', isEqualTo: businessId);
       }
-      
+
       if (limit != null) {
         query = query.limit(limit);
       }
@@ -293,9 +321,8 @@ class BusinessFirestoreService {
   /// Gets categories for a specific business
   Future<List<Category>> getBusinessCategories(String businessId) async {
     try {
-      final snapshot = await _categoriesRef
-          .where('businessId', isEqualTo: businessId)
-          .get();
+      final snapshot =
+          await _categoriesRef.where('businessId', isEqualTo: businessId).get();
 
       return snapshot.docs
           .map((doc) => Category.fromJson(
@@ -358,9 +385,8 @@ class BusinessFirestoreService {
 
   /// Deletes all categories of a business (private helper)
   Future<void> _deleteCategoriesByBusiness(String businessId) async {
-    final snapshot = await _categoriesRef
-        .where('businessId', isEqualTo: businessId)
-        .get();
+    final snapshot =
+        await _categoriesRef.where('businessId', isEqualTo: businessId).get();
 
     final batch = _firestore.batch();
     for (final doc in snapshot.docs) {
@@ -377,7 +403,7 @@ class BusinessFirestoreService {
   Future<List<Discount>> getDiscounts({String? businessId}) async {
     try {
       Query query = _discountsRef;
-      
+
       if (businessId != null) {
         query = query.where('businessId', isEqualTo: businessId);
       }
@@ -398,9 +424,8 @@ class BusinessFirestoreService {
   /// Gets discounts by business ID
   Future<List<Discount>> getDiscountsByBusinessId(String businessId) async {
     try {
-      final snapshot = await _discountsRef
-          .where('businessId', isEqualTo: businessId)
-          .get();
+      final snapshot =
+          await _discountsRef.where('businessId', isEqualTo: businessId).get();
 
       return snapshot.docs
           .map((doc) => Discount.fromJson({
@@ -463,9 +488,8 @@ class BusinessFirestoreService {
 
   /// Deletes all discounts of a business (private helper)
   Future<void> _deleteDiscountsByBusiness(String businessId) async {
-    final snapshot = await _discountsRef
-        .where('businessId', isEqualTo: businessId)
-        .get();
+    final snapshot =
+        await _discountsRef.where('businessId', isEqualTo: businessId).get();
 
     final batch = _firestore.batch();
     for (final doc in snapshot.docs) {
@@ -509,7 +533,7 @@ class BusinessFirestoreService {
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         final currentUsage = data['usageCount'] ?? 0;
-        
+
         await _discountsRef.doc(discountId).update({
           'usageCount': currentUsage + 1,
           'updatedAt': FieldValue.serverTimestamp(),
@@ -534,21 +558,21 @@ class BusinessFirestoreService {
   }) async {
     try {
       Query query = _ordersRef.where('businessId', isEqualTo: businessId);
-      
+
       if (status != null) {
         query = query.where('status', isEqualTo: status.toString());
       }
-      
+
       if (fromDate != null) {
         query = query.where('createdAt', isGreaterThanOrEqualTo: fromDate);
       }
-      
+
       if (toDate != null) {
         query = query.where('createdAt', isLessThanOrEqualTo: toDate);
       }
-      
+
       query = query.orderBy('createdAt', descending: true);
-      
+
       if (limit != null) {
         query = query.limit(limit);
       }
@@ -587,7 +611,8 @@ class BusinessFirestoreService {
   }
 
   /// Gets orders by business and customer phone
-  Future<List<app_order.Order>> getOrdersByBusinessAndPhone(String businessId, String customerPhone) async {
+  Future<List<app_order.Order>> getOrdersByBusinessAndPhone(
+      String businessId, String customerPhone) async {
     try {
       final snapshot = await _ordersRef
           .where('businessId', isEqualTo: businessId)
@@ -608,10 +633,11 @@ class BusinessFirestoreService {
   }
 
   /// Updates order status
-  Future<void> updateOrderStatus(String orderId, app_order.OrderStatus status) async {
+  Future<void> updateOrderStatus(
+      String orderId, app_order.OrderStatus status) async {
     try {
       print('🔄 Updating order status: $orderId -> ${status.value}');
-      
+
       // Check if document exists first
       final docSnapshot = await _ordersRef.doc(orderId).get();
       if (!docSnapshot.exists) {
@@ -622,7 +648,7 @@ class BusinessFirestoreService {
         'status': status.value, // Use .value instead of .toString()
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       print('✅ Order status updated successfully');
     } catch (e) {
       print('❌ Error updating order status: $e');
@@ -701,7 +727,8 @@ class BusinessFirestoreService {
   // =============================================================================
 
   /// Starts listening to real-time order updates for a business
-  void startOrderListener(String businessId, Function(List<app_order.Order>) onOrdersUpdated) {
+  void startOrderListener(
+      String businessId, Function(List<app_order.Order>) onOrdersUpdated) {
     // Cancel existing listener if any
     stopOrderListener(businessId);
 
@@ -745,4 +772,4 @@ class BusinessFirestoreService {
     _orderStreams.clear();
     _orderListeners.clear();
   }
-} 
+}

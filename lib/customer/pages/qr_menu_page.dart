@@ -37,8 +37,7 @@ class QRMenuPage extends StatefulWidget {
   State<QRMenuPage> createState() => _QRMenuPageState();
 }
 
-class _QRMenuPageState extends State<QRMenuPage>
-    with TickerProviderStateMixin {
+class _QRMenuPageState extends State<QRMenuPage> with TickerProviderStateMixin {
   final CustomerFirestoreService _firestoreService = CustomerFirestoreService();
   final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
@@ -46,21 +45,21 @@ class _QRMenuPageState extends State<QRMenuPage>
 
   final CartService _cartService = CartService();
   final AuthService _authService = AuthService();
-  
+
   // Data
   Business? _business;
   List<Category> _categories = [];
   List<Product> _products = [];
 
   int? _currentTableNumber;
-  
+
   // State
   bool _isLoading = true;
   String? _errorMessage;
   String? _selectedCategoryId = 'all';
   String _searchQuery = '';
   bool _showSearch = false;
-  
+
   // Animation
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -79,7 +78,7 @@ class _QRMenuPageState extends State<QRMenuPage>
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -118,7 +117,8 @@ class _QRMenuPageState extends State<QRMenuPage>
 
       _extractTableNumberFromQR();
 
-      final business = await _firestoreService.getBusinessById(widget.businessId);
+      final business =
+          await _firestoreService.getBusinessById(widget.businessId);
       if (business == null) {
         throw Exception('İşletme bulunamadı');
       }
@@ -127,13 +127,31 @@ class _QRMenuPageState extends State<QRMenuPage>
         throw Exception('İşletme şu anda hizmet vermiyor');
       }
 
-      final categories = await _firestoreService.getCategoriesByBusiness(widget.businessId);
-      final products = await _firestoreService.getProductsByBusiness(widget.businessId);
+      final categories =
+          await _firestoreService.getCategoriesByBusiness(widget.businessId);
+      final products =
+          await _firestoreService.getProductsByBusiness(widget.businessId);
 
+      print(
+          '🍽️ QRMenuPage: Loaded ${categories.length} categories and ${products.length} products');
+
+      // Debug için kullanıcıya da göster
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('QRMenuPage: ${products.length} ürün yüklendi'),
+            duration: Duration(seconds: 2),
+            backgroundColor:
+                products.isEmpty ? AppColors.error : AppColors.success,
+          ),
+        );
+      }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final dynamicRoute = '/qr-menu/${widget.businessId}?t=$timestamp&qr=${widget.qrCode ?? ''}';
-      _urlService.updateUrl(dynamicRoute, customTitle: '${business.businessName} - QR Menü | MasaMenu');
+      final dynamicRoute =
+          '/qr-menu/${widget.businessId}?t=$timestamp&qr=${widget.qrCode ?? ''}';
+      _urlService.updateUrl(dynamicRoute,
+          customTitle: '${business.businessName} - QR Menü | MasaMenu');
 
       if (mounted) {
         setState(() {
@@ -141,7 +159,8 @@ class _QRMenuPageState extends State<QRMenuPage>
           _categories = categories;
           _products = products;
 
-          _selectedCategoryId = _findFirstCategoryWithProducts(categories, products);
+          _selectedCategoryId =
+              _findFirstCategoryWithProducts(categories, products);
           _isLoading = false;
         });
 
@@ -171,7 +190,7 @@ class _QRMenuPageState extends State<QRMenuPage>
     if (widget.qrCode != null) {
       try {
         final qrCode = widget.qrCode!;
-        
+
         if (qrCode.contains('table_')) {
           final parts = qrCode.split('table_');
           if (parts.length > 1) {
@@ -189,18 +208,18 @@ class _QRMenuPageState extends State<QRMenuPage>
     }
   }
 
-  String? _findFirstCategoryWithProducts(List<Category> categories, List<Product> products) {
+  String? _findFirstCategoryWithProducts(
+      List<Category> categories, List<Product> products) {
     if (categories.isEmpty) return 'all';
-    
+
     for (final category in categories) {
-      final hasProducts = products.any((product) => 
-        product.categoryId == category.id && product.isAvailable
-      );
+      final hasProducts = products.any((product) =>
+          product.categoryId == category.id && product.isAvailable);
       if (hasProducts) {
         return category.id;
       }
     }
-    
+
     return 'all';
   }
 
@@ -231,20 +250,24 @@ class _QRMenuPageState extends State<QRMenuPage>
 
   List<Product> get _filteredProducts {
     List<Product> filtered;
-    
+
     if (_selectedCategoryId == null || _selectedCategoryId == 'all') {
       filtered = _products.where((p) => p.isAvailable).toList();
     } else {
-      filtered = _products.where((product) => 
-        product.categoryId == _selectedCategoryId && product.isAvailable
-      ).toList();
+      filtered = _products
+          .where((product) =>
+              product.categoryId == _selectedCategoryId && product.isAvailable)
+          .toList();
     }
 
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((product) =>
-        product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().contains(_searchQuery.toLowerCase())
-      ).toList();
+      filtered = filtered
+          .where((product) =>
+              product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              product.description
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()))
+          .toList();
     }
 
     return filtered;
@@ -397,16 +420,16 @@ class _QRMenuPageState extends State<QRMenuPage>
         slivers: [
           // Modern Header
           _buildModernHeader(),
-          
+
           // Search Bar
           if (_showSearch) _buildSearchSection(),
-          
+
           // Categories
           if (_categories.isNotEmpty) _buildCategoriesSection(),
-          
+
           // Products
           _buildProductsSection(),
-          
+
           // Bottom Spacing
           const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
@@ -482,7 +505,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                   ),
                 ),
               ),
-              
+
               // Content
               SafeArea(
                 child: Padding(
@@ -523,9 +546,9 @@ class _QRMenuPageState extends State<QRMenuPage>
                                 ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 20),
-                      
+
                       // Business Info
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,11 +567,10 @@ class _QRMenuPageState extends State<QRMenuPage>
                               ],
                             ),
                           ),
-                          
                           const SizedBox(height: 8),
-                          
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: AppColors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(20),
@@ -563,7 +585,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  _currentTableNumber != null 
+                                  _currentTableNumber != null
                                       ? 'Masa ${_currentTableNumber!}'
                                       : 'QR Menü',
                                   style: AppTypography.bodyMedium.copyWith(
@@ -613,7 +635,8 @@ class _QRMenuPageState extends State<QRMenuPage>
               },
               decoration: InputDecoration(
                 hintText: 'Yemek veya içecek ara...',
-                prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary),
+                prefixIcon:
+                    Icon(Icons.search_rounded, color: AppColors.primary),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         onPressed: () {
@@ -621,11 +644,13 @@ class _QRMenuPageState extends State<QRMenuPage>
                             _searchQuery = '';
                           });
                         },
-                        icon: Icon(Icons.clear_rounded, color: AppColors.textSecondary),
+                        icon: Icon(Icons.clear_rounded,
+                            color: AppColors.textSecondary),
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
               style: AppTypography.bodyMedium,
             ),
@@ -656,12 +681,12 @@ class _QRMenuPageState extends State<QRMenuPage>
                   Icons.restaurant_menu_rounded,
                 );
               }
-              
+
               final category = _categories[index - 1];
-              final productCount = _products.where((p) => 
-                p.categoryId == category.id && p.isAvailable
-              ).length;
-              
+              final productCount = _products
+                  .where((p) => p.categoryId == category.id && p.isAvailable)
+                  .length;
+
               return _buildCategoryChip(
                 category.name,
                 category.id,
@@ -676,7 +701,9 @@ class _QRMenuPageState extends State<QRMenuPage>
     );
   }
 
-  Widget _buildCategoryChip(String name, String id, bool isSelected, IconData icon, {int? productCount}) {
+  Widget _buildCategoryChip(
+      String name, String id, bool isSelected, IconData icon,
+      {int? productCount}) {
     return Padding(
       padding: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
       child: GestureDetector(
@@ -697,7 +724,7 @@ class _QRMenuPageState extends State<QRMenuPage>
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: isSelected 
+                color: isSelected
                     ? AppColors.primary.withOpacity(0.3)
                     : AppColors.black.withOpacity(0.05),
                 blurRadius: isSelected ? 15 : 8,
@@ -724,9 +751,10 @@ class _QRMenuPageState extends State<QRMenuPage>
               if (productCount != null && productCount > 0) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: isSelected 
+                    color: isSelected
                         ? AppColors.white.withOpacity(0.3)
                         : AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -750,7 +778,7 @@ class _QRMenuPageState extends State<QRMenuPage>
 
   Widget _buildProductsSection() {
     final products = _filteredProducts;
-    
+
     if (products.isEmpty) {
       return SliverToBoxAdapter(
         child: SlideTransition(
@@ -786,7 +814,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  _searchQuery.isNotEmpty 
+                  _searchQuery.isNotEmpty
                       ? 'Arama sonucu bulunamadı'
                       : 'Bu kategoride ürün bulunmuyor',
                   style: AppTypography.h6.copyWith(
@@ -796,7 +824,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _searchQuery.isNotEmpty 
+                  _searchQuery.isNotEmpty
                       ? 'Farklı kelimeler deneyin'
                       : 'Diğer kategorilere göz atın',
                   style: AppTypography.bodyMedium.copyWith(
@@ -841,8 +869,8 @@ class _QRMenuPageState extends State<QRMenuPage>
   }
 
   Widget _buildCompactProductCard(Product product, int index) {
-    final hasDiscount = product.currentPrice != null &&
-        product.currentPrice! < product.price;
+    final hasDiscount =
+        product.currentPrice != null && product.currentPrice! < product.price;
     final discountPercentage = hasDiscount
         ? ((1 - (product.currentPrice! / product.price)) * 100).round()
         : 0;
@@ -889,7 +917,8 @@ class _QRMenuPageState extends State<QRMenuPage>
                               height: double.infinity,
                               errorBuilder: (context, error, stackTrace) =>
                                   _buildCompactIcon(),
-                              loadingBuilder: (context, child, loadingProgress) {
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
                                 return _buildCompactIcon();
                               },
@@ -1003,7 +1032,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                                       : AppColors.primary,
                                 ),
                               ),
-                              
+
                               // Original Price (if discounted)
                               if (hasDiscount)
                                 Text(
@@ -1063,11 +1092,9 @@ class _QRMenuPageState extends State<QRMenuPage>
     );
   }
 
-
-
   Widget _buildFloatingActionButtons() {
     final currentUser = _authService.currentUser;
-    
+
     if (currentUser == null) {
       // Giriş yapmamış kullanıcılar için sadece kayıt ol butonu
       return FloatingActionButton.extended(
@@ -1080,7 +1107,7 @@ class _QRMenuPageState extends State<QRMenuPage>
         label: const Text('Kayıt Ol'),
       );
     }
-    
+
     // Giriş yapmış kullanıcılar için hem garson çağırma hem sepet butonu
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1098,7 +1125,8 @@ class _QRMenuPageState extends State<QRMenuPage>
           onPressed: _handleCartAction,
           backgroundColor: AppColors.secondary,
           heroTag: "cart",
-          child: const Icon(Icons.shopping_cart_rounded, color: AppColors.white),
+          child:
+              const Icon(Icons.shopping_cart_rounded, color: AppColors.white),
         ),
       ],
     );
@@ -1107,13 +1135,14 @@ class _QRMenuPageState extends State<QRMenuPage>
   // Sepet sayfasına git - giriş yapmış kullanıcılar için
   void _handleCartAction() {
     final currentUser = _authService.currentUser;
-    
+
     Navigator.pushNamed(
-      context, 
+      context,
       '/customer/cart',
       arguments: {
         'businessId': widget.businessId,
-        'userId': currentUser?.uid, // null olabilir, sepet sayfasında kontrol edilecek
+        'userId': currentUser
+            ?.uid, // null olabilir, sepet sayfasında kontrol edilecek
       },
     );
   }
@@ -1155,7 +1184,8 @@ class _QRMenuPageState extends State<QRMenuPage>
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.room_service_rounded, color: AppColors.white, size: 24),
+              child: Icon(Icons.room_service_rounded,
+                  color: AppColors.white, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -1211,7 +1241,8 @@ class _QRMenuPageState extends State<QRMenuPage>
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Vazgeç',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
             ),
           ),
           Row(
@@ -1225,7 +1256,8 @@ class _QRMenuPageState extends State<QRMenuPage>
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   side: BorderSide(color: AppColors.primary),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text('Giriş Yap'),
               ),
@@ -1238,7 +1270,8 @@ class _QRMenuPageState extends State<QRMenuPage>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text('Kayıt Ol'),
               ),
@@ -1249,17 +1282,16 @@ class _QRMenuPageState extends State<QRMenuPage>
     );
   }
 
-
-
   Future<void> _addToCart(Product product, {int quantity = 1}) async {
     try {
-      await _cartService.addToCart(product, widget.businessId, quantity: quantity);
-      
+      await _cartService.addToCart(product, widget.businessId,
+          quantity: quantity);
+
       HapticFeedback.heavyImpact();
 
       if (mounted) {
         final currentUser = _authService.currentUser;
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -1270,7 +1302,8 @@ class _QRMenuPageState extends State<QRMenuPage>
                     color: AppColors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(Icons.check_rounded, color: AppColors.white, size: 16),
+                  child: Icon(Icons.check_rounded,
+                      color: AppColors.white, size: 16),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1283,7 +1316,8 @@ class _QRMenuPageState extends State<QRMenuPage>
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
             duration: const Duration(seconds: 3),
             action: SnackBarAction(
@@ -1309,14 +1343,16 @@ class _QRMenuPageState extends State<QRMenuPage>
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: AppColors.white, size: 20),
+                Icon(Icons.error_outline_rounded,
+                    color: AppColors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(child: Text('Hata: $e')),
               ],
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
           ),
         );
@@ -1352,7 +1388,7 @@ class _QRMenuPageState extends State<QRMenuPage>
               borderRadius: BorderRadius.circular(3),
             ),
           ),
-          
+
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -1383,7 +1419,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                         ),
                       ),
                     ),
-                  
+
                   // Product Info
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1405,10 +1441,14 @@ class _QRMenuPageState extends State<QRMenuPage>
                             ),
                             const SizedBox(width: 16),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [AppColors.primary, AppColors.primaryLight],
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.primaryLight
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -1422,9 +1462,9 @@ class _QRMenuPageState extends State<QRMenuPage>
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Description
                         if (product.description.isNotEmpty) ...[
                           Container(
@@ -1467,7 +1507,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                           ),
                           const SizedBox(height: 24),
                         ],
-                        
+
                         // QR Menu Info
                         Container(
                           width: double.infinity,
@@ -1480,7 +1520,8 @@ class _QRMenuPageState extends State<QRMenuPage>
                               ],
                             ),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                            border: Border.all(
+                                color: AppColors.info.withOpacity(0.3)),
                           ),
                           child: Column(
                             children: [
@@ -1501,18 +1542,21 @@ class _QRMenuPageState extends State<QRMenuPage>
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'QR Menü',
-                                          style: AppTypography.bodyLarge.copyWith(
+                                          style:
+                                              AppTypography.bodyLarge.copyWith(
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.info,
                                           ),
                                         ),
                                         Text(
                                           'Sepete eklemek veya garson çağırmak için kayıt olun',
-                                          style: AppTypography.bodyMedium.copyWith(
+                                          style:
+                                              AppTypography.bodyMedium.copyWith(
                                             color: AppColors.textSecondary,
                                           ),
                                         ),
@@ -1528,14 +1572,17 @@ class _QRMenuPageState extends State<QRMenuPage>
                                     child: ElevatedButton(
                                       onPressed: () {
                                         Navigator.pop(context);
-                                        Navigator.pushNamed(context, '/register');
+                                        Navigator.pushNamed(
+                                            context, '/register');
                                       },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.primary,
                                         foregroundColor: AppColors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
                                         ),
                                       ),
                                       child: const Text('Kayıt Ol'),
@@ -1546,7 +1593,7 @@ class _QRMenuPageState extends State<QRMenuPage>
                             ],
                           ),
                         ),
-                        
+
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -1579,7 +1626,7 @@ class _QRMenuPageState extends State<QRMenuPage>
               borderRadius: BorderRadius.circular(3),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(24),
@@ -1613,7 +1660,8 @@ class _QRMenuPageState extends State<QRMenuPage>
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -1632,7 +1680,7 @@ class _QRMenuPageState extends State<QRMenuPage>
               ],
             ),
           ),
-          
+
           // Call Types
           Expanded(
             child: ListView.builder(
@@ -1645,7 +1693,7 @@ class _QRMenuPageState extends State<QRMenuPage>
               },
             ),
           ),
-          
+
           const SizedBox(height: 24),
         ],
       ),
@@ -1720,7 +1768,8 @@ class _QRMenuPageState extends State<QRMenuPage>
   }
 
   // DEPRECATED: Artık CustomerWaiterCallPage kullanılıyor
-  Future<void> _makeWaiterCall(WaiterCallType callType, Staff? selectedWaiter) async {
+  Future<void> _makeWaiterCall(
+      WaiterCallType callType, Staff? selectedWaiter) async {
     if (_currentTableNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1730,21 +1779,22 @@ class _QRMenuPageState extends State<QRMenuPage>
       );
       return;
     }
-    
+
     try {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
-      
+
       await _waiterCallService.callWaiter(
         businessId: widget.businessId,
-        customerId: widget.userId ?? 'qr_customer_${DateTime.now().millisecondsSinceEpoch}',
+        customerId: widget.userId ??
+            'qr_customer_${DateTime.now().millisecondsSinceEpoch}',
         customerName: 'QR Müşteri',
         tableNumber: _currentTableNumber!,
         requestType: callType,
-        message: selectedWaiter != null 
+        message: selectedWaiter != null
             ? '${selectedWaiter.firstName} ${selectedWaiter.lastName} için özel çağrı - QR menü üzerinden'
             : 'QR menü üzerinden çağrı',
         metadata: {
@@ -1755,10 +1805,9 @@ class _QRMenuPageState extends State<QRMenuPage>
           'table_number_from_qr': _currentTableNumber,
         },
       );
-      
+
       Navigator.pop(context);
       _showSuccessDialog(callType, _currentTableNumber!, selectedWaiter);
-      
     } catch (e) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1770,7 +1819,8 @@ class _QRMenuPageState extends State<QRMenuPage>
     }
   }
 
-  void _showSuccessDialog(WaiterCallType callType, int tableNumber, Staff? selectedWaiter) {
+  void _showSuccessDialog(
+      WaiterCallType callType, int tableNumber, Staff? selectedWaiter) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1811,7 +1861,8 @@ class _QRMenuPageState extends State<QRMenuPage>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.table_restaurant_rounded, color: AppColors.primary),
+                  Icon(Icons.table_restaurant_rounded,
+                      color: AppColors.primary),
                   const SizedBox(width: 8),
                   Text(
                     'Masa: $tableNumber',
@@ -1844,19 +1895,32 @@ class _QRMenuPageState extends State<QRMenuPage>
 
   IconData _getCategoryIcon(String categoryName) {
     final name = categoryName.toLowerCase();
-    if (name.contains('çorba') || name.contains('soup')) return Icons.soup_kitchen_rounded;
-    if (name.contains('salata') || name.contains('salad')) return Icons.eco_rounded;
-    if (name.contains('et') || name.contains('meat') || name.contains('kebap')) return Icons.outdoor_grill_rounded;
-    if (name.contains('tavuk') || name.contains('chicken')) return Icons.restaurant_rounded;
-    if (name.contains('balık') || name.contains('fish')) return Icons.set_meal_rounded;
+    if (name.contains('çorba') || name.contains('soup'))
+      return Icons.soup_kitchen_rounded;
+    if (name.contains('salata') || name.contains('salad'))
+      return Icons.eco_rounded;
+    if (name.contains('et') || name.contains('meat') || name.contains('kebap'))
+      return Icons.outdoor_grill_rounded;
+    if (name.contains('tavuk') || name.contains('chicken'))
+      return Icons.restaurant_rounded;
+    if (name.contains('balık') || name.contains('fish'))
+      return Icons.set_meal_rounded;
     if (name.contains('pizza')) return Icons.local_pizza_rounded;
-    if (name.contains('burger') || name.contains('hamburger')) return Icons.lunch_dining_rounded;
-    if (name.contains('tatlı') || name.contains('dessert')) return Icons.cake_rounded;
-    if (name.contains('içecek') || name.contains('drink') || name.contains('beverage')) return Icons.local_drink_rounded;
-    if (name.contains('kahve') || name.contains('coffee')) return Icons.coffee_rounded;
-    if (name.contains('çay') || name.contains('tea')) return Icons.emoji_food_beverage_rounded;
-    if (name.contains('meze') || name.contains('appetizer')) return Icons.tapas_rounded;
-    if (name.contains('makarna') || name.contains('pasta')) return Icons.ramen_dining_rounded;
+    if (name.contains('burger') || name.contains('hamburger'))
+      return Icons.lunch_dining_rounded;
+    if (name.contains('tatlı') || name.contains('dessert'))
+      return Icons.cake_rounded;
+    if (name.contains('içecek') ||
+        name.contains('drink') ||
+        name.contains('beverage')) return Icons.local_drink_rounded;
+    if (name.contains('kahve') || name.contains('coffee'))
+      return Icons.coffee_rounded;
+    if (name.contains('çay') || name.contains('tea'))
+      return Icons.emoji_food_beverage_rounded;
+    if (name.contains('meze') || name.contains('appetizer'))
+      return Icons.tapas_rounded;
+    if (name.contains('makarna') || name.contains('pasta'))
+      return Icons.ramen_dining_rounded;
     return Icons.restaurant_menu_rounded;
   }
 

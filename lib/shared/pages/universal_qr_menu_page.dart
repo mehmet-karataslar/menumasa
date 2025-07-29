@@ -209,6 +209,12 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           context,
           MaterialPageRoute(
             builder: (context) => MenuPage(businessId: _businessId!),
+            settings: RouteSettings(
+              arguments: {
+                'businessId': _businessId!,
+                if (_tableNumber != null) 'tableNumber': _tableNumber,
+              },
+            ),
           ),
         );
         return;
@@ -419,7 +425,24 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       // Ürünleri al
       final products =
           await _businessService.getProducts(businessId: _businessId!);
-      final activeProducts = products.where((p) => p.isActive).toList();
+      final activeProducts =
+          products.where((p) => p.isActive && p.isAvailable).toList();
+
+      print('📦 UniversalQRMenuPage: Total products found: ${products.length}');
+      print('✅ UniversalQRMenuPage: Active products: ${activeProducts.length}');
+
+      // Debug için kullanıcıya da göster
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Toplam ${products.length} ürün bulundu, ${activeProducts.length} tanesi aktif'),
+            duration: Duration(seconds: 3),
+            backgroundColor:
+                activeProducts.isEmpty ? AppColors.error : AppColors.success,
+          ),
+        );
+      }
 
       setState(() {
         _business = _business; // Business zaten yukarıda set edilmiş
@@ -511,9 +534,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     if (_searchQuery.isNotEmpty) {
       filtered = filtered
           .where((p) =>
-              p.productName
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()) ||
+              p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
               p.description.toLowerCase().contains(_searchQuery.toLowerCase()))
           .toList();
     }
@@ -551,7 +572,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('${product.productName} sepete eklendi'),
+                  child: Text('${product.name} sepete eklendi'),
                 ),
               ],
             ),

@@ -265,7 +265,26 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       print('🍽️ MenuPage: Loading products...');
       final productsData = await _businessFirestoreService
           .getBusinessProducts(widget.businessId);
-      print('🍽️ MenuPage: Products loaded: ${productsData.length} items');
+      print('🍽️ MenuPage: Raw products loaded: ${productsData.length} items');
+
+      // Sadece aktif ve müsait ürünleri filtrele
+      final activeProducts =
+          productsData.where((p) => p.isActive && p.isAvailable).toList();
+      print(
+          '🍽️ MenuPage: Active products after filtering: ${activeProducts.length} items');
+
+      // Debug için kullanıcıya da göster
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'MenuPage: ${productsData.length} ürün bulundu, ${activeProducts.length} tanesi aktif'),
+            duration: Duration(seconds: 2),
+            backgroundColor:
+                activeProducts.isEmpty ? AppColors.error : AppColors.success,
+          ),
+        );
+      }
 
       print('🎯 MenuPage: Loading discounts...');
       final discountsData = await _businessFirestoreService
@@ -293,7 +312,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         // Apply multilingual translations
         final translatedCategories = categoriesData; // .map((category) =>
         // _multilingualService.translateCategory(category, _currentLanguage)).toList();
-        final translatedProducts = productsData; // .map((product) =>
+        final translatedProducts = activeProducts; // .map((product) =>
         // _multilingualService.translateProduct(product, _currentLanguage)).toList();
 
         print('🔄 MenuPage: Setting state with loaded data...');

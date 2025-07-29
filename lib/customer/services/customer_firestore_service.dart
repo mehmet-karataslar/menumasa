@@ -719,23 +719,52 @@ class CustomerFirestoreService {
   /// Get products by business ID
   Future<List<Product>> getProductsByBusiness(String businessId) async {
     try {
+      print(
+          '🔍 CustomerFirestoreService: Getting products for businessId: $businessId');
+
       // Önce sadece businessId ile sorgula (index gerektirmez)
       final snapshot =
           await _productsRef.where('businessId', isEqualTo: businessId).get();
 
+      print(
+          '📦 CustomerFirestoreService: Found ${snapshot.docs.length} products in Firestore');
+
       // Client-side filtering ve sorting
-      final products = snapshot.docs
+      final allProducts = snapshot.docs
           .map((doc) => Product.fromJson({
                 ...doc.data() as Map<String, dynamic>,
                 'id': doc.id,
               }))
           .toList();
 
-      // Client-side sorting by sortOrder
-      products.sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
+      // Sadece aktif ve müsait ürünleri filtrele
+      final activeProducts =
+          allProducts.where((p) => p.isActive && p.isAvailable).toList();
 
-      return products;
+      print(
+          '✅ CustomerFirestoreService: Active products after filtering: ${activeProducts.length}');
+
+      // Debug: Print first few product names
+      if (activeProducts.isNotEmpty) {
+        print('📋 CustomerFirestoreService: Sample active products:');
+        for (int i = 0;
+            i < (activeProducts.length > 3 ? 3 : activeProducts.length);
+            i++) {
+          final product = activeProducts[i];
+          print(
+              '   - Product ${i + 1}: ${product.name} | Active: ${product.isActive} | Available: ${product.isAvailable}');
+        }
+      } else {
+        print(
+            '⚠️ CustomerFirestoreService: No active products found for businessId: $businessId');
+      }
+
+      // Client-side sorting by sortOrder
+      activeProducts.sort((a, b) => (a.sortOrder).compareTo(b.sortOrder));
+
+      return activeProducts;
     } catch (e) {
+      print('❌ CustomerFirestoreService: Error getting products: $e');
       return [];
     }
   }
