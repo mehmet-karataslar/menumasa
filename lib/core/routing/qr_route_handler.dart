@@ -380,9 +380,11 @@ class QRRouteHandler implements BaseRouteHandler {
     final routeName = settings.name!;
     final pathSegments = RouteUtils.getPathSegments(routeName);
 
-    // /menu/{businessId} format için - QR routing
-    if (pathSegments.length >= 2 && pathSegments[0] == 'menu') {
+    // /menu/{businessId} format için - QR routing (sadece ana menü, alt sayfalar değil)
+    if (pathSegments.length == 2 && pathSegments[0] == 'menu') {
       final businessId = pathSegments[1];
+      print('🔗 QR Route: Legacy menu format detected - /menu/$businessId');
+
       // QR route olduğu için UniversalQRMenuPage kullan
       final enhancedArguments = <String, dynamic>{
         'businessId': businessId,
@@ -398,6 +400,13 @@ class QRRouteHandler implements BaseRouteHandler {
           arguments: enhancedArguments,
         ),
       );
+    }
+
+    // /menu/{businessId}/cart, /menu/{businessId}/order gibi alt sayfalar için normal routing
+    if (pathSegments.length > 2 && pathSegments[0] == 'menu') {
+      print(
+          '🔗 QR Route: Menu sub-page detected, skipping QR handling: ${settings.name}');
+      return null; // Normal customer route handler'a bırak
     }
 
     // /product-detail handling

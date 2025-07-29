@@ -129,32 +129,42 @@ window.addEventListener('DOMContentLoaded', function() {
       console.log('✅ Business ID extracted successfully:', businessId);
     }
     
-    // Normalize the route for Flutter router
-    if (currentPath !== '/qr' && !currentPath.startsWith('/qr?')) {
-      // Convert legacy paths to standard /qr format
-      let normalizedUrl = '/qr';
-      const params = new URLSearchParams();
-      
-      if (businessId) params.set('business', businessId);
-      if (tableNumber) params.set('table', tableNumber);
-      
-      // Add any other existing parameters
-      for (const [key, value] of searchParams.entries()) {
-        if (key !== 'business' && key !== 'businessId' && key !== 'table' && key !== 'tableNumber') {
-          params.set(key, value);
-        }
-      }
-      
-      if (params.toString()) {
-        normalizedUrl += '?' + params.toString();
-      }
-      
-      console.log('🔄 Normalizing QR URL from:', currentPath + currentSearch);
-      console.log('🔄 To:', normalizedUrl);
-      
-      // Update URL without reload
-      window.history.replaceState(null, '', normalizedUrl);
-    }
+         // Normalize the route for Flutter router - only for QR menu access
+     if (currentPath !== '/qr' && !currentPath.startsWith('/qr?')) {
+       // Only normalize direct menu access (not sub-pages like cart, order)
+       const isDirectMenuAccess = currentPath.match(/^\/menu\/[^\/]+\/?$/) || 
+                                 currentPath.match(/^\/qr-menu\/[^\/]+\/?$/);
+       
+       if (isDirectMenuAccess && businessId) {
+         // Convert legacy paths to standard /qr format
+         let normalizedUrl = '/qr';
+         const params = new URLSearchParams();
+         
+         params.set('business', businessId);
+         if (tableNumber) params.set('table', tableNumber);
+         
+         // Add any other existing parameters (except timestamp)
+         for (const [key, value] of searchParams.entries()) {
+           if (key !== 'business' && key !== 'businessId' && 
+               key !== 'table' && key !== 'tableNumber' && 
+               key !== 't' && key !== 'timestamp') {
+             params.set(key, value);
+           }
+         }
+         
+         if (params.toString()) {
+           normalizedUrl += '?' + params.toString();
+         }
+         
+         console.log('🔄 Normalizing QR URL from:', currentPath + currentSearch);
+         console.log('🔄 To:', normalizedUrl);
+         
+         // Update URL without reload
+         window.history.replaceState(null, '', normalizedUrl);
+       } else if (!isDirectMenuAccess) {
+         console.log('✅ Sub-page URL detected, preserving original route:', currentPath);
+       }
+     }
     
     return; // Don't interfere with QR routes
   }
