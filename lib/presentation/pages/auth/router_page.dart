@@ -48,15 +48,25 @@ class _RouterPageState extends State<RouterPage> {
       String? businessId;
       String? tableId;
 
-      if (path.contains('/qr') ||
-          fullUrl.contains('business=') ||
-          fullUrl.contains('table=') ||
-          fullUrl.contains('businessId=') ||
-          fullUrl.contains('tableId=') ||
-          params.containsKey('business') ||
-          params.containsKey('businessId') ||
-          params.containsKey('table') ||
-          params.containsKey('tableId')) {
+      // ÖNEMLİ: Business veya admin panel URL'lerini hariç tut
+      bool isBusinessPanelUrl = path.startsWith('/business/') ||
+          path.startsWith('/admin/') ||
+          path.startsWith('/customer/dashboard');
+
+      if (!isBusinessPanelUrl &&
+          (path == '/qr' ||
+              path.startsWith('/qr?') ||
+              path.startsWith('/qr-menu/') ||
+              path.startsWith('/menu/') ||
+              path.startsWith('/universal-qr') ||
+              fullUrl.contains('business=') ||
+              fullUrl.contains('table=') ||
+              fullUrl.contains('businessId=') ||
+              fullUrl.contains('tableId=') ||
+              params.containsKey('business') ||
+              params.containsKey('businessId') ||
+              params.containsKey('table') ||
+              params.containsKey('tableId'))) {
         isQrUrl = true;
 
         // URL parametrelerini parse et
@@ -131,15 +141,23 @@ class _RouterPageState extends State<RouterPage> {
     // QR URL formatları kontrolü (öncelik sırasıyla)
     bool isQRUrl = false;
 
+    // ÖNEMLİ: Business veya admin panel URL'lerini hariç tut
+    bool isBusinessPanelUrl = currentUrl.startsWith('/business/') ||
+        currentUrl.startsWith('/admin/') ||
+        currentUrl.startsWith('/customer/dashboard');
+
     // 1. Yeni evrensel QR format (/qr veya /qr?business=X)
-    if (routeName == '/qr' ||
-        currentUrl == '/qr' ||
-        currentParams.containsKey('business')) {
+    if (!isBusinessPanelUrl &&
+        (routeName == '/qr' ||
+            currentUrl == '/qr' ||
+            currentUrl.startsWith('/qr?') ||
+            currentParams.containsKey('business'))) {
       isQRUrl = true;
     }
 
     // 2. Eski QR formatları (/qr-menu/X veya /menu/X)
     if (!isQRUrl &&
+        !isBusinessPanelUrl &&
         routeName != null &&
         (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/'))) {
       isQRUrl = true;

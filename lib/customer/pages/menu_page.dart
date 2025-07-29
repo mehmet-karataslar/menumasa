@@ -26,7 +26,6 @@ import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import 'cart_page.dart';
 import 'package:shimmer/shimmer.dart';
-import 'customer_orders_page.dart';
 import 'product_detail_page.dart';
 import '../services/customer_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -485,30 +484,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         builder: (context) => CartPage(
           businessId: widget.businessId,
           userId: _authService.currentUser?.uid,
-        ),
-        settings: RouteSettings(name: dynamicRoute),
-      ),
-    );
-  }
-
-  void _onOrdersPressed() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final dynamicRoute = '/menu/${widget.businessId}/orders?t=$timestamp';
-    _urlService.updateUrl(dynamicRoute, customTitle: 'Siparişlerim | MasaMenu');
-
-    HapticFeedback.lightImpact();
-
-    // Auth'lu kullanıcının ID'sini al
-    final currentUser = _authService.currentUser;
-    final customerId = currentUser?.uid; // Firebase Auth UID'sini kullan
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CustomerOrdersPage(
-          businessId: widget.businessId,
-          customerPhone: currentUser?.phoneNumber,
-          customerId: customerId,
         ),
         settings: RouteSettings(name: dynamicRoute),
       ),
@@ -1068,10 +1043,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         _buildHeaderButton(
           icon: Icons.tune_rounded,
           onPressed: _showFilterBottomSheet,
-        ),
-        _buildHeaderButton(
-          icon: Icons.receipt_long_rounded,
-          onPressed: _onOrdersPressed,
         ),
         _buildCartHeaderButton(),
         const SizedBox(width: 8),
