@@ -13,10 +13,7 @@ import '../models/category.dart' as category_model;
 import '../services/business_firestore_service.dart';
 
 // Add new image source enum
-enum ImageSourceType { 
-  url, 
-  file 
-}
+enum ImageSourceType { url, file }
 
 // Add new image data class
 class ImageData {
@@ -24,7 +21,7 @@ class ImageData {
   final String? url;
   final XFile? file;
   final Uint8List? bytes;
-  
+
   const ImageData({
     required this.sourceType,
     this.url,
@@ -53,7 +50,8 @@ class ProductEditPage extends StatefulWidget {
 
 class _ProductEditPageState extends State<ProductEditPage>
     with TickerProviderStateMixin {
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final ImagePicker _imagePicker = ImagePicker();
   final PageController _pageController = PageController();
@@ -89,13 +87,29 @@ class _ProductEditPageState extends State<ProductEditPage>
 
   // Constants
   final List<String> _commonAllergens = [
-    'Gluten', 'Süt', 'Yumurta', 'Soya', 'Fındık', 'Fıstık', 
-    'Susam', 'Balık', 'Kabuklu deniz ürünleri', 'Kükürt dioksit'
+    'Gluten',
+    'Süt',
+    'Yumurta',
+    'Soya',
+    'Fındık',
+    'Fıstık',
+    'Susam',
+    'Balık',
+    'Kabuklu deniz ürünleri',
+    'Kükürt dioksit'
   ];
 
   final List<String> _commonTags = [
-    'Popüler', 'Yeni', 'Acılı', 'Vejetaryen', 'Vegan', 'Glutensiz',
-    'Organik', 'Ev yapımı', 'Taze', 'Özel'
+    'Popüler',
+    'Yeni',
+    'Acılı',
+    'Vejetaryen',
+    'Vegan',
+    'Glutensiz',
+    'Organik',
+    'Ev yapımı',
+    'Taze',
+    'Özel'
   ];
 
   @override
@@ -150,7 +164,7 @@ class _ProductEditPageState extends State<ProductEditPage>
 
     // Listen to price changes to auto-update current price
     _priceController.addListener(() {
-      if (_currentPriceController.text.isEmpty || 
+      if (_currentPriceController.text.isEmpty ||
           _currentPriceController.text == _priceController.text) {
         _currentPriceController.text = _priceController.text;
       }
@@ -189,8 +203,9 @@ class _ProductEditPageState extends State<ProductEditPage>
       title: Text(isEditing ? 'Ürün Düzenle' : 'Ürün Ekle'),
       centerTitle: true,
       leading: IconButton(
-        icon: const Icon(Icons.close),
+        icon: const Icon(Icons.arrow_back),
         onPressed: () => Navigator.pop(context),
+        tooltip: 'Geri',
       ),
       actions: [
         if (_currentStep > 0)
@@ -280,7 +295,7 @@ class _ProductEditPageState extends State<ProductEditPage>
           Row(
             children: List.generate(5, (index) {
               final isActive = index <= _currentStep;
-              
+
               return Expanded(
                 child: Row(
                   children: [
@@ -288,8 +303,8 @@ class _ProductEditPageState extends State<ProductEditPage>
                       child: Container(
                         height: 4,
                         decoration: BoxDecoration(
-                          color: isActive 
-                              ? AppColors.primary 
+                          color: isActive
+                              ? AppColors.primary
                               : AppColors.greyLight,
                           borderRadius: BorderRadius.circular(2),
                         ),
@@ -316,12 +331,18 @@ class _ProductEditPageState extends State<ProductEditPage>
 
   String _getStepTitle(int step) {
     switch (step) {
-      case 0: return 'Temel Bilgiler';
-      case 1: return 'Detaylı Açıklama';
-      case 2: return 'Fiyat Bilgileri';
-      case 3: return 'Ürün Resimleri';
-      case 4: return 'Beslenme ve Etiketler';
-      default: return '';
+      case 0:
+        return 'Temel Bilgiler';
+      case 1:
+        return 'Detaylı Açıklama';
+      case 2:
+        return 'Fiyat Bilgileri';
+      case 3:
+        return 'Ürün Resimleri';
+      case 4:
+        return 'Beslenme ve Etiketler';
+      default:
+        return '';
     }
   }
 
@@ -382,7 +403,8 @@ class _ProductEditPageState extends State<ProductEditPage>
           _buildTextField(
             controller: _detailedDescriptionController,
             label: 'Detaylı Açıklama',
-            hint: 'Ürününüzün malzemeleri, hazırlanış şekli, servis bilgileri vb.',
+            hint:
+                'Ürününüzün malzemeleri, hazırlanış şekli, servis bilgileri vb.',
             icon: Icons.article,
             maxLines: 6,
           ),
@@ -566,13 +588,13 @@ class _ProductEditPageState extends State<ProductEditPage>
       uniqueCategories[category.categoryId] = category;
     }
     final categoriesList = uniqueCategories.values.toList();
-    
+
     // Check if current selected category exists in the list
-    final validSelectedCategoryId = _selectedCategoryId.isNotEmpty && 
-        categoriesList.any((cat) => cat.categoryId == _selectedCategoryId)
-        ? _selectedCategoryId 
+    final validSelectedCategoryId = _selectedCategoryId.isNotEmpty &&
+            categoriesList.any((cat) => cat.categoryId == _selectedCategoryId)
+        ? _selectedCategoryId
         : null;
-    
+
     return DropdownButtonFormField<String>(
       value: validSelectedCategoryId,
       decoration: InputDecoration(
@@ -617,7 +639,6 @@ class _ProductEditPageState extends State<ProductEditPage>
           ),
         ),
         const SizedBox(height: 12),
-        
         Container(
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -646,7 +667,9 @@ class _ProductEditPageState extends State<ProductEditPage>
               SwitchListTile(
                 title: const Text('Satışta'),
                 subtitle: Text(
-                  _isAvailable ? 'Müşteriler satın alabilir' : 'Geçici olarak satışta değil',
+                  _isAvailable
+                      ? 'Müşteriler satın alabilir'
+                      : 'Geçici olarak satışta değil',
                   style: TextStyle(
                     color: _isAvailable ? AppColors.success : AppColors.warning,
                   ),
@@ -684,7 +707,6 @@ class _ProductEditPageState extends State<ProductEditPage>
           ),
         ),
         const SizedBox(height: 12),
-        
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -729,7 +751,6 @@ class _ProductEditPageState extends State<ProductEditPage>
           ),
         ),
         const SizedBox(height: 12),
-        
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -759,18 +780,24 @@ class _ProductEditPageState extends State<ProductEditPage>
   Widget _buildPriceInfo() {
     final originalPrice = double.tryParse(_priceController.text) ?? 0.0;
     final currentPrice = double.tryParse(_currentPriceController.text) ?? 0.0;
-    
-    if (originalPrice > 0 && currentPrice > 0 && originalPrice != currentPrice) {
+
+    if (originalPrice > 0 &&
+        currentPrice > 0 &&
+        originalPrice != currentPrice) {
       final discount = ((originalPrice - currentPrice) / originalPrice * 100);
       final isDiscount = currentPrice < originalPrice;
-      
+
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDiscount ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+          color: isDiscount
+              ? AppColors.success.withOpacity(0.1)
+              : AppColors.warning.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isDiscount ? AppColors.success.withOpacity(0.3) : AppColors.warning.withOpacity(0.3),
+            color: isDiscount
+                ? AppColors.success.withOpacity(0.3)
+                : AppColors.warning.withOpacity(0.3),
           ),
         ),
         child: Row(
@@ -782,7 +809,7 @@ class _ProductEditPageState extends State<ProductEditPage>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isDiscount 
+                isDiscount
                     ? '${discount.toStringAsFixed(1)}% İndirimli Fiyat'
                     : '${discount.abs().toStringAsFixed(1)}% Fiyat Artışı',
                 style: AppTypography.bodyMedium.copyWith(
@@ -795,7 +822,7 @@ class _ProductEditPageState extends State<ProductEditPage>
         ),
       );
     }
-    
+
     return const SizedBox.shrink();
   }
 
@@ -865,7 +892,8 @@ class _ProductEditPageState extends State<ProductEditPage>
                 bottom: 4,
                 left: 4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(4),
@@ -916,8 +944,8 @@ class _ProductEditPageState extends State<ProductEditPage>
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: imageData.sourceType == ImageSourceType.url 
-                      ? AppColors.primary 
+                  color: imageData.sourceType == ImageSourceType.url
+                      ? AppColors.primary
                       : AppColors.secondary,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -986,8 +1014,8 @@ class _ProductEditPageState extends State<ProductEditPage>
             child: Center(
               child: CircularProgressIndicator(
                 value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded / 
-                      loadingProgress.expectedTotalBytes!
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),
@@ -1023,15 +1051,16 @@ class _ProductEditPageState extends State<ProductEditPage>
     return Container(
       width: double.infinity,
       child: OutlinedButton.icon(
-                              onPressed: _isUploadingImages ? null : _showImageSourceDialog,
-        icon: _isUploadingImages 
+        onPressed: _isUploadingImages ? null : _showImageSourceDialog,
+        icon: _isUploadingImages
             ? SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : Icon(Icons.add_photo_alternate),
-        label: Text(_isUploadingImages ? 'Resimler Yükleniyor...' : 'Resim Ekle'),
+        label:
+            Text(_isUploadingImages ? 'Resimler Yükleniyor...' : 'Resim Ekle'),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
           side: BorderSide(color: AppColors.primary),
@@ -1058,7 +1087,6 @@ class _ProductEditPageState extends State<ProductEditPage>
           ),
         ),
         const SizedBox(height: 12),
-        
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1157,7 +1185,8 @@ class _ProductEditPageState extends State<ProductEditPage>
                   final extractedUrl = _extractImageUrl(url);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('URL desteklenmiyor. Çıkarılan URL: ${extractedUrl.length > 50 ? extractedUrl.substring(0, 50) + "..." : extractedUrl}'),
+                      content: Text(
+                          'URL desteklenmiyor. Çıkarılan URL: ${extractedUrl.length > 50 ? extractedUrl.substring(0, 50) + "..." : extractedUrl}'),
                       duration: Duration(seconds: 4),
                     ),
                   );
@@ -1188,7 +1217,7 @@ class _ProductEditPageState extends State<ProductEditPage>
         // If parsing fails, continue with original input
       }
     }
-    
+
     // Other image hosting services could be added here
     // For now, return the original URL if it's not a Google Images link
     return input;
@@ -1200,15 +1229,15 @@ class _ProductEditPageState extends State<ProductEditPage>
       final actualUrl = _extractImageUrl(url);
       final uri = Uri.parse(actualUrl);
       final path = uri.path.toLowerCase();
-      
+
       // Check for common image extensions
-      return path.endsWith('.jpg') || 
-             path.endsWith('.jpeg') || 
-             path.endsWith('.png') || 
-             path.endsWith('.gif') || 
-             path.endsWith('.webp') ||
-             path.endsWith('.bmp') ||
-             path.endsWith('.svg');
+      return path.endsWith('.jpg') ||
+          path.endsWith('.jpeg') ||
+          path.endsWith('.png') ||
+          path.endsWith('.gif') ||
+          path.endsWith('.webp') ||
+          path.endsWith('.bmp') ||
+          path.endsWith('.svg');
     } catch (e) {
       return false;
     }
@@ -1217,7 +1246,7 @@ class _ProductEditPageState extends State<ProductEditPage>
   void _addImageFromUrl(String url) {
     // Extract the actual image URL (handles Google Images and other formats)
     final actualImageUrl = _extractImageUrl(url);
-    
+
     setState(() {
       _selectedImages.add(ImageData(
         sourceType: ImageSourceType.url,
@@ -1240,13 +1269,13 @@ class _ProductEditPageState extends State<ProductEditPage>
 
       if (images.isNotEmpty) {
         List<ImageData> newImageData = [];
-        
+
         for (final image in images) {
           Uint8List? bytes;
           if (kIsWeb) {
             bytes = await image.readAsBytes();
           }
-          
+
           newImageData.add(ImageData(
             sourceType: ImageSourceType.file,
             file: image,
@@ -1328,7 +1357,7 @@ class _ProductEditPageState extends State<ProductEditPage>
       case 2:
         final price = double.tryParse(_priceController.text);
         final currentPrice = double.tryParse(_currentPriceController.text);
-        
+
         if (price == null || price <= 0) {
           setState(() {
             _errorMessage = 'Geçerli bir liste fiyatı girin';
@@ -1361,15 +1390,16 @@ class _ProductEditPageState extends State<ProductEditPage>
       if (_selectedImages.isNotEmpty) {
         for (int i = 0; i < _selectedImages.length; i++) {
           final imageData = _selectedImages[i];
-          
+
           if (imageData.sourceType == ImageSourceType.url) {
             // For URL images, add directly to URLs list
             allImageUrls.add(imageData.url!);
           } else {
             // For file images, upload to storage
-            final fileName = _storageService.generateFileName('product_image_$i.jpg');
+            final fileName =
+                _storageService.generateFileName('product_image_$i.jpg');
             dynamic imageFile;
-            
+
             if (kIsWeb && imageData.bytes != null) {
               imageFile = imageData.bytes!; // Uint8List for web
             } else if (imageData.file != null) {
@@ -1377,10 +1407,11 @@ class _ProductEditPageState extends State<ProductEditPage>
             } else {
               continue; // Skip if no valid data
             }
-            
+
             final imageUrl = await _storageService.uploadProductImage(
               businessId: widget.businessId,
-              productId: widget.product?.productId ?? 'new_${DateTime.now().millisecondsSinceEpoch}',
+              productId: widget.product?.productId ??
+                  'new_${DateTime.now().millisecondsSinceEpoch}',
               imageFile: imageFile,
               fileName: fileName,
             );
@@ -1454,14 +1485,12 @@ class _ProductEditPageState extends State<ProductEditPage>
         HapticFeedback.lightImpact();
         widget.onProductSaved();
         Navigator.pop(context);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              widget.product == null 
-                  ? '${_nameController.text} ürünü başarıyla eklendi'
-                  : '${_nameController.text} ürünü başarıyla güncellendi'
-            ),
+            content: Text(widget.product == null
+                ? '${_nameController.text} ürünü başarıyla eklendi'
+                : '${_nameController.text} ürünü başarıyla güncellendi'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -1476,4 +1505,4 @@ class _ProductEditPageState extends State<ProductEditPage>
       });
     }
   }
-} 
+}

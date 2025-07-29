@@ -10,6 +10,17 @@ class CustomerManagementPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Geri',
+        ),
+        title: const Text('Müşteri Yönetimi'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+        elevation: 0,
+      ),
       body: const Center(
         child: EmptyState(
           icon: Icons.people,
@@ -19,4 +30,4 @@ class CustomerManagementPage extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -56,13 +56,15 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
   void _applyFilters() {
     _filteredStaff = _allStaff.where((staff) {
-      final matchesSearch = staff.fullName.toLowerCase().contains(_searchQuery) ||
-          staff.email.toLowerCase().contains(_searchQuery) ||
-          staff.phone.contains(_searchQuery);
-      
+      final matchesSearch =
+          staff.fullName.toLowerCase().contains(_searchQuery) ||
+              staff.email.toLowerCase().contains(_searchQuery) ||
+              staff.phone.contains(_searchQuery);
+
       final matchesRole = _roleFilter == null || staff.role == _roleFilter;
-      final matchesStatus = _statusFilter == null || staff.status == _statusFilter;
-      
+      final matchesStatus =
+          _statusFilter == null || staff.status == _statusFilter;
+
       return matchesSearch && matchesRole && matchesStatus;
     }).toList();
 
@@ -86,7 +88,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
       });
 
       final staff = await _staffService.getStaffByBusiness(widget.businessId);
-      
+
       setState(() {
         _allStaff = staff;
         _applyFilters();
@@ -105,6 +107,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Geri',
+        ),
         title: const Text('Personel Yönetimi'),
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
@@ -194,10 +201,14 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
   Widget _buildStatsCard() {
     final activeCount = _allStaff.where((s) => s.isActive).length;
-    final managerCount = _allStaff.where((s) => s.role == StaffRole.manager).length;
-    final waiterCount = _allStaff.where((s) => s.role == StaffRole.waiter).length;
-    final kitchenCount = _allStaff.where((s) => s.role == StaffRole.kitchen).length;
-    final cashierCount = _allStaff.where((s) => s.role == StaffRole.cashier).length;
+    final managerCount =
+        _allStaff.where((s) => s.role == StaffRole.manager).length;
+    final waiterCount =
+        _allStaff.where((s) => s.role == StaffRole.waiter).length;
+    final kitchenCount =
+        _allStaff.where((s) => s.role == StaffRole.kitchen).length;
+    final cashierCount =
+        _allStaff.where((s) => s.role == StaffRole.cashier).length;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -310,8 +321,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               IconButton(
                 icon: Icon(
                   Icons.filter_list_off,
-                  color: (_roleFilter != null || _statusFilter != null) 
-                      ? AppColors.primary 
+                  color: (_roleFilter != null || _statusFilter != null)
+                      ? AppColors.primary
                       : AppColors.textSecondary,
                 ),
                 onPressed: () {
@@ -347,9 +358,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
           child: Text('Tüm Roller'),
         ),
         ...StaffRole.values.map((role) => DropdownMenuItem<StaffRole?>(
-          value: role,
-          child: Text(role.displayName),
-        )),
+              value: role,
+              child: Text(role.displayName),
+            )),
       ],
       onChanged: (value) {
         setState(() {
@@ -377,9 +388,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
           child: Text('Tüm Durumlar'),
         ),
         ...StaffStatus.values.map((status) => DropdownMenuItem<StaffStatus?>(
-          value: status,
-          child: Text(status.displayName),
-        )),
+              value: status,
+              child: Text(status.displayName),
+            )),
       ],
       onChanged: (value) {
         setState(() {
@@ -394,12 +405,15 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     if (_filteredStaff.isEmpty) {
       return EmptyState(
         icon: Icons.people_outline,
-        title: _searchQuery.isNotEmpty ? 'Arama sonucu bulunamadı' : 'Henüz personel eklenmemiş',
-        message: _searchQuery.isNotEmpty 
+        title: _searchQuery.isNotEmpty
+            ? 'Arama sonucu bulunamadı'
+            : 'Henüz personel eklenmemiş',
+        message: _searchQuery.isNotEmpty
             ? 'Farklı terimlerle aramayı deneyin'
             : 'İlk personeli eklemek için "+" butonuna tıklayın',
-        actionText: _searchQuery.isNotEmpty ? 'Filtreleri Temizle' : 'Personel Ekle',
-        onActionPressed: _searchQuery.isNotEmpty 
+        actionText:
+            _searchQuery.isNotEmpty ? 'Filtreleri Temizle' : 'Personel Ekle',
+        onActionPressed: _searchQuery.isNotEmpty
             ? () {
                 _searchController.clear();
                 setState(() {
@@ -457,7 +471,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         shape: BoxShape.circle,
         color: _getRoleColor(staff.role).withOpacity(0.1),
         border: Border.all(
-          color: staff.isActive ? _getRoleColor(staff.role) : AppColors.textSecondary,
+          color: staff.isActive
+              ? _getRoleColor(staff.role)
+              : AppColors.textSecondary,
           width: 2,
         ),
       ),
@@ -482,7 +498,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: staff.isActive ? _getRoleColor(staff.role) : AppColors.textSecondary,
+          color: staff.isActive
+              ? _getRoleColor(staff.role)
+              : AppColors.textSecondary,
         ),
       ),
     );
@@ -499,7 +517,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 staff.fullName,
                 style: AppTypography.bodyLarge.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: staff.isActive ? AppColors.textPrimary : AppColors.textSecondary,
+                  color: staff.isActive
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
                 ),
               ),
             ),
@@ -508,7 +528,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               decoration: BoxDecoration(
                 color: _getRoleColor(staff.role).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _getRoleColor(staff.role).withOpacity(0.3)),
+                border: Border.all(
+                    color: _getRoleColor(staff.role).withOpacity(0.3)),
               ),
               child: Text(
                 staff.role.displayName,
@@ -785,7 +806,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${staff.fullName} personelini silmek istediğinizden emin misiniz?'),
+            Text(
+                '${staff.fullName} personelini silmek istediğinizden emin misiniz?'),
             const SizedBox(height: 8),
             Text(
               'Bu işlem geri alınamaz ve personelin tüm verileri silinecektir.',
@@ -875,7 +897,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   StaffStatus _selectedStatus = StaffStatus.available;
   StaffShift _selectedShift = StaffShift.none;
   List<int> _assignedTables = [];
-  
+
   bool _isLoading = false;
   File? _selectedImage;
   String? _profileImageUrl;
@@ -883,14 +905,16 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   @override
   void initState() {
     super.initState();
-    
-    _firstNameController = TextEditingController(text: widget.staff?.firstName ?? '');
-    _lastNameController = TextEditingController(text: widget.staff?.lastName ?? '');
+
+    _firstNameController =
+        TextEditingController(text: widget.staff?.firstName ?? '');
+    _lastNameController =
+        TextEditingController(text: widget.staff?.lastName ?? '');
     _emailController = TextEditingController(text: widget.staff?.email ?? '');
     _phoneController = TextEditingController(text: widget.staff?.phone ?? '');
     _passwordController = TextEditingController();
     _notesController = TextEditingController(text: widget.staff?.notes ?? '');
-    
+
     if (widget.staff != null) {
       _selectedRole = widget.staff!.role;
       _selectedStatus = widget.staff!.status;
@@ -1125,15 +1149,18 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
         TextFormField(
           controller: _passwordController,
           decoration: InputDecoration(
-            labelText: widget.staff == null ? 'Şifre *' : 'Yeni Şifre (Boş bırakılabilir)',
+            labelText: widget.staff == null
+                ? 'Şifre *'
+                : 'Yeni Şifre (Boş bırakılabilir)',
             border: const OutlineInputBorder(),
-            helperText: widget.staff == null 
-                ? 'Minimum 6 karakter' 
+            helperText: widget.staff == null
+                ? 'Minimum 6 karakter'
                 : 'Şifreyi değiştirmek istemiyorsanız boş bırakın',
           ),
           obscureText: true,
           validator: (value) {
-            if (widget.staff == null && (value == null || value.trim().isEmpty)) {
+            if (widget.staff == null &&
+                (value == null || value.trim().isEmpty)) {
               return 'Yeni personel için şifre gerekli';
             }
             if (value != null && value.isNotEmpty && value.length < 6) {
@@ -1164,10 +1191,12 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                   labelText: 'Rol',
                   border: OutlineInputBorder(),
                 ),
-                items: StaffRole.values.map((role) => DropdownMenuItem(
-                  value: role,
-                  child: Text(role.displayName),
-                )).toList(),
+                items: StaffRole.values
+                    .map((role) => DropdownMenuItem(
+                          value: role,
+                          child: Text(role.displayName),
+                        ))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedRole = value!;
@@ -1183,10 +1212,12 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                   labelText: 'Durum',
                   border: OutlineInputBorder(),
                 ),
-                items: StaffStatus.values.map((status) => DropdownMenuItem(
-                  value: status,
-                  child: Text(status.displayName),
-                )).toList(),
+                items: StaffStatus.values
+                    .map((status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(status.displayName),
+                        ))
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedStatus = value!;
@@ -1203,10 +1234,12 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
             labelText: 'Vardiya',
             border: OutlineInputBorder(),
           ),
-          items: StaffShift.values.map((shift) => DropdownMenuItem(
-            value: shift,
-            child: Text(shift.displayName),
-          )).toList(),
+          items: StaffShift.values
+              .map((shift) => DropdownMenuItem(
+                    value: shift,
+                    child: Text(shift.displayName),
+                  ))
+              .toList(),
           onChanged: (value) {
             setState(() {
               _selectedShift = value!;
@@ -1228,7 +1261,8 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
         const SizedBox(height: 8),
         Text(
           'Personelin sorumlu olduğu masa numaralarını girin (virgülle ayırın)',
-          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+          style:
+              AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -1315,7 +1349,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (pickedFile != null) {
       setState(() {
         _selectedImage = File(pickedFile.path);
@@ -1332,7 +1366,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
 
     try {
       String? imageUrl = _profileImageUrl;
-      
+
       // Yeni resim seçildiyse upload et
       if (_selectedImage != null) {
         imageUrl = await _storageService.uploadFile(
@@ -1388,7 +1422,9 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.staff == null ? 'Personel başarıyla eklendi' : 'Personel başarıyla güncellendi',
+            widget.staff == null
+                ? 'Personel başarıyla eklendi'
+                : 'Personel başarıyla güncellendi',
           ),
           backgroundColor: AppColors.success,
         ),
@@ -1520,23 +1556,32 @@ class _StaffDetailsDialog extends StatelessWidget {
         ]),
         const SizedBox(height: 20),
         _buildInfoSection('Çalışma Bilgileri', [
-          _buildInfoRow('Durum', staff.status.displayName, Icons.circle, 
+          _buildInfoRow('Durum', staff.status.displayName, Icons.circle,
               color: _getStatusColor(staff.status)),
-          _buildInfoRow('Vardiya', staff.currentShift.displayName, Icons.schedule),
-          _buildInfoRow('Aktif', staff.isActive ? 'Evet' : 'Hayır', Icons.person,
+          _buildInfoRow(
+              'Vardiya', staff.currentShift.displayName, Icons.schedule),
+          _buildInfoRow(
+              'Aktif', staff.isActive ? 'Evet' : 'Hayır', Icons.person,
               color: staff.isActive ? Colors.green : Colors.red),
         ]),
         const SizedBox(height: 20),
         if (staff.assignedTables.isNotEmpty)
           _buildInfoSection('Atanmış Masalar', [
-            _buildInfoRow('Masalar', staff.assignedTables.join(', '), Icons.table_restaurant),
+            _buildInfoRow('Masalar', staff.assignedTables.join(', '),
+                Icons.table_restaurant),
           ]),
         const SizedBox(height: 20),
         _buildInfoSection('İstatistikler', [
-          _buildInfoRow('Sipariş Sayısı', staff.statistics.totalOrders.toString(), Icons.receipt),
-          _buildInfoRow('Müşteri Sayısı', staff.statistics.totalCustomers.toString(), Icons.people),
-          _buildInfoRow('Çağrı Yanıt Oranı', '${staff.statistics.responseRate.toStringAsFixed(1)}%', Icons.phone_in_talk),
-          _buildInfoRow('Çalışma Günü', staff.statistics.workingDays.toString(), Icons.calendar_today),
+          _buildInfoRow('Sipariş Sayısı',
+              staff.statistics.totalOrders.toString(), Icons.receipt),
+          _buildInfoRow('Müşteri Sayısı',
+              staff.statistics.totalCustomers.toString(), Icons.people),
+          _buildInfoRow(
+              'Çağrı Yanıt Oranı',
+              '${staff.statistics.responseRate.toStringAsFixed(1)}%',
+              Icons.phone_in_talk),
+          _buildInfoRow('Çalışma Günü', staff.statistics.workingDays.toString(),
+              Icons.calendar_today),
         ]),
         if (staff.notes.isNotEmpty) ...[
           const SizedBox(height: 20),
@@ -1558,8 +1603,10 @@ class _StaffDetailsDialog extends StatelessWidget {
         ],
         const SizedBox(height: 20),
         _buildInfoSection('Kayıt Bilgileri', [
-          _buildInfoRow('Oluşturulma', _formatDate(staff.createdAt), Icons.access_time),
-          _buildInfoRow('Son Güncelleme', _formatDate(staff.updatedAt), Icons.update),
+          _buildInfoRow(
+              'Oluşturulma', _formatDate(staff.createdAt), Icons.access_time),
+          _buildInfoRow(
+              'Son Güncelleme', _formatDate(staff.updatedAt), Icons.update),
         ]),
       ],
     );
@@ -1582,7 +1629,8 @@ class _StaffDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, IconData icon, {Color? color}) {
+  Widget _buildInfoRow(String label, String value, IconData icon,
+      {Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1625,4 +1673,4 @@ class _StaffDetailsDialog extends StatelessWidget {
   String _formatDate(DateTime date) {
     return '${date.day}.${date.month}.${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
-} 
+}

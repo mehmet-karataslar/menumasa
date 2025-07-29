@@ -60,6 +60,11 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Geri',
+        ),
         title: Text(_getPageTitle()),
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,

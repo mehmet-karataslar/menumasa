@@ -159,6 +159,11 @@ class _StaffCallManagementPageState extends State<StaffCallManagementPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Geri',
+        ),
         title: Row(
           children: [
             Container(
