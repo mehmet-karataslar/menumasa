@@ -20,6 +20,7 @@ import '../../customer/pages/customer_waiter_call_page.dart';
 import '../../customer/pages/menu_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Evrensel QR Menü Sayfası - Tüm İşletmeler İçin Ortak (Misafir Modu Destekli)
 class UniversalQRMenuPage extends StatefulWidget {
@@ -326,8 +327,37 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   /// Get QR route info from web platform (if available)
   Map<String, dynamic>? _getWebQRRouteInfo() {
     // This would interface with the JavaScript QR route info
-    // For now, return null as this requires platform-specific implementation
-    return null;
+    try {
+      // Web platformunda JavaScript'ten QR bilgilerini al
+      // Bu method web'de çalıştığında JavaScript'teki window.qrRouteInfo'yu okuyacak
+
+      // Flutter web'de JavaScript interop kullanarak
+      if (kIsWeb) {
+        // JavaScript window.getQRRouteInfo() function'ını çağır
+        // Bu implementation JavaScript ile Flutter arasında bridge gerektirir
+        // Şimdilik URL parsing ile fallback yapıyoruz
+
+        final currentUrl = Uri.base;
+        final businessId = currentUrl.queryParameters['business'] ??
+            currentUrl.queryParameters['businessId'];
+        final tableNumber = currentUrl.queryParameters['table'] ??
+            currentUrl.queryParameters['tableNumber'];
+
+        if (businessId != null && businessId.isNotEmpty) {
+          return {
+            'businessId': businessId,
+            'tableNumber':
+                tableNumber != null ? int.tryParse(tableNumber) : null,
+            'source': 'flutter_web_fallback'
+          };
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('⚠️ Web QR info extraction failed: $e');
+      return null;
+    }
   }
 
   /// Build validation URL for QR service

@@ -55,11 +55,12 @@ window.addEventListener('DOMContentLoaded', function() {
   console.log('📍 Current path:', currentPath);
   console.log('📍 Current search:', currentSearch);
   
-  // Enhanced QR menu URL detection
+  // Enhanced QR menu URL detection - unified patterns
   const isQRMenuURL = currentPath.includes('/menu/') ||
                      currentPath.includes('/qr-menu/') ||
                      currentPath === '/qr' ||
                      currentPath.startsWith('/qr?') ||
+                     currentPath === '/universal-qr' ||
                      searchParams.has('business') ||
                      searchParams.has('businessId');
   
@@ -71,17 +72,58 @@ window.addEventListener('DOMContentLoaded', function() {
     hasBusinessId: searchParams.has('businessId')
   });
   
+  // Extract business info for QR URLs
+  let businessId = null;
+  let tableNumber = null;
+  
+  if (isQRMenuURL) {
+    // Method 1: From query parameters
+    businessId = searchParams.get('business') || searchParams.get('businessId');
+    tableNumber = searchParams.get('table') || searchParams.get('tableNumber');
+    
+    // Method 2: From path parameters (e.g., /qr-menu/businessId)
+    if (!businessId && currentPath.includes('/qr-menu/')) {
+      const pathParts = currentPath.split('/qr-menu/');
+      if (pathParts.length > 1) {
+        businessId = pathParts[1].split('?')[0].split('/')[0];
+      }
+    }
+    
+    // Method 3: From path parameters (e.g., /menu/businessId)
+    if (!businessId && currentPath.includes('/menu/')) {
+      const pathParts = currentPath.split('/menu/');
+      if (pathParts.length > 1) {
+        businessId = pathParts[1].split('?')[0].split('/')[0];
+      }
+    }
+    
+    console.log('🎯 Extracted QR parameters:', {
+      businessId: businessId,
+      tableNumber: tableNumber,
+      source: businessId ? 'success' : 'failed'
+    });
+  }
+  
   // Don't redirect QR menu URLs - let Flutter handle them
   if (isQRMenuURL) {
     console.log('✅ QR Menu URL detected, preserving route:', currentPath + currentSearch);
-    // Ensure Flutter can access the QR parameters
+    
+    // Enhanced Flutter accessibility with validation
     window.qrRouteInfo = {
       originalPath: currentPath,
       originalSearch: currentSearch,
-      businessId: searchParams.get('business') || searchParams.get('businessId'),
-      tableNumber: searchParams.get('table') || searchParams.get('tableNumber'),
-      timestamp: Date.now()
+      businessId: businessId,
+      tableNumber: tableNumber ? parseInt(tableNumber) : null,
+      timestamp: Date.now(),
+      isValid: businessId ? true : false,
+      source: 'web_router'
     };
+    
+    // If no businessId found, log warning
+    if (!businessId) {
+      console.warn('⚠️ QR URL detected but no businessId found:', currentPath + currentSearch);
+    }
+    
     return; // Don't interfere with QR routes
   }
   
@@ -100,7 +142,7 @@ window.addEventListener('DOMContentLoaded', function() {
     const path = hash.split('?')[0];
     
     // Check if hash contains QR menu path
-    if (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr')) {
+    if (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr') || path.includes('/universal-qr')) {
       console.log('✅ QR Menu hash detected, preserving:', hash);
       return; // Don't redirect QR menu paths
     }
@@ -119,7 +161,7 @@ window.addEventListener('hashchange', function() {
   const path = hash.split('?')[0];
   
   // Don't interfere with QR menu URLs
-  if (path && (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr'))) {
+  if (path && (path.includes('/menu/') || path.includes('/qr-menu/') || path.includes('/qr') || path.includes('/universal-qr'))) {
     console.log('✅ QR Menu hash change detected, preserving:', hash);
     return;
   }
@@ -143,18 +185,44 @@ window.validateQRUrl = function(url) {
     const hasBusinessParam = uri.searchParams.has('business') || uri.searchParams.has('businessId');
     const hasQRPath = uri.pathname.includes('/menu/') || 
                      uri.pathname.includes('/qr-menu/') || 
-                     uri.pathname === '/qr';
+                     uri.pathname === '/qr' ||
+                     uri.pathname === '/universal-qr';
+    
+    // Extract businessId from path if not in params
+    let businessId = uri.searchParams.get('business') || uri.searchParams.get('businessId');
+    
+    if (!businessId && uri.pathname.includes('/qr-menu/')) {
+      const pathParts = uri.pathname.split('/qr-menu/');
+      if (pathParts.length > 1) {
+        businessId = pathParts[1].split('?')[0].split('/')[0];
+      }
+    }
+    
+    if (!businessId && uri.pathname.includes('/menu/')) {
+      const pathParts = uri.pathname.split('/menu/');
+      if (pathParts.length > 1) {
+        businessId = pathParts[1].split('?')[0].split('/')[0];
+      }
+    }
     
     return {
-      isValid: hasBusinessParam || hasQRPath,
-      businessId: uri.searchParams.get('business') || uri.searchParams.get('businessId'),
+      isValid: (hasBusinessParam || hasQRPath) && businessId,
+      businessId: businessId,
       tableNumber: uri.searchParams.get('table') || uri.searchParams.get('tableNumber'),
-      originalUrl: url
+      originalUrl: url,
+      pathType: hasQRPath ? 'path' : 'query'
     };
   } catch (e) {
     console.error('QR URL validation error:', e);
     return { isValid: false, error: e.message };
   }
+};
+
+// Additional helper for debugging
+window.debugQRRoute = function() {
+  const info = window.getQRRouteInfo();
+  console.log('🐛 Current QR Route Info:', info);
+  return info;
 };
 </script>
 </head>
