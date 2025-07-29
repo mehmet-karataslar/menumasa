@@ -28,7 +28,7 @@ class _RouterPageState extends State<RouterPage> {
   void initState() {
     super.initState();
     _checkAuthenticationState();
-    
+
     // URL güncelle
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
@@ -38,23 +38,18 @@ class _RouterPageState extends State<RouterPage> {
   Future<void> _checkAuthenticationState() async {
     try {
       // 🔍 ÖNCELİKLE QR URL KONTROLÜ YAP!
-      print('🔍 RouterPage: Checking for QR URL...');
-      
+
       final path = _urlService.getCurrentPath();
       final fullUrl = '${_urlService.getCurrentBaseUrl()}$path';
       final params = _urlService.getCurrentParams();
-      
-      print('📍 Current Path: $path');
-      print('📍 Current URL: $fullUrl');
-      print('📍 Current Params: $params');
-      
+
       // QR URL kontrolü - çeşitli formatları destekle
       bool isQrUrl = false;
       String? businessId;
       String? tableId;
-      
-      if (path.contains('/qr') || 
-          fullUrl.contains('business=') || 
+
+      if (path.contains('/qr') ||
+          fullUrl.contains('business=') ||
           fullUrl.contains('table=') ||
           fullUrl.contains('businessId=') ||
           fullUrl.contains('tableId=') ||
@@ -62,16 +57,12 @@ class _RouterPageState extends State<RouterPage> {
           params.containsKey('businessId') ||
           params.containsKey('table') ||
           params.containsKey('tableId')) {
-        
-        print('✅ QR URL detected! Redirecting to UniversalQRMenuPage...');
         isQrUrl = true;
-        
+
         // URL parametrelerini parse et
         businessId = params['business'] ?? params['businessId'];
         tableId = params['table'] ?? params['tableId'];
-        
-        print('📊 QR Params - Business: $businessId, Table: $tableId');
-        
+
         // Hemen QR menü sayfasına yönlendir
         if (mounted) {
           Navigator.of(context).pushReplacement(
@@ -82,20 +73,16 @@ class _RouterPageState extends State<RouterPage> {
           return; // Erken çık, auth kontrolü yapma
         }
       }
-      
-      print('📍 Not a QR URL, continuing with auth check...');
-      
+
       final currentUser = _authService.currentUser;
-      
+
       // Sadece auth durumunu kontrol et, otomatik yönlendirme yapma
       if (currentUser != null) {
-        print('User authenticated: ${currentUser.uid}');
         // User authenticated but don't auto-redirect
         // Let them choose what to do from the main page
       }
     } catch (e) {
       // Continue to show router page if there's an error
-      print('Auth check error: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -109,7 +96,8 @@ class _RouterPageState extends State<RouterPage> {
     try {
       await _authService.signOut();
       if (mounted) {
-        _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+        _urlService.updateUrl('/',
+            customTitle: 'MasaMenu - Dijital Menü Çözümü');
         // Reload the router page to show welcome screen
         setState(() {
           _isLoading = false;
@@ -139,32 +127,26 @@ class _RouterPageState extends State<RouterPage> {
     final routeName = ModalRoute.of(context)?.settings.name;
     final currentUrl = _urlService.getCurrentPath();
     final currentParams = _urlService.getCurrentParams();
-    
-    print('🔍 RouterPage - Route name: $routeName');
-    print('🔍 RouterPage - Current URL: $currentUrl');
-    print('🔍 RouterPage - Current params: $currentParams');
-    
+
     // QR URL formatları kontrolü (öncelik sırasıyla)
     bool isQRUrl = false;
-    
+
     // 1. Yeni evrensel QR format (/qr veya /qr?business=X)
-    if (routeName == '/qr' || 
-        currentUrl == '/qr' || 
+    if (routeName == '/qr' ||
+        currentUrl == '/qr' ||
         currentParams.containsKey('business')) {
       isQRUrl = true;
-      print('✅ RouterPage - Evrensel QR URL tespit edildi');
     }
-    
+
     // 2. Eski QR formatları (/qr-menu/X veya /menu/X)
-    if (!isQRUrl && routeName != null && 
+    if (!isQRUrl &&
+        routeName != null &&
         (routeName.startsWith('/qr-menu/') || routeName.startsWith('/menu/'))) {
       isQRUrl = true;
-      print('✅ RouterPage - Eski format QR URL tespit edildi');
     }
-    
+
     // QR URL tespit edilirse loading kontrolünü bypass et ve direkt yönlendir
     if (isQRUrl) {
-      print('🎯 RouterPage - QR URL tespit edildi, direkt yönlendiriliyor...');
       return _buildQRMenuRedirect(routeName ?? currentUrl);
     }
 
@@ -205,19 +187,19 @@ class _RouterPageState extends State<RouterPage> {
             children: [
               // Header
               _buildHeader(),
-              
+
               const SizedBox(height: 60),
-              
+
               // Main action buttons
               _buildMainActions(),
-              
+
               const SizedBox(height: 40),
-              
+
               // Feature highlights
               _buildFeatureHighlights(),
-              
+
               const SizedBox(height: 40),
-              
+
               // Footer
               _buildFooter(),
             ],
@@ -321,17 +303,18 @@ class _RouterPageState extends State<RouterPage> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () async {
-                              final userData = await _authService.getCurrentUserData();
-                              print('Router - User data: ${userData?.toJson()}'); // Debug log
-                              print('Router - User type: ${userData?.userType}'); // Debug log
-                              
+                              final userData =
+                                  await _authService.getCurrentUserData();
+
                               if (userData?.userType.value == 'business') {
-                                Navigator.pushNamed(context, '/business/dashboard');
-                              } else if (userData?.userType.value == 'customer') {
-                                Navigator.pushNamed(context, '/customer/dashboard', 
-                                  arguments: {'userId': userData!.id});
+                                Navigator.pushNamed(
+                                    context, '/business/dashboard');
+                              } else if (userData?.userType.value ==
+                                  'customer') {
+                                Navigator.pushNamed(
+                                    context, '/customer/dashboard',
+                                    arguments: {'userId': userData!.id});
                               } else {
-                                print('Router - Unknown user type: ${userData?.userType}');
                                 // Fallback: Go to appropriate login
                                 Navigator.pushNamed(context, '/login');
                               }
@@ -371,7 +354,8 @@ class _RouterPageState extends State<RouterPage> {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () {
-              _urlService.updateUrl('/login', customTitle: 'Müşteri Girişi | MasaMenu');
+              _urlService.updateUrl('/login',
+                  customTitle: 'Müşteri Girişi | MasaMenu');
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -405,7 +389,8 @@ class _RouterPageState extends State<RouterPage> {
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () {
-              _urlService.updateUrl('/business/login', customTitle: 'İşletme Girişi | MasaMenu');
+              _urlService.updateUrl('/business/login',
+                  customTitle: 'İşletme Girişi | MasaMenu');
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -440,11 +425,13 @@ class _RouterPageState extends State<RouterPage> {
           children: [
             TextButton(
               onPressed: () {
-                _urlService.updateUrl('/register', customTitle: 'Müşteri Kaydı | MasaMenu');
+                _urlService.updateUrl('/register',
+                    customTitle: 'Müşteri Kaydı | MasaMenu');
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const RegisterPage(userType: 'customer'),
+                    builder: (context) =>
+                        const RegisterPage(userType: 'customer'),
                   ),
                 );
               },
@@ -456,12 +443,11 @@ class _RouterPageState extends State<RouterPage> {
                 ),
               ),
             ),
-            
             const Text(' | '),
-            
             TextButton(
               onPressed: () {
-                _urlService.updateUrl('/business-register', customTitle: 'İşletme Kaydı | MasaMenu');
+                _urlService.updateUrl('/business-register',
+                    customTitle: 'İşletme Kaydı | MasaMenu');
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -489,54 +475,41 @@ class _RouterPageState extends State<RouterPage> {
   }
 
   Widget _buildQRMenuRedirect(String routeName) {
-    print('🔄 _buildQRMenuRedirect called with: $routeName');
-    
     // URL parsing için birden fazla kaynak kullan
     String? businessId;
     int? tableNumber;
-    
+
     // 1. Current URL parameters'dan dene
     final currentParams = _urlService.getCurrentParams();
     businessId = currentParams['business'];
     if (currentParams['table'] != null) {
       tableNumber = int.tryParse(currentParams['table']!);
     }
-    
-    print('🔍 URL Service params - business: $businessId, table: $tableNumber');
-    
+
     // 2. Route name'den parse etmeye çalış
     if (businessId == null && routeName.isNotEmpty) {
       try {
         final uri = Uri.parse(routeName);
         final pathSegments = uri.pathSegments;
         final queryParams = uri.queryParameters;
-        
-        print('🔍 Parsing route: $routeName');
-        print('🔍 Path segments: $pathSegments');
-        print('🔍 Query params: $queryParams');
-        
+
         // Query parameters'dan business ID al
         businessId = queryParams['business'];
         if (queryParams['table'] != null) {
           tableNumber = int.tryParse(queryParams['table']!);
         }
-        
+
         // Eski format (/menu/businessId veya /qr-menu/businessId)
         if (businessId == null && pathSegments.length >= 2) {
           if (pathSegments[0] == 'menu' || pathSegments[0] == 'qr-menu') {
             businessId = pathSegments[1];
           }
         }
-        
-        print('🔍 Parsed - business: $businessId, table: $tableNumber');
-      } catch (e) {
-        print('❌ URL parsing error: $e');
-      }
+      } catch (e) {}
     }
-    
+
     // 3. Business ID bulunamadıysa hata sayfası göster
     if (businessId == null || businessId.isEmpty) {
-      print('❌ Business ID bulunamadı, hata sayfası gösteriliyor');
       return Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
@@ -579,7 +552,8 @@ class _RouterPageState extends State<RouterPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -592,11 +566,9 @@ class _RouterPageState extends State<RouterPage> {
         ),
       );
     }
-    
+
     // 4. Business ID bulundu, UniversalQRMenuPage'e yönlendir
-    print('✅ Business ID bulundu: $businessId, table: $tableNumber');
-    print('✅ UniversalQRMenuPage\'e yönlendiriliyor');
-    
+
     // Widget olarak direkt UniversalQRMenuPage döndür
     // ModalRoute.of(context) içinde parametreleri taşımak için arguments kullan
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -612,19 +584,20 @@ class _RouterPageState extends State<RouterPage> {
             'source': 'qr_redirect',
           },
         );
-        
+
         // URL'i güncelle
         final urlParams = <String, String>{'business': businessId!};
         if (tableNumber != null) {
           urlParams['table'] = tableNumber.toString();
         }
-        _urlService.updateUrl('/qr', 
+        _urlService.updateUrl(
+          '/qr',
           customTitle: 'QR Menü | MasaMenu',
           params: urlParams,
         );
       }
     });
-    
+
     return const UniversalQRMenuPage();
   }
 
@@ -638,9 +611,7 @@ class _RouterPageState extends State<RouterPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        
         const SizedBox(height: 24),
-        
         Row(
           children: [
             Expanded(
@@ -660,9 +631,7 @@ class _RouterPageState extends State<RouterPage> {
             ),
           ],
         ),
-        
         const SizedBox(height: 16),
-        
         Row(
           children: [
             Expanded(
@@ -740,9 +709,7 @@ class _RouterPageState extends State<RouterPage> {
           color: AppColors.grey.withOpacity(0.3),
           thickness: 1,
         ),
-        
         const SizedBox(height: 16),
-        
         Text(
           '© 2024 MasaMenu. Tüm hakları saklıdır.',
           style: AppTypography.caption.copyWith(
@@ -750,9 +717,7 @@ class _RouterPageState extends State<RouterPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        
         const SizedBox(height: 8),
-        
         Text(
           'Dijital menü çözümünüz',
           style: AppTypography.caption.copyWith(
@@ -764,4 +729,3 @@ class _RouterPageState extends State<RouterPage> {
     );
   }
 }
-

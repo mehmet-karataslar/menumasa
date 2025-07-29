@@ -39,7 +39,9 @@ class Order {
     return Order(
       orderId: id ?? data['orderId'] ?? '',
       businessId: data['businessId'] ?? '',
-      customerId: data['customerId'] ?? data['customerName'] ?? '', // Fallback for old data
+      customerId: data['customerId'] ??
+          data['customerName'] ??
+          '', // Fallback for old data
       customerName: data['customerName'] ?? '',
       customerPhone: data['customerPhone'],
       tableNumber: data['tableNumber'] ?? 0,
@@ -51,7 +53,7 @@ class Order {
       notes: data['notes'],
       createdAt: _parseDateTime(data['createdAt']),
       updatedAt: _parseDateTime(data['updatedAt']),
-      completedAt: data['completedAt'] != null 
+      completedAt: data['completedAt'] != null
           ? _parseDateTime(data['completedAt'])
           : null,
     );
@@ -59,7 +61,7 @@ class Order {
 
   static double _parsePrice(dynamic value) {
     if (value == null) return 0.0;
-    
+
     if (value is num) {
       return value.toDouble();
     } else if (value is String) {
@@ -67,22 +69,21 @@ class Order {
       if (parsed != null) {
         return parsed;
       } else {
-        print('Warning: Could not parse price value "$value" as double, using 0.0');
         return 0.0;
       }
     }
-    
+
     return 0.0;
   }
 
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
-    
+
     // Handle Firestore Timestamp
     if (value.runtimeType.toString() == 'Timestamp') {
       return (value as dynamic).toDate();
     }
-    
+
     // Handle String
     if (value is String) {
       try {
@@ -91,12 +92,12 @@ class Order {
         return DateTime.now();
       }
     }
-    
+
     // Handle DateTime (already parsed)
     if (value is DateTime) {
       return value;
     }
-    
+
     return DateTime.now();
   }
 
@@ -288,7 +289,7 @@ class Order {
       items: orderItems,
       totalAmount: totalAmount,
       status: OrderStatus.pending,
-      notes: notes != null && notes.isNotEmpty 
+      notes: notes != null && notes.isNotEmpty
           ? 'Personel: $staffName | $notes'
           : 'Personel: $staffName tarafından oluşturuldu',
       createdAt: DateTime.now(),
@@ -344,7 +345,7 @@ class OrderItem {
 
   static double _parsePriceStatic(dynamic value) {
     if (value == null) return 0.0;
-    
+
     if (value is num) {
       return value.toDouble();
     } else if (value is String) {
@@ -352,11 +353,10 @@ class OrderItem {
       if (parsed != null) {
         return parsed;
       } else {
-        print('Warning: Could not parse price value "$value" as double, using 0.0');
         return 0.0;
       }
     }
-    
+
     return 0.0;
   }
 

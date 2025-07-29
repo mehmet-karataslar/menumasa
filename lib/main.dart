@@ -30,8 +30,9 @@ void main() async {
 
   // Initialize Firebase with error handling
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+
     // Configure Firebase Auth for development
     if (kIsWeb) {
       // Disable reCAPTCHA for development
@@ -40,7 +41,6 @@ void main() async {
       );
     }
   } catch (e) {
-    print('Firebase initialization failed: $e');
     // Continue anyway, Firebase might already be initialized
   }
 
@@ -49,10 +49,10 @@ void main() async {
 
   // Initialize services
   final coreFirestoreService = CoreFirestoreService();
-  
+
   // Initialize notification service
   await NotificationService().initialize();
-  
+
   // Initialize location service (don't request permissions yet)
   final locationService = LocationService();
   await coreFirestoreService.initializeDatabase();
@@ -79,7 +79,7 @@ void main() async {
 
 class MasaMenuApp extends StatelessWidget {
   final AppRouter router;
-  
+
   const MasaMenuApp({Key? key, required this.router}) : super(key: key);
 
   @override
@@ -193,13 +193,7 @@ class MasaMenuApp extends StatelessWidget {
       ),
     );
   }
-
-
-
-
 }
-
-
 
 // Menu router page - takes businessId parameter
 class MenuRouterPage extends StatelessWidget {
@@ -257,7 +251,7 @@ class AdminDashboardRouterPage extends StatelessWidget {
       return const NotFoundPage();
     }
 
-            return BusinessDashboard(businessId: businessId);
+    return BusinessDashboard(businessId: businessId);
   }
 }
 
@@ -315,8 +309,6 @@ class BusinessProfileRouterPage extends StatelessWidget {
   }
 }
 
-
-
 // QR Management router page
 class QRManagementRouterPage extends StatelessWidget {
   const QRManagementRouterPage({Key? key}) : super(key: key);
@@ -345,7 +337,7 @@ class DiscountManagementRouterPage extends StatelessWidget {
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String?;
 
-    if (businessId ==null) {
+    if (businessId == null) {
       return const NotFoundPage();
     }
 

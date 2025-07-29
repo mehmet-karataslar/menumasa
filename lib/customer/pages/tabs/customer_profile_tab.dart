@@ -34,7 +34,8 @@ class CustomerProfileTab extends StatefulWidget {
 }
 
 class _CustomerProfileTabState extends State<CustomerProfileTab> {
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
   final UrlService _urlService = UrlService();
   final MultilingualService _multilingualService = MultilingualService();
 
@@ -56,15 +57,20 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
 
     try {
       // Kullanıcının siparişlerini yükle
-      final orders = await _customerFirestoreService.getOrdersByCustomer(widget.userId);
-      
+      final orders =
+          await _customerFirestoreService.getOrdersByCustomer(widget.userId);
+
       // Favori işletmeleri yükle
       final businesses = await _customerFirestoreService.getBusinesses();
-      final favoriteIds = widget.customerData?.favorites.map((f) => f.businessId).toList() ?? [];
-      final favorites = businesses.where((b) => favoriteIds.contains(b.id)).toList();
+      final favoriteIds =
+          widget.customerData?.favorites.map((f) => f.businessId).toList() ??
+              [];
+      final favorites =
+          businesses.where((b) => favoriteIds.contains(b.id)).toList();
 
       // Dil ayarlarını yükle
-      final languageSettings = await _multilingualService.getLanguageSettings(widget.userId);
+      final languageSettings =
+          await _multilingualService.getLanguageSettings(widget.userId);
 
       setState(() {
         _orders = orders;
@@ -72,11 +78,13 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         _languageSettings = languageSettings;
       });
     } catch (e) {
-      print('Profil veri yükleme hatası: $e');
+      // Removed print for performance
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -88,8 +96,9 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
   void _navigateToProfile() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final dynamicRoute = '/customer/${widget.userId}/profile?t=$timestamp';
-    _urlService.updateCustomerUrl(widget.userId, 'profile', customTitle: 'Profilim | MasaMenu');
-    
+    _urlService.updateCustomerUrl(widget.userId, 'profile',
+        customTitle: 'Profilim | MasaMenu');
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -112,14 +121,14 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
           children: [
             // Profil kartı
             _buildModernProfileCard(),
-            
+
             const SizedBox(height: 24),
-            
+
             // İstatistikler
             _buildDetailedStats(),
-            
+
             const SizedBox(height: 24),
-            
+
             // Menü seçenekleri
             _buildProfileMenuOptions(),
           ],
@@ -218,14 +227,15 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
   }
 
   Widget _buildDetailedStats() {
-    final stats = widget.customerData?.stats ?? app_user.CustomerStats(
-      totalOrders: 0,
-      totalSpent: 0.0,
-      favoriteBusinessCount: 0,
-      totalVisits: 0,
-      categoryPreferences: {},
-      businessSpending: {},
-    );
+    final stats = widget.customerData?.stats ??
+        app_user.CustomerStats(
+          totalOrders: 0,
+          totalSpent: 0.0,
+          favoriteBusinessCount: 0,
+          totalVisits: 0,
+          categoryPreferences: {},
+          businessSpending: {},
+        );
 
     return Container(
       decoration: BoxDecoration(
@@ -351,7 +361,7 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
       {
         'icon': Icons.language_rounded,
         'title': 'Dil Seçimi',
-        'subtitle': _languageSettings != null 
+        'subtitle': _languageSettings != null
             ? 'Mevcut: ${LanguageSettings.getLanguageInfo(_languageSettings!.preferredLanguage)?.name ?? "Türkçe"}'
             : 'Menü dilini değiştirin',
         'color': AppColors.secondary,
@@ -365,7 +375,8 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         'action': () {
           // Navigate to orders with URL update
           final timestamp = DateTime.now().millisecondsSinceEpoch;
-          _urlService.updateCustomerUrl(widget.userId, 'orders', customTitle: 'Siparişlerim | MasaMenu');
+          _urlService.updateCustomerUrl(widget.userId, 'orders',
+              customTitle: 'Siparişlerim | MasaMenu');
           widget.onNavigateToTab?.call(1);
         },
       },
@@ -377,7 +388,8 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         'action': () {
           // Navigate to favorites with URL update
           final timestamp = DateTime.now().millisecondsSinceEpoch;
-          _urlService.updateCustomerUrl(widget.userId, 'favorites', customTitle: 'Favorilerim | MasaMenu');
+          _urlService.updateCustomerUrl(widget.userId, 'favorites',
+              customTitle: 'Favorilerim | MasaMenu');
           widget.onNavigateToTab?.call(2);
         },
       },
@@ -441,7 +453,7 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         children: menuItems.asMap().entries.map((entry) {
           final index = entry.key;
           final item = entry.value;
-          
+
           return Column(
             children: [
               Material(
@@ -634,15 +646,17 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
               '• Teknik sorunlar',
               '• Favori işletmeler',
               '• Bildirim ayarları',
-            ].map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                item,
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            )).toList(),
+            ]
+                .map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        item,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ))
+                .toList(),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -718,13 +732,14 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                Icon(Icons.language_rounded, color: AppColors.primary, size: 24),
+                Icon(Icons.language_rounded,
+                    color: AppColors.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
                   'Dil Seçimi',
@@ -741,7 +756,7 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
               ],
             ),
           ),
-          
+
           // Language list
           Expanded(
             child: ListView.builder(
@@ -749,8 +764,9 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
               itemCount: LanguageSettings.supportedLanguages.length,
               itemBuilder: (context, index) {
                 final language = LanguageSettings.supportedLanguages[index];
-                final isSelected = _languageSettings?.preferredLanguage == language.code;
-                
+                final isSelected =
+                    _languageSettings?.preferredLanguage == language.code;
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: Material(
@@ -761,10 +777,14 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.greyLighter,
+                          color: isSelected
+                              ? AppColors.primary.withOpacity(0.1)
+                              : AppColors.greyLighter,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.greyLight,
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.greyLight,
                             width: isSelected ? 2 : 1,
                           ),
                         ),
@@ -783,7 +803,9 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
                                     language.name,
                                     style: AppTypography.bodyLarge.copyWith(
                                       fontWeight: FontWeight.w600,
-                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.textPrimary,
                                     ),
                                   ),
                                   Text(
@@ -810,7 +832,7 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
               },
             ),
           ),
-          
+
           // Auto detect toggle
           Container(
             margin: const EdgeInsets.all(20),
@@ -863,15 +885,16 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         widget.userId,
         preferredLanguage: languageCode,
       );
-      
+
       // Dil ayarlarını güncelle
-      final updatedSettings = await _multilingualService.getLanguageSettings(widget.userId);
+      final updatedSettings =
+          await _multilingualService.getLanguageSettings(widget.userId);
       setState(() {
         _languageSettings = updatedSettings;
       });
-      
+
       Navigator.pop(context);
-      
+
       // Başarı mesajı
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -888,10 +911,11 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
           ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
-      
+
       // Sayfayı yenile
       widget.onRefresh();
     } catch (e) {
@@ -911,9 +935,10 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
         widget.userId,
         autoDetectLanguage: value,
       );
-      
+
       // Dil ayarlarını güncelle
-      final updatedSettings = await _multilingualService.getLanguageSettings(widget.userId);
+      final updatedSettings =
+          await _multilingualService.getLanguageSettings(widget.userId);
       setState(() {
         _languageSettings = updatedSettings;
       });
@@ -926,4 +951,4 @@ class _CustomerProfileTabState extends State<CustomerProfileTab> {
       );
     }
   }
-} 
+}

@@ -11,7 +11,7 @@ class AdminService {
   static const String _adminCollection = 'admin_users';
   static const String _adminSessionsCollection = 'admin_sessions';
   static const String _adminLogsCollection = 'admin_activity_logs';
-  
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   AdminUser? _currentAdmin;
@@ -25,7 +25,8 @@ class AdminService {
   // Getters
   AdminUser? get currentAdmin => _currentAdmin;
   AdminSession? get currentSession => _currentSession;
-  bool get isLoggedIn => _currentAdmin != null && _currentSession?.isValid == true;
+  bool get isLoggedIn =>
+      _currentAdmin != null && _currentSession?.isValid == true;
 
   /// Admin girişi
   Future<AdminUser?> signInWithCredentials({
@@ -37,10 +38,10 @@ class AdminService {
     try {
       // Önce Firebase Authentication ile giriş yap
       UserCredential userCredential;
-      
+
       // Admin kullanıcıları için özel email formatı kullan
       final adminEmail = '$username@admin.masamenu.com';
-      
+
       try {
         userCredential = await _auth.signInWithEmailAndPassword(
           email: adminEmail,
@@ -48,7 +49,7 @@ class AdminService {
         );
       } catch (e) {
         print('Firebase Auth hatası: $e');
-        
+
         // Eğer kullanıcı yoksa, ilk admin için otomatik oluştur
         if (e.toString().contains('user-not-found')) {
           print('İlk admin kullanıcısı oluşturuluyor: $username');
@@ -57,9 +58,10 @@ class AdminService {
               email: adminEmail,
               password: password,
             );
-            
+
             // İlk admin kullanıcısını Firestore'a kaydet
-            await _createFirstAdmin(username, password, userCredential.user!.uid);
+            await _createFirstAdmin(
+                username, password, userCredential.user!.uid);
           } catch (createError) {
             print('Admin oluşturma hatası: $createError');
             if (createError.toString().contains('email-already-in-use')) {
@@ -77,7 +79,8 @@ class AdminService {
         } else if (e.toString().contains('invalid-credential')) {
           throw AdminException('Geçersiz kullanıcı adı veya şifre');
         } else if (e.toString().contains('reCAPTCHA')) {
-          throw AdminException('Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.');
+          throw AdminException(
+              'Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.');
         } else {
           throw AdminException('Giriş sırasında hata: $e');
         }
@@ -93,20 +96,20 @@ class AdminService {
         // Eğer Firestore'da admin yoksa, oluştur
         print('Firestore\'da admin bulunamadı, oluşturuluyor...');
         await _createFirstAdmin(username, password, userCredential.user!.uid);
-        
+
         // Tekrar al
         final newAdminDoc = await _firestore
             .collection(_adminCollection)
             .doc(userCredential.user!.uid)
             .get();
-            
+
         if (!newAdminDoc.exists) {
           throw AdminException('Admin kullanıcısı oluşturulamadı');
         }
-        
+
         final adminData = newAdminDoc.data()!;
         final admin = AdminUser.fromJson({...adminData, 'id': newAdminDoc.id});
-        
+
         // Session oluştur
         final session = await _createSession(
           adminId: admin.id,
@@ -135,10 +138,7 @@ class AdminService {
       );
 
       // Admin bilgilerini güncelle
-      await _firestore
-          .collection(_adminCollection)
-          .doc(admin.id)
-          .update({
+      await _firestore.collection(_adminCollection).doc(admin.id).update({
         'lastLoginAt': DateTime.now().toIso8601String(),
         'lastLoginIp': ipAddress,
         'sessionToken': session.sessionToken,
@@ -168,7 +168,8 @@ class AdminService {
   }
 
   /// İlk admin kullanıcısını oluştur
-  Future<void> _createFirstAdmin(String username, String password, String uid) async {
+  Future<void> _createFirstAdmin(
+      String username, String password, String uid) async {
     final adminId = uid;
     final hashedPassword = _hashPassword(password);
 
@@ -184,14 +185,11 @@ class AdminService {
       isActive: true,
     );
 
-    await _firestore
-        .collection(_adminCollection)
-        .doc(adminId)
-        .set({
+    await _firestore.collection(_adminCollection).doc(adminId).set({
       ...admin.toJson(),
       'passwordHash': hashedPassword,
     });
-    
+
     print('Admin kullanıcısı Firestore\'a kaydedildi: $username');
   }
 
@@ -297,7 +295,8 @@ class AdminService {
       if (sessionQuery.docs.isEmpty) return false;
 
       final sessionData = sessionQuery.docs.first.data();
-      final session = AdminSession.fromJson({...sessionData, 'id': sessionQuery.docs.first.id});
+      final session = AdminSession.fromJson(
+          {...sessionData, 'id': sessionQuery.docs.first.id});
 
       if (!session.isValid) {
         // Session'ı deaktif et
@@ -330,7 +329,8 @@ class AdminService {
   }
 
   /// Tüm admin kullanıcılarını getir
-  Future<List<AdminUser>> getAllAdmins({bool skipPermissionCheck = false}) async {
+  Future<List<AdminUser>> getAllAdmins(
+      {bool skipPermissionCheck = false}) async {
     try {
       // Firebase Authentication kontrolü
       final user = _auth.currentUser;
@@ -339,7 +339,8 @@ class AdminService {
       }
 
       // İlk admin oluşturulurken yetki kontrolü yapma
-      if (!skipPermissionCheck && !_hasPermission(AdminPermission.manageAdmins)) {
+      if (!skipPermissionCheck &&
+          !_hasPermission(AdminPermission.manageAdmins)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -349,7 +350,8 @@ class AdminService {
           .get();
 
       return querySnapshot.docs
-          .map((doc) => AdminUser.fromJson({...(doc.data() as Map<String, dynamic>), 'id': doc.id}))
+          .map((doc) => AdminUser.fromJson(
+              {...(doc.data() as Map<String, dynamic>), 'id': doc.id}))
           .toList();
     } catch (e) {
       if (e is AdminException) rethrow;
@@ -375,7 +377,8 @@ class AdminService {
       }
 
       // İlk admin oluşturulurken yetki kontrolü yapma
-      if (!skipPermissionCheck && !_hasPermission(AdminPermission.manageAdmins)) {
+      if (!skipPermissionCheck &&
+          !_hasPermission(AdminPermission.manageAdmins)) {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
@@ -416,10 +419,7 @@ class AdminService {
         isActive: true,
       );
 
-      await _firestore
-          .collection(_adminCollection)
-          .doc(adminId)
-          .set({
+      await _firestore.collection(_adminCollection).doc(adminId).set({
         ...admin.toJson(),
         'passwordHash': hashedPassword,
       });
@@ -503,10 +503,7 @@ class AdminService {
 
       final hashedPassword = _hashPassword(newPassword);
 
-      await _firestore
-          .collection(_adminCollection)
-          .doc(adminId)
-          .update({
+      await _firestore.collection(_adminCollection).doc(adminId).update({
         'passwordHash': hashedPassword,
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -533,10 +530,7 @@ class AdminService {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
-      await _firestore
-          .collection(_adminCollection)
-          .doc(adminId)
-          .delete();
+      await _firestore.collection(_adminCollection).doc(adminId).delete();
 
       // Activity log kaydet
       await _logActivity(
@@ -587,10 +581,8 @@ class AdminService {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
-      final doc = await _firestore
-          .collection('businesses')
-          .doc(businessId)
-          .get();
+      final doc =
+          await _firestore.collection('businesses').doc(businessId).get();
 
       if (!doc.exists) {
         return null;
@@ -627,10 +619,7 @@ class AdminService {
         updates['approvedBy'] = _currentAdmin?.id;
       }
 
-      await _firestore
-          .collection('businesses')
-          .doc(businessId)
-          .update(updates);
+      await _firestore.collection('businesses').doc(businessId).update(updates);
 
       // Activity log kaydet
       await _logActivity(
@@ -657,10 +646,7 @@ class AdminService {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
-      await _firestore
-          .collection('businesses')
-          .doc(businessId)
-          .update({
+      await _firestore.collection('businesses').doc(businessId).update({
         'isActive': isActive,
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -687,9 +673,8 @@ class AdminService {
         throw AdminException('Bu işlem için yetkiniz yok');
       }
 
-      final businessesSnapshot = await _firestore
-          .collection('businesses')
-          .get();
+      final businessesSnapshot =
+          await _firestore.collection('businesses').get();
 
       final totalBusinesses = businessesSnapshot.docs.length;
       final activeBusinesses = businessesSnapshot.docs
@@ -784,25 +769,22 @@ class AdminService {
 
       // İşletme istatistikleri
       final businessStats = await getBusinessStats();
-      
+
       // Müşteri istatistikleri
       final customerStats = await getCustomerStats();
-      
+
       // Admin istatistikleri
-      final adminsSnapshot = await _firestore
-          .collection(_adminCollection)
-          .get();
-      
+      final adminsSnapshot =
+          await _firestore.collection(_adminCollection).get();
+
       final totalAdmins = adminsSnapshot.docs.length;
       final activeAdmins = adminsSnapshot.docs
           .where((doc) => doc.data()['isActive'] == true)
           .length;
 
       // Sipariş istatistikleri
-      final ordersSnapshot = await _firestore
-          .collection('orders')
-          .get();
-      
+      final ordersSnapshot = await _firestore.collection('orders').get();
+
       final totalOrders = ordersSnapshot.docs.length;
       final completedOrders = ordersSnapshot.docs
           .where((doc) => doc.data()['status'] == 'completed')
@@ -822,8 +804,12 @@ class AdminService {
           'pendingOrders': totalOrders - completedOrders,
         },
         'system': {
-          'totalUsers': businessStats['totalBusinesses'] + customerStats['totalCustomers'] + totalAdmins,
-          'totalActiveUsers': businessStats['activeBusinesses'] + customerStats['activeCustomers'] + activeAdmins,
+          'totalUsers': businessStats['totalBusinesses'] +
+              customerStats['totalCustomers'] +
+              totalAdmins,
+          'totalActiveUsers': businessStats['activeBusinesses'] +
+              customerStats['activeCustomers'] +
+              activeAdmins,
         },
       };
     } catch (e) {
@@ -859,17 +845,20 @@ class AdminService {
       }
 
       if (startDate != null) {
-        query = query.where('createdAt', isGreaterThanOrEqualTo: startDate.toIso8601String());
+        query = query.where('createdAt',
+            isGreaterThanOrEqualTo: startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        query = query.where('createdAt', isLessThanOrEqualTo: endDate.toIso8601String());
+        query = query.where('createdAt',
+            isLessThanOrEqualTo: endDate.toIso8601String());
       }
 
       final querySnapshot = await query.get();
 
       return querySnapshot.docs
-          .map((doc) => AdminActivityLog.fromJson({...(doc.data() as Map<String, dynamic>), 'id': doc.id}))
+          .map((doc) => AdminActivityLog.fromJson(
+              {...(doc.data() as Map<String, dynamic>), 'id': doc.id}))
           .toList();
     } catch (e) {
       if (e is AdminException) rethrow;
@@ -934,14 +923,18 @@ class AdminService {
   }) async {
     try {
       final logId = 'log_${DateTime.now().millisecondsSinceEpoch}';
-      
+
       final log = AdminActivityLog(
         id: logId,
         adminUserId: adminId,
         adminUserName: adminUsername,
         activityType: AdminActivityType.adminManagement, // Default type
         description: details ?? action,
-        details: {'action': action, 'targetType': targetType, 'targetId': targetId},
+        details: {
+          'action': action,
+          'targetType': targetType,
+          'targetId': targetId
+        },
         timestamp: DateTime.now(),
         ipAddress: ipAddress,
         userAgent: userAgent,
@@ -952,7 +945,7 @@ class AdminService {
           .doc(logId)
           .set(log.toJson());
     } catch (e) {
-      print('Activity log kaydedilirken hata: $e');
+      // Removed print statement for performance
     }
   }
 }
@@ -963,4 +956,4 @@ class AdminException implements Exception {
 
   @override
   String toString() => 'AdminException: $message';
-} 
+}

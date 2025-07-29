@@ -30,7 +30,6 @@ class UniversalQRMenuPage extends StatefulWidget {
 
 class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     with TickerProviderStateMixin {
-  
   // Services
   final AuthService _authService = AuthService();
   final CartService _cartService = CartService();
@@ -49,18 +48,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   List<Product> _products = [];
   List<Category> _categories = [];
   List<Product> _filteredProducts = [];
-  
+
   // URL Parameters
   String? _businessId;
   int? _tableNumber;
-  
+
   // State
   bool _isLoading = true;
   String? _errorMessage;
   String _selectedCategoryId = 'all';
   String _searchQuery = '';
   bool _isSearching = false;
-  
+
   // Guest Mode State
   bool _isGuestMode = false;
   String? _guestUserId;
@@ -71,7 +70,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     _initializeAnimations();
     _initializeGuestMode();
   }
-  
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -86,7 +85,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -112,21 +111,19 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   void _initializeGuestMode() {
     // Kullanıcı giriş yapmış mı kontrol et
     final currentUser = _authService.currentUser;
-    
+
     if (currentUser == null) {
       // Kullanıcı giriş yapmamış, misafir modu başlat
       setState(() {
         _isGuestMode = true;
         _guestUserId = 'guest_${DateTime.now().millisecondsSinceEpoch}';
       });
-      print('🎭 Misafir modu aktif - Guest ID: $_guestUserId');
     } else {
       // Kullanıcı giriş yapmış
       setState(() {
         _isGuestMode = false;
         _guestUserId = null;
       });
-      print('👤 Kayıtlı kullanıcı - ID: ${currentUser.uid}');
     }
   }
 
@@ -137,8 +134,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     });
 
     try {
-      print('🔍 UniversalQRMenuPage - Enhanced URL parsing başlıyor...');
-      
       // User feedback - POST FRAME
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -151,7 +146,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.white),
                     ),
                   ),
                   SizedBox(width: 12),
@@ -169,8 +165,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       final parseResult = _extractBusinessParametersEnhanced();
       _businessId = parseResult['businessId'];
       _tableNumber = parseResult['tableNumber'];
-      
-      print('✅ Enhanced parsing result - Business: $_businessId, Table: $_tableNumber');
 
       // Validate that we have a business ID
       if (_businessId == null || _businessId!.isEmpty) {
@@ -182,12 +176,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
       // Enhanced QR validation using QR Service
       final currentUrl = _buildValidationUrl();
-      print('📱 Current URL for validation: $currentUrl');
 
-      final validationResult = await _qrService.validateAndParseQRUrl(currentUrl);
-      
+      final validationResult =
+          await _qrService.validateAndParseQRUrl(currentUrl);
+
       if (!validationResult.isValid) {
-        print('❌ QR Validation failed: ${validationResult.errorMessage}');
         throw QRValidationException(
           validationResult.errorMessage ?? 'QR kod doğrulama hatası',
           errorCode: validationResult.errorCode,
@@ -201,30 +194,24 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       if (validationResult.tableNumber != null) {
         _tableNumber = validationResult.tableNumber;
       }
-      
-      print('✅ Enhanced validation successful - Business: $_businessId, Table: $_tableNumber');
 
       // Use business from validation if available
       if (validationResult.business != null) {
         setState(() {
           _business = validationResult.business;
         });
-        print('🚀 Business loaded from validation cache: ${_business!.businessName}');
       }
 
       // Load remaining data
       await _loadMenuData();
-      
+
       // Start animations
       _slideController.forward();
       _fadeController.forward();
-      
     } catch (e) {
-      print('❌ Enhanced Universal QR Menu Error: $e');
-      
       String userFriendlyMessage;
       String? errorCode;
-      
+
       if (e is QRValidationException) {
         userFriendlyMessage = e.message;
         errorCode = e.errorCode;
@@ -232,11 +219,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         userFriendlyMessage = _getUserFriendlyErrorMessage(e.toString());
         errorCode = 'GENERAL_ERROR';
       }
-      
+
       setState(() {
         _errorMessage = userFriendlyMessage;
       });
-      
+
       // Log error for analytics
       final currentUrl = _buildValidationUrl();
       final validationService = QRValidationService();
@@ -245,7 +232,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         userFriendlyMessage,
         errorCode,
       );
-      
     } finally {
       setState(() {
         _isLoading = false;
@@ -255,85 +241,67 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
   /// Enhanced business parameter extraction with multiple fallback methods
   Map<String, dynamic> _extractBusinessParametersEnhanced() {
-    String? businessId;
-    int? tableNumber;
-    
-    print('🔍 Starting enhanced parameter extraction...');
-    
     // Method 1: Route arguments (highest priority - most reliable)
     final routeSettings = ModalRoute.of(context)?.settings;
     final arguments = routeSettings?.arguments as Map<String, dynamic>?;
-    
+
     if (arguments != null) {
-      businessId = arguments['businessId']?.toString();
+      final businessId = arguments['businessId']?.toString();
       final tableString = arguments['tableNumber']?.toString();
-      if (tableString != null) {
-        tableNumber = int.tryParse(tableString);
-      }
-      print('📋 Method 1 - Route arguments: business=$businessId, table=$tableNumber');
       if (businessId != null && businessId.isNotEmpty) {
+        final tableNumber = int.tryParse(tableString ?? '');
         return {'businessId': businessId, 'tableNumber': tableNumber};
       }
     }
-    
+
     // Method 2: URL Service (web-compatible)
     try {
       final urlParams = _urlService.getCurrentParams();
-      businessId = urlParams['business'] ?? urlParams['businessId'];
+      final businessId = urlParams['business'] ?? urlParams['businessId'];
       final tableString = urlParams['table'] ?? urlParams['tableNumber'];
-      if (tableString != null) {
-        tableNumber = int.tryParse(tableString);
-      }
-      print('📋 Method 2 - URL Service: business=$businessId, table=$tableNumber');
       if (businessId != null && businessId.isNotEmpty) {
+        final tableNumber = int.tryParse(tableString ?? '');
         return {'businessId': businessId, 'tableNumber': tableNumber};
       }
     } catch (e) {
-      print('⚠️ URL Service method failed: $e');
+      // print('⚠️ URL Service method failed: $e'); // Removed print
     }
-    
+
     // Method 3: Direct route name parsing
     try {
       if (routeSettings?.name != null) {
         final uri = Uri.tryParse(routeSettings!.name!);
         if (uri != null) {
-          businessId = uri.queryParameters['business'] ?? 
-                      uri.queryParameters['businessId'];
-          final tableString = uri.queryParameters['table'] ?? 
-                             uri.queryParameters['tableNumber'];
-          if (tableString != null) {
-            tableNumber = int.tryParse(tableString);
-          }
-          print('📋 Method 3 - Route parsing: business=$businessId, table=$tableNumber');
+          final businessId = uri.queryParameters['business'] ??
+              uri.queryParameters['businessId'];
+          final tableString = uri.queryParameters['table'] ??
+              uri.queryParameters['tableNumber'];
           if (businessId != null && businessId.isNotEmpty) {
+            final tableNumber = int.tryParse(tableString ?? '');
             return {'businessId': businessId, 'tableNumber': tableNumber};
           }
         }
       }
     } catch (e) {
-      print('⚠️ Route parsing method failed: $e');
+      // print('⚠️ Route parsing method failed: $e'); // Removed print
     }
-    
+
     // Method 4: Web-specific QR route info (from enhanced web routing)
     try {
       // This would be populated by the enhanced web routing system
       final webQRInfo = _getWebQRRouteInfo();
       if (webQRInfo != null) {
-        businessId = webQRInfo['businessId'];
+        final businessId = webQRInfo['businessId'];
         final tableString = webQRInfo['tableNumber']?.toString();
-        if (tableString != null) {
-          tableNumber = int.tryParse(tableString);
-        }
-        print('📋 Method 4 - Web QR info: business=$businessId, table=$tableNumber');
         if (businessId != null && businessId.isNotEmpty) {
+          final tableNumber = int.tryParse(tableString ?? '');
           return {'businessId': businessId, 'tableNumber': tableNumber};
         }
       }
     } catch (e) {
-      print('⚠️ Web QR info method failed: $e');
+      // print('⚠️ Web QR info method failed: $e'); // Removed print
     }
-    
-    print('❌ No valid business ID found through any method');
+
     return {'businessId': null, 'tableNumber': null};
   }
 
@@ -354,13 +322,13 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         return '$baseUrl/qr?business=$_businessId';
       }
     }
-    
+
     // Fallback: try to construct from route
     final routeSettings = ModalRoute.of(context)?.settings;
     if (routeSettings?.name != null) {
       return '${_qrService.baseUrl}${routeSettings!.name!}';
     }
-    
+
     // Last resort: empty URL (will cause validation to fail appropriately)
     return '';
   }
@@ -382,8 +350,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
   Future<void> _loadMenuData() async {
     try {
-      print('🔄 Loading menu data for business ID: $_businessId');
-      
       // User feedback - POST FRAME
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -396,7 +362,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.white),
                     ),
                   ),
                   SizedBox(width: 12),
@@ -409,45 +376,38 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           );
         }
       });
-      
+
       // Eğer business bilgisi henüz yüklenmemişse, şimdi yükle
       if (_business == null) {
-        print('🔄 Loading business data from Firestore...');
         final business = await _businessService.getBusiness(_businessId!);
-        
+
         if (business == null) {
           throw QRValidationException(
             'İşletme bulunamadı (ID: $_businessId)',
             errorCode: 'BUSINESS_NOT_FOUND',
           );
         }
-        
+
         if (!business.isActive) {
           throw QRValidationException(
             'İşletme şu anda hizmet vermiyor',
             errorCode: 'BUSINESS_INACTIVE',
           );
         }
-        
+
         setState(() {
           _business = business;
         });
-        
-        print('✅ Business loaded: ${business.businessName}');
-      } else {
-        print('✅ Business already loaded from cache: ${_business!.businessName}');
       }
-      
+
       // Kategorileri al
-      print('🔄 Loading categories...');
-      final categories = await _businessService.getCategories(businessId: _businessId!);
-      print('✅ Categories loaded: ${categories.length}');
-      
+      final categories =
+          await _businessService.getCategories(businessId: _businessId!);
+
       // Ürünleri al
-      print('🔄 Loading products...');
-      final products = await _businessService.getProducts(businessId: _businessId!);
+      final products =
+          await _businessService.getProducts(businessId: _businessId!);
       final activeProducts = products.where((p) => p.isActive).toList();
-      print('✅ Products loaded: ${activeProducts.length} active out of ${products.length} total');
 
       setState(() {
         _business = _business; // Business zaten yukarıda set edilmiş
@@ -471,38 +431,43 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
       // URL'i güncelle
       _updateUrl();
-      
-      print('✅ Menu data loaded: ${_business!.businessName}');
-      print('📊 Categories: ${categories.length}, Products: ${activeProducts.length}');
-      
     } catch (e) {
-      print('❌ Error in _loadMenuData: $e');
-      print('❌ Stack trace: ${StackTrace.current}');
-      
+      String userFriendlyMessage;
+      String? errorCode;
+
       if (e is QRValidationException) {
-        rethrow;
+        userFriendlyMessage = e.message;
+        errorCode = e.errorCode;
       } else {
-        throw QRValidationException(
-          'Menü verileri yüklenirken hata: $e',
-          errorCode: 'MENU_LOAD_ERROR',
-        );
+        userFriendlyMessage = _getUserFriendlyErrorMessage(e.toString());
+        errorCode = 'MENU_LOAD_ERROR';
       }
+
+      setState(() {
+        _errorMessage = userFriendlyMessage;
+      });
+
+      // Log error for analytics
+      final currentUrl = _buildValidationUrl();
+      final validationService = QRValidationService();
+      await validationService.logQRCodeError(
+        currentUrl,
+        userFriendlyMessage,
+        errorCode,
+      );
     }
   }
 
   void _updateUrl() {
     if (_business != null) {
-      final title = _tableNumber != null 
+      final title = _tableNumber != null
           ? '${_business!.businessName} - Masa $_tableNumber | MasaMenu'
           : '${_business!.businessName} - Menü | MasaMenu';
-      
-      _urlService.updateUrl('/qr', 
-        customTitle: title,
-        params: {
-          'business': _businessId!,
-          if (_tableNumber != null) 'table': _tableNumber.toString(),
-        }
-      );
+
+      _urlService.updateUrl('/qr', customTitle: title, params: {
+        'business': _businessId!,
+        if (_tableNumber != null) 'table': _tableNumber.toString(),
+      });
     }
   }
 
@@ -526,15 +491,19 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
     // Kategori filtresi
     if (_selectedCategoryId != 'all') {
-      filtered = filtered.where((p) => p.categoryId == _selectedCategoryId).toList();
+      filtered =
+          filtered.where((p) => p.categoryId == _selectedCategoryId).toList();
     }
 
     // Arama filtresi
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((p) => 
-        p.productName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().contains(_searchQuery.toLowerCase())
-      ).toList();
+      filtered = filtered
+          .where((p) =>
+              p.productName
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()) ||
+              p.description.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .toList();
     }
 
     setState(() {
@@ -547,10 +516,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
     try {
       // Misafir modu için guest user ID kullan
-      final userId = _isGuestMode ? _guestUserId : _authService.currentUser?.uid;
-      
+      final userId =
+          _isGuestMode ? _guestUserId : _authService.currentUser?.uid;
+
       await _cartService.addToCart(product, _businessId!, quantity: quantity);
-      
+
       HapticFeedback.heavyImpact();
 
       if (mounted) {
@@ -564,7 +534,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                     color: AppColors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.check_rounded, color: AppColors.white, size: 16),
+                  child: const Icon(Icons.check_rounded,
+                      color: AppColors.white, size: 16),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -575,7 +546,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             duration: const Duration(seconds: 3),
             action: SnackBarAction(
               label: _isGuestMode ? 'Sepete Git' : 'Sepete Git',
@@ -622,7 +594,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       // Kayıtlı kullanıcı - direkt sepete git
       final currentUser = _authService.currentUser;
       Navigator.pushNamed(
-        context, 
+        context,
         '/customer/cart',
         arguments: {
           'businessId': _businessId,
@@ -666,15 +638,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               Navigator.pushNamed(context, '/login');
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Giriş Yap', style: TextStyle(color: AppColors.white)),
+            child: const Text('Giriş Yap',
+                style: TextStyle(color: AppColors.white)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/register');
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
-            child: const Text('Kayıt Ol', style: TextStyle(color: AppColors.white)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Kayıt Ol',
+                style: TextStyle(color: AppColors.white)),
           ),
         ],
       ),
@@ -698,7 +673,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     String customerName;
 
     if (_isGuestMode) {
-      customerId = _guestUserId ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+      customerId =
+          _guestUserId ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
       customerName = 'Misafir Kullanıcı';
     } else if (currentUser != null) {
       customerId = currentUser.uid;
@@ -735,7 +711,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             const Text('Sepete Gitmek İçin Giriş Yapın'),
           ],
         ),
-        content: Text('Misafir modunda sepete erişim için giriş yapmanız gerekmektedir.'),
+        content: Text(
+            'Misafir modunda sepete erişim için giriş yapmanız gerekmektedir.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -747,15 +724,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               Navigator.pushNamed(context, '/login');
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Giriş Yap', style: TextStyle(color: AppColors.white)),
+            child: const Text('Giriş Yap',
+                style: TextStyle(color: AppColors.white)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/register');
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
-            child: const Text('Kayıt Ol', style: TextStyle(color: AppColors.white)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Kayıt Ol',
+                style: TextStyle(color: AppColors.white)),
           ),
         ],
       ),
@@ -774,7 +754,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             const Text('Garson Çağırma'),
           ],
         ),
-        content: Text('Misafir modunda da garson çağırabilirsiniz. Daha iyi hizmet için giriş yapmanızı öneririz.'),
+        content: Text(
+            'Misafir modunda da garson çağırabilirsiniz. Daha iyi hizmet için giriş yapmanızı öneririz.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -786,22 +767,26 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               _showWaiterCallDialog(); // Direkt garson çağırma sayfasına git
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Garson Çağır', style: TextStyle(color: AppColors.white)),
+            child: const Text('Garson Çağır',
+                style: TextStyle(color: AppColors.white)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/login');
             },
-            child: const Text('Giriş Yap', style: TextStyle(color: AppColors.white)),
+            child: const Text('Giriş Yap',
+                style: TextStyle(color: AppColors.white)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/register');
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
-            child: const Text('Kayıt Ol', style: TextStyle(color: AppColors.white)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Kayıt Ol',
+                style: TextStyle(color: AppColors.white)),
           ),
         ],
       ),
@@ -830,7 +815,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               style: AppTypography.bodyMedium,
             ),
             const SizedBox(height: 16),
-            
+
             // Hata detayları göster
             if (_errorMessage != null) ...[
               Container(
@@ -865,7 +850,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               const SizedBox(height: 16),
             ],
-            
+
             // Destek seçenekleri
             _buildSupportOption(
               Icons.phone_rounded,
@@ -876,7 +861,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 _contactBusinessSupport();
               },
             ),
-            
+
             _buildSupportOption(
               Icons.qr_code_scanner_rounded,
               'QR Kod Tarayıcı',
@@ -886,7 +871,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 _showQRScannerHelp();
               },
             ),
-            
+
             _buildSupportOption(
               Icons.refresh_rounded,
               'Sayfa Yenile',
@@ -934,7 +919,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               style: AppTypography.bodyMedium,
             ),
             const SizedBox(height: 16),
-            
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -945,7 +929,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               child: Column(
                 children: [
-                  Icon(Icons.qr_code_2_rounded, size: 48, color: AppColors.info),
+                  Icon(Icons.qr_code_2_rounded,
+                      size: 48, color: AppColors.info),
                   const SizedBox(height: 12),
                   Text(
                     'QR kod tarayıcıya yönlendirileceksiniz. QR kodunuzu kameranızla taratın.',
@@ -1015,7 +1000,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
             ),
             const SizedBox(height: 16),
-            
             if (_business!.phone != null && _business!.phone!.isNotEmpty) ...[
               _buildContactOption(
                 Icons.phone_rounded,
@@ -1025,7 +1009,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               const SizedBox(height: 8),
             ],
-            
             if (_business!.email != null && _business!.email!.isNotEmpty) ...[
               _buildContactOption(
                 Icons.email_rounded,
@@ -1035,7 +1018,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               const SizedBox(height: 8),
             ],
-            
             _buildContactOption(
               Icons.location_on_rounded,
               'Adres',
@@ -1075,8 +1057,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               style: AppTypography.bodyMedium,
             ),
             const SizedBox(height: 16),
-            
-            _buildHelpStep('1', 'QR kodun net ve hasarsız olduğundan emin olun'),
+            _buildHelpStep(
+                '1', 'QR kodun net ve hasarsız olduğundan emin olun'),
             _buildHelpStep('2', 'İnternet bağlantınızı kontrol edin'),
             _buildHelpStep('3', 'Uygulamayı yeniden başlatın'),
             _buildHelpStep('4', 'İşletmeden yeni bir QR kod isteyin'),
@@ -1097,7 +1079,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   // =============================================================================
 
   /// Destek seçeneği widget'ı
-  Widget _buildSupportOption(IconData icon, String title, String subtitle, VoidCallback onTap) {
+  Widget _buildSupportOption(
+      IconData icon, String title, String subtitle, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -1133,7 +1116,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textSecondary),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 16, color: AppColors.textSecondary),
           ],
         ),
       ),
@@ -1141,7 +1125,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   }
 
   /// İletişim seçeneği widget'ı
-  Widget _buildContactOption(IconData icon, String title, String value, VoidCallback onTap) {
+  Widget _buildContactOption(
+      IconData icon, String title, String value, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -1226,7 +1211,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         throw 'Telefon uygulaması açılamadı';
       }
     } catch (e) {
-      print('❌ Phone call error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1248,7 +1232,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         throw 'E-posta uygulaması açılamadı';
       }
     } catch (e) {
-      print('❌ Email error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1263,7 +1246,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   /// Adres detay dialog'u
   void _showAddressDialog() {
     if (_business == null) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1317,18 +1300,19 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   /// Harita uygulamasını açma
   void _openMaps() async {
     if (_business == null) return;
-    
+
     try {
-      final address = '${_business!.address.street}, ${_business!.address.district}, ${_business!.address.city}';
-      final Uri mapsUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
-      
+      final address =
+          '${_business!.address.street}, ${_business!.address.district}, ${_business!.address.city}';
+      final Uri mapsUri = Uri.parse(
+          'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+
       if (await canLaunchUrl(mapsUri)) {
         await launchUrl(mapsUri);
       } else {
         throw 'Harita uygulaması açılamadı';
       }
     } catch (e) {
-      print('❌ Maps error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1445,7 +1429,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               Text(
                 'Menü Yükleniyor...',
                 style: AppTypography.h3.copyWith(
@@ -1455,7 +1439,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              
+
               // Debug info for user
               Container(
                 padding: const EdgeInsets.all(16),
@@ -1501,9 +1485,9 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               Text(
                 'Lütfen bekleyin, veriler yükleniyor.',
                 style: AppTypography.bodyMedium.copyWith(
@@ -1553,13 +1537,14 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
               const SizedBox(height: 12),
               Text(
-                _getUserFriendlyErrorMessage(_errorMessage ?? 'Bilinmeyen hata'),
+                _getUserFriendlyErrorMessage(
+                    _errorMessage ?? 'Bilinmeyen hata'),
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
-              
+
               // Kullanıcı dostu çözüm önerileri
               const SizedBox(height: 20),
               Container(
@@ -1575,7 +1560,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.lightbulb_outline, color: AppColors.info, size: 20),
+                        Icon(Icons.lightbulb_outline,
+                            color: AppColors.info, size: 20),
                         SizedBox(width: 8),
                         Text(
                           'Çözüm Önerileri:',
@@ -1589,14 +1575,15 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                     const SizedBox(height: 12),
                     _buildSolutionItem('• QR kodu tekrar tarayın'),
                     _buildSolutionItem('• İnternet bağlantınızı kontrol edin'),
-                    _buildSolutionItem('• QR kodun net ve hasarsız olduğundan emin olun'),
+                    _buildSolutionItem(
+                        '• QR kodun net ve hasarsız olduğundan emin olun'),
                     _buildSolutionItem('• İşletmeden yeni bir QR kod isteyin'),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Ana eylem butonları
               Column(
                 children: [
@@ -1616,7 +1603,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1624,12 +1612,14 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                       ),
                       const SizedBox(width: 16),
                       OutlinedButton.icon(
-                        onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+                        onPressed: () =>
+                            Navigator.pushReplacementNamed(context, '/'),
                         icon: Icon(Icons.home_rounded),
                         label: Text('Ana Sayfa'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1637,9 +1627,9 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Destek ve yardım butonları
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1650,7 +1640,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                         label: Text('Destek Al'),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.secondary,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1660,7 +1651,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                         label: Text('QR Tarayıcı'),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.info,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                     ],
@@ -1717,7 +1709,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1742,7 +1735,10 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primary.withOpacity(0.9), AppColors.secondary.withOpacity(0.9)],
+                colors: [
+                  AppColors.primary.withOpacity(0.9),
+                  AppColors.secondary.withOpacity(0.9)
+                ],
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
@@ -1756,7 +1752,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.person_outline_rounded, color: AppColors.white, size: 16),
+                Icon(Icons.person_outline_rounded,
+                    color: AppColors.white, size: 16),
                 const SizedBox(width: 6),
                 Text(
                   'Misafir Modu',
@@ -1777,20 +1774,22 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 onPressed: () => Navigator.pushNamed(context, '/login'),
                 backgroundColor: AppColors.primary,
                 heroTag: "login",
-                child: const Icon(Icons.login_rounded, color: AppColors.white, size: 18),
+                child: const Icon(Icons.login_rounded,
+                    color: AppColors.white, size: 18),
               ),
               const SizedBox(width: 8),
               FloatingActionButton.small(
                 onPressed: () => Navigator.pushNamed(context, '/register'),
                 backgroundColor: AppColors.secondary,
                 heroTag: "register",
-                child: const Icon(Icons.person_add_rounded, color: AppColors.white, size: 18),
+                child: const Icon(Icons.person_add_rounded,
+                    color: AppColors.white, size: 18),
               ),
             ],
           ),
           const SizedBox(height: 16),
         ],
-        
+
         // Ana aksiyonlar
         // Garson Çağır
         FloatingActionButton(
@@ -1805,7 +1804,8 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           onPressed: _handleCartAction,
           backgroundColor: AppColors.secondary,
           heroTag: "cart",
-          child: const Icon(Icons.shopping_cart_rounded, color: AppColors.white),
+          child:
+              const Icon(Icons.shopping_cart_rounded, color: AppColors.white),
         ),
       ],
     );
@@ -1838,15 +1838,16 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       return 'QR kod okunamadı. Lütfen tekrar deneyin veya işletmeden yardım isteyin.';
     }
   }
-} 
+}
 
 /// QR doğrulama hata sınıfı
 class QRValidationException implements Exception {
   final String message;
   final String? errorCode;
-  
+
   QRValidationException(this.message, {this.errorCode});
-  
+
   @override
-  String toString() => 'QRValidationException: $message${errorCode != null ? ' (Code: $errorCode)' : ''}';
+  String toString() =>
+      'QRValidationException: $message${errorCode != null ? ' (Code: $errorCode)' : ''}';
 }

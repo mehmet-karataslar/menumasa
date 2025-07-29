@@ -843,7 +843,6 @@ class CustomerService {
           .map((doc) => app_user.ProductFavorite.fromJson(doc.data()))
           .toList();
     } catch (e) {
-      print('Favori ürünler alınırken hata: $e');
       // Hata durumunda boş liste döndür
       return [];
     }
@@ -856,7 +855,6 @@ class CustomerService {
           await getFavoriteProducts(customerId: customerId);
       return favoriteProducts.map((f) => f.productId).toList();
     } catch (e) {
-      print('Favori ürün ID\'leri alınırken hata: $e');
       return [];
     }
   }
@@ -1121,7 +1119,7 @@ class CustomerService {
         metadata: metadata ?? {},
       );
     } catch (e) {
-      print('Activity logging error: $e');
+      // print('Activity logging error: $e'); // Removed print
     }
   }
 
@@ -1270,7 +1268,7 @@ class CustomerService {
 
       _currentCustomer = updatedCustomer;
     } catch (e) {
-      print('Product favorite order count update error: $e');
+      // print('Product favorite order count update error: $e'); // Removed print
     }
   }
 }

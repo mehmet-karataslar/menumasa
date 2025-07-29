@@ -738,33 +738,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           ),
         ),
       ),
-      actions: [
-        // Arama butonu
-        _buildAppBarActionButton(
-          icon: Icons.search_rounded,
-          onTap: _navigateToSearch,
-        ),
-
-        // Siparişlerim butonu
-        _buildAppBarActionButton(
-          icon: Icons.receipt_long_rounded,
-          onTap: () => _navigateToTab(1),
-          badge: _hasNewOrders,
-        ),
-
-        // Sepet butonu
-        _buildAppBarActionButton(
-          icon: Icons.shopping_cart_rounded,
-          onTap: _navigateToCart,
-          badgeCount: _cartItemCount,
-        ),
-
-        // Çıkış Yap butonu
-        _buildAppBarActionButton(
-          icon: Icons.logout_rounded,
-          onTap: _handleLogout,
-        ),
-      ],
     );
   }
 

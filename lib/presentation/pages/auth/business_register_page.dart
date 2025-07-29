@@ -51,7 +51,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   String? _businessId; // Store the generated business ID
 
   final AuthService _authService = AuthService();
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
   final BusinessService _businessService = BusinessService();
 
   @override
@@ -74,7 +75,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
           Navigator.pushReplacementNamed(context, '/business/dashboard');
           return;
         }
-        
+
         // Pre-fill email field with user's email for non-business users
         setState(() {
           _emailController.text = userData.email;
@@ -145,7 +146,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   bool _validateBusinessInfo() {
     final businessName = _businessNameController.text.trim();
     final businessDescription = _businessDescriptionController.text.trim();
-    
+
     if (businessName.isEmpty) {
       setState(() {
         _errorMessage = 'İşletme adı gerekli';
@@ -169,7 +170,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
     final city = _cityController.text.trim();
     final district = _districtController.text.trim();
     final postalCode = _postalCodeController.text.trim();
-    
+
     if (street.isEmpty) {
       setState(() {
         _errorMessage = 'Adres gerekli';
@@ -205,7 +206,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
-    
+
     if (phone.isEmpty) {
       setState(() {
         _errorMessage = 'Telefon numarası gerekli';
@@ -251,16 +252,11 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   }
 
   Future<void> _handleBusinessRegister() async {
-    print('📋 Form validation starting...');
     final isFormValid = _formKey.currentState?.validate() ?? false;
-    print('📋 Form validation result: $isFormValid');
-    
+
     if (!isFormValid) {
-      print('❌ Form validation failed, stopping registration');
       return;
     }
-
-    print('🚀 Starting business registration...');
 
     setState(() {
       _isLoading = true;
@@ -269,30 +265,24 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
 
     try {
       final currentUser = _authService.currentUser;
-      print('🔍 Current user before registration: ${currentUser?.uid ?? "NULL"}');
-      
+
       if (currentUser == null) {
-        print('❌ No current user, creating account first...');
-        // If user is not logged in, create account first
         await _createUserAccount();
         // After user account creation, check again
         final newCurrentUser = _authService.currentUser;
-        print('🔍 Current user after account creation: ${newCurrentUser?.uid ?? "NULL"}');
-        
+
         if (newCurrentUser == null) {
-          print('❌ User account creation failed');
           setState(() {
             _errorMessage = 'Kullanıcı hesabı oluşturulamadı';
           });
           return;
         }
-      } else {
-        print('✅ User already authenticated: ${currentUser.uid}');
-      }
+      } else {}
 
       // Ensure businessId is set
       if (_businessId == null) {
-        _businessId = FirebaseFirestore.instance.collection('businesses').doc().id;
+        _businessId =
+            FirebaseFirestore.instance.collection('businesses').doc().id;
       }
 
       // Get current user (should exist now)
@@ -308,9 +298,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       final phone = _phoneController.text.trim();
       final email = _emailController.text.trim();
       final website = _websiteController.text.trim();
-      
-      print('🏢 Creating business model with ID: $_businessId');
-      
+
       // Create business model
       final business = Business(
         id: _businessId!,
@@ -347,18 +335,14 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         updatedAt: DateTime.now(),
       );
 
-      print('💾 Saving business to Firestore...');
       // Save business to Firestore with the specific ID using toFirestore() for proper Timestamp conversion
       await FirebaseFirestore.instance
           .collection('businesses')
           .doc(_businessId!)
           .set(business.toFirestore());
-      print('✅ Business saved successfully');
 
-      print('📂 Creating default categories...');
       // Create default categories
       await _createDefaultCategories(_businessId!);
-      print('✅ Default categories created');
 
       if (mounted) {
         // Registration successful, navigate to business dashboard
@@ -368,23 +352,18 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         );
       }
     } on AuthException catch (e) {
-      print('🔥 AuthException: ${e.message}');
       setState(() {
         _errorMessage = e.message;
       });
     } on FirebaseAuthException catch (e) {
-      print('🔥 FirebaseAuthException: ${e.code} - ${e.message}');
       setState(() {
         _errorMessage = 'Kimlik doğrulama hatası: ${e.message}';
       });
     } on FirebaseException catch (e) {
-      print('🔥 FirebaseException: ${e.code} - ${e.message}');
       setState(() {
         _errorMessage = 'Firebase hatası: ${e.message}';
       });
     } catch (e, stackTrace) {
-      print('🔥 General Exception: $e');
-      print('🔥 Stack Trace: $stackTrace');
       setState(() {
         _errorMessage = 'İşletme kaydedilirken bir hata oluştu: $e';
       });
@@ -396,8 +375,6 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
   }
 
   Future<void> _createUserAccount() async {
-    print('👤 Creating user account...');
-    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -409,20 +386,16 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       final businessName = _businessNameController.text.trim();
       final phone = _phoneController.text.trim();
       final password = _passwordController.text;
-      
-      print('📧 Email: $email');
-      print('🏢 Business Name: $businessName');
-      print('📞 Phone: $phone');
-      
+
       // Generate business ID first if not already set
       if (_businessId == null) {
-        _businessId = FirebaseFirestore.instance.collection('businesses').doc().id;
-        print('🆔 Generated business ID: $_businessId');
+        _businessId =
+            FirebaseFirestore.instance.collection('businesses').doc().id;
       }
-      
-      print('🔐 Creating Firebase Auth user...');
+
       // Create business user with Firebase Auth and BusinessService
-      final businessUser = await _authService.createBusinessUserWithEmailAndPassword(
+      final businessUser =
+          await _authService.createBusinessUserWithEmailAndPassword(
         email,
         password,
         businessName,
@@ -431,15 +404,10 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       );
 
       if (businessUser != null) {
-        print('✅ Business user account created successfully');
-        print('👤 User ID: ${businessUser.id}');
       } else {
-        print('❌ Business user creation returned null');
         throw Exception('Business user creation failed - returned null');
       }
     } catch (e, stackTrace) {
-      print('🔥 Error creating user account: $e');
-      print('🔥 Stack Trace: $stackTrace');
       setState(() {
         _errorMessage = 'İşletme kullanıcısı oluşturulurken hata: $e';
       });
@@ -450,11 +418,12 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
     }
   }
 
-  Future<void> _createBusinessUser(String businessId, String email, String businessName, String password) async {
+  Future<void> _createBusinessUser(String businessId, String email,
+      String businessName, String password) async {
     try {
       // Create a username from email (part before @)
       final username = email.split('@').first.toLowerCase();
-      
+
       // Import BusinessUser and use the new createWithPassword method
       final businessUser = BusinessUser.createWithPassword(
         businessId: businessId,
@@ -489,7 +458,6 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       } else {
         throw Exception('Kullanıcı oturum açmamış');
       }
-
     } catch (e) {
       throw Exception('İşletme kullanıcısı oluşturulurken hata: $e');
     }
@@ -537,7 +505,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
       // Save each category to Firestore
       for (final category in categories) {
         // Generate a new ID for each category
-        final categoryId = FirebaseFirestore.instance.collection('categories').doc().id;
+        final categoryId =
+            FirebaseFirestore.instance.collection('categories').doc().id;
         final categoryWithId = Category(
           categoryId: categoryId,
           businessId: category.businessId,
@@ -549,18 +518,19 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,
         );
-        
+
         final categoryData = categoryWithId.toJson();
-        categoryData['createdAt'] = Timestamp.fromDate(categoryWithId.createdAt);
-        categoryData['updatedAt'] = Timestamp.fromDate(categoryWithId.updatedAt);
-        
+        categoryData['createdAt'] =
+            Timestamp.fromDate(categoryWithId.createdAt);
+        categoryData['updatedAt'] =
+            Timestamp.fromDate(categoryWithId.updatedAt);
+
         await FirebaseFirestore.instance
             .collection('categories')
             .doc(categoryId)
             .set(categoryData);
       }
     } catch (e) {
-      print('Error creating default categories: $e');
       // Don't throw error here, as the business is already created
     }
   }
@@ -579,9 +549,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
-          onPressed: _currentStep == 0
-              ? () => Navigator.pop(context)
-              : _previousStep,
+          onPressed:
+              _currentStep == 0 ? () => Navigator.pop(context) : _previousStep,
         ),
       ),
       body: SafeArea(
@@ -685,8 +654,8 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
               color: isCompleted
                   ? AppColors.success
                   : isActive
-                  ? AppColors.primary
-                  : AppColors.greyLight,
+                      ? AppColors.primary
+                      : AppColors.greyLight,
             ),
             child: Center(
               child: isCompleted
@@ -970,9 +939,9 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
 
           // Divider
           const Divider(),
-          
+
           const SizedBox(height: 16),
-          
+
           Text(
             'Giriş Bilgileri',
             style: AppTypography.h5.copyWith(
@@ -980,7 +949,7 @@ class _BusinessRegisterPageState extends State<BusinessRegisterPage> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          
+
           const SizedBox(height: 16),
 
           // Password field
