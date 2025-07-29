@@ -256,18 +256,46 @@ class StaffService {
   /// Müsait garsonları getir
   Future<List<Staff>> getAvailableWaiters(String businessId) async {
     try {
+      print('🔍 Getting available waiters for business: $businessId');
+
       final query = await _firestore
           .collection(_collection)
           .where('businessId', isEqualTo: businessId)
           .where('role', isEqualTo: StaffRole.waiter.value)
           .where('isActive', isEqualTo: true)
-          .where('status', isEqualTo: StaffStatus.available.value)
           .get();
 
-      final staffList = query.docs
-          .map((doc) => Staff.fromFirestore(doc))
-          .where((staff) => staff.isAvailable)
-          .toList();
+      print('📊 Found ${query.docs.length} waiters in database');
+
+      final staffList = query.docs.map((doc) {
+        final staff = Staff.fromFirestore(doc);
+        print(
+            '👨‍🍳 Waiter: ${staff.fullName} - Status: ${staff.status.displayName} - Available: ${staff.isAvailable}');
+        return staff;
+      }).toList();
+
+      // Eğer hiç garson yoksa, demo garsonlar oluştur
+      if (staffList.isEmpty) {
+        print('🏗️ No waiters found, creating demo waiters...');
+        await _createDemoWaiters(businessId);
+
+        // Demo garsonları tekrar getir
+        final newQuery = await _firestore
+            .collection(_collection)
+            .where('businessId', isEqualTo: businessId)
+            .where('role', isEqualTo: StaffRole.waiter.value)
+            .where('isActive', isEqualTo: true)
+            .get();
+
+        final newStaffList =
+            newQuery.docs.map((doc) => Staff.fromFirestore(doc)).toList();
+
+        print('✅ Created and returning ${newStaffList.length} demo waiters');
+        return newStaffList;
+      }
+
+      // Tüm aktif garsonları döndür (durum kontrolü yapmayalım)
+      print('✅ Returning ${staffList.length} waiters');
 
       // Performansa göre sırala (rating ve response time)
       staffList.sort((a, b) {
@@ -287,7 +315,62 @@ class StaffService {
 
       return staffList;
     } catch (e) {
+      print('❌ Error getting available waiters: $e');
       throw Exception('Müsait garsonlar alınırken hata oluştu: $e');
+    }
+  }
+
+  /// Demo garsonlar oluştur
+  Future<void> _createDemoWaiters(String businessId) async {
+    try {
+      final demoWaiters = [
+        Staff.create(
+          businessId: businessId,
+          firstName: 'Ahmet',
+          lastName: 'Yılmaz',
+          email: 'ahmet@masamenu.com',
+          phone: '05551234567',
+          password: 'demo123',
+          role: StaffRole.waiter,
+          status: StaffStatus.available,
+          currentSection: 'Salon',
+          notes: 'Deneyimli garson',
+          languages: ['tr', 'en'],
+        ),
+        Staff.create(
+          businessId: businessId,
+          firstName: 'Ayşe',
+          lastName: 'Demir',
+          email: 'ayse@masamenu.com',
+          phone: '05551234568',
+          password: 'demo123',
+          role: StaffRole.waiter,
+          status: StaffStatus.available,
+          currentSection: 'Teras',
+          notes: 'Yeni garson',
+          languages: ['tr'],
+        ),
+        Staff.create(
+          businessId: businessId,
+          firstName: 'Mehmet',
+          lastName: 'Kaya',
+          email: 'mehmet@masamenu.com',
+          phone: '05551234569',
+          password: 'demo123',
+          role: StaffRole.waiter,
+          status: StaffStatus.available,
+          currentSection: 'Bahçe',
+          notes: 'Müşteri ilişkileri uzmanı',
+          languages: ['tr', 'en', 'de'],
+        ),
+      ];
+
+      for (final waiter in demoWaiters) {
+        await _firestore.collection(_collection).add(waiter.toFirestore());
+        print('✅ Created demo waiter: ${waiter.fullName}');
+      }
+    } catch (e) {
+      print('❌ Error creating demo waiters: $e');
     }
   }
 

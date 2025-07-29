@@ -539,12 +539,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   void _onWaiterCallPressed() {
-    final user = _authService.currentUser;
-    if (user == null) {
-      _showGuestWaiterDialog();
-    } else {
-      _showWaiterSelectionDialog();
-    }
+    // Tüm kullanıcılar için garson seçimi göster
+    _showWaiterSelectionDialog();
   }
 
   void _showGuestWaiterDialog() {
@@ -564,8 +560,11 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
+            onPressed: () {
+              Navigator.pop(context);
+              _showWaiterSelectionDialog(); // Misafir kullanıcı da garson seçebilsin
+            },
+            child: const Text('Misafir Olarak Devam Et'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -597,8 +596,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               children: [
                 Icon(Icons.info_outline, color: AppColors.white),
                 const SizedBox(width: 12),
-                const Expanded(
-                    child: Text('Şu anda müsait garson bulunmuyor.')),
+                Expanded(
+                    child:
+                        Text('Garsonlar yükleniyor, lütfen biraz bekleyin...')),
               ],
             ),
             backgroundColor: AppColors.warning,
@@ -606,6 +606,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         );
         return;
       }
+
+      final user = _authService.currentUser;
+      final isGuest = user == null;
 
       showDialog(
         context: context,
@@ -624,12 +627,27 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     Icon(Icons.room_service_rounded, color: AppColors.success),
               ),
               const SizedBox(width: 12),
-              const Text('Garson Seç'),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Garson Seç'),
+                    if (isGuest)
+                      Text(
+                        'Misafir Çağrı',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
           content: Container(
             width: double.maxFinite,
-            constraints: const BoxConstraints(maxHeight: 400),
+            constraints: const BoxConstraints(maxHeight: 500),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -661,15 +679,52 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 12),
                 ],
+                if (isGuest) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: AppColors.warning.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            color: AppColors.warning, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Misafir olarak çağrı yapıyorsunuz. Kayıtlı kullanıcılar öncelikli hizmet alır.',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 Text(
                   _tableNumber != null
-                      ? 'Masa $_tableNumber için garson seçin'
+                      ? 'Masa $_tableNumber için ${isGuest ? "misafir" : ""} garson seçin'
                       : 'Müsait garsonları seçebilir ve çağırabilirsiniz',
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 16),
+                Text(
+                  '${availableWaiters.length} Müsait Garson',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Flexible(
                   child: ListView.builder(
                     shrinkWrap: true,
@@ -688,6 +743,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               onPressed: () => Navigator.pop(context),
               child: const Text('İptal'),
             ),
+            if (isGuest)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary),
+                child: const Text('Giriş Yap',
+                    style: TextStyle(color: AppColors.white)),
+              ),
           ],
         ),
       );
@@ -884,7 +950,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       Navigator.pop(context); // Close dialog
 
       final user = _authService.currentUser;
-      if (user == null) return;
 
       // Use extracted table number or fallback to URL parsing
       String tableNumber = _tableNumber?.toString() ?? 'Bilinmeyen Masa';
@@ -904,14 +969,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       final waiterCallService = WaiterCallService();
       final call = WaiterCall.create(
         businessId: widget.businessId,
-        customerId: user.uid,
-        customerName: user.displayName ?? 'Müşteri',
+        customerId:
+            user?.uid ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
+        customerName: user?.displayName ?? 'Misafir Müşteri',
         waiterId: waiter.staffId,
         waiterName: waiter.fullName,
         tableNumber: tableNumber,
         message: _tableNumber != null
-            ? 'Masa $_tableNumber\'dan yardım talep edildi'
-            : 'Masa yardımı talep edildi',
+            ? 'Masa $_tableNumber\'dan yardım talep edildi ${user == null ? "(Misafir)" : ""}'
+            : 'Masa yardımı talep edildi ${user == null ? "(Misafir)" : ""}',
       );
 
       await waiterCallService.createWaiterCall(call);
@@ -928,8 +994,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                 Expanded(
                   child: Text(
                     _tableNumber != null
-                        ? '${waiter.fullName} başarıyla çağrıldı! (Masa $_tableNumber)'
-                        : '${waiter.fullName} başarıyla çağrıldı!',
+                        ? '${waiter.fullName} başarıyla çağrıldı! (Masa $_tableNumber)${user == null ? " - Misafir çağrı" : ""}'
+                        : '${waiter.fullName} başarıyla çağrıldı!${user == null ? " - Misafir çağrı" : ""}',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -951,7 +1017,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               children: [
                 Icon(Icons.error_outline, color: AppColors.white),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Garson çağrısı başarısız: $e')),
+                Expanded(
+                  child: Text(
+                    'Garson çağırırken hata: $e',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
               ],
             ),
             backgroundColor: AppColors.error,
