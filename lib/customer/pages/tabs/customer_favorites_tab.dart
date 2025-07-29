@@ -37,10 +37,9 @@ class CustomerFavoritesTab extends StatefulWidget {
 }
 
 class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final CustomerFirestoreService _customerFirestoreService =
       CustomerFirestoreService();
-  final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
   final DataService _dataService = DataService();
   final CartService _cartService = CartService();
@@ -59,6 +58,7 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
     _loadFavorites();
     _searchController.addListener(_onSearchChanged);
@@ -66,9 +66,18 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Uygulama foreground'a geldiğinde favorileri yenile
+      _loadFavorites();
+    }
   }
 
   void _onSearchChanged() {
@@ -77,90 +86,222 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     });
   }
 
-  Future<void> _initializeCustomerService() async {
-    try {
-      // Firebase Auth'dan current user'ı al
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await _customerService.createOrGetCustomer(
-          email: user.email,
-          name: user.displayName,
-          phone: user.phoneNumber,
-          isAnonymous: false,
-        );
-      } else {
-        // Anonim kullanıcı olarak devam et
-        await _customerService.createOrGetCustomer(
-          isAnonymous: true,
-        );
-      }
-    } catch (e) {
-      print('❌ FavoritesTab: CustomerService initialization failed: $e');
-    }
-  }
-
   Future<List<String>> _loadBusinessFavoritesFromFirebase() async {
     try {
-      final currentCustomer = _customerService.currentCustomer;
-      if (currentCustomer == null) {
-        print('⚠️ FavoritesTab: No current customer for business favorites');
+      // Firebase Auth'dan current user'ı direkt al
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('⚠️ FavoritesTab: No authenticated user for business favorites');
         return [];
       }
 
-      // Firebase'den customer data al
-      final customerDoc = await _customerFirestoreService.firestore
-          .collection('customer_users')
-          .doc(currentCustomer.id)
+      print(
+          '🔍 FavoritesTab: Loading business favorites for user: ${user.uid}');
+      List<String> favoriteBusinessIds = [];
+
+      // Önce users collection'ından kontrol et (customer kullanıcılar için)
+      final userDoc = await _customerFirestoreService.firestore
+          .collection('users')
+          .doc(user.uid)
           .get();
 
-      if (customerDoc.exists) {
-        final data = customerDoc.data()!;
-        final favoriteBusinessIds =
-            List<String>.from(data['favoriteBusinessIds'] ?? []);
-        return favoriteBusinessIds;
+      if (userDoc.exists) {
+        print('✅ FavoritesTab: User found in users collection');
+        final data = userDoc.data()!;
+        final customerData = data['customerData'] as Map<String, dynamic>?;
+        if (customerData != null) {
+          favoriteBusinessIds =
+              List<String>.from(customerData['favoriteBusinessIds'] ?? []);
+          print(
+              '📋 FavoritesTab: Found ${favoriteBusinessIds.length} business favorites in users collection: $favoriteBusinessIds');
+        } else {
+          print('⚠️ FavoritesTab: customerData is null in users collection');
+        }
       } else {
-        print('⚠️ FavoritesTab: Customer document not found in Firebase');
-        return [];
+        print(
+            '❌ FavoritesTab: User not found in users collection, checking business_favorites');
+        // Business kullanıcılar için ayrı business_favorites collection'ını kullan
+        final businessFavoritesQuery = await _customerFirestoreService.firestore
+            .collection('business_favorites')
+            .where('userId', isEqualTo: user.uid)
+            .get();
+
+        favoriteBusinessIds = businessFavoritesQuery.docs
+            .map((doc) => doc.data()['businessId'] as String)
+            .toList();
+        print(
+            '📋 FavoritesTab: Found ${favoriteBusinessIds.length} business favorites in business_favorites collection: $favoriteBusinessIds');
       }
+
+      // Eğer hiç favori yoksa, eski customers collection'ından kontrol et (migration için)
+      if (favoriteBusinessIds.isEmpty) {
+        print(
+            '🔄 FavoritesTab: No favorites found, checking old customers collection for migration...');
+        await _migrateOldFavorites(user.uid);
+
+        // Migration sonrası tekrar yükle
+        if (userDoc.exists) {
+          final updatedUserDoc = await _customerFirestoreService.firestore
+              .collection('users')
+              .doc(user.uid)
+              .get();
+          if (updatedUserDoc.exists) {
+            final data = updatedUserDoc.data()!;
+            final customerData = data['customerData'] as Map<String, dynamic>?;
+            if (customerData != null) {
+              favoriteBusinessIds =
+                  List<String>.from(customerData['favoriteBusinessIds'] ?? []);
+              print(
+                  '📋 FavoritesTab: After migration - Found ${favoriteBusinessIds.length} business favorites: $favoriteBusinessIds');
+            }
+          }
+        } else {
+          final businessFavoritesQuery = await _customerFirestoreService
+              .firestore
+              .collection('business_favorites')
+              .where('userId', isEqualTo: user.uid)
+              .get();
+
+          favoriteBusinessIds = businessFavoritesQuery.docs
+              .map((doc) => doc.data()['businessId'] as String)
+              .toList();
+          print(
+              '📋 FavoritesTab: After migration - Found ${favoriteBusinessIds.length} business favorites in business_favorites: $favoriteBusinessIds');
+        }
+      }
+
+      return favoriteBusinessIds;
     } catch (e) {
       print('❌ FavoritesTab: Error loading business favorites: $e');
       return [];
     }
   }
 
-  Future<void> _waitForCustomerServiceInitialization() async {
-    // CustomerService'in initialize olmasını bekle
-    int attempts = 0;
-    const maxAttempts = 10;
-    const delay = Duration(milliseconds: 500);
+  // Eski customers collection'ından favorileri yeni sisteme taşı
+  Future<void> _migrateOldFavorites(String userUid) async {
+    try {
+      // Eski customers collection'ında bu kullanıcının verilerini ara
+      final customersQuery = await _customerFirestoreService.firestore
+          .collection('customers')
+          .where('id', isEqualTo: userUid)
+          .get();
 
-    while (_customerService.currentCustomer == null && attempts < maxAttempts) {
-      print(
-          '⏳ FavoritesTab: Waiting for CustomerService initialization... Attempt ${attempts + 1}');
-      await Future.delayed(delay);
-      attempts++;
-    }
+      if (customersQuery.docs.isNotEmpty) {
+        final oldCustomerData = customersQuery.docs.first.data();
+        final oldFavoriteBusinessIds =
+            List<String>.from(oldCustomerData['favoriteBusinessIds'] ?? []);
+        final oldProductFavorites =
+            List<dynamic>.from(oldCustomerData['productFavorites'] ?? []);
 
-    if (_customerService.currentCustomer == null) {
-      print(
-          '⚠️ FavoritesTab: CustomerService not initialized after $maxAttempts attempts');
-    } else {
-      print('✅ FavoritesTab: CustomerService is ready');
+        print(
+            '🔄 FavoritesTab: Found ${oldFavoriteBusinessIds.length} business favorites and ${oldProductFavorites.length} product favorites to migrate');
+
+        if (oldFavoriteBusinessIds.isNotEmpty ||
+            oldProductFavorites.isNotEmpty) {
+          // users collection'ında kullanıcı var mı kontrol et
+          final userDocRef = _customerFirestoreService.firestore
+              .collection('users')
+              .doc(userUid);
+          final userDoc = await userDocRef.get();
+
+          if (userDoc.exists) {
+            // users collection'ına business favorilerini taşı
+            final userData = userDoc.data()!;
+            final customerData =
+                Map<String, dynamic>.from(userData['customerData'] ?? {});
+            customerData['favoriteBusinessIds'] = oldFavoriteBusinessIds;
+
+            await userDocRef.update({
+              'customerData': customerData,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+            print(
+                '✅ FavoritesTab: Migrated business favorites to users collection');
+          } else {
+            // business_users için business_favorites collection'ına taşı
+            for (final businessId in oldFavoriteBusinessIds) {
+              // İşletme adını al
+              final businessDoc = await _customerFirestoreService.firestore
+                  .collection('businesses')
+                  .doc(businessId)
+                  .get();
+
+              final businessName = businessDoc.exists
+                  ? (businessDoc.data()!['businessName'] ??
+                      'Bilinmeyen İşletme')
+                  : 'Bilinmeyen İşletme';
+
+              await _customerFirestoreService.firestore
+                  .collection('business_favorites')
+                  .add({
+                'userId': userUid,
+                'businessId': businessId,
+                'businessName': businessName,
+                'addedAt': FieldValue.serverTimestamp(),
+                'migratedFrom': 'customers_collection',
+              });
+            }
+            print(
+                '✅ FavoritesTab: Migrated business favorites to business_favorites collection');
+          }
+
+          // Product favorilerini product_favorites collection'ına taşı
+          for (final productFav in oldProductFavorites) {
+            final productFavorite = {
+              'customerId': userUid,
+              'productId': productFav['productId'],
+              'businessId': productFav['businessId'],
+              'createdAt': FieldValue.serverTimestamp(),
+              'productName': productFav['productName'],
+              'productPrice': productFav['productPrice'],
+              'productImage': productFav['productImage'],
+              'businessName': productFav['businessName'],
+              'migratedFrom': 'customers_collection',
+            };
+
+            await _customerFirestoreService.firestore
+                .collection('product_favorites')
+                .add(productFavorite);
+          }
+          print(
+              '✅ FavoritesTab: Migrated ${oldProductFavorites.length} product favorites');
+
+          // Eski kaydı sil (opsiyonel)
+          // await customersQuery.docs.first.reference.delete();
+        }
+      }
+    } catch (e) {
+      print('❌ FavoritesTab: Error during migration: $e');
     }
   }
 
   Future<List<app_user.ProductFavorite>> _loadFavoritesFromFirebase(
       String customerId) async {
     try {
-      // Firebase'den direkt olarak favorileri yükle
+      // Firebase Auth'dan current user'ı al - customerId parametresini kullanmak yerine
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('⚠️ FavoritesTab: No authenticated user for product favorites');
+        return [];
+      }
+
+      print('🔍 FavoritesTab: Loading product favorites for user: ${user.uid}');
+
+      // Firebase'den direkt olarak favorileri yükle - Firebase Auth UID'si ile
       final favoritesSnapshot = await _customerFirestoreService.firestore
           .collection('product_favorites')
-          .where('customerId', isEqualTo: customerId)
+          .where('customerId', isEqualTo: user.uid) // Firebase Auth UID kullan
           .orderBy('createdAt', descending: true)
           .get();
 
-      final favorites = favoritesSnapshot.docs.map((doc) {
+      print(
+          '📊 FavoritesTab: Found ${favoritesSnapshot.docs.length} product favorite documents');
+
+      List<app_user.ProductFavorite> favorites =
+          favoritesSnapshot.docs.map((doc) {
         final data = doc.data();
+        print(
+            '📄 FavoritesTab: Processing product favorite: ${data['productName']} (${doc.id})');
 
         // Firestore verilerini işle (hem Timestamp hem String formatlarını destekle)
         final processedData = Map<String, dynamic>.from(data);
@@ -199,9 +340,93 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
         return app_user.ProductFavorite.fromJson(processedData);
       }).toList();
 
+      print(
+          '✅ FavoritesTab: Successfully processed ${favorites.length} product favorites');
+
+      // Eğer ürün favorileri boşsa ve migration henüz yapılmamışsa, eski verilerden kontrol et
+      if (favorites.isEmpty) {
+        print(
+            '🔄 FavoritesTab: No product favorites found, checking for migration...');
+        final migrationResult =
+            await _checkAndMigrateProductFavorites(user.uid);
+        if (migrationResult.isNotEmpty) {
+          favorites = migrationResult;
+          print(
+              '✅ FavoritesTab: After migration - Found ${favorites.length} product favorites');
+        }
+      }
+
       return favorites;
     } catch (e) {
       print('❌ FavoritesTab: Error loading favorites from Firebase: $e');
+      return [];
+    }
+  }
+
+  // Eski customers collection'ından product favorilerini kontrol et ve taşı
+  Future<List<app_user.ProductFavorite>> _checkAndMigrateProductFavorites(
+      String userUid) async {
+    try {
+      // Eski customers collection'ında bu kullanıcının verilerini ara
+      final customersQuery = await _customerFirestoreService.firestore
+          .collection('customers')
+          .where('id', isEqualTo: userUid)
+          .get();
+
+      if (customersQuery.docs.isNotEmpty) {
+        final oldCustomerData = customersQuery.docs.first.data();
+        final oldProductFavorites =
+            List<dynamic>.from(oldCustomerData['productFavorites'] ?? []);
+
+        if (oldProductFavorites.isNotEmpty) {
+          print(
+              '🔄 FavoritesTab: Found ${oldProductFavorites.length} product favorites to migrate');
+
+          List<app_user.ProductFavorite> migratedFavorites = [];
+
+          // Product favorilerini product_favorites collection'ına taşı
+          for (final productFav in oldProductFavorites) {
+            final productFavorite = {
+              'customerId': userUid,
+              'productId': productFav['productId'] ?? '',
+              'businessId': productFav['businessId'] ?? '',
+              'createdAt': FieldValue.serverTimestamp(),
+              'productName': productFav['productName'],
+              'productPrice': productFav['productPrice'],
+              'productImage': productFav['productImage'],
+              'businessName': productFav['businessName'],
+              'migratedFrom': 'customers_collection',
+            };
+
+            final docRef = await _customerFirestoreService.firestore
+                .collection('product_favorites')
+                .add(productFavorite);
+
+            // Local liste için ProductFavorite objesi oluştur
+            final favorite = app_user.ProductFavorite(
+              id: docRef.id,
+              productId: productFav['productId'] ?? '',
+              businessId: productFav['businessId'] ?? '',
+              customerId: userUid,
+              createdAt: DateTime.now(),
+              productName: productFav['productName'],
+              productPrice: productFav['productPrice']?.toDouble(),
+              productImage: productFav['productImage'],
+              businessName: productFav['businessName'],
+            );
+
+            migratedFavorites.add(favorite);
+          }
+
+          print(
+              '✅ FavoritesTab: Successfully migrated ${migratedFavorites.length} product favorites');
+          return migratedFavorites;
+        }
+      }
+
+      return [];
+    } catch (e) {
+      print('❌ FavoritesTab: Error during product favorites migration: $e');
       return [];
     }
   }
@@ -281,13 +506,26 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   }
 
   Future<void> _loadFavorites() async {
+    if (!mounted) return; // Mounted kontrolü ekle
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // CustomerService'i initialize et (sadece bir kez)
-      await _initializeCustomerService();
+      // Firebase Auth'dan current user'ı al
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('⚠️ FavoritesTab: No authenticated user');
+        if (mounted) {
+          setState(() {
+            _favoriteBusinesses = [];
+            _favoriteProducts = [];
+            _productFavorites = [];
+          });
+        }
+        return;
+      }
 
       // Paralel olarak tüm gerekli verileri yükle
       final futures = await Future.wait([
@@ -313,16 +551,12 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
       List<Product> favoriteProducts = [];
 
       try {
-        final currentCustomer = _customerService.currentCustomer;
-        if (currentCustomer != null) {
-          // Firebase'den direkt favori ürünleri yükle
-          productFavorites =
-              await _loadFavoritesFromFirebase(currentCustomer.id);
+        // Firebase Auth UID'si ile direkt favori ürünleri yükle
+        productFavorites = await _loadFavoritesFromFirebase(user.uid);
 
-          // Favori ürünlerin detaylarını Firebase'den al
-          favoriteProducts =
-              await _loadProductDetailsFromFirebase(productFavorites);
-        }
+        // Favori ürünlerin detaylarını Firebase'den al
+        favoriteProducts =
+            await _loadProductDetailsFromFirebase(productFavorites);
       } catch (e) {
         print('Favori ürünler yüklenirken hata: $e');
         // Hata durumunda boş liste kullan
@@ -330,17 +564,21 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
         favoriteProducts = [];
       }
 
-      setState(() {
-        _favoriteBusinesses = favoriteBusinesses;
-        _favoriteProducts = favoriteProducts;
-        _productFavorites = productFavorites;
-      });
+      if (mounted) {
+        setState(() {
+          _favoriteBusinesses = favoriteBusinesses;
+          _favoriteProducts = favoriteProducts;
+          _productFavorites = productFavorites;
+        });
+      }
     } catch (e) {
       print('Favoriler yükleme hatası: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -349,20 +587,84 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     widget.onRefresh();
   }
 
+  /// External refresh tetikleyici
+  void refreshFavorites() {
+    if (mounted) {
+      _loadFavorites();
+    }
+  }
+
   Future<void> _toggleBusinessFavorite(Business business) async {
     try {
-      await _customerService.toggleFavorite(business.id);
+      // Firebase Auth'dan current user'ı al
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Giriş yapılması gerekli');
+      }
 
-      // Sadece local state'i güncelle, full reload yapma
+      // Önce mevcut favori durumunu kontrol et
       final isFavorite = _favoriteBusinesses.any((b) => b.id == business.id);
 
+      // Önce users collection'ından kontrol et (customer kullanıcılar için)
+      final userDocRef =
+          _customerFirestoreService.firestore.collection('users').doc(user.uid);
+
+      final userDoc = await userDocRef.get();
+
+      if (userDoc.exists) {
+        // users collection'ında bulundu (customer user) - mevcut sistemi kullan
+        final userData = userDoc.data()!;
+        final customerData =
+            Map<String, dynamic>.from(userData['customerData'] ?? {});
+        final currentFavorites =
+            List<String>.from(customerData['favoriteBusinessIds'] ?? []);
+
+        List<String> updatedFavorites;
+        if (isFavorite) {
+          updatedFavorites =
+              currentFavorites.where((id) => id != business.id).toList();
+        } else {
+          updatedFavorites = [...currentFavorites, business.id];
+        }
+
+        customerData['favoriteBusinessIds'] = updatedFavorites;
+        await userDocRef.update({
+          'customerData': customerData,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Business kullanıcı - business_favorites collection'ını kullan
+        if (isFavorite) {
+          // Favorilerden çıkar
+          final existingFavoriteQuery = await _customerFirestoreService
+              .firestore
+              .collection('business_favorites')
+              .where('userId', isEqualTo: user.uid)
+              .where('businessId', isEqualTo: business.id)
+              .get();
+
+          for (final doc in existingFavoriteQuery.docs) {
+            await doc.reference.delete();
+          }
+        } else {
+          // Favorilere ekle
+          await _customerFirestoreService.firestore
+              .collection('business_favorites')
+              .add({
+            'userId': user.uid,
+            'businessId': business.id,
+            'businessName': business.businessName,
+            'addedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // Local state'i güncelle
       if (isFavorite) {
-        // İşletmeyi favorilerden çıkar
         setState(() {
           _favoriteBusinesses.removeWhere((b) => b.id == business.id);
         });
       } else {
-        // İşletmeyi favorilere ekle
         setState(() {
           _favoriteBusinesses.add(business);
         });
@@ -426,20 +728,68 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
 
   Future<void> _toggleProductFavorite(Product product) async {
     try {
-      await _customerService.toggleProductFavorite(
-          product.productId, product.businessId);
+      // Firebase Auth'dan current user'ı al
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Giriş yapılması gerekli');
+      }
 
-      // Sadece local state'i güncelle, full reload yapma
+      // Önce mevcut favori durumunu kontrol et
       final isFavorite =
           _favoriteProducts.any((p) => p.productId == product.productId);
 
       if (isFavorite) {
-        // Ürünü favorilerden çıkar
+        // Ürünü favorilerden çıkar - product_favorites collection'ından sil
+        final favoriteToRemove = _productFavorites.firstWhere(
+          (f) => f.productId == product.productId,
+          orElse: () => throw Exception('Favori bulunamadı'),
+        );
+
+        // Firebase'den sil
+        final favoritesQuery = await _customerFirestoreService.firestore
+            .collection('product_favorites')
+            .where('customerId', isEqualTo: user.uid)
+            .where('productId', isEqualTo: product.productId)
+            .get();
+
+        for (final doc in favoritesQuery.docs) {
+          await doc.reference.delete();
+        }
+
+        // Local state'i güncelle
         setState(() {
           _favoriteProducts
               .removeWhere((p) => p.productId == product.productId);
           _productFavorites
               .removeWhere((f) => f.productId == product.productId);
+        });
+      } else {
+        // Ürünü favorilere ekle
+        final business =
+            _allBusinesses.where((b) => b.id == product.businessId).firstOrNull;
+        final businessName = business?.businessName ?? 'Bilinmeyen İşletme';
+
+        final newFavorite = app_user.ProductFavorite(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          productId: product.productId,
+          businessId: product.businessId,
+          customerId: user.uid, // Firebase Auth UID kullan
+          createdAt: DateTime.now(),
+          productName: product.name,
+          productPrice: product.price,
+          productImage: product.imageUrl,
+          businessName: businessName,
+        );
+
+        // Firebase'e ekle
+        await _customerFirestoreService.firestore
+            .collection('product_favorites')
+            .add(newFavorite.toJson());
+
+        // Local state'i güncelle
+        setState(() {
+          _favoriteProducts.add(product);
+          _productFavorites.add(newFavorite);
         });
       }
 
@@ -501,9 +851,11 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
 
   Future<void> _reorderProduct(Product product) async {
     try {
-      final orderId = await _customerService.reorderFromFavorite(
-        productId: product.productId,
-        businessId: product.businessId,
+      // CartService kullanarak direkt sepete ekle
+      await _cartService.initialize();
+      await _cartService.addToCart(
+        product,
+        product.businessId,
         quantity: 1,
       );
 
@@ -934,7 +1286,9 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          Icons.favorite_rounded,
+                          _favoriteBusinesses.any((b) => b.id == business.id)
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
                           color: AppColors.accent,
                           size: 20,
                         ),
@@ -991,14 +1345,21 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     // Favori ürünün işletme bilgisini al
     final productFavorite = _productFavorites.firstWhere(
       (f) => f.productId == product.productId,
-      orElse: () => app_user.ProductFavorite(
-        id: '',
-        productId: product.productId,
-        businessId: product.businessId,
-        customerId: widget.userId,
-        createdAt: DateTime.now(),
-        businessName: null,
-      ),
+      orElse: () {
+        // Firebase Auth UID'sini kullan
+        final user = FirebaseAuth.instance.currentUser;
+        return app_user.ProductFavorite(
+          id: '',
+          productId: product.productId,
+          businessId: product.businessId,
+          customerId: user?.uid ?? '', // Firebase Auth UID kullan
+          createdAt: DateTime.now(),
+          productName: null,
+          productPrice: null,
+          productImage: null,
+          businessName: null,
+        );
+      },
     );
 
     final businessName = productFavorite.businessName ??

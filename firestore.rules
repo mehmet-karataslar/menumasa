@@ -48,6 +48,26 @@ service cloud.firestore {
       allow create: if request.auth != null && 
         request.auth.uid == request.resource.data.customerId;
       allow list: if request.auth != null; // Kendi favorilerini listeleyebilir
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.customerId;
+    }
+    
+    // Business Favorites collection - müşteriler kendi işletme favorilerini yönetebilir
+    match /business_favorites/{favoriteId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      allow list: if request.auth != null; // Kendi favorilerini listeleyebilir
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
+    
+    // Customers collection - CustomerService için
+    match /customers/{customerId} {
+      allow read, write: if request.auth != null; // Authenticated kullanıcılar
+      allow create: if request.auth != null;
+      allow list: if request.auth != null;
     }
     
     // QR codes collection - allow public read for scans, authenticated write

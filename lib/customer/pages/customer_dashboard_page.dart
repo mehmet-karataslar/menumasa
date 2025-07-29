@@ -199,6 +199,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       });
       _updateCustomerUrl();
 
+      // Favoriler sekmesi seçildiğinde favorileri yenile
+      if (_selectedTabIndex == 2) {
+        // Favorites tab index 2
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _loadUserData();
+        });
+      }
+
       // FAB animasyonu
       if (_selectedTabIndex == 0) {
         _fabAnimationController.forward();

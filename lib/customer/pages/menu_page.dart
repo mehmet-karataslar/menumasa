@@ -29,6 +29,8 @@ import 'package:shimmer/shimmer.dart';
 import 'customer_orders_page.dart';
 import 'product_detail_page.dart';
 import '../services/customer_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
@@ -133,10 +135,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeOutBack));
+    ).animate(CurvedAnimation(
+        parent: _slideAnimationController, curve: Curves.easeOutBack));
 
     _fabScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fabAnimationController, curve: Curves.elasticOut),
+      CurvedAnimation(
+          parent: _fabAnimationController, curve: Curves.elasticOut),
     );
   }
 
@@ -156,7 +160,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     try {
       final currentUser = _authService.currentUser;
       if (currentUser != null) {
-        print('🔐 MenuPage: Initializing CustomerService with user: ${currentUser.uid}');
+        print(
+            '🔐 MenuPage: Initializing CustomerService with user: ${currentUser.uid}');
         await _customerService.createOrGetCustomer(
           email: currentUser.email,
           name: currentUser.displayName,
@@ -181,15 +186,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     int attempts = 0;
     const maxAttempts = 10;
     const delay = Duration(milliseconds: 500);
-    
+
     while (_customerService.currentCustomer == null && attempts < maxAttempts) {
-      print('⏳ MenuPage: Waiting for CustomerService initialization... Attempt ${attempts + 1}');
+      print(
+          '⏳ MenuPage: Waiting for CustomerService initialization... Attempt ${attempts + 1}');
       await Future.delayed(delay);
       attempts++;
     }
-    
+
     if (_customerService.currentCustomer == null) {
-      print('⚠️ MenuPage: CustomerService not initialized after $maxAttempts attempts');
+      print(
+          '⚠️ MenuPage: CustomerService not initialized after $maxAttempts attempts');
     } else {
       print('✅ MenuPage: CustomerService is ready');
     }
@@ -197,33 +204,28 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   Future<List<dynamic>> _loadFavoritesFromFirebase() async {
     try {
-      final currentUser = _authService.currentUser;
-      if (currentUser == null) {
+      // Firebase Auth'dan current user'ı al
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
         print('🔒 MenuPage: No authenticated user, returning empty favorites');
         return [];
       }
 
-      // CustomerService'den customerId'yi al
-      final customerId = _customerService.currentCustomer?.id;
-      if (customerId == null) {
-        print('🔒 MenuPage: No CustomerService customerId, returning empty favorites');
-        return [];
-      }
+      print('💖 MenuPage: Loading favorite products from Firebase...');
 
-      // Firebase'den direkt olarak favorileri yükle
-      
-      final customerFirestoreService = _customerFirestoreService;
-      
-      // Query product_favorites collection directly with correct customerId
-      final favoritesSnapshot = await customerFirestoreService.firestore
+      // Firebase'den direkt olarak favorileri yükle - Firebase Auth UID ile
+      final favoritesSnapshot = await FirebaseFirestore.instance
           .collection('product_favorites')
-          .where('customerId', isEqualTo: customerId)  // CustomerService'den alınan ID kullan
+          .where('customerId', isEqualTo: user.uid) // Firebase Auth UID kullan
           .orderBy('createdAt', descending: true)
           .get();
 
       final favorites = favoritesSnapshot.docs.map((doc) {
         return doc.data();
       }).toList();
+
+      print(
+          '💖 MenuPage: Favorite products loaded from Firebase: ${favorites.length} items - ${favorites.map((f) => f['productId']).toList()}');
 
       return favorites;
     } catch (e) {
@@ -258,11 +260,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     }
   }
 
-
-
   Future<void> _loadMenuData() async {
     try {
-      print('🔄 MenuPage: Loading menu data for business: ${widget.businessId}');
+      print(
+          '🔄 MenuPage: Loading menu data for business: ${widget.businessId}');
       setState(() {
         _isLoading = true;
         _hasError = false;
@@ -271,30 +272,37 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
       // Load business, categories, products, and discounts
       print('📊 MenuPage: Loading business data...');
-      final businessData = await _businessFirestoreService.getBusiness(widget.businessId);
-      print('📊 MenuPage: Business data loaded: ${businessData?.businessName ?? 'null'}');
-      
+      final businessData =
+          await _businessFirestoreService.getBusiness(widget.businessId);
+      print(
+          '📊 MenuPage: Business data loaded: ${businessData?.businessName ?? 'null'}');
+
       print('📂 MenuPage: Loading categories...');
-      final categoriesData = await _businessFirestoreService.getBusinessCategories(widget.businessId);
+      final categoriesData = await _businessFirestoreService
+          .getBusinessCategories(widget.businessId);
       print('📂 MenuPage: Categories loaded: ${categoriesData.length} items');
-      
+
       print('🍽️ MenuPage: Loading products...');
-      final productsData = await _businessFirestoreService.getBusinessProducts(widget.businessId);
+      final productsData = await _businessFirestoreService
+          .getBusinessProducts(widget.businessId);
       print('🍽️ MenuPage: Products loaded: ${productsData.length} items');
-      
+
       print('🎯 MenuPage: Loading discounts...');
-      final discountsData = await _businessFirestoreService.getDiscountsByBusinessId(widget.businessId);
+      final discountsData = await _businessFirestoreService
+          .getDiscountsByBusinessId(widget.businessId);
       print('🎯 MenuPage: Discounts loaded: ${discountsData.length} items');
 
       // CustomerService is already initialized in initState
-      
+
       // Load favorite products from Firebase
       List<String> favoriteProductIds = [];
       try {
         print('💖 MenuPage: Loading favorite products from Firebase...');
         final favoriteProducts = await _loadFavoritesFromFirebase();
-        favoriteProductIds = favoriteProducts.map((f) => f['productId'] as String).toList();
-        print('💖 MenuPage: Favorite products loaded from Firebase: ${favoriteProductIds.length} items - $favoriteProductIds');
+        favoriteProductIds =
+            favoriteProducts.map((f) => f['productId'] as String).toList();
+        print(
+            '💖 MenuPage: Favorite products loaded from Firebase: ${favoriteProductIds.length} items - $favoriteProductIds');
       } catch (e) {
         print('❌ MenuPage: Error loading favorite products from Firebase: $e');
         favoriteProductIds = [];
@@ -304,9 +312,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         print('✅ MenuPage: Business data is valid, processing...');
         // Apply multilingual translations
         final translatedCategories = categoriesData; // .map((category) =>
-            // _multilingualService.translateCategory(category, _currentLanguage)).toList();
+        // _multilingualService.translateCategory(category, _currentLanguage)).toList();
         final translatedProducts = productsData; // .map((product) =>
-            // _multilingualService.translateProduct(product, _currentLanguage)).toList();
+        // _multilingualService.translateProduct(product, _currentLanguage)).toList();
 
         print('🔄 MenuPage: Setting state with loaded data...');
         setState(() {
@@ -322,7 +330,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
         // Initialize tab controller after categories are loaded
         if (_categories.isNotEmpty && _tabController == null) {
-          _tabController = TabController(length: _categories.length, vsync: this);
+          _tabController =
+              TabController(length: _categories.length, vsync: this);
           _tabController?.addListener(_onTabChanged);
         }
 
@@ -354,7 +363,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   void _initializeTabs() {
     if (_categories.isNotEmpty) {
       _tabController?.dispose();
-      _tabController = TabController(length: _categories.length + 1, vsync: this);
+      _tabController =
+          TabController(length: _categories.length + 1, vsync: this);
       _tabController!.addListener(_onTabChanged);
 
       if (_selectedCategoryId == null) {
@@ -503,8 +513,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   void _navigateToProductDetail(Product product) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final dynamicRoute = '/menu/${widget.businessId}/product/${product.productId}?t=$timestamp';
-    _urlService.updateUrl(dynamicRoute, customTitle: '${product.name} | MasaMenu');
+    final dynamicRoute =
+        '/menu/${widget.businessId}/product/${product.productId}?t=$timestamp';
+    _urlService.updateUrl(dynamicRoute,
+        customTitle: '${product.name} | MasaMenu');
 
     Navigator.push(
       context,
@@ -520,116 +532,88 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   Future<void> _toggleProductFavorite(Product product) async {
     try {
-      // Önce UI'ı hemen güncelle (optimistic update) - product.id kullan
-      final wasAlreadyFavorite = _favoriteProductIds.contains(product.id);
-      setState(() {
-        if (wasAlreadyFavorite) {
-          _favoriteProductIds.remove(product.id);
-        } else {
-          _favoriteProductIds.add(product.id);
+      print(
+          '🔄 MenuPage: Toggling favorite for product: ${product.productName} (ID: ${product.productId})');
+
+      // Firebase Auth'dan current user'ı al
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Giriş yapılması gerekli')),
+        );
+        return;
+      }
+
+      // Mevcut favori durumunu kontrol et
+      final isFavorite = _favoriteProductIds.contains(product.productId);
+
+      if (isFavorite) {
+        // Favorilerden çıkar
+        final query = await FirebaseFirestore.instance
+            .collection('product_favorites')
+            .where('customerId', isEqualTo: user.uid)
+            .where('productId', isEqualTo: product.productId)
+            .get();
+
+        for (final doc in query.docs) {
+          await doc.reference.delete();
         }
-      });
-      
-      print('🔄 MenuPage: Toggling favorite for product: ${product.name} (ID: ${product.id})');
-      
-      // Backend'i güncelle - product.id kullan
-      await _customerService.toggleProductFavorite(product.id, widget.businessId);
-      
-      print('✅ MenuPage: Backend favorite toggle completed');
-      
-      // Firebase'den fresh data al
-      try {
-        print('🔄 MenuPage: Refreshing favorites from Firebase...');
-        final favoriteProducts = await _loadFavoritesFromFirebase();
-        final favoriteProductIds = favoriteProducts.map((f) => f['productId'] as String).toList();
-        
-        print('✅ MenuPage: Fresh favorites loaded: ${favoriteProductIds.length} items');
-        
+
         if (mounted) {
           setState(() {
-            _favoriteProductIds = favoriteProductIds;
+            _favoriteProductIds.remove(product.productId);
           });
         }
-      } catch (e) {
-        print('❌ MenuPage: Error refreshing favorites: $e');
-        // Fallback to service method
-        try {
-          final favoriteProducts = await _customerService.getFavoriteProducts();
-          final favoriteProductIds = favoriteProducts.map((f) => f.productId).toList();
-          if (mounted) {
-            setState(() {
-              _favoriteProductIds = favoriteProductIds;
-            });
-          }
-        } catch (e2) {
-          print('❌ MenuPage: Fallback favorite refresh also failed: $e2');
-        }
-      }
-      
-      // Kullanıcıya bilgi ver
-      final isFavorite = !wasAlreadyFavorite;
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: AppColors.white,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isFavorite 
-                      ? '${product.name} favorilere eklendi'
-                      : '${product.name} favorilerden çıkarıldı',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: isFavorite ? AppColors.success : AppColors.warning,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      print('❌ MenuPage: Error toggling favorite: $e');
-      // Hata durumunda Firebase'den fresh data al
-      if (mounted) {
-        try {
-          final favoriteProducts = await _loadFavoritesFromFirebase();
-          final favoriteProductIds = favoriteProducts.map((f) => f['productId'] as String).toList();
+      } else {
+        // Favorilere ekle
+        final favoriteId =
+            FirebaseFirestore.instance.collection('product_favorites').doc().id;
+
+        await FirebaseFirestore.instance
+            .collection('product_favorites')
+            .doc(favoriteId)
+            .set({
+          'id': favoriteId,
+          'productId': product.productId,
+          'businessId': widget.businessId,
+          'customerId': user.uid, // Firebase Auth UID kullan
+          'createdAt': FieldValue.serverTimestamp(),
+          'productName': product.productName,
+          'productDescription': product.description,
+          'productPrice': product.price,
+          'productImage': product.imageUrl,
+          'businessName': _business?.businessName,
+          'categoryName': null,
+          'addedDate': FieldValue.serverTimestamp(),
+        });
+
+        if (mounted) {
           setState(() {
-            _favoriteProductIds = favoriteProductIds;
+            _favoriteProductIds.add(product.productId);
           });
-        } catch (e2) {
-          print('❌ MenuPage: Error restoring favorites after failure: $e2');
         }
-        
+      }
+
+      print('✅ MenuPage: Backend favorite toggle completed');
+
+      // Favorileri yeniden yükle
+      print('🔄 MenuPage: Refreshing favorites from Firebase...');
+      final favoriteProducts = await _loadFavoritesFromFirebase();
+      final favoriteProductIds =
+          favoriteProducts.map((f) => f['productId'] as String).toList();
+
+      if (mounted) {
+        setState(() {
+          _favoriteProductIds = favoriteProductIds;
+        });
+      }
+      print(
+          '✅ MenuPage: Fresh favorites loaded: ${_favoriteProductIds.length} items');
+    } catch (e) {
+      print('❌ MenuPage: Favorite toggle error: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded, color: AppColors.white),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Favori işlemi hatası: $e')),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
+          SnackBar(content: Text('Favori işlemi hatası: $e')),
         );
       }
     }
@@ -639,19 +623,21 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     try {
       // Debug logging
       print('🛒 Adding to cart: ${product.name}');
-      print('   Product ID: ${product.productId}'); 
+      print('   Product ID: ${product.productId}');
       print('   Price: ${product.price}');
       print('   Current Price: ${product.currentPrice}');
-      
-      await _cartService.addToCart(product, widget.businessId, quantity: quantity);
-      
+
+      await _cartService.addToCart(product, widget.businessId,
+          quantity: quantity);
+
       // Debug: Check cart contents
       final cart = await _cartService.getCurrentCart(widget.businessId);
       print('🛒 Cart now has ${cart.items.length} unique items:');
       for (var item in cart.items) {
-        print('   - ${item.productName} (ID: ${item.productId}) x${item.quantity}');
+        print(
+            '   - ${item.productName} (ID: ${item.productId}) x${item.quantity}');
       }
-      
+
       HapticFeedback.heavyImpact();
 
       if (mounted) {
@@ -665,7 +651,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     color: AppColors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(Icons.check_rounded, color: AppColors.white, size: 16),
+                  child: Icon(Icons.check_rounded,
+                      color: AppColors.white, size: 16),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -678,7 +665,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
             duration: const Duration(seconds: 2),
             action: SnackBarAction(
@@ -695,14 +683,16 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: AppColors.white, size: 20),
+                Icon(Icons.error_outline_rounded,
+                    color: AppColors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(child: Text('Hata: $e')),
               ],
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
           ),
         );
@@ -718,8 +708,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       body: _isLoading
           ? _buildLoadingState()
           : _hasError
-          ? _buildErrorState()
-          : _buildMenuContent(),
+              ? _buildErrorState()
+              : _buildMenuContent(),
       floatingActionButton: _buildCartFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -769,11 +759,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               decoration: BoxDecoration(
                                 color: AppColors.accent,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: AppColors.white, width: 2),
+                                border: Border.all(
+                                    color: AppColors.white, width: 2),
                               ),
-                              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                              constraints: const BoxConstraints(
+                                  minWidth: 20, minHeight: 20),
                               child: Text(
-                                _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
+                                _cartItemCount > 99
+                                    ? '99+'
+                                    : _cartItemCount.toString(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -872,7 +866,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     // Product grid skeleton
                     Expanded(
                       child: GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
@@ -955,7 +950,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -1057,11 +1053,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               borderRadius: BorderRadius.circular(17),
                               child: _business?.logoUrl != null
                                   ? Image.network(
-                                _business!.logoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _buildBusinessIcon(),
-                              )
+                                      _business!.logoUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              _buildBusinessIcon(),
+                                    )
                                   : _buildBusinessIcon(),
                             ),
                           ),
@@ -1086,7 +1083,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               ),
                               const SizedBox(height: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: AppColors.white.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
@@ -1106,8 +1104,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
                                       color: (_business?.isOpen == true
-                                          ? AppColors.success
-                                          : AppColors.error).withOpacity(0.2),
+                                              ? AppColors.success
+                                              : AppColors.error)
+                                          .withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Icon(
@@ -1120,7 +1119,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    _business?.isOpen == true ? 'Açık' : 'Kapalı',
+                                    _business?.isOpen == true
+                                        ? 'Açık'
+                                        : 'Kapalı',
                                     style: AppTypography.caption.copyWith(
                                       color: AppColors.white.withOpacity(0.9),
                                       fontWeight: FontWeight.w500,
@@ -1142,7 +1143,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       ),
       actions: [
         _buildHeaderButton(
-          icon: _showSearchBar ? Icons.search_off_rounded : Icons.search_rounded,
+          icon:
+              _showSearchBar ? Icons.search_off_rounded : Icons.search_rounded,
           onPressed: _toggleSearchBar,
         ),
         _buildHeaderButton(
@@ -1245,7 +1247,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.white, width: 1.5),
                       ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
                         _cartItemCount > 9 ? '9+' : _cartItemCount.toString(),
                         style: const TextStyle(
@@ -1296,13 +1299,13 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                  icon: Icon(
-                    Icons.clear_rounded,
-                    color: AppColors.textSecondary,
-                    size: 20,
-                  ),
-                  onPressed: () => _onSearchChanged(''),
-                )
+                        icon: Icon(
+                          Icons.clear_rounded,
+                          color: AppColors.textSecondary,
+                          size: 20,
+                        ),
+                        onPressed: () => _onSearchChanged(''),
+                      )
                     : null,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
@@ -1325,7 +1328,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCategorySection() {
-    if (_categories.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (_categories.isEmpty)
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
 
     return SliverToBoxAdapter(
       child: SlideTransition(
@@ -1356,7 +1360,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                       return _buildCategoryChip(
                         categoryId: 'all',
                         name: 'Tümü',
-                        isSelected: _selectedCategoryId == 'all' || _selectedCategoryId == null,
+                        isSelected: _selectedCategoryId == 'all' ||
+                            _selectedCategoryId == null,
                         icon: Icons.apps_rounded,
                       );
                     }
@@ -1399,10 +1404,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               gradient: isSelected
                   ? LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryLight],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              )
+                      colors: [AppColors.primary, AppColors.primaryLight],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    )
                   : null,
               color: isSelected ? null : AppColors.white,
               borderRadius: BorderRadius.circular(22),
@@ -1414,20 +1419,20 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               ),
               boxShadow: isSelected
                   ? [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                  spreadRadius: 0,
-                ),
-              ]
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                        spreadRadius: 0,
+                      ),
+                    ]
                   : [
-                BoxShadow(
-                  color: AppColors.shadow.withOpacity(0.06),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+                      BoxShadow(
+                        color: AppColors.shadow.withOpacity(0.06),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1436,21 +1441,16 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   Icon(
                     icon,
                     size: 18,
-                    color: isSelected
-                        ? AppColors.white
-                        : AppColors.textSecondary,
+                    color:
+                        isSelected ? AppColors.white : AppColors.textSecondary,
                   ),
                   const SizedBox(width: 8),
                 ],
                 Text(
                   name,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: isSelected
-                        ? AppColors.white
-                        : AppColors.textPrimary,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w500,
+                    color: isSelected ? AppColors.white : AppColors.textPrimary,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
               ],
@@ -1464,13 +1464,20 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   IconData _getCategoryIcon(String categoryName) {
     final name = categoryName.toLowerCase();
     if (name.contains('pizza')) return Icons.local_pizza_rounded;
-    if (name.contains('burger') || name.contains('hamburger')) return Icons.lunch_dining_rounded;
-    if (name.contains('içecek') || name.contains('drink')) return Icons.local_drink_rounded;
-    if (name.contains('tatlı') || name.contains('dessert')) return Icons.cake_rounded;
-    if (name.contains('kahve') || name.contains('coffee')) return Icons.local_cafe_rounded;
-    if (name.contains('salata') || name.contains('salad')) return Icons.eco_rounded;
-    if (name.contains('et') || name.contains('meat')) return Icons.restaurant_rounded;
-    if (name.contains('balık') || name.contains('fish')) return Icons.set_meal_rounded;
+    if (name.contains('burger') || name.contains('hamburger'))
+      return Icons.lunch_dining_rounded;
+    if (name.contains('içecek') || name.contains('drink'))
+      return Icons.local_drink_rounded;
+    if (name.contains('tatlı') || name.contains('dessert'))
+      return Icons.cake_rounded;
+    if (name.contains('kahve') || name.contains('coffee'))
+      return Icons.local_cafe_rounded;
+    if (name.contains('salata') || name.contains('salad'))
+      return Icons.eco_rounded;
+    if (name.contains('et') || name.contains('meat'))
+      return Icons.restaurant_rounded;
+    if (name.contains('balık') || name.contains('fish'))
+      return Icons.set_meal_rounded;
     return Icons.restaurant_menu_rounded;
   }
 
@@ -1483,10 +1490,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           child: _filteredProducts.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(
-            onRefresh: _loadMenuData,
-            color: AppColors.primary,
-            child: _buildProductGrid(),
-          ),
+                  onRefresh: _loadMenuData,
+                  color: AppColors.primary,
+                  child: _buildProductGrid(),
+                ),
         ),
       ),
     );
@@ -1499,7 +1506,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
     if (_searchQuery.isNotEmpty) {
       title = 'Ürün Bulunamadı';
-      subtitle = 'Aradığınız "${_searchQuery}" için sonuç bulunamadı.\nFarklı bir arama deneyin.';
+      subtitle =
+          'Aradığınız "${_searchQuery}" için sonuç bulunamadı.\nFarklı bir arama deneyin.';
       icon = Icons.search_off_rounded;
     } else if (_selectedCategoryId != null && _selectedCategoryId != 'all') {
       title = 'Bu kategoride ürün yok';
@@ -1559,7 +1567,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -1592,8 +1601,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCompactProductCard(Product product, int index) {
-    final hasDiscount = product.currentPrice != null &&
-        product.currentPrice! < product.price;
+    final hasDiscount =
+        product.currentPrice != null && product.currentPrice! < product.price;
     final discountPercentage = hasDiscount
         ? ((1 - (product.currentPrice! / product.price)) * 100).round()
         : 0;
@@ -1640,7 +1649,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               height: double.infinity,
                               errorBuilder: (context, error, stackTrace) =>
                                   _buildCompactIcon(),
-                              loadingBuilder: (context, child, loadingProgress) {
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
                                 return _buildCompactIcon();
                               },
@@ -1680,17 +1690,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               ),
                               child: Icon(
                                 _favoriteProductIds.contains(product.id)
-                                    ? Icons.favorite_rounded 
+                                    ? Icons.favorite_rounded
                                     : Icons.favorite_border_rounded,
                                 color: _favoriteProductIds.contains(product.id)
-                                    ? AppColors.accent 
+                                    ? AppColors.accent
                                     : AppColors.textSecondary,
                                 size: 14,
                               ),
                             ),
                           ),
                         ),
-                        
+
                         // Discount Badge
                         if (hasDiscount)
                           Container(
@@ -1795,7 +1805,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                       : AppColors.primary,
                                 ),
                               ),
-                              
+
                               // Original Price (if discounted)
                               if (hasDiscount)
                                 Text(
@@ -1916,7 +1926,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     try {
       final userId = _authService.currentUser?.uid;
       if (userId != null) {
-        final language = await _multilingualService.determineUserLanguage(userId);
+        final language =
+            await _multilingualService.determineUserLanguage(userId);
         setState(() {
           _currentLanguage = language;
         });

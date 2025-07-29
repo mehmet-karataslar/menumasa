@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../business/models/business.dart';
 import '../../business/models/category.dart';
 import '../../business/models/category.dart' as category_model;
@@ -14,6 +15,7 @@ import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../widgets/business_header.dart';
 import '../services/customer_firestore_service.dart';
+import '../services/customer_service.dart';
 import '../widgets/category_list.dart';
 import '../widgets/product_grid.dart';
 import 'menu_page.dart';
@@ -34,7 +36,9 @@ class BusinessDetailPage extends StatefulWidget {
 
 class _BusinessDetailPageState extends State<BusinessDetailPage>
     with TickerProviderStateMixin {
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
+  final CustomerService _customerService = CustomerService();
   final ScrollController _scrollController = ScrollController();
 
   List<Product> _products = [];
@@ -75,17 +79,21 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _fadeAnimationController, curve: Curves.easeInOut),
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(
+        parent: _slideAnimationController, curve: Curves.easeOutCubic));
     _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _headerAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _headerAnimationController, curve: Curves.easeInOut),
     );
 
     _loadData();
+    _checkFavoriteStatus();
   }
 
   @override
@@ -115,17 +123,20 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
     try {
       // Start animations
       _fadeAnimationController.forward();
-      
+
       // Load products and categories
-      final productsData = await _customerFirestoreService.getBusinessProducts(widget.business.id);
-      final categoriesData = await _customerFirestoreService.getBusinessCategories(widget.business.id);
+      final productsData = await _customerFirestoreService
+          .getBusinessProducts(widget.business.id);
+      final categoriesData = await _customerFirestoreService
+          .getBusinessCategories(widget.business.id);
 
       setState(() {
         _products = productsData
             .map((data) => Product.fromJson(data, id: data['id']))
             .toList();
         _categories = categoriesData
-            .map((data) => category_model.Category.fromJson(data, id: data['id']))
+            .map((data) =>
+                category_model.Category.fromJson(data, id: data['id']))
             .toList();
         _isLoading = false;
       });
@@ -137,6 +148,47 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
         _errorMessage = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _isFavorite = false;
+        });
+        return;
+      }
+
+      final userDocRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+      final userDoc = await userDocRef.get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+        final customerData =
+            Map<String, dynamic>.from(userData['customerData'] ?? {});
+        final currentFavorites =
+            List<String>.from(customerData['favoriteBusinessIds'] ?? []);
+        setState(() {
+          _isFavorite = currentFavorites.contains(widget.business.id);
+        });
+      } else {
+        // Business kullanıcı - business_favorites collection'ını kullan
+        final existingFavoriteQuery = await FirebaseFirestore.instance
+            .collection('business_favorites')
+            .where('userId', isEqualTo: user.uid)
+            .where('businessId', isEqualTo: widget.business.id)
+            .get();
+
+        setState(() {
+          _isFavorite = existingFavoriteQuery.docs.isNotEmpty;
+        });
+      }
+    } catch (e) {
+      print('Favori durum kontrolü hatası: $e');
     }
   }
 
@@ -174,7 +226,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
           children: [
             // Business cover image
             _buildBusinessCoverImage(),
-            
+
             // Gradient overlay
             Container(
               decoration: BoxDecoration(
@@ -189,7 +241,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
                 ),
               ),
             ),
-            
+
             // Business info overlay
             Positioned(
               bottom: 20,
@@ -241,7 +293,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
                   if (loadingProgress == null) return child;
                   return Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white.withOpacity(0.8)),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.white.withOpacity(0.8)),
                     ),
                   );
                 },
@@ -289,14 +342,15 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
               _buildRatingWidget(),
             ],
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Business type and status
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -350,7 +404,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: widget.business.isOpen 
+        color: widget.business.isOpen
             ? AppColors.success.withOpacity(0.1)
             : AppColors.error.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -362,7 +416,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: widget.business.isOpen ? AppColors.success : AppColors.error,
+              color:
+                  widget.business.isOpen ? AppColors.success : AppColors.error,
               shape: BoxShape.circle,
             ),
           ),
@@ -370,7 +425,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
           Text(
             widget.business.isOpen ? 'Açık' : 'Kapalı',
             style: AppTypography.bodyMedium.copyWith(
-              color: widget.business.isOpen ? AppColors.success : AppColors.error,
+              color:
+                  widget.business.isOpen ? AppColors.success : AppColors.error,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -405,30 +461,106 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
           _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
           color: _isFavorite ? AppColors.accent : AppColors.white,
         ),
-        onPressed: () {
-          setState(() {
-            _isFavorite = !_isFavorite;
-          });
-          HapticFeedback.mediumImpact();
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(
-                    _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: AppColors.white,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(_isFavorite ? 'Favorilere eklendi!' : 'Favorilerden çıkarıldı!'),
-                ],
+        onPressed: () async {
+          try {
+            // Firebase Auth'dan current user'ı al
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null) {
+              throw Exception('Giriş yapılması gerekli');
+            }
+
+            // Önce users collection'ından kontrol et (customer kullanıcılar için)
+            final userDocRef =
+                FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+            final userDoc = await userDocRef.get();
+
+            if (userDoc.exists) {
+              // users collection'ında bulundu (customer user) - mevcut sistemi kullan
+              final userData = userDoc.data()!;
+              final customerData =
+                  Map<String, dynamic>.from(userData['customerData'] ?? {});
+              final currentFavorites =
+                  List<String>.from(customerData['favoriteBusinessIds'] ?? []);
+
+              List<String> updatedFavorites;
+              if (_isFavorite) {
+                updatedFavorites = currentFavorites
+                    .where((id) => id != widget.business.id)
+                    .toList();
+              } else {
+                updatedFavorites = [...currentFavorites, widget.business.id];
+              }
+
+              customerData['favoriteBusinessIds'] = updatedFavorites;
+              await userDocRef.update({
+                'customerData': customerData,
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
+            } else {
+              // Business kullanıcı - business_favorites collection'ını kullan
+              if (_isFavorite) {
+                // Favorilerden çıkar
+                final existingFavoriteQuery = await FirebaseFirestore.instance
+                    .collection('business_favorites')
+                    .where('userId', isEqualTo: user.uid)
+                    .where('businessId', isEqualTo: widget.business.id)
+                    .get();
+
+                for (final doc in existingFavoriteQuery.docs) {
+                  await doc.reference.delete();
+                }
+              } else {
+                // Favorilere ekle
+                await FirebaseFirestore.instance
+                    .collection('business_favorites')
+                    .add({
+                  'userId': user.uid,
+                  'businessId': widget.business.id,
+                  'businessName': widget.business.businessName,
+                  'addedAt': FieldValue.serverTimestamp(),
+                });
+              }
+            }
+
+            setState(() {
+              _isFavorite = !_isFavorite;
+            });
+
+            HapticFeedback.mediumImpact();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(
+                      _isFavorite
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: AppColors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(_isFavorite
+                        ? 'Favorilere eklendi!'
+                        : 'Favorilerden çıkarıldı!'),
+                  ],
+                ),
+                backgroundColor:
+                    _isFavorite ? AppColors.accent : AppColors.info,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
               ),
-              backgroundColor: _isFavorite ? AppColors.accent : AppColors.info,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Favori işlemi sırasında hata: $e'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
         },
       ),
     );
@@ -456,7 +588,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
               ),
               backgroundColor: AppColors.success,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -487,10 +620,10 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
       children: [
         // Business details section
         _buildBusinessDetailsSection(),
-        
+
         // Tab bar
         _buildModernTabBar(),
-        
+
         // Tab content
         _buildTabContent(),
       ],
@@ -518,7 +651,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
           // About section
           Row(
             children: [
-              Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 24),
+              Icon(Icons.info_outline_rounded,
+                  color: AppColors.primary, size: 24),
               const SizedBox(width: 12),
               Text(
                 'Hakkında',
@@ -537,14 +671,14 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
               height: 1.6,
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Contact info
           _buildContactInfo(),
-          
+
           const SizedBox(height: 24),
-          
+
           // Quick stats
           _buildQuickStats(),
         ],
@@ -565,7 +699,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
         _buildInfoRow(
           icon: Icons.phone_rounded,
           title: 'Telefon',
-                     value: widget.business.contactInfo.phone ?? 'Belirtilmemiş',
+          value: widget.business.contactInfo.phone ?? 'Belirtilmemiş',
           color: AppColors.success,
         ),
         const SizedBox(height: 16),
@@ -810,7 +944,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.greyLighter,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 gradient: LinearGradient(
                   colors: [
                     AppColors.primary.withOpacity(0.1),
@@ -820,7 +955,8 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
               ),
               child: product.images.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(16)),
                       child: Image.network(
                         product.images.first.url,
                         fit: BoxFit.cover,
@@ -833,7 +969,7 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
                   : _buildProductPlaceholder(),
             ),
           ),
-          
+
           // Product info
           Expanded(
             flex: 2,
@@ -947,14 +1083,14 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
       child: FloatingActionButton.extended(
         onPressed: () {
           HapticFeedback.mediumImpact();
-                     Navigator.push(
-             context,
-             MaterialPageRoute(
-               builder: (context) => MenuPage(
-                 businessId: widget.business.id,
-               ),
-             ),
-           );
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MenuPage(
+                businessId: widget.business.id,
+              ),
+            ),
+          );
         },
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -969,4 +1105,4 @@ class _BusinessDetailPageState extends State<BusinessDetailPage>
       ),
     );
   }
-} 
+}
