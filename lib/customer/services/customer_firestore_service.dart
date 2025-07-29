@@ -508,30 +508,13 @@ class CustomerFirestoreService {
 
   /// Gets orders by business ID and customer phone
   Future<List<app_order.Order>> getOrdersByBusinessAndPhone(
-      String businessId, String customerPhone) async {
+    String businessId,
+    String customerPhone,
+  ) async {
     try {
       final snapshot = await _ordersRef
           .where('businessId', isEqualTo: businessId)
           .where('customerPhone', isEqualTo: customerPhone)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => app_order.Order.fromJson(
-                doc.data() as Map<String, dynamic>,
-                id: doc.id,
-              ))
-          .toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Gets orders by business ID only
-  Future<List<app_order.Order>> getOrdersByBusiness(String businessId) async {
-    try {
-      final snapshot = await _ordersRef
-          .where('businessId', isEqualTo: businessId)
           .orderBy('createdAt', descending: true)
           .get();
 

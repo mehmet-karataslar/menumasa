@@ -497,13 +497,18 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     _urlService.updateUrl(dynamicRoute, customTitle: 'Siparişlerim | MasaMenu');
 
     HapticFeedback.lightImpact();
+
+    // Auth'lu kullanıcının ID'sini al
+    final currentUser = _authService.currentUser;
+    final customerId = currentUser?.uid; // Firebase Auth UID'sini kullan
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CustomerOrdersPage(
           businessId: widget.businessId,
-          customerPhone: null,
-          customerId: null,
+          customerPhone: currentUser?.phoneNumber,
+          customerId: customerId,
         ),
         settings: RouteSettings(name: dynamicRoute),
       ),

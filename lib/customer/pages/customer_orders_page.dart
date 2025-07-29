@@ -31,7 +31,8 @@ class CustomerOrdersPage extends StatefulWidget {
 class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     with TickerProviderStateMixin {
   final CustomerService _customerService = CustomerService();
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
 
   List<app_order.Order> _orders = [];
   Map<String, Business> _businessCache = {};
@@ -44,7 +45,13 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  final List<String> _filterOptions = ['Tümü', 'Bekliyor', 'Hazırlanıyor', 'Tamamlandı', 'İptal Edildi'];
+  final List<String> _filterOptions = [
+    'Tümü',
+    'Bekliyor',
+    'Hazırlanıyor',
+    'Tamamlandı',
+    'İptal Edildi'
+  ];
 
   @override
   void initState() {
@@ -59,12 +66,14 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _fadeAnimationController, curve: Curves.easeInOut),
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(
+        parent: _slideAnimationController, curve: Curves.easeOutCubic));
 
     _loadOrders();
   }
@@ -83,30 +92,52 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
         _errorMessage = null;
       });
 
-      List<app_order.Order> orders;
-      
-      if (widget.customerId != null) {
-        // Load orders by customer ID
-        orders = await _customerFirestoreService.getOrdersByCustomer(widget.customerId!);
-      } else if (widget.businessId != null && widget.customerPhone != null) {
-        // Load orders by business and phone
-        orders = await _customerFirestoreService.getOrdersByBusinessAndPhone(
-          widget.businessId!,
-          widget.customerPhone!,
-        );
-      } else if (widget.businessId != null) {
-        // Load orders by business only
-        orders = await _customerFirestoreService.getOrdersByBusiness(widget.businessId!);
-      } else {
-        orders = [];
+      // *** GÜVENLİK KONTROLÜ - ZORUNLU AUTH ***
+      final currentUser = _customerService.currentCustomer;
+
+      if (currentUser == null) {
+        setState(() {
+          _errorMessage =
+              'Siparişlerinizi görmek için giriş yapmanız gerekiyor.';
+          _isLoading = false;
+        });
+        return;
       }
+
+      print('🔐 Loading orders for authenticated user: ${currentUser.id}');
+
+      List<app_order.Order> orders;
+
+      // SADECE AUTH'LU KULLANICININ SİPARİŞLERİNİ GETİR
+      if (widget.customerId != null) {
+        // Widget'tan gelen customerId varsa ama auth'lu kullanıcının ID'si ile eşleşmeli
+        if (widget.customerId != currentUser.id) {
+          print(
+              '⚠️ Security: Widget customerId (${widget.customerId}) != Auth customerId (${currentUser.id})');
+          setState(() {
+            _errorMessage = 'Bu siparişleri görme yetkiniz yok.';
+            _isLoading = false;
+          });
+          return;
+        }
+        orders = await _customerFirestoreService
+            .getOrdersByCustomer(widget.customerId!);
+      } else {
+        // Widget'tan customerId gelmemişse auth'lu kullanıcının ID'sini kullan
+        orders =
+            await _customerFirestoreService.getOrdersByCustomer(currentUser.id);
+      }
+
+      print(
+          '✅ Successfully loaded ${orders.length} orders for customer: ${currentUser.id}');
 
       // Load business details for each order
       final businessIds = orders.map((o) => o.businessId).toSet();
       for (final businessId in businessIds) {
         if (!_businessCache.containsKey(businessId)) {
           try {
-            final business = await _customerFirestoreService.getBusiness(businessId);
+            final business =
+                await _customerFirestoreService.getBusiness(businessId);
             if (business != null) {
               _businessCache[businessId] = business;
             }
@@ -124,6 +155,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
       _fadeAnimationController.forward();
       _slideAnimationController.forward();
     } catch (e) {
+      print('❌ Error loading orders: $e');
       setState(() {
         _errorMessage = 'Siparişler yüklenirken hata: $e';
         _isLoading = false;
@@ -135,7 +167,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     if (_selectedFilter == 'Tümü') {
       return _orders;
     }
-    
+
     final statusFilter = _getOrderStatusFromString(_selectedFilter);
     return _orders.where((order) => order.status == statusFilter).toList();
   }
@@ -170,18 +202,18 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
       body: _isLoading
           ? Center(child: LoadingIndicator())
           : _errorMessage != null
-          ? Center(child: ErrorMessage(message: _errorMessage!))
-          : FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                children: [
-                  _buildFilterTabs(),
-                  Expanded(
-                    child: _buildOrdersList(),
+              ? Center(child: ErrorMessage(message: _errorMessage!))
+              : FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Column(
+                    children: [
+                      _buildFilterTabs(),
+                      Expanded(
+                        child: _buildOrdersList(),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 
@@ -229,9 +261,11 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
         itemBuilder: (context, index) {
           final filter = _filterOptions[index];
           final isSelected = filter == _selectedFilter;
-          final orderCount = filter == 'Tümü' 
-              ? _orders.length 
-              : _orders.where((o) => _getOrderStatusText(o.status) == filter).length;
+          final orderCount = filter == 'Tümü'
+              ? _orders.length
+              : _orders
+                  .where((o) => _getOrderStatusText(o.status) == filter)
+                  .length;
 
           return Container(
             margin: EdgeInsets.only(right: 12),
@@ -247,7 +281,8 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                     color: isSelected ? AppColors.primary : AppColors.white,
                     borderRadius: BorderRadius.circular(25),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.greyLight,
+                      color:
+                          isSelected ? AppColors.primary : AppColors.greyLight,
                       width: isSelected ? 0 : 1,
                     ),
                     boxShadow: isSelected
@@ -272,24 +307,30 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                       Text(
                         filter,
                         style: AppTypography.bodyMedium.copyWith(
-                          color: isSelected ? AppColors.white : AppColors.textPrimary,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? AppColors.white
+                              : AppColors.textPrimary,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
                         ),
                       ),
                       if (orderCount > 0) ...[
                         SizedBox(width: 8),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: isSelected 
-                                ? AppColors.white.withOpacity(0.2) 
+                            color: isSelected
+                                ? AppColors.white.withOpacity(0.2)
                                 : AppColors.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             orderCount.toString(),
                             style: AppTypography.caption.copyWith(
-                              color: isSelected ? AppColors.white : AppColors.primary,
+                              color: isSelected
+                                  ? AppColors.white
+                                  : AppColors.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -425,7 +466,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
 
   Widget _buildOrderCard(app_order.Order order, int index) {
     final business = _businessCache[order.businessId];
-    
+
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -716,7 +757,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
 
   void _showOrderDetails(app_order.Order order, Business? business) {
     HapticFeedback.lightImpact();
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -744,7 +785,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -814,8 +855,10 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                 children: [
                   // Order info
                   _buildDetailSection('Sipariş Bilgileri', [
-                    _buildDetailRow('Sipariş No', '#${order.orderId.substring(0, 8)}'),
-                    _buildDetailRow('Tarih', _formatOrderDateDetailed(order.createdAt)),
+                    _buildDetailRow(
+                        'Sipariş No', '#${order.orderId.substring(0, 8)}'),
+                    _buildDetailRow(
+                        'Tarih', _formatOrderDateDetailed(order.createdAt)),
                     _buildDetailRow('Masa', 'Masa ${order.tableNumber}'),
                     _buildDetailRow('Müşteri', order.customerName),
                     if (order.customerPhone != null)
@@ -827,10 +870,9 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                   SizedBox(height: 24),
 
                   // Order items
-                  _buildDetailSection('Sipariş İçeriği', 
-                    order.items.map((item) => 
-                      _buildItemRow(item)
-                    ).toList(),
+                  _buildDetailSection(
+                    'Sipariş İçeriği',
+                    order.items.map((item) => _buildItemRow(item)).toList(),
                   ),
 
                   SizedBox(height: 24),
@@ -1087,10 +1129,20 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
 
   String _formatOrderDateDetailed(DateTime date) {
     final months = [
-      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+      'Ocak',
+      'Şubat',
+      'Mart',
+      'Nisan',
+      'Mayıs',
+      'Haziran',
+      'Temmuz',
+      'Ağustos',
+      'Eylül',
+      'Ekim',
+      'Kasım',
+      'Aralık'
     ];
-    
+
     return '${date.day} ${months[date.month - 1]} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
@@ -1132,7 +1184,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Header
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -1178,7 +1230,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                   ],
                 ),
               ),
-              
+
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1213,9 +1265,9 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Puanlama
                       Text(
                         'Genel Memnuniyetiniz',
@@ -1225,7 +1277,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       Center(
                         child: Column(
                           children: [
@@ -1233,14 +1285,15 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: List.generate(5, (index) {
                                 return GestureDetector(
-                                  onTap: () => setState(() => rating = index + 1.0),
+                                  onTap: () =>
+                                      setState(() => rating = index + 1.0),
                                   child: Container(
                                     padding: const EdgeInsets.all(8),
                                     child: Icon(
                                       Icons.star_rounded,
                                       size: 40,
-                                      color: index < rating 
-                                          ? AppColors.warning 
+                                      color: index < rating
+                                          ? AppColors.warning
                                           : AppColors.greyLight,
                                     ),
                                   ),
@@ -1258,9 +1311,9 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Yorum
                       Text(
                         'Yorumunuz (Opsiyonel)',
@@ -1270,7 +1323,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       TextField(
                         controller: commentController,
                         maxLines: 4,
@@ -1285,20 +1338,21 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
                     ],
                   ),
                 ),
               ),
-              
+
               // Submit button
               Container(
                 padding: const EdgeInsets.all(20),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _submitReview(order, rating, commentController.text),
+                    onPressed: () =>
+                        _submitReview(order, rating, commentController.text),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.white,
@@ -1358,7 +1412,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Header
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -1404,7 +1458,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                   ],
                 ),
               ),
-              
+
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1420,7 +1474,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       Wrap(
                         spacing: 8,
                         children: FeedbackType.values.map((type) {
@@ -1428,15 +1482,16 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                           return FilterChip(
                             label: Text(type.displayName),
                             selected: isSelected,
-                            onSelected: (selected) => setState(() => selectedType = type),
+                            onSelected: (selected) =>
+                                setState(() => selectedType = type),
                             selectedColor: AppColors.primary.withOpacity(0.2),
                             checkmarkColor: AppColors.primary,
                           );
                         }).toList(),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Kategori
                       Text(
                         'Kategori',
@@ -1446,7 +1501,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       DropdownButtonFormField<FeedbackCategory>(
                         value: selectedCategory,
                         decoration: InputDecoration(
@@ -1460,11 +1515,12 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                             child: Text(category.displayName),
                           );
                         }).toList(),
-                        onChanged: (value) => setState(() => selectedCategory = value!),
+                        onChanged: (value) =>
+                            setState(() => selectedCategory = value!),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Konu
                       Text(
                         'Konu',
@@ -1474,7 +1530,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       TextField(
                         controller: subjectController,
                         decoration: InputDecoration(
@@ -1488,9 +1544,9 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Mesaj
                       Text(
                         'Mesajınız',
@@ -1500,7 +1556,7 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       TextField(
                         controller: messageController,
                         maxLines: 5,
@@ -1515,13 +1571,13 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
                     ],
                   ),
                 ),
               ),
-              
+
               // Submit button
               Container(
                 padding: const EdgeInsets.all(20),
@@ -1529,10 +1585,10 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () => _submitFeedback(
-                      order, 
-                      selectedType, 
-                      selectedCategory, 
-                      subjectController.text, 
+                      order,
+                      selectedType,
+                      selectedCategory,
+                      subjectController.text,
                       messageController.text,
                     ),
                     style: ElevatedButton.styleFrom(
@@ -1576,7 +1632,8 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
     }
   }
 
-  Future<void> _submitReview(app_order.Order order, double rating, String comment) async {
+  Future<void> _submitReview(
+      app_order.Order order, double rating, String comment) async {
     try {
       // Loading göster
       showDialog(
@@ -1617,7 +1674,8 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
           ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     } catch (e) {
@@ -1690,7 +1748,8 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
           ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     } catch (e) {
