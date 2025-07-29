@@ -64,30 +64,56 @@ class WaiterCall {
 
   /// Firestore'dan oluştur
   factory WaiterCall.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return WaiterCall(
-      callId: doc.id,
-      businessId: data['businessId'] ?? '',
-      customerId: data['customerId'] ?? '',
-      customerName: data['customerName'] ?? '',
-      waiterId: data['waiterId'] ?? '',
-      waiterName: data['waiterName'] ?? '',
-      tableNumber: data['tableNumber'] ?? '',
-      floorNumber: data['floorNumber'],
-      message: data['message'],
-      status: WaiterCallStatus.values.firstWhere(
-        (status) => status.value == data['status'],
-        orElse: () => WaiterCallStatus.pending,
-      ),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
-      respondedAt: data['respondedAt'] != null 
-          ? (data['respondedAt'] as Timestamp).toDate()
-          : null,
-      completedAt: data['completedAt'] != null 
-          ? (data['completedAt'] as Timestamp).toDate()
-          : null,
-    );
+    try {
+      final data = doc.data() as Map<String, dynamic>;
+      final now = DateTime.now();
+
+      return WaiterCall(
+        callId: doc.id,
+        businessId: data['businessId'] ?? '',
+        customerId: data['customerId'] ?? '',
+        customerName: data['customerName'] ?? '',
+        waiterId: data['waiterId'] ?? '',
+        waiterName: data['waiterName'] ?? '',
+        tableNumber: data['tableNumber'] ?? '',
+        floorNumber: data['floorNumber'],
+        message: data['message'],
+        status: WaiterCallStatus.values.firstWhere(
+          (status) => status.value == data['status'],
+          orElse: () => WaiterCallStatus.pending,
+        ),
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : now,
+        updatedAt: data['updatedAt'] != null
+            ? (data['updatedAt'] as Timestamp).toDate()
+            : now,
+        respondedAt: data['respondedAt'] != null
+            ? (data['respondedAt'] as Timestamp).toDate()
+            : null,
+        completedAt: data['completedAt'] != null
+            ? (data['completedAt'] as Timestamp).toDate()
+            : null,
+      );
+    } catch (e) {
+      print('❌ Error parsing WaiterCall from Firestore: $e');
+      print('📄 Document data: ${doc.data()}');
+
+      // Return a default waiter call in case of error
+      final now = DateTime.now();
+      return WaiterCall(
+        callId: doc.id,
+        businessId: '',
+        customerId: '',
+        customerName: 'Unknown',
+        waiterId: '',
+        waiterName: 'Unknown',
+        tableNumber: 'Unknown',
+        status: WaiterCallStatus.pending,
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
   }
 
   /// Firestore'a kaydet
@@ -104,8 +130,10 @@ class WaiterCall {
       'status': status.value,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
-      'respondedAt': respondedAt != null ? Timestamp.fromDate(respondedAt!) : null,
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'respondedAt':
+          respondedAt != null ? Timestamp.fromDate(respondedAt!) : null,
+      'completedAt':
+          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
     };
   }
 
@@ -182,7 +210,8 @@ class WaiterCall {
 
   /// Çağrı geçerli mi?
   bool get isActive {
-    return status == WaiterCallStatus.pending || status == WaiterCallStatus.responded;
+    return status == WaiterCallStatus.pending ||
+        status == WaiterCallStatus.responded;
   }
 
   /// Masa ve kat bilgisi
@@ -232,4 +261,4 @@ enum WaiterCallStatus {
       orElse: () => WaiterCallStatus.pending,
     );
   }
-} 
+}
