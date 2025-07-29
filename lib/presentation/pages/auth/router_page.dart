@@ -73,15 +73,10 @@ class _RouterPageState extends State<RouterPage> {
         businessId = params['business'] ?? params['businessId'];
         tableId = params['table'] ?? params['tableId'];
 
-        // Hemen QR menü sayfasına yönlendir
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const UniversalQRMenuPage(),
-            ),
-          );
-          return; // Erken çık, auth kontrolü yapma
-        }
+        // QR URL tespit edildi ama RouterPage üzerinden değil,
+        // build method'unda handle edilecek
+        print(
+            '🔍 QR URL detected in _checkAuthenticationState: business=$businessId, table=$tableId');
       }
 
       final currentUser = _authService.currentUser;
