@@ -14,9 +14,13 @@ import 'package:shared_preferences/shared_preferences.dart'; // Added for Shared
 
 class MultiBusinessCartPage extends StatefulWidget {
   final String userId;
+  final bool showAppBar;
 
-  const MultiBusinessCartPage({Key? key, required this.userId})
-      : super(key: key);
+  const MultiBusinessCartPage({
+    Key? key,
+    required this.userId,
+    this.showAppBar = true,
+  }) : super(key: key);
 
   @override
   State<MultiBusinessCartPage> createState() => _MultiBusinessCartPageState();
@@ -147,19 +151,21 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          'Sepetlerim',
-          style: AppTypography.h5.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.white,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: Text(
+                'Sepetlerim',
+                style: AppTypography.h5.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.white,
+                ),
+              ),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              elevation: 0,
+              centerTitle: true,
+            )
+          : null,
       body: _isLoading
           ? const Center(child: LoadingIndicator())
           : _businessCarts.isEmpty

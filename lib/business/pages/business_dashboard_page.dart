@@ -39,6 +39,7 @@ import 'digital_marketing_page.dart';
 import 'data_security_page.dart';
 import 'analytics_page.dart';
 import 'stock_management_page.dart';
+import '../../core/utils/date_utils.dart' as date_utils;
 
 class BusinessDashboard extends StatefulWidget {
   final String businessId;
@@ -56,7 +57,8 @@ class BusinessDashboard extends StatefulWidget {
 
 class _BusinessDashboardState extends State<BusinessDashboard>
     with SingleTickerProviderStateMixin {
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
   final UrlService _urlService = UrlService();
   final AuthService _authService = AuthService();
   final NotificationService _notificationService = NotificationService();
@@ -81,7 +83,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   // Notifications
   List<NotificationModel> _notifications = [];
   int _unreadNotificationCount = 0;
-  
+
   // Waiter calls
   List<WaiterCall> _activeWaiterCalls = [];
   List<WaiterCall> _recentWaiterCalls = [];
@@ -182,12 +184,12 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   void _setInitialTab() {
     if (widget.initialTab != null) {
       String initialTab = widget.initialTab!;
-      
+
       // Eski tab route'larını yeni route'lara yönlendir
       if (initialTab == 'kategoriler' || initialTab == 'urunler') {
         initialTab = 'menu-yonetimi';
       }
-      
+
       final tabIndex = _tabRoutes.indexOf(initialTab);
       if (tabIndex != -1) {
         _tabController.index = tabIndex;
@@ -207,11 +209,13 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   void _updateUrl() {
     final currentTab = _tabRoutes[_currentIndex];
     final businessName = _business?.businessName;
-    _urlService.updateBusinessUrl(widget.businessId, currentTab, businessName: businessName);
+    _urlService.updateBusinessUrl(widget.businessId, currentTab,
+        businessName: businessName);
   }
 
   void _setupNotificationListener() {
-    _notificationService.addNotificationListener(widget.businessId, _onNotificationsChanged);
+    _notificationService.addNotificationListener(
+        widget.businessId, _onNotificationsChanged);
   }
 
   void _onNotificationsChanged(List<NotificationModel> notifications) {
@@ -225,12 +229,13 @@ class _BusinessDashboardState extends State<BusinessDashboard>
 
   Future<void> _loadWaiterCalls() async {
     try {
-      final activeCalls = await _waiterCallService.getBusinessActiveCalls(widget.businessId);
+      final activeCalls =
+          await _waiterCallService.getBusinessActiveCalls(widget.businessId);
       final recentCalls = await _waiterCallService.getBusinessCallHistory(
         widget.businessId,
         limit: 10,
       );
-      
+
       if (mounted) {
         setState(() {
           _activeWaiterCalls = activeCalls;
@@ -249,12 +254,16 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     });
 
     try {
-      final business = await _businessFirestoreService.getBusiness(widget.businessId);
+      final business =
+          await _businessFirestoreService.getBusiness(widget.businessId);
       if (business == null) throw Exception('İşletme bulunamadı');
 
-      final orders = await _businessFirestoreService.getBusinessOrders(widget.businessId, limit: 5);
-      final categories = await _businessFirestoreService.getBusinessCategories(widget.businessId);
-      final products = await _businessFirestoreService.getBusinessProducts(widget.businessId, limit: 10);
+      final orders = await _businessFirestoreService
+          .getBusinessOrders(widget.businessId, limit: 5);
+      final categories = await _businessFirestoreService
+          .getBusinessCategories(widget.businessId);
+      final products = await _businessFirestoreService
+          .getBusinessProducts(widget.businessId, limit: 10);
       final stats = await _calculateStats();
 
       setState(() {
@@ -280,8 +289,10 @@ class _BusinessDashboardState extends State<BusinessDashboard>
 
   Future<Map<String, dynamic>> _calculateStats() async {
     try {
-      final dailyStats = await _businessFirestoreService.getDailyOrderStats(widget.businessId);
-      final allOrders = await _businessFirestoreService.getOrdersByBusiness(widget.businessId);
+      final dailyStats =
+          await _businessFirestoreService.getDailyOrderStats(widget.businessId);
+      final allOrders = await _businessFirestoreService
+          .getOrdersByBusiness(widget.businessId);
 
       double totalRevenue = 0.0;
       int pendingOrders = 0;
@@ -315,7 +326,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Çıkış Yap', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Çıkış Yap',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
         actions: [
           TextButton(
@@ -331,7 +343,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text('Çıkış Yap'),
@@ -344,16 +357,21 @@ class _BusinessDashboardState extends State<BusinessDashboard>
       try {
         await _authService.signOut();
         if (mounted) {
-          _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+          _urlService.updateUrl('/',
+              customTitle: 'MasaMenu - Dijital Menü Çözümü');
           Navigator.pushReplacementNamed(context, '/');
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Çıkış yapıldı'), backgroundColor: AppColors.success),
+            const SnackBar(
+                content: Text('Çıkış yapıldı'),
+                backgroundColor: AppColors.success),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Çıkış hatası: $e'), backgroundColor: AppColors.error),
+            SnackBar(
+                content: Text('Çıkış hatası: $e'),
+                backgroundColor: AppColors.error),
           );
         }
       }
@@ -373,7 +391,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             _navigateToTab(1);
           }
         },
-        onMarkAllRead: () => _notificationService.markAllAsRead(widget.businessId),
+        onMarkAllRead: () =>
+            _notificationService.markAllAsRead(widget.businessId),
       ),
     );
   }
@@ -389,7 +408,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
-    _notificationService.removeNotificationListener(widget.businessId, _onNotificationsChanged);
+    _notificationService.removeNotificationListener(
+        widget.businessId, _onNotificationsChanged);
     super.dispose();
   }
 
@@ -528,7 +548,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.notifications_rounded, color: AppColors.primary),
+                  child: Icon(Icons.notifications_rounded,
+                      color: AppColors.primary),
                 ),
                 if (_unreadNotificationCount > 0)
                   Positioned(
@@ -592,10 +613,12 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                 color: AppColors.textSecondary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+              child:
+                  Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
             ),
             offset: const Offset(0, 48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onSelected: (value) {
               switch (value) {
                 case 'profile':
@@ -610,7 +633,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               const PopupMenuItem(
                 value: 'profile',
                 child: ListTile(
-                  leading: Icon(Icons.business_rounded, color: AppColors.primary),
+                  leading:
+                      Icon(Icons.business_rounded, color: AppColors.primary),
                   title: Text('İşletme Profili'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -619,7 +643,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                 value: 'logout',
                 child: ListTile(
                   leading: Icon(Icons.logout_rounded, color: AppColors.error),
-                  title: Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
+                  title: Text('Çıkış Yap',
+                      style: TextStyle(color: AppColors.error)),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -673,11 +698,13 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             ),
           ],
         ),
-        labelStyle: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
-        unselectedLabelStyle: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+        labelStyle:
+            AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+            AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
         tabs: List.generate(
           _tabTitles.length,
-              (index) => Tab(
+          (index) => Tab(
             height: 72, // Artırıldı çünkü dikey layout daha fazla yer kaplıyor
             child: Stack(
               children: [
@@ -702,7 +729,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                     top: 2,
                     right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.error,
                         borderRadius: BorderRadius.circular(10),
@@ -811,7 +839,9 @@ class _BusinessDashboardState extends State<BusinessDashboard>
           title: 'Bekleyen Siparişler',
           value: _pendingOrders.toString(),
           icon: Icons.pending_actions_rounded,
-          color: _pendingOrders > 0 ? const Color(0xFFFF6B6B) : const Color(0xFF4ECDC4),
+          color: _pendingOrders > 0
+              ? const Color(0xFFFF6B6B)
+              : const Color(0xFF4ECDC4),
           gradient: LinearGradient(
             colors: _pendingOrders > 0
                 ? [const Color(0xFFFF6B6B), const Color(0xFFFF8787)]
@@ -946,12 +976,14 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                         color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 20),
+                      child: Icon(Icons.receipt_long_rounded,
+                          color: AppColors.primary, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Son Siparişler',
-                      style: AppTypography.h5.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.h5
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -959,7 +991,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                   onPressed: () => _navigateToTab(1),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   child: Row(
                     children: const [
@@ -992,8 +1025,10 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _recentOrders.take(5).length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) => _buildOrderItem(_recentOrders[index]),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) =>
+                    _buildOrderItem(_recentOrders[index]),
               ),
           ],
         ),
@@ -1102,7 +1137,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                     color: AppColors.warning.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.flash_on_rounded, color: AppColors.warning, size: 20),
+                  child: Icon(Icons.flash_on_rounded,
+                      color: AppColors.warning, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -1222,12 +1258,14 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                         color: AppColors.success.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.star_rounded, color: AppColors.success, size: 20),
+                      child: Icon(Icons.star_rounded,
+                          color: AppColors.success, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Popüler Ürünler',
-                      style: AppTypography.h5.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.h5
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -1235,7 +1273,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                   onPressed: () => _navigateToTab(3),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   child: Row(
                     children: const [
@@ -1268,8 +1307,10 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _popularProducts.take(5).length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) => _buildProductItem(_popularProducts[index]),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) =>
+                    _buildProductItem(_popularProducts[index]),
               ),
           ],
         ),
@@ -1303,10 +1344,9 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                       height: 56,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.restaurant_rounded, 
-                        color: AppColors.textSecondary, 
-                        size: 24
-                      ),
+                          Icons.restaurant_rounded,
+                          color: AppColors.textSecondary,
+                          size: 24),
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
                         return Center(
@@ -1315,14 +1355,16 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.primary),
                             ),
                           ),
                         );
                       },
                     ),
                   )
-                : Icon(Icons.restaurant_rounded, color: AppColors.textSecondary, size: 24),
+                : Icon(Icons.restaurant_rounded,
+                    color: AppColors.textSecondary, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -1365,7 +1407,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             child: Text(
               product.isAvailable ? 'Mevcut' : 'Tükendi',
               style: TextStyle(
-                color: product.isAvailable ? AppColors.success : AppColors.error,
+                color:
+                    product.isAvailable ? AppColors.success : AppColors.error,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -1405,12 +1448,14 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                         color: AppColors.info.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.category_rounded, color: AppColors.info, size: 20),
+                      child: Icon(Icons.category_rounded,
+                          color: AppColors.info, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Kategoriler',
-                      style: AppTypography.h5.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.h5
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -1418,7 +1463,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                   onPressed: () => _navigateToTab(2),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   child: Row(
                     children: const [
@@ -1451,8 +1497,10 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _categories.take(5).length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) => _buildCategoryItem(_categories[index]),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) =>
+                    _buildCategoryItem(_categories[index]),
               ),
           ],
         ),
@@ -1484,7 +1532,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               ),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(Icons.category_rounded, color: AppColors.white, size: 24),
+            child:
+                Icon(Icons.category_rounded, color: AppColors.white, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -1498,7 +1547,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                     color: AppColors.textPrimary,
                   ),
                 ),
-                if (category.description != null && category.description!.isNotEmpty) ...[
+                if (category.description != null &&
+                    category.description!.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     category.description!,
@@ -1601,14 +1651,14 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _activeWaiterCalls.isNotEmpty 
+                    color: _activeWaiterCalls.isNotEmpty
                         ? AppColors.error.withOpacity(0.1)
                         : AppColors.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.room_service_rounded,
-                    color: _activeWaiterCalls.isNotEmpty 
+                    color: _activeWaiterCalls.isNotEmpty
                         ? AppColors.error
                         : AppColors.success,
                     size: 24,
@@ -1627,11 +1677,11 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                         ),
                       ),
                       Text(
-                        _activeWaiterCalls.isNotEmpty 
+                        _activeWaiterCalls.isNotEmpty
                             ? '${_activeWaiterCalls.length} aktif çağrı var'
                             : 'Tüm çağrılar halledildi',
                         style: AppTypography.bodyMedium.copyWith(
-                          color: _activeWaiterCalls.isNotEmpty 
+                          color: _activeWaiterCalls.isNotEmpty
                               ? AppColors.error
                               : AppColors.success,
                           fontWeight: FontWeight.w500,
@@ -1648,7 +1698,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               ],
             ),
           ),
-          
+
           // Active calls or empty state
           if (_activeWaiterCalls.isNotEmpty) ...[
             const Divider(height: 1),
@@ -1665,7 +1715,9 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ..._activeWaiterCalls.take(3).map((call) => _buildWaiterCallCard(call)),
+                  ..._activeWaiterCalls
+                      .take(3)
+                      .map((call) => _buildWaiterCallCard(call)),
                   if (_activeWaiterCalls.length > 3)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -1674,7 +1726,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                           onPressed: () {
                             // Navigate to full waiter calls page
                           },
-                          child: Text('${_activeWaiterCalls.length - 3} çağrı daha göster'),
+                          child: Text(
+                              '${_activeWaiterCalls.length - 3} çağrı daha göster'),
                         ),
                       ),
                     ),
@@ -1713,7 +1766,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               ),
             ),
           ],
-          
+
           // Statistics
           if (_recentWaiterCalls.isNotEmpty) ...[
             const Divider(height: 1),
@@ -1754,7 +1807,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     );
   }
 
-  Widget _buildCallStat(String label, String value, IconData icon, Color color) {
+  Widget _buildCallStat(
+      String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, size: 20, color: color),
@@ -1793,12 +1847,15 @@ class _BusinessDashboardState extends State<BusinessDashboard>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Color(int.parse('0xFF${call.priorityColorCode.substring(1)}')).withOpacity(0.1),
+              color:
+                  Color(int.parse('0xFF${call.priorityColorCode.substring(1)}'))
+                      .withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               _getCallTypeIcon(call.requestType),
-              color: Color(int.parse('0xFF${call.priorityColorCode.substring(1)}')),
+              color: Color(
+                  int.parse('0xFF${call.priorityColorCode.substring(1)}')),
               size: 20,
             ),
           ),
@@ -1818,15 +1875,19 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Color(int.parse('0xFF${call.statusColorCode.substring(1)}')).withOpacity(0.1),
+                        color: Color(int.parse(
+                                '0xFF${call.statusColorCode.substring(1)}'))
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         call.status.displayName,
                         style: AppTypography.caption.copyWith(
-                          color: Color(int.parse('0xFF${call.statusColorCode.substring(1)}')),
+                          color: Color(int.parse(
+                              '0xFF${call.statusColorCode.substring(1)}')),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1846,8 +1907,12 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                     Text(
                       '${call.waitingTimeMinutes} dakika önce',
                       style: AppTypography.caption.copyWith(
-                        color: call.isOverdue ? AppColors.error : AppColors.textSecondary,
-                        fontWeight: call.isOverdue ? FontWeight.w600 : FontWeight.normal,
+                        color: call.isOverdue
+                            ? AppColors.error
+                            : AppColors.textSecondary,
+                        fontWeight: call.isOverdue
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                     ),
                     if (call.isOverdue) ...[
@@ -1899,20 +1964,24 @@ class _BusinessDashboardState extends State<BusinessDashboard>
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
-    return date.year == now.year && date.month == now.month && date.day == now.day;
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
   }
 
   int _calculateAverageResponseTime() {
     final completedCalls = _recentWaiterCalls
-        .where((c) => c.status == WaiterCallStatus.completed && c.responseTimeMinutes != null)
+        .where((c) =>
+            c.status == WaiterCallStatus.completed &&
+            c.responseTimeMinutes != null)
         .toList();
-    
+
     if (completedCalls.isEmpty) return 0;
-    
+
     final totalTime = completedCalls
         .map((c) => c.responseTimeMinutes!)
         .reduce((a, b) => a + b);
-    
+
     return (totalTime / completedCalls.length).round();
   }
 
@@ -1921,7 +1990,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Masa ${call.tableNumber} - ${call.requestType.displayName}'),
+        title:
+            Text('Masa ${call.tableNumber} - ${call.requestType.displayName}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1942,7 +2012,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_rounded, color: AppColors.error, size: 16),
+                    Icon(Icons.warning_rounded,
+                        color: AppColors.error, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       'Bu çağrı gecikmiş!',
@@ -2028,7 +2099,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         waiterName: 'İşletme Yöneticisi',
       );
       _loadWaiterCalls();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2056,7 +2127,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         responseNotes: 'İşletme yöneticisi tarafından tamamlandı',
       );
       _loadWaiterCalls();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2078,6 +2149,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    return date_utils.DateUtils.formatBusinessDateTime(dateTime);
   }
 }

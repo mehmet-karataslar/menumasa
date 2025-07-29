@@ -9,18 +9,22 @@ import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../services/business_firestore_service.dart';
+import '../../core/utils/date_utils.dart' as date_utils;
 
 class OrderManagementPage extends StatefulWidget {
   final String businessId;
 
-  const OrderManagementPage({Key? key, required this.businessId}) : super(key: key);
+  const OrderManagementPage({Key? key, required this.businessId})
+      : super(key: key);
 
   @override
   State<OrderManagementPage> createState() => _OrderManagementPageState();
 }
 
-class _OrderManagementPageState extends State<OrderManagementPage> with TickerProviderStateMixin {
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+class _OrderManagementPageState extends State<OrderManagementPage>
+    with TickerProviderStateMixin {
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
 
   List<Order> _orders = [];
   List<Order> _filteredOrders = [];
@@ -54,7 +58,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
   }
 
   void _setupOrderListener() {
-    _businessFirestoreService.startOrderListener(widget.businessId, _onOrdersChanged);
+    _businessFirestoreService.startOrderListener(
+        widget.businessId, _onOrdersChanged);
   }
 
   void _onOrdersChanged(List<Order> orders) {
@@ -68,10 +73,13 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
   }
 
   void _updateStatistics() {
-    _pendingCount = _orders.where((o) => o.status == OrderStatus.pending).length;
-    _inProgressCount = _orders.where((o) => o.status == OrderStatus.inProgress).length;
-    _completedCount = _orders.where((o) => o.status == OrderStatus.completed).length;
-    
+    _pendingCount =
+        _orders.where((o) => o.status == OrderStatus.pending).length;
+    _inProgressCount =
+        _orders.where((o) => o.status == OrderStatus.inProgress).length;
+    _completedCount =
+        _orders.where((o) => o.status == OrderStatus.completed).length;
+
     final today = DateTime.now();
     _todayOrderCount = _orders.where((order) {
       final orderDate = order.createdAt;
@@ -88,10 +96,12 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
       });
 
       // Load business info
-      final business = await _businessFirestoreService.getBusiness(widget.businessId);
+      final business =
+          await _businessFirestoreService.getBusiness(widget.businessId);
 
       // Load initial orders
-      final orders = await _businessFirestoreService.getOrdersByBusiness(widget.businessId);
+      final orders = await _businessFirestoreService
+          .getOrdersByBusiness(widget.businessId);
 
       setState(() {
         _business = business;
@@ -185,10 +195,10 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
       children: [
         // Header with statistics
         _buildHeader(),
-        
+
         // Filter tabs
         _buildFilterTabs(),
-        
+
         // Orders list
         Expanded(child: _buildOrdersList()),
       ],
@@ -227,7 +237,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                 hintText: 'Sipariş ara (müşteri adı, masa no, sipariş no)...',
                 prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ),
@@ -280,7 +291,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, IconData icon, [bool isUrgent = false]) {
+  Widget _buildStatCard(String label, String value, Color color, IconData icon,
+      [bool isUrgent = false]) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -356,7 +368,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
 
   Widget _buildFilterChip(String filter, String label, int count) {
     final isSelected = _selectedStatus == filter;
-    
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -447,8 +459,10 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
 
   Widget _buildOrderCard(Order order) {
     final statusColor = _getStatusColor(order.status);
-    final timeAgo = _getTimeAgo(order.createdAt);
-    
+    final timeAgo = date_utils.DateUtils.formatTimeAgo(order.createdAt);
+    final orderDate =
+        date_utils.DateUtils.formatBusinessDateTime(order.createdAt);
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -474,7 +488,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                     ),
                   ),
                   const SizedBox(width: 12),
-                  
+
                   // Order info
                   Expanded(
                     child: Column(
@@ -490,7 +504,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
@@ -517,7 +532,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                       ],
                     ),
                   ),
-                  
+
                   // Time and amount
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -529,6 +544,14 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                         ),
                       ),
                       Text(
+                        orderDate,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
                         '${order.totalAmount.toStringAsFixed(2)} TL',
                         style: AppTypography.bodyLarge.copyWith(
                           fontWeight: FontWeight.bold,
@@ -539,9 +562,9 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Order items preview
               Text(
                 'Ürünler (${order.items.length})',
@@ -552,16 +575,18 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
               ),
               const SizedBox(height: 4),
               Text(
-                order.items.take(3).map((item) => 
-                  '${item.quantity}x ${item.productName}'
-                ).join(', ') + (order.items.length > 3 ? '...' : ''),
+                order.items
+                        .take(3)
+                        .map((item) => '${item.quantity}x ${item.productName}')
+                        .join(', ') +
+                    (order.items.length > 3 ? '...' : ''),
                 style: AppTypography.bodySmall.copyWith(
                   color: AppColors.textSecondary,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              
+
               if (order.notes?.isNotEmpty == true) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -572,7 +597,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.note, size: 16, color: AppColors.textSecondary),
+                      Icon(Icons.note,
+                          size: 16, color: AppColors.textSecondary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -586,16 +612,17 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                   ),
                 ),
               ],
-              
+
               const SizedBox(height: 12),
-              
+
               // Action buttons
               Row(
                 children: [
                   if (order.status == OrderStatus.pending) ...[
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _updateOrderStatus(order, OrderStatus.inProgress),
+                        onPressed: () =>
+                            _updateOrderStatus(order, OrderStatus.inProgress),
                         icon: const Icon(Icons.restaurant, size: 16),
                         label: const Text('Hazırla'),
                         style: OutlinedButton.styleFrom(
@@ -606,7 +633,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _updateOrderStatus(order, OrderStatus.cancelled),
+                        onPressed: () =>
+                            _updateOrderStatus(order, OrderStatus.cancelled),
                         icon: const Icon(Icons.cancel, size: 16),
                         label: const Text('İptal'),
                         style: OutlinedButton.styleFrom(
@@ -617,7 +645,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                   ] else if (order.status == OrderStatus.inProgress) ...[
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _updateOrderStatus(order, OrderStatus.completed),
+                        onPressed: () =>
+                            _updateOrderStatus(order, OrderStatus.completed),
                         icon: const Icon(Icons.check, size: 16),
                         label: const Text('Tamamla'),
                         style: ElevatedButton.styleFrom(
@@ -666,23 +695,10 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
     }
   }
 
-  String _getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}dk';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}s';
-    } else {
-      return '${difference.inDays}g';
-    }
-  }
-
   Future<void> _updateOrderStatus(Order order, OrderStatus newStatus) async {
     try {
       await _businessFirestoreService.updateOrderStatus(order.id, newStatus);
-      
+
       // Immediately update local state for better UX
       if (mounted) {
         setState(() {
@@ -697,9 +713,9 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
           }
         });
       }
-      
+
       HapticFeedback.lightImpact();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -781,9 +797,9 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Order items
             Text(
               'Sipariş Detayları',
@@ -792,47 +808,49 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
               ),
             ),
             const SizedBox(height: 8),
-            ...order.items.map((item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        item.quantity.toString(),
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+            ...order.items
+                .map((item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                item.quantity.toString(),
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              item.productName,
+                              style: AppTypography.bodyMedium,
+                            ),
+                          ),
+                          Text(
+                            '${item.totalPrice.toStringAsFixed(2)} TL',
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item.productName,
-                      style: AppTypography.bodyMedium,
-                    ),
-                  ),
-                  Text(
-                    '${item.totalPrice.toStringAsFixed(2)} TL',
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            )).toList(),
-            
+                    ))
+                .toList(),
+
             const Divider(height: 24),
-            
+
             // Total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -852,9 +870,9 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Status actions
             if (order.status == OrderStatus.pending) ...[
               Row(
@@ -901,7 +919,7 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
                 ),
               ),
             ],
-            
+
             // Safe area padding
             SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
@@ -953,4 +971,3 @@ class _OrderManagementPageState extends State<OrderManagementPage> with TickerPr
     );
   }
 }
- 

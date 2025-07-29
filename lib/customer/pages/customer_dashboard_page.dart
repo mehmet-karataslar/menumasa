@@ -536,6 +536,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                         ),
                         MultiBusinessCartPage(
                           userId: widget.userId,
+                          showAppBar: false,
                         ),
                         CustomerServicesTab(customerId: widget.userId),
                         CustomerProfileTab(
