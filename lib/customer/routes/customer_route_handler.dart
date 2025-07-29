@@ -16,7 +16,8 @@ import '../../business/models/category.dart' as app_category;
 
 /// Customer Route Handler - Customer modülü route'larını yönetir
 class CustomerRouteHandler implements BaseRouteHandler {
-  static final CustomerRouteHandler _instance = CustomerRouteHandler._internal();
+  static final CustomerRouteHandler _instance =
+      CustomerRouteHandler._internal();
   factory CustomerRouteHandler() => _instance;
   CustomerRouteHandler._internal();
 
@@ -28,27 +29,46 @@ class CustomerRouteHandler implements BaseRouteHandler {
 
   @override
   List<String> get supportedRoutes => [
-    AppRouteConstants.customerDashboard,
-    AppRouteConstants.customerOrders,
-    AppRouteConstants.customerProfile,
-    AppRouteConstants.customerCart,
-    AppRouteConstants.customerSearch,
-    AppRouteConstants.customerQRScanner,
-  ];
+        AppRouteConstants.customerDashboard,
+        AppRouteConstants.customerOrders,
+        AppRouteConstants.customerProfile,
+        AppRouteConstants.customerCart,
+        AppRouteConstants.customerSearch,
+        AppRouteConstants.customerQRScanner,
+      ];
 
   @override
   Map<String, WidgetBuilder> get staticRoutes => {
-    AppRouteConstants.customerDashboard: (context) => const CustomerDashboardRouterPage(),
-    AppRouteConstants.customerOrders: (context) => const CustomerOrdersRouterPage(),
-    AppRouteConstants.customerProfile: (context) => const CustomerProfileRouterPage(),
-    AppRouteConstants.customerCart: (context) => const CustomerCartRouterPage(),
-    AppRouteConstants.customerSearch: (context) => const SearchRouterPage(),
-    AppRouteConstants.customerQRScanner: (context) => const QRScannerRouterPage(),
-  };
+        AppRouteConstants.customerDashboard: (context) =>
+            const CustomerDashboardRouterPage(),
+        AppRouteConstants.customerOrders: (context) =>
+            const CustomerOrdersRouterPage(),
+        AppRouteConstants.customerProfile: (context) =>
+            const CustomerProfileRouterPage(),
+        AppRouteConstants.customerCart: (context) =>
+            const CustomerCartRouterPage(),
+        AppRouteConstants.customerSearch: (context) => const SearchRouterPage(),
+        AppRouteConstants.customerQRScanner: (context) =>
+            const QRScannerRouterPage(),
+      };
 
   @override
   bool canHandle(String routeName) {
-    return AppRouteConstants.isCustomerRoute(routeName);
+    // Standard customer routes
+    if (AppRouteConstants.isCustomerRoute(routeName)) {
+      return true;
+    }
+
+    // Legacy menu routes: /menu/{businessId}/cart, /menu/{businessId}/order
+    if (routeName.startsWith('/menu/') && routeName.contains('/')) {
+      final pathSegments = routeName.split('/');
+      if (pathSegments.length > 3) {
+        final subPage = pathSegments[3];
+        return subPage == 'cart' || subPage == 'order' || subPage == 'orders';
+      }
+    }
+
+    return false;
   }
 
   @override
@@ -75,10 +95,54 @@ class CustomerRouteHandler implements BaseRouteHandler {
     final routeName = settings.name!;
     final pathSegments = RouteUtils.getPathSegments(routeName);
 
+    // Handle legacy menu routes: /menu/{businessId}/cart, /menu/{businessId}/order
+    if (pathSegments.length >= 4 && pathSegments[0] == 'menu') {
+      final businessId = pathSegments[1];
+      final subPage = pathSegments[2];
+
+      print(
+          '🔗 Customer Route: Legacy menu sub-page detected - /menu/$businessId/$subPage');
+
+      switch (subPage) {
+        case 'cart':
+          return RouteUtils.createRoute(
+            (context) => CartPage(businessId: businessId),
+            RouteSettings(
+              name: routeName,
+              arguments: {
+                'businessId': businessId,
+                'source': 'legacy_menu_cart',
+                ...?settings.arguments as Map<String, dynamic>?,
+              },
+            ),
+          );
+
+        case 'order':
+        case 'orders':
+          return RouteUtils.createRoute(
+            (context) => CustomerOrdersPage(
+              businessId: businessId,
+              customerId: 'guest', // Legacy routes are often for guest users
+            ),
+            RouteSettings(
+              name: routeName,
+              arguments: {
+                'businessId': businessId,
+                'customerId': 'guest',
+                'source': 'legacy_menu_orders',
+                ...?settings.arguments as Map<String, dynamic>?,
+              },
+            ),
+          );
+      }
+    }
+
     if (pathSegments.length >= 2) {
       switch (pathSegments[1]) {
         case 'dashboard':
-          final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
+          final args =
+              RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ??
+                  {};
           final userId = args['userId'] as String? ?? 'guest';
           return RouteUtils.createRoute(
             (context) => CustomerDashboardPage(userId: userId),
@@ -86,7 +150,9 @@ class CustomerRouteHandler implements BaseRouteHandler {
           );
 
         case 'orders':
-          final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
+          final args =
+              RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ??
+                  {};
           return RouteUtils.createRoute(
             (context) => CustomerOrdersPage(
               businessId: args['businessId'] as String?,
@@ -103,7 +169,9 @@ class CustomerRouteHandler implements BaseRouteHandler {
           );
 
         case 'cart':
-          final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
+          final args =
+              RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ??
+                  {};
           final businessId = args['businessId'] as String?;
           if (businessId == null) return null;
           return RouteUtils.createRoute(
@@ -143,7 +211,9 @@ class CustomerRouteHandler implements BaseRouteHandler {
 
               switch (actionType) {
                 case 'business':
-                  final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
+                  final args = RouteUtils.getArgument<Map<String, dynamic>>(
+                          settings, 'args') ??
+                      {};
                   final business = args['business'];
                   final customerData = args['customerData'];
                   if (business == null) return null;
@@ -177,7 +247,7 @@ class CustomerRouteHandler implements BaseRouteHandler {
                   );
               }
             }
-            
+
             // Single segment routes
             switch (actionType) {
               case 'qr-scanner':
@@ -187,7 +257,9 @@ class CustomerRouteHandler implements BaseRouteHandler {
                 );
 
               case 'search':
-                final args = RouteUtils.getArgument<Map<String, dynamic>>(settings, 'args') ?? {};
+                final args = RouteUtils.getArgument<Map<String, dynamic>>(
+                        settings, 'args') ??
+                    {};
                 final businesses = args['businesses'] as List<dynamic>? ?? [];
                 final categories = args['categories'] as List<dynamic>? ?? [];
                 return RouteUtils.createRoute(
@@ -237,7 +309,8 @@ class CustomerDashboardRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final userId = args?['userId'] as String? ?? 'guest';
     final tabIndex = args?['tabIndex'] as int? ?? 0;
 
@@ -253,7 +326,8 @@ class CustomerOrdersRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String?;
     final customerPhone = args?['customerPhone'] as String?;
     final customerId = args?['customerId'] as String?;
@@ -285,7 +359,8 @@ class CustomerCartRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String?;
 
     if (businessId == null || businessId.isEmpty) {
@@ -301,7 +376,8 @@ class SearchRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businesses = args?['businesses'] as List<dynamic>?;
     final categories = args?['categories'] as List<dynamic>?;
 
@@ -321,9 +397,10 @@ class QRScannerRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final userId = args?['userId'] as String?;
 
     return QRScannerPage(userId: userId);
   }
-} 
+}

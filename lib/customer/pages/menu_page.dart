@@ -30,6 +30,10 @@ import 'product_detail_page.dart';
 import '../services/customer_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../business/models/staff.dart';
+import '../../business/models/waiter_call.dart';
+import '../../business/services/staff_service.dart';
+import '../../business/services/waiter_call_service.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
@@ -66,6 +70,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   final _multilingualService = MultilingualService();
   final _customerService = CustomerService();
 
+  // Table information from QR code
+  int? _tableNumber;
+  String? _tableInfo;
+
   // UI State
   String _searchQuery = '';
   String? _selectedCategoryId;
@@ -87,8 +95,48 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     super.initState();
     _initControllers();
     _initAnimations();
+    _extractTableInformation();
     _determineUserLanguage();
     _initializeServices();
+  }
+
+  void _extractTableInformation() {
+    try {
+      // Extract table number from current URL
+      final params = _urlService.getCurrentParams();
+      final tableParam = params['table'] ?? params['tableNumber'];
+
+      if (tableParam != null) {
+        _tableNumber = int.tryParse(tableParam.toString());
+        if (_tableNumber != null) {
+          _tableInfo = 'Masa $_tableNumber';
+          print('📍 MenuPage: Table information extracted: $_tableInfo');
+        }
+      }
+
+      // Alternative: Extract from current URL path
+      if (_tableNumber == null) {
+        final currentUrl = Uri.base.toString();
+        final tableMatch = RegExp(r'[?&]table=(\d+)').firstMatch(currentUrl);
+        if (tableMatch != null) {
+          _tableNumber = int.tryParse(tableMatch.group(1) ?? '');
+          if (_tableNumber != null) {
+            _tableInfo = 'Masa $_tableNumber';
+            print(
+                '📍 MenuPage: Table information extracted from URL: $_tableInfo');
+          }
+        }
+      }
+
+      // Log result
+      if (_tableNumber != null) {
+        print('✅ MenuPage: Table $_tableNumber detected');
+      } else {
+        print('⚠️ MenuPage: No table number found in URL');
+      }
+    } catch (e) {
+      print('❌ MenuPage: Error extracting table information: $e');
+    }
   }
 
   Future<void> _initializeServices() async {
@@ -488,6 +536,432 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         settings: RouteSettings(name: dynamicRoute),
       ),
     );
+  }
+
+  void _onWaiterCallPressed() {
+    final user = _authService.currentUser;
+    if (user == null) {
+      _showGuestWaiterDialog();
+    } else {
+      _showWaiterSelectionDialog();
+    }
+  }
+
+  void _showGuestWaiterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.room_service_rounded, color: AppColors.warning),
+            const SizedBox(width: 12),
+            const Text('Garson Çağır'),
+          ],
+        ),
+        content: const Text(
+          'Garson çağırmak için sisteme giriş yapmanız gerekmektedir. Kayıtlı kullanıcılar garson seçebilir ve öncelikli hizmet alır.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/login');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Giriş Yap',
+                style: TextStyle(color: AppColors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showWaiterSelectionDialog() async {
+    try {
+      // Load available waiters for this business
+      final staffService = StaffService();
+      final availableWaiters =
+          await staffService.getAvailableWaiters(widget.businessId);
+
+      if (!mounted) return;
+
+      if (availableWaiters.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.white),
+                const SizedBox(width: 12),
+                const Expanded(
+                    child: Text('Şu anda müsait garson bulunmuyor.')),
+              ],
+            ),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child:
+                    Icon(Icons.room_service_rounded, color: AppColors.success),
+              ),
+              const SizedBox(width: 12),
+              const Text('Garson Seç'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            constraints: const BoxConstraints(maxHeight: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_tableNumber != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: AppColors.accent.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.table_restaurant_rounded,
+                            color: AppColors.accent, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'MASA $_tableNumber',
+                          style: AppTypography.bodyLarge.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Text(
+                  _tableNumber != null
+                      ? 'Masa $_tableNumber için garson seçin'
+                      : 'Müsait garsonları seçebilir ve çağırabilirsiniz',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: availableWaiters.length,
+                    itemBuilder: (context, index) {
+                      final waiter = availableWaiters[index];
+                      return _buildWaiterCard(waiter);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('İptal'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Garson listesi yüklenirken hata: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildWaiterCard(Staff waiter) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => _callWaiter(waiter),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.greyLight.withOpacity(0.5)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadow.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Waiter Avatar
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(25),
+                    border:
+                        Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  ),
+                  child: waiter.profileImageUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(25),
+                          child: Image.network(
+                            waiter.profileImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildWaiterInitials(waiter),
+                          ),
+                        )
+                      : _buildWaiterInitials(waiter),
+                ),
+                const SizedBox(width: 16),
+
+                // Waiter Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        waiter.fullName,
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              waiter.role.displayName,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(waiter.status),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            waiter.status.displayName,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.star_rounded,
+                              size: 14, color: AppColors.accent),
+                          const SizedBox(width: 4),
+                          Text(
+                            waiter.statistics.averageRating > 0
+                                ? '${waiter.statistics.averageRating.toStringAsFixed(1)}'
+                                : 'Yeni',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(Icons.timer_outlined,
+                              size: 14, color: AppColors.textSecondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            waiter.statistics.responseTime > 0
+                                ? '~${waiter.statistics.responseTime.toInt()} dk'
+                                : 'Hızlı',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Call Button
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.success,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.phone_rounded,
+                    color: AppColors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaiterInitials(Staff waiter) {
+    return Center(
+      child: Text(
+        waiter.initials,
+        style: AppTypography.bodyLarge.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(StaffStatus status) {
+    switch (status) {
+      case StaffStatus.available:
+        return AppColors.success;
+      case StaffStatus.busy:
+        return AppColors.warning;
+      case StaffStatus.break_:
+        return AppColors.info;
+      case StaffStatus.offline:
+        return AppColors.error;
+    }
+  }
+
+  Future<void> _callWaiter(Staff waiter) async {
+    try {
+      Navigator.pop(context); // Close dialog
+
+      final user = _authService.currentUser;
+      if (user == null) return;
+
+      // Use extracted table number or fallback to URL parsing
+      String tableNumber = _tableNumber?.toString() ?? 'Bilinmeyen Masa';
+      if (_tableNumber == null) {
+        try {
+          final params = _urlService.getCurrentParams();
+          final tableParam = params['table'] ?? params['tableNumber'];
+          if (tableParam != null) {
+            tableNumber = tableParam.toString();
+            _tableNumber = int.tryParse(tableNumber);
+          }
+        } catch (e) {
+          print('Fallback table number extraction failed: $e');
+        }
+      }
+
+      final waiterCallService = WaiterCallService();
+      final call = WaiterCall.create(
+        businessId: widget.businessId,
+        customerId: user.uid,
+        customerName: user.displayName ?? 'Müşteri',
+        waiterId: waiter.staffId,
+        waiterName: waiter.fullName,
+        tableNumber: tableNumber,
+        message: _tableNumber != null
+            ? 'Masa $_tableNumber\'dan yardım talep edildi'
+            : 'Masa yardımı talep edildi',
+      );
+
+      await waiterCallService.createWaiterCall(call);
+
+      HapticFeedback.mediumImpact();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _tableNumber != null
+                        ? '${waiter.fullName} başarıyla çağrıldı! (Masa $_tableNumber)'
+                        : '${waiter.fullName} başarıyla çağrıldı!',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Garson çağrısı başarısız: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
   }
 
   void _navigateToProductDetail(Product product) {
@@ -1020,6 +1494,39 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
+                                  if (_tableNumber != null) ...[
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            AppColors.accent.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.table_restaurant_rounded,
+                                            size: 12,
+                                            color: AppColors.white
+                                                .withOpacity(0.9),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Masa $_tableNumber',
+                                            style:
+                                                AppTypography.caption.copyWith(
+                                              color: AppColors.white
+                                                  .withOpacity(0.9),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ],
@@ -1044,6 +1551,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           icon: Icons.tune_rounded,
           onPressed: _showFilterBottomSheet,
         ),
+        _buildWaiterCallButton(),
         _buildCartHeaderButton(),
         const SizedBox(width: 8),
       ],
@@ -1090,6 +1598,37 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               ),
             ),
             child: Icon(icon, color: AppColors.white, size: 22),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaiterCallButton() {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: _onWaiterCallPressed,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AppColors.success.withOpacity(0.4),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              Icons.room_service_rounded,
+              color: AppColors.white,
+              size: 22,
+            ),
           ),
         ),
       ),

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../qr_menu/controllers/qr_menu_controller.dart';
-import '../qr_menu/widgets/qr_menu_loading.dart';
-import '../qr_menu/widgets/qr_menu_error.dart';
-import '../qr_menu/widgets/qr_menu_dialogs.dart';
+import '../controllers/qr_menu_controller.dart';
+import '../widgets/qr_menu_loading.dart';
+import '../widgets/qr_menu_error.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../customer/widgets/filter_bottom_sheet.dart';
@@ -270,7 +269,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           icon: Icons.tune_rounded,
           onPressed: _showFilterBottomSheet,
         ),
-        _buildWaiterCallButton(),
         _buildCartHeaderButton(),
         const SizedBox(width: 8),
       ],
@@ -317,37 +315,6 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
               ),
             ),
             child: Icon(icon, color: AppColors.white, size: 22),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWaiterCallButton() {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: _onWaiterCallPressed,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.success.withOpacity(0.4),
-                width: 1,
-              ),
-            ),
-            child: Icon(
-              Icons.room_service_rounded,
-              color: AppColors.white,
-              size: 22,
-            ),
           ),
         ),
       ),
@@ -608,188 +575,70 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
   }
 
   Widget _buildProductCard(Product product) {
-    final isFavorite =
-        _controller.state.favoriteProductIds.contains(product.productId);
-
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _showProductDetail(product),
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.greyLighter,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(12),
-                      ),
-                    ),
-                    child: product.imageUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(12),
-                            ),
-                            child: Image.network(
-                              product.imageUrl!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Center(
-                                      child: Icon(Icons.restaurant,
-                                          size: 40, color: AppColors.greyDark)),
-                            ),
-                          )
-                        : Center(
-                            child: Icon(Icons.restaurant,
-                                size: 40, color: AppColors.greyDark)),
-                  ),
-                  // Favorite button
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      child: InkWell(
-                        onTap: () => _toggleFavorite(product),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.white.withOpacity(0.9),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: isFavorite
-                                ? AppColors.accent
-                                : AppColors.greyDark,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Product badges (if any)
-                  if (product.tags.contains('popular'))
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Popüler',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.greyLighter,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(8),
+                ),
               ),
+              child: product.imageUrl != null
+                  ? Image.network(
+                      product.imageUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Icon(Icons.restaurant),
+                    )
+                  : Icon(Icons.restaurant),
             ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  if (product.description.isNotEmpty) ...[
-                    SizedBox(height: 2),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Text(
-                      product.description,
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textSecondary,
+                      '${product.price.toStringAsFixed(0)} ₺',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
+                    if (!_controller.state.isGuestMode)
+                      ElevatedButton(
+                        onPressed: () => _addToCart(product),
+                        child: Icon(Icons.add, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          minimumSize: Size(32, 32),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
                   ],
-                  SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${product.price.toStringAsFixed(0)} ₺',
-                            style: AppTypography.bodyLarge.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (product.currentPrice != product.price)
-                            Text(
-                              '${product.currentPrice.toStringAsFixed(0)} ₺',
-                              style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.textSecondary,
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          if (_controller.state.isGuestMode)
-                            ElevatedButton(
-                              onPressed: () =>
-                                  _showGuestAddToCartDialog(product),
-                              child: Icon(Icons.info_outline, size: 16),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.warning,
-                                foregroundColor: AppColors.white,
-                                minimumSize: Size(32, 32),
-                                padding: EdgeInsets.zero,
-                              ),
-                            )
-                          else
-                            ElevatedButton(
-                              onPressed: () => _addToCart(product),
-                              child: Icon(Icons.add, size: 16),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                minimumSize: Size(32, 32),
-                                padding: EdgeInsets.zero,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -821,97 +670,32 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     }
   }
 
-  void _onWaiterCallPressed() {
-    if (_controller.state.isGuestMode) {
-      QRMenuDialogs.showGuestWaiterDialog(context);
-    } else {
-      // Authenticated user can call waiter directly
-      _showRegisteredWaiterDialog();
-    }
-  }
-
-  void _showRegisteredWaiterDialog() {
-    // For registered users, show direct waiter call
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: AppColors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _controller.state.tableNumber != null
-                    ? 'Masa ${_controller.state.tableNumber} için garson çağrısı gönderildi!'
-                    : 'Garson çağrısı gönderildi!',
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
   void _showGuestCartDialog() {
-    QRMenuDialogs.showGuestCartDialog(context);
-  }
-
-  void _toggleFavorite(Product product) {
-    if (_controller.state.isGuestMode) {
-      QRMenuDialogs.showGuestFavoriteDialog(context, product.name);
-    } else {
-      // TODO: Implement favorite toggle for registered users
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Favori işlemi yakında eklenecek'),
-          backgroundColor: AppColors.info,
-        ),
-      );
-    }
-  }
-
-  void _showProductDetail(Product product) {
-    // Navigate to product detail page
-    Navigator.pushNamed(
-      context,
-      '/customer/product-detail',
-      arguments: {
-        'product': product,
-        'businessId': _controller.state.businessId,
-      },
-    );
-  }
-
-  void _showGuestAddToCartDialog(Product product) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.info_outline, color: AppColors.warning),
+            Icon(Icons.shopping_cart_rounded, color: AppColors.secondary),
             const SizedBox(width: 8),
-            Text('Misafir Kullanıcı'),
+            const Text('Sepete Gitmek İçin Giriş Yapın'),
           ],
         ),
         content: Text(
-          'Misafir kullanıcılar sepete ürün ekleyemez. Sipariş vermek için sisteme kayıt olmanız gerekmektedir.',
-        ),
+            'Misafir modunda sepete erişim için giriş yapmanız gerekmektedir.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
+            child: const Text('İptal'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/register',
-                  arguments: {'userType': 'customer'});
+              Navigator.pushNamed(context, '/login');
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Kayıt Ol',
+            child: const Text('Giriş Yap',
                 style: TextStyle(color: AppColors.white)),
           ),
         ],

@@ -9,7 +9,7 @@ class WaiterCallService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final NotificationService _notificationService = NotificationService();
   final StaffService _staffService = StaffService();
-  
+
   static const String _collection = 'waiter_calls';
 
   // ============================================================================
@@ -19,11 +19,13 @@ class WaiterCallService {
   /// Yeni garson çağırma kaydı oluştur
   Future<String> createWaiterCall(WaiterCall waiterCall) async {
     try {
-      final docRef = await _firestore.collection(_collection).add(waiterCall.toFirestore());
-      
+      final docRef = await _firestore
+          .collection(_collection)
+          .add(waiterCall.toFirestore());
+
       // Belirli garsona bildirim gönder
       await _sendWaiterNotification(waiterCall);
-      
+
       // Staff istatistiklerini güncelle
       await _staffService.staffReceivedCall(waiterCall.waiterId);
 
@@ -42,9 +44,10 @@ class WaiterCallService {
           .update(waiterCall.toFirestore());
 
       // Eğer çağrı tamamlandıysa, staff istatistiklerini güncelle
-      if (waiterCall.status == WaiterCallStatus.completed && waiterCall.responseTimeMinutes != null) {
+      if (waiterCall.status == WaiterCallStatus.completed &&
+          waiterCall.responseTimeMinutes != null) {
         await _staffService.staffCompletedCall(
-          waiterCall.waiterId, 
+          waiterCall.waiterId,
           waiterCall.responseTimeMinutes!,
         );
       }
@@ -70,7 +73,7 @@ class WaiterCallService {
   Future<WaiterCall?> getWaiterCall(String callId) async {
     try {
       final doc = await _firestore.collection(_collection).doc(callId).get();
-      
+
       if (doc.exists) {
         return WaiterCall.fromFirestore(doc);
       }
@@ -89,11 +92,27 @@ class WaiterCallService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return query.docs
-          .map((doc) => WaiterCall.fromFirestore(doc))
-          .toList();
+      return query.docs.map((doc) => WaiterCall.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('İşletme garson çağrıları alınırken hata oluştu: $e');
+    }
+  }
+
+  /// İşletme aktif garson çağrılarını getir
+  Future<List<WaiterCall>> getActiveWaiterCallsByBusiness(
+      String businessId) async {
+    try {
+      final query = await _firestore
+          .collection(_collection)
+          .where('businessId', isEqualTo: businessId)
+          .where('status', whereIn: ['pending', 'responded'])
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return query.docs.map((doc) => WaiterCall.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception(
+          'İşletme aktif garson çağrıları alınırken hata oluştu: $e');
     }
   }
 
@@ -106,9 +125,7 @@ class WaiterCallService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return query.docs
-          .map((doc) => WaiterCall.fromFirestore(doc))
-          .toList();
+      return query.docs.map((doc) => WaiterCall.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Garson çağrıları alınırken hata oluştu: $e');
     }
@@ -124,9 +141,7 @@ class WaiterCallService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return query.docs
-          .map((doc) => WaiterCall.fromFirestore(doc))
-          .toList();
+      return query.docs.map((doc) => WaiterCall.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Aktif garson çağrıları alınırken hata oluştu: $e');
     }
@@ -142,9 +157,7 @@ class WaiterCallService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      return query.docs
-          .map((doc) => WaiterCall.fromFirestore(doc))
-          .toList();
+      return query.docs.map((doc) => WaiterCall.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Garsonun aktif çağrıları alınırken hata oluştu: $e');
     }
@@ -162,10 +175,8 @@ class WaiterCallService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => WaiterCall.fromFirestore(doc))
-              .toList();
-        });
+      return snapshot.docs.map((doc) => WaiterCall.fromFirestore(doc)).toList();
+    });
   }
 
   /// Belirli garsonun çağrıları stream'i
@@ -176,10 +187,8 @@ class WaiterCallService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => WaiterCall.fromFirestore(doc))
-              .toList();
-        });
+      return snapshot.docs.map((doc) => WaiterCall.fromFirestore(doc)).toList();
+    });
   }
 
   /// Aktif çağrılar stream'i (belirli garson için)
@@ -309,28 +318,33 @@ class WaiterCallService {
   Future<Map<String, dynamic>> getBusinessCallStats(String businessId) async {
     try {
       final calls = await getWaiterCallsByBusiness(businessId);
-      
+
       final today = DateTime.now();
       final todayCalls = calls.where((call) {
         return call.createdAt.year == today.year &&
-               call.createdAt.month == today.month &&
-               call.createdAt.day == today.day;
+            call.createdAt.month == today.month &&
+            call.createdAt.day == today.day;
       }).toList();
 
       int totalCalls = todayCalls.length;
-      int pendingCalls = todayCalls.where((c) => c.status == WaiterCallStatus.pending).length;
-      int respondedCalls = todayCalls.where((c) => c.status == WaiterCallStatus.responded).length;
-      int completedCalls = todayCalls.where((c) => c.status == WaiterCallStatus.completed).length;
-      
+      int pendingCalls =
+          todayCalls.where((c) => c.status == WaiterCallStatus.pending).length;
+      int respondedCalls = todayCalls
+          .where((c) => c.status == WaiterCallStatus.responded)
+          .length;
+      int completedCalls = todayCalls
+          .where((c) => c.status == WaiterCallStatus.completed)
+          .length;
+
       double averageResponseTime = 0.0;
-      final respondedCallsWithTime = todayCalls
-          .where((c) => c.responseTimeMinutes != null)
-          .toList();
-      
+      final respondedCallsWithTime =
+          todayCalls.where((c) => c.responseTimeMinutes != null).toList();
+
       if (respondedCallsWithTime.isNotEmpty) {
         averageResponseTime = respondedCallsWithTime
-            .map((c) => c.responseTimeMinutes!)
-            .reduce((a, b) => a + b) / respondedCallsWithTime.length;
+                .map((c) => c.responseTimeMinutes!)
+                .reduce((a, b) => a + b) /
+            respondedCallsWithTime.length;
       }
 
       return {
@@ -339,7 +353,9 @@ class WaiterCallService {
         'respondedCalls': respondedCalls,
         'completedCalls': completedCalls,
         'averageResponseTimeMinutes': averageResponseTime,
-        'responseRate': totalCalls > 0 ? (respondedCalls + completedCalls) / totalCalls * 100 : 0.0,
+        'responseRate': totalCalls > 0
+            ? (respondedCalls + completedCalls) / totalCalls * 100
+            : 0.0,
       };
     } catch (e) {
       throw Exception('Çağrı istatistikleri alınırken hata oluştu: $e');
@@ -350,27 +366,33 @@ class WaiterCallService {
   Future<Map<String, dynamic>> getWaiterCallStats(String waiterId) async {
     try {
       final calls = await getWaiterCallsByWaiterId(waiterId);
-      
+
       final today = DateTime.now();
       final todayCalls = calls.where((call) {
         return call.createdAt.year == today.year &&
-               call.createdAt.month == today.month &&
-               call.createdAt.day == today.day;
+            call.createdAt.month == today.month &&
+            call.createdAt.day == today.day;
       }).toList();
 
       int totalCalls = todayCalls.length;
-      int respondedCalls = todayCalls.where((c) => c.status == WaiterCallStatus.responded || c.status == WaiterCallStatus.completed).length;
-      int completedCalls = todayCalls.where((c) => c.status == WaiterCallStatus.completed).length;
-      
+      int respondedCalls = todayCalls
+          .where((c) =>
+              c.status == WaiterCallStatus.responded ||
+              c.status == WaiterCallStatus.completed)
+          .length;
+      int completedCalls = todayCalls
+          .where((c) => c.status == WaiterCallStatus.completed)
+          .length;
+
       double averageResponseTime = 0.0;
-      final respondedCallsWithTime = todayCalls
-          .where((c) => c.responseTimeMinutes != null)
-          .toList();
-      
+      final respondedCallsWithTime =
+          todayCalls.where((c) => c.responseTimeMinutes != null).toList();
+
       if (respondedCallsWithTime.isNotEmpty) {
         averageResponseTime = respondedCallsWithTime
-            .map((c) => c.responseTimeMinutes!)
-            .reduce((a, b) => a + b) / respondedCallsWithTime.length;
+                .map((c) => c.responseTimeMinutes!)
+                .reduce((a, b) => a + b) /
+            respondedCallsWithTime.length;
       }
 
       return {
@@ -378,7 +400,8 @@ class WaiterCallService {
         'respondedCalls': respondedCalls,
         'completedCalls': completedCalls,
         'averageResponseTimeMinutes': averageResponseTime,
-        'responseRate': totalCalls > 0 ? respondedCalls / totalCalls * 100 : 0.0,
+        'responseRate':
+            totalCalls > 0 ? respondedCalls / totalCalls * 100 : 0.0,
       };
     } catch (e) {
       throw Exception('Garson çağrı istatistikleri alınırken hata oluştu: $e');
@@ -396,7 +419,8 @@ class WaiterCallService {
         businessId: waiterCall.businessId,
         recipientId: waiterCall.waiterId,
         title: 'Garson Çağrısı! 🔔',
-        message: '${waiterCall.customerName} sizi ${waiterCall.tableInfo} için çağırıyor',
+        message:
+            '${waiterCall.customerName} sizi ${waiterCall.tableInfo} için çağırıyor',
         type: NotificationType.waiterCall,
         data: {
           'callId': waiterCall.callId,
@@ -418,7 +442,7 @@ class WaiterCallService {
     try {
       // Tüm müsait garsonları getir
       final availableStaff = await _staffService.getAvailableStaff(businessId);
-      
+
       // Sadece garsonları filtrele
       return availableStaff
           .where((staff) => staff.role == StaffRole.waiter)
@@ -427,4 +451,4 @@ class WaiterCallService {
       throw Exception('Müsait garsonlar alınırken hata oluştu: $e');
     }
   }
-} 
+}

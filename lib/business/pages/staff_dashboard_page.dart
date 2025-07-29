@@ -17,7 +17,7 @@ class StaffDashboardPage extends StatefulWidget {
 class _StaffDashboardPageState extends State<StaffDashboardPage> {
   final StaffService _staffService = StaffService();
   final AuthService _authService = AuthService();
-  
+
   Staff? _currentStaff;
   bool _isLoading = true;
   String? _error;
@@ -44,7 +44,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
       // Staff bilgilerini al (eğer staff ise)
       // Burada normalde user'dan staff ID'sini alacağız
       // Şimdilik mock data kullanıyoruz
-      
+
       setState(() {
         _isLoading = false;
       });
@@ -162,14 +162,14 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Demo Personel',  // _currentStaff?.fullName ?? 'Personel'
+                        'Demo Personel', // _currentStaff?.fullName ?? 'Personel'
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'Garson',  // _currentStaff?.role.displayName ?? 'Rol'
+                        'Garson', // _currentStaff?.role.displayName ?? 'Rol'
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey[600],
@@ -188,7 +188,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                'Müsait',  // _currentStaff?.status.displayName ?? 'Durum'
+                'Müsait', // _currentStaff?.status.displayName ?? 'Durum'
                 style: TextStyle(
                   color: Colors.green[700],
                   fontWeight: FontWeight.w500,
@@ -223,83 +223,86 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   Widget _buildWaiterFeatures() {
     return Column(
       children: [
-                 _buildFeatureCard(
-           title: 'Sipariş Verme',
-           description: 'Müşteri siparişlerini sisteme gir',
-           icon: Icons.restaurant_menu,
-           color: Colors.orange,
-           onTap: () {
-             // Demo Staff objesi oluştur ve menü sayfasına git
-             final demoStaff = Staff.create(
-               businessId: 'demo_business_id',
-               firstName: 'Demo',
-               lastName: 'Garson',
-               email: 'demo@garson.com',
-               phone: '5555555555',
-               password: 'demo123',
-               role: StaffRole.waiter,
-             );
-             
-             Navigator.push(
-               context,
-               MaterialPageRoute(
-                 builder: (context) => StaffMenuPage(currentStaff: demoStaff),
-               ),
-             );
-           },
-         ),
+        _buildFeatureCard(
+          title: 'Sipariş Verme',
+          description: 'Müşteri siparişlerini sisteme gir',
+          icon: Icons.restaurant_menu,
+          color: Colors.orange,
+          onTap: () {
+            // Demo Staff objesi oluştur ve menü sayfasına git
+            final demoStaff = Staff.create(
+              businessId: 'demo_business_id',
+              firstName: 'Demo',
+              lastName: 'Garson',
+              email: 'demo@garson.com',
+              phone: '5555555555',
+              password: 'demo123',
+              role: StaffRole.waiter,
+            );
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => StaffMenuPage(currentStaff: demoStaff),
+              ),
+            );
+          },
+        ),
         const SizedBox(height: 12),
-                 _buildFeatureCard(
-           title: 'Sipariş Takibi',
-           description: 'Mevcut siparişleri takip et',
-           icon: Icons.track_changes,
-           color: Colors.blue,
-           onTap: () {
-             // Demo Staff objesi oluştur ve sipariş takip sayfasına git
-             final demoStaff = Staff.create(
-               businessId: 'demo_business_id',
-               firstName: 'Demo',
-               lastName: 'Garson',
-               email: 'demo@garson.com',
-               phone: '5555555555',
-               password: 'demo123',
-               role: StaffRole.waiter,
-             );
-             
-             Navigator.push(
-               context,
-               MaterialPageRoute(
-                 builder: (context) => StaffOrderTrackingPage(currentStaff: demoStaff),
-               ),
-             );
-           },
-         ),
+        _buildFeatureCard(
+          title: 'Sipariş Takibi',
+          description: 'Mevcut siparişleri takip et',
+          icon: Icons.track_changes,
+          color: Colors.blue,
+          onTap: () {
+            // Demo Staff objesi oluştur ve sipariş takip sayfasına git
+            final demoStaff = Staff.create(
+              businessId: 'demo_business_id',
+              firstName: 'Demo',
+              lastName: 'Garson',
+              email: 'demo@garson.com',
+              phone: '5555555555',
+              password: 'demo123',
+              role: StaffRole.waiter,
+            );
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    StaffOrderTrackingPage(currentStaff: demoStaff),
+              ),
+            );
+          },
+        ),
         const SizedBox(height: 12),
-                 _buildFeatureCard(
-           title: 'Garson Çağırma',
-           description: 'Müşteri çağrılarına cevap ver',
-           icon: Icons.support_agent,
-           color: Colors.green,
-           onTap: () {
-             // Demo Staff objesi oluştur ve çağrı yönetim sayfasına git
-             final demoStaff = Staff.create(
-               businessId: 'demo_business_id',
-               firstName: 'Demo',
-               lastName: 'Garson',
-               email: 'demo@garson.com',
-               phone: '5555555555',
-               password: 'demo123',
-               role: StaffRole.waiter,
-             );
-             
-             Navigator.push(
-               context,
-               MaterialPageRoute(
-                 builder: (context) => StaffCallManagementPage(currentStaff: demoStaff),
-               ),
-             );
-           },
-         ),
+        _buildFeatureCard(
+          title: 'Garson Çağırma',
+          description: 'Müşteri çağrılarına cevap ver',
+          icon: Icons.support_agent,
+          color: Colors.green,
+          onTap: () {
+            // Demo Staff objesi oluştur ve çağrı yönetim sayfasına git
+            final demoStaff = Staff.create(
+              businessId: 'demo_business_id',
+              firstName: 'Demo',
+              lastName: 'Garson',
+              email: 'demo@garson.com',
+              phone: '5555555555',
+              password: 'demo123',
+              role: StaffRole.waiter,
+            );
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => StaffCallManagementPage(
+                  businessId: 'demo_business_id',
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
@@ -442,10 +445,10 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   String _getPageTitle() {
     // Demo amaçlı
     return 'Garson Paneli';
-    
+
     // Gerçek implementation:
     // if (_currentStaff == null) return 'Personel Paneli';
-    // 
+    //
     // switch (_currentStaff!.role) {
     //   case StaffRole.manager:
     //     return 'Müdür Paneli';
@@ -457,4 +460,4 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
     //     return 'Kasiyer Paneli';
     // }
   }
-} 
+}

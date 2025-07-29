@@ -6,12 +6,12 @@ import '../models/business.dart';
 import '../models/product.dart';
 import '../models/category.dart' as business_category;
 import '../../data/models/order.dart' as app_order;
-import '../../customer/models/waiter_call.dart';
+import '../models/waiter_call.dart';
 import '../services/business_firestore_service.dart';
 import '../../core/services/url_service.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/notification_service.dart';
-import '../../core/services/waiter_call_service.dart';
+import '../services/waiter_call_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
@@ -28,6 +28,7 @@ import 'kitchen_integration_page.dart';
 import 'delivery_management_page.dart';
 import 'payment_management_page.dart';
 import 'staff_tracking_page.dart';
+import 'staff_call_management_page.dart';
 import 'crm_management_page.dart';
 import 'hardware_integration_page.dart';
 import 'multi_branch_page.dart';
@@ -87,6 +88,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   // Waiter calls
   List<WaiterCall> _activeWaiterCalls = [];
   List<WaiterCall> _recentWaiterCalls = [];
+  int _urgentCallsCount = 0;
 
   late TabController _tabController;
   int _currentIndex = 0;
@@ -227,26 +229,6 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     }
   }
 
-  Future<void> _loadWaiterCalls() async {
-    try {
-      final activeCalls =
-          await _waiterCallService.getBusinessActiveCalls(widget.businessId);
-      final recentCalls = await _waiterCallService.getBusinessCallHistory(
-        widget.businessId,
-        limit: 10,
-      );
-
-      if (mounted) {
-        setState(() {
-          _activeWaiterCalls = activeCalls;
-          _recentWaiterCalls = recentCalls;
-        });
-      }
-    } catch (e) {
-      print('Garson çağrıları yüklenirken hata: $e');
-    }
-  }
-
   Future<void> _loadBusinessData() async {
     setState(() {
       _isLoading = true;
@@ -278,6 +260,9 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         _todayOrders = stats['todayOrders'] ?? 0;
         _pendingOrders = stats['pendingOrders'] ?? 0;
       });
+
+      // Load waiter calls
+      await _loadWaiterCalls();
 
       _updateUrl();
     } catch (e) {
@@ -317,6 +302,28 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     } catch (e) {
       print('İstatistik hesaplama hatası: $e');
       return {};
+    }
+  }
+
+  Future<void> _loadWaiterCalls() async {
+    try {
+      final activeCalls = await _waiterCallService
+          .getActiveWaiterCallsByBusiness(widget.businessId);
+      final recentCalls =
+          await _waiterCallService.getWaiterCallsByBusiness(widget.businessId);
+
+      final urgentCalls = activeCalls
+          .where(
+              (call) => DateTime.now().difference(call.createdAt).inMinutes > 5)
+          .length;
+
+      setState(() {
+        _activeWaiterCalls = activeCalls;
+        _recentWaiterCalls = recentCalls.take(10).toList();
+        _urgentCallsCount = urgentCalls;
+      });
+    } catch (e) {
+      print('Garson çağrıları yüklenirken hata: $e');
     }
   }
 
@@ -395,6 +402,20 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             _notificationService.markAllAsRead(widget.businessId),
       ),
     );
+  }
+
+  void _showWaiterCallsDialog() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StaffCallManagementPage(
+          businessId: widget.businessId,
+        ),
+      ),
+    ).then((_) {
+      // Sayfa kapandığında verileri yenile
+      _loadWaiterCalls();
+    });
   }
 
   void _navigateToTab(int index) {
@@ -587,6 +608,91 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             ),
             onPressed: _showNotificationsDialog,
             tooltip: 'Bildirimler',
+          ),
+        ),
+        // Garson Çağrıları Butonu
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            icon: Stack(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.room_service_rounded,
+                      color: AppColors.success),
+                ),
+                if (_urgentCallsCount > 0)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.warning.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        '$_urgentCallsCount',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                if (_activeWaiterCalls.isNotEmpty && _urgentCallsCount == 0)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.info,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.info.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        '${_activeWaiterCalls.length}',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: _showWaiterCallsDialog,
+            tooltip: 'Garson Çağrıları',
           ),
         ),
         Container(
@@ -1628,181 +1734,182 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   }
 
   Widget _buildWaiterCallsSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _activeWaiterCalls.isNotEmpty
-                        ? AppColors.error.withOpacity(0.1)
-                        : AppColors.success.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.room_service_rounded,
-                    color: _activeWaiterCalls.isNotEmpty
-                        ? AppColors.error
-                        : AppColors.success,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Garson Çağrıları',
-                        style: AppTypography.h6.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        _activeWaiterCalls.isNotEmpty
-                            ? '${_activeWaiterCalls.length} aktif çağrı var'
-                            : 'Tüm çağrılar halledildi',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: _activeWaiterCalls.isNotEmpty
-                              ? AppColors.error
-                              : AppColors.success,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: _loadWaiterCalls,
-                  icon: const Icon(Icons.refresh_rounded),
-                  color: AppColors.textSecondary,
-                ),
-              ],
-            ),
-          ),
-
-          // Active calls or empty state
-          if (_activeWaiterCalls.isNotEmpty) ...[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Aktif Çağrılar',
-                    style: AppTypography.bodyLarge.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ..._activeWaiterCalls
-                      .take(3)
-                      .map((call) => _buildWaiterCallCard(call)),
-                  if (_activeWaiterCalls.length > 3)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Center(
-                        child: TextButton(
-                          onPressed: () {
-                            // Navigate to full waiter calls page
-                          },
-                          child: Text(
-                              '${_activeWaiterCalls.length - 3} çağrı daha göster'),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ] else ...[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.check_circle_rounded,
-                      size: 48,
-                      color: AppColors.success,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Tüm çağrılar halledildi!',
-                      style: AppTypography.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.success,
-                      ),
-                    ),
-                    Text(
-                      'Şu anda bekleyen garson çağrısı bulunmuyor.',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+    return GestureDetector(
+      onTap: _showWaiterCallsDialog,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
-
-          // Statistics
-          if (_recentWaiterCalls.isNotEmpty) ...[
-            const Divider(height: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
             Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
-                  Expanded(
-                    child: _buildCallStat(
-                      'Bugün',
-                      '${_recentWaiterCalls.where((c) => _isToday(c.createdAt)).length}',
-                      Icons.today_rounded,
-                      AppColors.primary,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _activeWaiterCalls.isNotEmpty
+                          ? AppColors.error.withOpacity(0.1)
+                          : AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.room_service_rounded,
+                      color: _activeWaiterCalls.isNotEmpty
+                          ? AppColors.error
+                          : AppColors.success,
+                      size: 24,
                     ),
                   ),
+                  const SizedBox(width: 16),
                   Expanded(
-                    child: _buildCallStat(
-                      'Ort. Yanıt',
-                      '${_calculateAverageResponseTime()} dk',
-                      Icons.access_time_rounded,
-                      AppColors.info,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Garson Çağrıları',
+                          style: AppTypography.h6.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          _activeWaiterCalls.isNotEmpty
+                              ? '${_activeWaiterCalls.length} aktif çağrı var'
+                              : 'Tüm çağrılar halledildi',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: _activeWaiterCalls.isNotEmpty
+                                ? AppColors.error
+                                : AppColors.success,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Expanded(
-                    child: _buildCallStat(
-                      'Tamamlanan',
-                      '${_recentWaiterCalls.where((c) => c.status == WaiterCallStatus.completed).length}',
-                      Icons.check_circle_rounded,
-                      AppColors.success,
-                    ),
+                  IconButton(
+                    onPressed: _loadWaiterCalls,
+                    icon: const Icon(Icons.refresh_rounded),
+                    color: AppColors.textSecondary,
                   ),
                 ],
               ),
             ),
+
+            // Active calls or empty state
+            if (_activeWaiterCalls.isNotEmpty) ...[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Aktif Çağrılar',
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ..._activeWaiterCalls
+                        .take(3)
+                        .map((call) => _buildWaiterCallCard(call)),
+                    if (_activeWaiterCalls.length > 3)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Center(
+                          child: TextButton(
+                            onPressed: _showWaiterCallsDialog,
+                            child: Text(
+                                '${_activeWaiterCalls.length - 3} çağrı daha göster'),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: 48,
+                        color: AppColors.success,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Tüm çağrılar halledildi!',
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.success,
+                        ),
+                      ),
+                      Text(
+                        'Şu anda bekleyen garson çağrısı bulunmuyor.',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            // Statistics
+            if (_recentWaiterCalls.isNotEmpty) ...[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildCallStat(
+                        'Bugün',
+                        '${_recentWaiterCalls.where((c) => _isToday(c.createdAt)).length}',
+                        Icons.today_rounded,
+                        AppColors.primary,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildCallStat(
+                        'Ort. Yanıt',
+                        '${_calculateAverageResponseTime()} dk',
+                        Icons.access_time_rounded,
+                        AppColors.info,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildCallStat(
+                        'Tamamlanan',
+                        '${_recentWaiterCalls.where((c) => c.status == WaiterCallStatus.completed).length}',
+                        Icons.check_circle_rounded,
+                        AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1831,134 +1938,135 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   }
 
   Widget _buildWaiterCallCard(WaiterCall call) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.greyLighter,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: call.isOverdue ? AppColors.error : AppColors.greyLight,
-          width: call.isOverdue ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color:
-                  Color(int.parse('0xFF${call.priorityColorCode.substring(1)}'))
-                      .withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              _getCallTypeIcon(call.requestType),
-              color: Color(
-                  int.parse('0xFF${call.priorityColorCode.substring(1)}')),
-              size: 20,
-            ),
+    final isUrgent = DateTime.now().difference(call.createdAt).inMinutes > 5;
+
+    return GestureDetector(
+      onTap: _showWaiterCallsDialog,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.greyLighter,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isUrgent ? AppColors.error : AppColors.greyLight,
+            width: isUrgent ? 2 : 1,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Masa ${call.tableNumber}',
-                      style: AppTypography.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Color(int.parse(
-                                '0xFF${call.statusColorCode.substring(1)}'))
-                            .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        call.status.displayName,
-                        style: AppTypography.caption.copyWith(
-                          color: Color(int.parse(
-                              '0xFF${call.statusColorCode.substring(1)}')),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.room_service_rounded,
+                color: AppColors.success,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Masa ${call.tableNumber}',
+                        style: AppTypography.bodyLarge.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  call.requestType.displayName,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '${call.waitingTimeMinutes} dakika önce',
-                      style: AppTypography.caption.copyWith(
-                        color: call.isOverdue
-                            ? AppColors.error
-                            : AppColors.textSecondary,
-                        fontWeight: call.isOverdue
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    if (call.isOverdue) ...[
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.warning_rounded,
-                        size: 14,
-                        color: AppColors.error,
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getWaiterCallStatusColor(call.status)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _getWaiterCallStatusText(call.status),
+                          style: AppTypography.caption.copyWith(
+                            color: _getWaiterCallStatusColor(call.status),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    call.customerName,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        '${DateTime.now().difference(call.createdAt).inMinutes} dakika önce',
+                        style: AppTypography.caption.copyWith(
+                          color: isUrgent
+                              ? AppColors.error
+                              : AppColors.textSecondary,
+                          fontWeight:
+                              isUrgent ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      if (isUrgent) ...[
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.warning_rounded,
+                          size: 14,
+                          color: AppColors.error,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: () => _handleWaiterCall(call),
-            icon: const Icon(Icons.arrow_forward_ios_rounded),
-            iconSize: 16,
-            color: AppColors.textSecondary,
-          ),
-        ],
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  IconData _getCallTypeIcon(WaiterCallType type) {
-    switch (type) {
-      case WaiterCallType.service:
-        return Icons.room_service_rounded;
-      case WaiterCallType.order:
-        return Icons.restaurant_menu_rounded;
-      case WaiterCallType.payment:
-        return Icons.receipt_rounded;
-      case WaiterCallType.complaint:
-        return Icons.report_problem_rounded;
-      case WaiterCallType.assistance:
-        return Icons.help_rounded;
-      case WaiterCallType.bill:
-        return Icons.receipt_rounded;
-      case WaiterCallType.help:
-        return Icons.help_rounded;
-      case WaiterCallType.cleaning:
-        return Icons.cleaning_services_rounded;
-      case WaiterCallType.emergency:
-        return Icons.emergency_rounded;
+  Color _getWaiterCallStatusColor(WaiterCallStatus status) {
+    switch (status) {
+      case WaiterCallStatus.pending:
+        return AppColors.warning;
+      case WaiterCallStatus.responded:
+        return AppColors.info;
+      case WaiterCallStatus.completed:
+        return AppColors.success;
+      case WaiterCallStatus.cancelled:
+        return AppColors.error;
+    }
+  }
+
+  String _getWaiterCallStatusText(WaiterCallStatus status) {
+    switch (status) {
+      case WaiterCallStatus.pending:
+        return 'Bekliyor';
+      case WaiterCallStatus.responded:
+        return 'Yanıtlandı';
+      case WaiterCallStatus.completed:
+        return 'Tamamlandı';
+      case WaiterCallStatus.cancelled:
+        return 'İptal';
     }
   }
 
@@ -1990,20 +2098,18 @@ class _BusinessDashboardState extends State<BusinessDashboard>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title:
-            Text('Masa ${call.tableNumber} - ${call.requestType.displayName}'),
+        title: Text('Masa ${call.tableNumber} - Garson Çağrısı'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildInfoRow('Durum', call.status.displayName),
-            _buildInfoRow('Öncelik', call.priority.displayName),
             if (call.message != null && call.message!.isNotEmpty)
               _buildInfoRow('Mesaj', call.message!),
             _buildInfoRow('Çağrı Zamanı', _formatDateTime(call.createdAt)),
-            if (call.waiterName != null)
-              _buildInfoRow('Atanan Garson', call.waiterName!),
-            if (call.isOverdue)
+            if (call.waiterName.isNotEmpty)
+              _buildInfoRow('Atanan Garson', call.waiterName),
+            if (DateTime.now().difference(call.createdAt).inMinutes > 5)
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -2036,7 +2142,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _acknowledgeCall(call);
+                _respondToCall(call);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -2044,8 +2150,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               ),
               child: const Text('Onayla'),
             ),
-          if (call.status == WaiterCallStatus.acknowledged ||
-              call.status == WaiterCallStatus.inProgress)
+          if (call.status == WaiterCallStatus.responded)
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -2091,13 +2196,9 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     );
   }
 
-  Future<void> _acknowledgeCall(WaiterCall call) async {
+  Future<void> _respondToCall(WaiterCall call) async {
     try {
-      await _waiterCallService.acknowledgeCall(
-        call.callId,
-        waiterId: 'business_manager',
-        waiterName: 'İşletme Yöneticisi',
-      );
+      await _waiterCallService.respondToCall(call.callId);
       _loadWaiterCalls();
 
       if (mounted) {
@@ -2122,10 +2223,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
 
   Future<void> _completeCall(WaiterCall call) async {
     try {
-      await _waiterCallService.completeCall(
-        call.callId,
-        responseNotes: 'İşletme yöneticisi tarafından tamamlandı',
-      );
+      await _waiterCallService.completeCall(call.callId);
       _loadWaiterCalls();
 
       if (mounted) {
