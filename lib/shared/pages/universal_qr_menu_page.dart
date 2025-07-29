@@ -17,6 +17,7 @@ import '../../customer/widgets/business_header.dart';
 import '../../customer/widgets/search_bar.dart' as custom_search;
 import '../../customer/widgets/filter_bottom_sheet.dart';
 import '../../customer/pages/customer_waiter_call_page.dart';
+import '../../customer/pages/menu_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -202,7 +203,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
         });
       }
 
-      // Load remaining data
+      // QR kod başarıyla çözümlendi, direkt MenuPage'e yönlendir
+      if (mounted && _businessId != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MenuPage(businessId: _businessId!),
+          ),
+        );
+        return;
+      }
+
+      // Load remaining data (fallback - normalde çalışmayacak)
       await _loadMenuData();
 
       // Start animations
