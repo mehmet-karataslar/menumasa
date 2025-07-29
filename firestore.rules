@@ -9,23 +9,23 @@ service cloud.firestore {
       allow create: if request.auth != null; // Yeni kullanıcı kaydı için
     }
     
-    // Businesses collection - authenticated kullanıcılar okuyabilir, sahipler yazabilir
+    // Businesses collection - PUBLIC READ for QR menu access
     match /businesses/{businessId} {
-      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow read: if true; // Public read için QR menü erişimi (misafir kullanıcılar)
       allow write: if request.auth != null && 
         (request.auth.uid == resource.data.ownerId || 
          request.auth.uid == request.resource.data.ownerId);
     }
     
-    // Products collection - işletme sahipleri ve authenticated kullanıcılar
+    // Products collection - PUBLIC READ for QR menu access
     match /products/{productId} {
-      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow read: if true; // Public read için QR menü erişimi (misafir kullanıcılar)
       allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir (business kontrolü app seviyesinde)
     }
     
-    // Categories collection - işletme sahipleri ve authenticated kullanıcılar
+    // Categories collection - PUBLIC READ for QR menu access
     match /categories/{categoryId} {
-      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow read: if true; // Public read için QR menü erişimi (misafir kullanıcılar)
       allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
     }
     
@@ -35,21 +35,28 @@ service cloud.firestore {
       allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
     }
     
-    // Discounts collection - işletme sahipleri
+    // Discounts collection - PUBLIC READ for QR menu access
     match /discounts/{discountId} {
-      allow read: if request.auth != null; // Authenticated kullanıcılar okuyabilir
+      allow read: if true; // Public read için QR menü erişimi (misafir kullanıcılar indirimli fiyatları görmeli)
       allow write: if request.auth != null; // Authenticated kullanıcılar yazabilir
     }
     
-    // Product Favorites collection - müşteriler kendi favorilerini yönetebilir
+    // Product Favorites collection - müşteriler ve misafir kullanıcılar
     match /product_favorites/{favoriteId} {
+      // Authenticated kullanıcılar kendi favorilerini yönetebilir
       allow read, write: if request.auth != null && 
         request.auth.uid == resource.data.customerId;
       allow create: if request.auth != null && 
         request.auth.uid == request.resource.data.customerId;
-      allow list: if request.auth != null; // Kendi favorilerini listeleyebilir
+      allow list: if request.auth != null;
       allow delete: if request.auth != null && 
         request.auth.uid == resource.data.customerId;
+      
+      // Misafir kullanıcılar için lokal favoriler (sessionId ile)
+      allow read, write: if request.auth == null && 
+        'guestSessionId' in resource.data;
+      allow create: if request.auth == null && 
+        'guestSessionId' in request.resource.data;
     }
     
     // Business Favorites collection - müşteriler kendi işletme favorilerini yönetebilir

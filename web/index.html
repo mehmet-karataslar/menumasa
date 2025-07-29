@@ -62,7 +62,9 @@ window.addEventListener('DOMContentLoaded', function() {
                      currentPath.startsWith('/qr?') ||
                      currentPath === '/universal-qr' ||
                      searchParams.has('business') ||
-                     searchParams.has('businessId');
+                     searchParams.has('businessId') ||
+                     currentSearch.includes('business=') ||
+                     currentSearch.includes('businessId=');
   
   console.log('🔍 QR Detection Result:', {
     path: currentPath,
@@ -119,9 +121,39 @@ window.addEventListener('DOMContentLoaded', function() {
       source: 'web_router'
     };
     
-    // If no businessId found, log warning
+    // If no businessId found, log warning but still allow the route
     if (!businessId) {
       console.warn('⚠️ QR URL detected but no businessId found:', currentPath + currentSearch);
+      console.log('🔄 Will let Flutter router handle parameter extraction...');
+    } else {
+      console.log('✅ Business ID extracted successfully:', businessId);
+    }
+    
+    // Normalize the route for Flutter router
+    if (currentPath !== '/qr' && !currentPath.startsWith('/qr?')) {
+      // Convert legacy paths to standard /qr format
+      let normalizedUrl = '/qr';
+      const params = new URLSearchParams();
+      
+      if (businessId) params.set('business', businessId);
+      if (tableNumber) params.set('table', tableNumber);
+      
+      // Add any other existing parameters
+      for (const [key, value] of searchParams.entries()) {
+        if (key !== 'business' && key !== 'businessId' && key !== 'table' && key !== 'tableNumber') {
+          params.set(key, value);
+        }
+      }
+      
+      if (params.toString()) {
+        normalizedUrl += '?' + params.toString();
+      }
+      
+      console.log('🔄 Normalizing QR URL from:', currentPath + currentSearch);
+      console.log('🔄 To:', normalizedUrl);
+      
+      // Update URL without reload
+      window.history.replaceState(null, '', normalizedUrl);
     }
     
     return; // Don't interfere with QR routes
@@ -205,13 +237,17 @@ window.validateQRUrl = function(url) {
       }
     }
     
-    return {
-      isValid: (hasBusinessParam || hasQRPath) && businessId,
+    const result = {
+      isValid: hasBusinessParam || hasQRPath,
       businessId: businessId,
       tableNumber: uri.searchParams.get('table') || uri.searchParams.get('tableNumber'),
       originalUrl: url,
-      pathType: hasQRPath ? 'path' : 'query'
+      pathType: hasQRPath ? 'path' : 'query',
+      normalizedUrl: businessId ? `/qr?business=${businessId}${uri.searchParams.get('table') ? `&table=${uri.searchParams.get('table')}` : ''}` : null
     };
+    
+    console.log('🔍 QR URL Validation Result:', result);
+    return result;
   } catch (e) {
     console.error('QR URL validation error:', e);
     return { isValid: false, error: e.message };

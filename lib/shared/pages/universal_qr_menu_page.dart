@@ -444,11 +444,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     final routeSettings = ModalRoute.of(context)?.settings;
     final arguments = routeSettings?.arguments as Map<String, dynamic>?;
 
+    print('🔍 UniversalQRMenuPage: Route settings: ${routeSettings?.name}');
+    print('🔍 UniversalQRMenuPage: Arguments: $arguments');
+
     if (arguments != null) {
       final businessId = arguments['businessId']?.toString();
       final tableString = arguments['tableNumber']?.toString();
+      print(
+          '🔍 UniversalQRMenuPage: From arguments - businessId: $businessId, table: $tableString');
       if (businessId != null && businessId.isNotEmpty) {
         final tableNumber = int.tryParse(tableString ?? '');
+        print(
+            '✅ UniversalQRMenuPage: Using arguments method - businessId: $businessId, tableNumber: $tableNumber');
         return {'businessId': businessId, 'tableNumber': tableNumber};
       }
     }
@@ -458,12 +465,16 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
       final urlParams = _urlService.getCurrentParams();
       final businessId = urlParams['business'] ?? urlParams['businessId'];
       final tableString = urlParams['table'] ?? urlParams['tableNumber'];
+      print(
+          '🔍 UniversalQRMenuPage: From URL params - businessId: $businessId, table: $tableString');
       if (businessId != null && businessId.isNotEmpty) {
         final tableNumber = int.tryParse(tableString ?? '');
+        print(
+            '✅ UniversalQRMenuPage: Using URL method - businessId: $businessId, tableNumber: $tableNumber');
         return {'businessId': businessId, 'tableNumber': tableNumber};
       }
     } catch (e) {
-      // print('⚠️ URL Service method failed: $e'); // Removed print
+      print('⚠️ UniversalQRMenuPage: URL Service method failed: $e');
     }
 
     // Method 3: Direct route name parsing

@@ -180,10 +180,10 @@ class QRRouteHandler implements BaseRouteHandler {
         ...?settings.arguments as Map<String, dynamic>?,
       };
 
-      // Route directly to MenuPage if we have a businessId
+      // Route directly to UniversalQRMenuPage if we have a businessId
       if (businessId != null && businessId.isNotEmpty) {
         return RouteUtils.createRoute(
-          (context) => MenuPage(businessId: businessId),
+          (context) => const UniversalQRMenuPage(),
           RouteSettings(
             name: routeName,
             arguments: enhancedArguments,
@@ -380,12 +380,23 @@ class QRRouteHandler implements BaseRouteHandler {
     final routeName = settings.name!;
     final pathSegments = RouteUtils.getPathSegments(routeName);
 
-    // /menu/{businessId} format için
+    // /menu/{businessId} format için - QR routing
     if (pathSegments.length >= 2 && pathSegments[0] == 'menu') {
       final businessId = pathSegments[1];
+      // QR route olduğu için UniversalQRMenuPage kullan
+      final enhancedArguments = <String, dynamic>{
+        'businessId': businessId,
+        'isQRRoute': true,
+        'originalUrl': settings.name,
+        'source': 'menu_path_routing',
+        ...?settings.arguments as Map<String, dynamic>?,
+      };
       return RouteUtils.createRoute(
-        (context) => MenuPage(businessId: businessId),
-        settings,
+        (context) => const UniversalQRMenuPage(),
+        RouteSettings(
+          name: settings.name,
+          arguments: enhancedArguments,
+        ),
       );
     }
 
