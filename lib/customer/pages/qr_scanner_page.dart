@@ -6,6 +6,7 @@ import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
 import 'qr_menu_page.dart';
 import '../../shared/pages/universal_qr_menu_page.dart';
+import 'menu_page.dart';
 import 'dart:convert'; // Added for jsonDecode
 
 /// QR Kod Tarayıcı Sayfası
@@ -24,12 +25,12 @@ class QRScannerPage extends StatefulWidget {
 class _QRScannerPageState extends State<QRScannerPage>
     with TickerProviderStateMixin {
   final UrlService _urlService = UrlService();
-  
+
   late AnimationController _scanAnimationController;
   late AnimationController _pulseAnimationController;
   late Animation<double> _scanAnimation;
   late Animation<double> _pulseAnimation;
-  
+
   MobileScannerController? _qrController;
   bool _isScanning = false;
   String? _scannedCode;
@@ -44,7 +45,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     _updateURL();
     _initializeCamera();
   }
-  
+
   Future<void> _initializeCamera() async {
     try {
       _qrController = MobileScannerController(
@@ -52,7 +53,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         facing: CameraFacing.back,
         torchEnabled: _flashOn,
       );
-      
+
       setState(() {
         _hasPermission = true;
         _permissionError = null;
@@ -71,7 +72,7 @@ class _QRScannerPageState extends State<QRScannerPage>
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    
+
     _pulseAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -128,7 +129,8 @@ class _QRScannerPageState extends State<QRScannerPage>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              _permissionError ?? 'QR kod tarayabilmek için kamera erişimi gereklidir.',
+              _permissionError ??
+                  'QR kod tarayabilmek için kamera erişimi gereklidir.',
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.white.withOpacity(0.8),
               ),
@@ -167,7 +169,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     });
 
     HapticFeedback.mediumImpact();
-    
+
     // Kamera erişimini başlat
     if (_qrController != null && _hasPermission) {
       await _qrController!.start();
@@ -187,7 +189,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     });
 
     HapticFeedback.heavyImpact();
-    
+
     // Kamera taramayı durdur
     if (_qrController != null) {
       await _qrController!.stop();
@@ -195,27 +197,27 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     try {
       print('📱 QR Scanner: Processing external camera QR code: $qrCode');
-      
+
       // Enhanced QR kod analizi ve business ID çıkarımı
       final analysisResult = _analyzeQRCode(qrCode);
-      
+
       if (!analysisResult['isValid']) {
         throw Exception(analysisResult['error'] ?? 'Geçersiz QR kod formatı');
       }
-      
+
       final businessId = analysisResult['businessId'] as String;
       final tableNumber = analysisResult['tableNumber'] as int?;
-      
-      print('✅ QR Analysis successful - Business: $businessId, Table: $tableNumber');
-      
+
+      print(
+          '✅ QR Analysis successful - Business: $businessId, Table: $tableNumber');
+
       await _handleQRCodeDetected(qrCode, businessId, tableNumber: tableNumber);
-      
     } catch (e) {
       print('❌ QR Scanner Error: $e');
-      
+
       // Enhanced error handling with user-friendly messages
       String userMessage = _getQRErrorMessage(e.toString());
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -256,11 +258,11 @@ class _QRScannerPageState extends State<QRScannerPage>
           ),
         );
       }
-      
+
       setState(() {
         _isScanning = false;
       });
-      
+
       // Kamera taramayı tekrar başlat
       if (_qrController != null && _hasPermission) {
         await Future.delayed(const Duration(seconds: 2));
@@ -274,18 +276,18 @@ class _QRScannerPageState extends State<QRScannerPage>
   /// Enhanced QR code analysis with detailed logging
   Map<String, dynamic> _analyzeQRCode(String qrCode) {
     print('🔍 QR Analysis starting for: $qrCode');
-    
+
     try {
       // Method 1: URL-based QR codes
       if (qrCode.startsWith('http://') || qrCode.startsWith('https://')) {
         return _analyzeUrlQRCode(qrCode);
       }
-      
+
       // Method 2: Custom format QR codes (masamenu_businessId_table_X)
       if (qrCode.startsWith('masamenu_')) {
         return _analyzeCustomFormatQRCode(qrCode);
       }
-      
+
       // Method 3: Direct business ID format
       if (_isDirectBusinessId(qrCode)) {
         return {
@@ -295,18 +297,18 @@ class _QRScannerPageState extends State<QRScannerPage>
           'format': 'direct_business_id'
         };
       }
-      
+
       // Method 4: JSON format QR codes
       if (qrCode.startsWith('{') && qrCode.endsWith('}')) {
         return _analyzeJsonQRCode(qrCode);
       }
-      
+
       return {
         'isValid': false,
         'error': 'QR kod formatı tanımlanamadı',
-        'details': 'Supported formats: URL, masamenu_*, direct business ID, JSON'
+        'details':
+            'Supported formats: URL, masamenu_*, direct business ID, JSON'
       };
-      
     } catch (e) {
       print('❌ QR Analysis error: $e');
       return {
@@ -321,41 +323,43 @@ class _QRScannerPageState extends State<QRScannerPage>
     try {
       print('🔗 Analyzing URL QR code');
       final uri = Uri.parse(qrCode);
-      
+
       // Extract business ID from query parameters
-      String? businessId = uri.queryParameters['business'] ?? 
-                          uri.queryParameters['businessId'];
-      
+      String? businessId =
+          uri.queryParameters['business'] ?? uri.queryParameters['businessId'];
+
       // Extract from path if not in query params
       if (businessId == null) {
-        if (uri.pathSegments.contains('qr-menu') && uri.pathSegments.length > 1) {
+        if (uri.pathSegments.contains('qr-menu') &&
+            uri.pathSegments.length > 1) {
           final index = uri.pathSegments.indexOf('qr-menu');
           if (index + 1 < uri.pathSegments.length) {
             businessId = uri.pathSegments[index + 1];
           }
-        } else if (uri.pathSegments.contains('menu') && uri.pathSegments.length > 1) {
+        } else if (uri.pathSegments.contains('menu') &&
+            uri.pathSegments.length > 1) {
           final index = uri.pathSegments.indexOf('menu');
           if (index + 1 < uri.pathSegments.length) {
             businessId = uri.pathSegments[index + 1];
           }
         }
       }
-      
+
       // Extract table number
       int? tableNumber;
-      final tableString = uri.queryParameters['table'] ?? 
-                         uri.queryParameters['tableNumber'];
+      final tableString =
+          uri.queryParameters['table'] ?? uri.queryParameters['tableNumber'];
       if (tableString != null) {
         tableNumber = int.tryParse(tableString);
       }
-      
+
       if (businessId == null || businessId.isEmpty) {
         return {
           'isValid': false,
           'error': 'URL\'de işletme bilgisi bulunamadı',
         };
       }
-      
+
       return {
         'isValid': true,
         'businessId': businessId,
@@ -363,7 +367,6 @@ class _QRScannerPageState extends State<QRScannerPage>
         'format': 'url',
         'originalUrl': qrCode,
       };
-      
     } catch (e) {
       return {
         'isValid': false,
@@ -377,29 +380,28 @@ class _QRScannerPageState extends State<QRScannerPage>
     try {
       print('🏷️ Analyzing custom format QR code');
       final parts = qrCode.split('_');
-      
+
       if (parts.length < 2) {
         return {
           'isValid': false,
           'error': 'Geçersiz masamenu formatı',
         };
       }
-      
+
       final businessId = parts[1];
       int? tableNumber;
-      
+
       // Look for table number
       if (parts.length >= 4 && parts[2] == 'table') {
         tableNumber = int.tryParse(parts[3]);
       }
-      
+
       return {
         'isValid': true,
         'businessId': businessId,
         'tableNumber': tableNumber,
         'format': 'masamenu_custom',
       };
-      
     } catch (e) {
       return {
         'isValid': false,
@@ -413,24 +415,25 @@ class _QRScannerPageState extends State<QRScannerPage>
     try {
       print('📋 Analyzing JSON QR code');
       final Map<String, dynamic> jsonData = jsonDecode(qrCode);
-      
+
       final businessId = jsonData['businessId'] ?? jsonData['business'];
       final tableNumber = jsonData['tableNumber'] ?? jsonData['table'];
-      
+
       if (businessId == null) {
         return {
           'isValid': false,
           'error': 'JSON\'da işletme bilgisi bulunamadı',
         };
       }
-      
+
       return {
         'isValid': true,
         'businessId': businessId.toString(),
-        'tableNumber': tableNumber is int ? tableNumber : int.tryParse(tableNumber?.toString() ?? ''),
+        'tableNumber': tableNumber is int
+            ? tableNumber
+            : int.tryParse(tableNumber?.toString() ?? ''),
         'format': 'json',
       };
-      
     } catch (e) {
       return {
         'isValid': false,
@@ -443,14 +446,14 @@ class _QRScannerPageState extends State<QRScannerPage>
   bool _isDirectBusinessId(String qrCode) {
     // Business ID should be alphanumeric, 3-50 characters
     if (qrCode.length < 3 || qrCode.length > 50) return false;
-    
+
     // Should not contain spaces or special characters (except _ and -)
     if (!RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(qrCode)) return false;
-    
+
     // Should not be a common word
     const commonWords = ['test', 'demo', 'admin', 'user', 'guest'];
     if (commonWords.contains(qrCode.toLowerCase())) return false;
-    
+
     return true;
   }
 
@@ -471,10 +474,10 @@ class _QRScannerPageState extends State<QRScannerPage>
 
   String _extractBusinessIdFromQR(String qrCode) {
     print('🔍 QR Kod analiz ediliyor: $qrCode');
-    
+
     // Use the enhanced analysis method
     final analysis = _analyzeQRCode(qrCode);
-    
+
     if (analysis['isValid']) {
       final businessId = analysis['businessId'] as String;
       print('✅ Business ID extracted: $businessId');
@@ -488,16 +491,16 @@ class _QRScannerPageState extends State<QRScannerPage>
   int? _extractTableNumberFromQR(String qrCode) {
     try {
       print('🔍 Table number extraction: $qrCode');
-      
+
       // Use the enhanced analysis method
       final analysis = _analyzeQRCode(qrCode);
-      
+
       if (analysis['isValid']) {
         final tableNumber = analysis['tableNumber'] as int?;
         print('📋 Table number extracted: $tableNumber');
         return tableNumber;
       }
-      
+
       return null;
     } catch (e) {
       print('❌ Table number extraction error: $e');
@@ -507,7 +510,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
   Future<void> _toggleFlash() async {
     if (_qrController == null || !_hasPermission) return;
-    
+
     try {
       await _qrController!.toggleTorch();
       setState(() {
@@ -521,7 +524,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
   Future<void> _flipCamera() async {
     if (_qrController == null || !_hasPermission) return;
-    
+
     try {
       await _qrController!.switchCamera();
       HapticFeedback.lightImpact();
@@ -530,7 +533,8 @@ class _QRScannerPageState extends State<QRScannerPage>
     }
   }
 
-  Future<void> _handleQRCodeDetected(String qrCode, String businessId, {int? tableNumber}) async {
+  Future<void> _handleQRCodeDetected(String qrCode, String businessId,
+      {int? tableNumber}) async {
     setState(() {
       _scannedCode = qrCode;
       _isScanning = false;
@@ -538,22 +542,20 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     HapticFeedback.heavyImpact();
 
-    // QR kod başarıyla tarandı, evrensel menü sayfasına yönlendir
+    // QR kod başarıyla tarandı, direkt menü sayfasına yönlendir
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (mounted) {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      
-      // Enhanced route construction with debugging
-      final dynamicRoute = '/qr?business=$businessId${tableNumber != null ? '&table=$tableNumber' : ''}&t=$timestamp';
-      
-      print('🚀 QR Scanner navigating to: $dynamicRoute');
-      print('📋 Navigation arguments: businessId=$businessId, tableNumber=$tableNumber, userId=${widget.userId}');
-      
+
+      // Direkt menu sayfasına yönlendir
+      final dynamicRoute =
+          '/menu/$businessId${tableNumber != null ? '?table=$tableNumber' : ''}?t=$timestamp';
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const UniversalQRMenuPage(),
+          builder: (context) => MenuPage(businessId: businessId),
           settings: RouteSettings(
             name: dynamicRoute,
             arguments: {
@@ -577,7 +579,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
   void _showManualEntryDialog() {
     final controller = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -645,7 +647,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     // Manuel kod ile işletme ID'si oluştur
     final businessId = 'manual_${code.toLowerCase()}';
     final qrCode = 'manual_entry_$code';
-    
+
     _handleQRCodeDetected(qrCode, businessId);
   }
 
@@ -710,7 +712,7 @@ class _QRScannerPageState extends State<QRScannerPage>
               ],
             ),
           ),
-          
+
           // Tarama alanı
           Expanded(
             child: SingleChildScrollView(
@@ -720,9 +722,9 @@ class _QRScannerPageState extends State<QRScannerPage>
                 children: [
                   // QR tarama frame
                   _buildScanFrame(),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Kamera kontrolleri
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -732,18 +734,20 @@ class _QRScannerPageState extends State<QRScannerPage>
                         onPressed: _toggleFlash,
                         icon: Icon(
                           _flashOn ? Icons.flash_on : Icons.flash_off,
-                          color: _flashOn ? AppColors.warning : AppColors.textSecondary,
+                          color: _flashOn
+                              ? AppColors.warning
+                              : AppColors.textSecondary,
                         ),
                         tooltip: 'Flash ${_flashOn ? 'Kapat' : 'Aç'}',
                       ),
-                      
+
                       const SizedBox(width: 16),
-                      
+
                       // Tarama durumu
                       _buildScanButton(),
-                      
+
                       const SizedBox(width: 16),
-                      
+
                       // Kamerayı değiştir butonu
                       IconButton(
                         onPressed: _flipCamera,
@@ -753,9 +757,9 @@ class _QRScannerPageState extends State<QRScannerPage>
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Manuel giriş butonu
                   OutlinedButton.icon(
                     onPressed: _handleManualEntry,
@@ -764,7 +768,8 @@ class _QRScannerPageState extends State<QRScannerPage>
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -774,7 +779,7 @@ class _QRScannerPageState extends State<QRScannerPage>
               ),
             ),
           ),
-          
+
           // Alt bilgi
           Container(
             padding: const EdgeInsets.all(24),
@@ -824,7 +829,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: _scannedCode != null 
+            child: _scannedCode != null
                 ? Container(
                     color: AppColors.success.withOpacity(0.1),
                     child: Icon(
@@ -838,11 +843,12 @@ class _QRScannerPageState extends State<QRScannerPage>
                     : MobileScanner(
                         controller: _qrController!,
                         onDetect: _onQRCodeDetected,
-                        overlay: Container(), // Kendi overlay'imizi kullanıyoruz
+                        overlay:
+                            Container(), // Kendi overlay'imizi kullanıyoruz
                       ),
           ),
         ),
-        
+
         // Overlay ve border
         Container(
           width: 280,
@@ -851,16 +857,16 @@ class _QRScannerPageState extends State<QRScannerPage>
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: _scannedCode != null 
-                  ? AppColors.success 
-                  : _isScanning 
-                      ? AppColors.primary 
+              color: _scannedCode != null
+                  ? AppColors.success
+                  : _isScanning
+                      ? AppColors.primary
                       : AppColors.greyLight,
               width: 3,
             ),
           ),
         ),
-        
+
         // QR Tarama overlay çerçevesi
         if (_scannedCode == null)
           Container(
@@ -868,11 +874,12 @@ class _QRScannerPageState extends State<QRScannerPage>
             height: 280,
             child: CustomPaint(
               painter: QRScannerOverlayPainter(
-                borderColor: _isScanning ? AppColors.primary : AppColors.greyLight,
+                borderColor:
+                    _isScanning ? AppColors.primary : AppColors.greyLight,
               ),
             ),
           ),
-        
+
         // Köşe işaretleri
         Positioned.fill(
           child: Stack(
@@ -913,7 +920,7 @@ class _QRScannerPageState extends State<QRScannerPage>
             ],
           ),
         ),
-        
+
         // Tarama çizgisi
         if (_isScanning)
           AnimatedBuilder(
@@ -939,7 +946,7 @@ class _QRScannerPageState extends State<QRScannerPage>
               );
             },
           ),
-        
+
         // İçerik
         if (_scannedCode != null)
           ScaleTransition(
@@ -1012,7 +1019,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: _isScanning 
+        color: _isScanning
             ? AppColors.primary.withOpacity(0.1)
             : AppColors.greyLight.withOpacity(0.3),
         borderRadius: BorderRadius.circular(20),
@@ -1054,19 +1061,19 @@ class _QRScannerPageState extends State<QRScannerPage>
 
 class QRScannerOverlayPainter extends CustomPainter {
   final Color borderColor;
-  
+
   QRScannerOverlayPainter({required this.borderColor});
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = borderColor
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
-    
+
     final cornerLength = 30.0;
     final cornerRadius = 8.0;
-    
+
     // Sol üst köşe
     canvas.drawPath(
       Path()
@@ -1076,7 +1083,7 @@ class QRScannerOverlayPainter extends CustomPainter {
         ..lineTo(0, cornerLength),
       paint,
     );
-    
+
     // Sağ üst köşe
     canvas.drawPath(
       Path()
@@ -1086,7 +1093,7 @@ class QRScannerOverlayPainter extends CustomPainter {
         ..lineTo(size.width, cornerLength),
       paint,
     );
-    
+
     // Sol alt köşe
     canvas.drawPath(
       Path()
@@ -1096,7 +1103,7 @@ class QRScannerOverlayPainter extends CustomPainter {
         ..lineTo(cornerLength, size.height),
       paint,
     );
-    
+
     // Sağ alt köşe
     canvas.drawPath(
       Path()
@@ -1107,7 +1114,7 @@ class QRScannerOverlayPainter extends CustomPainter {
       paint,
     );
   }
-  
+
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => true;
-} 
+}

@@ -80,10 +80,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   // Animation controllers
   late AnimationController _fadeAnimationController;
   late AnimationController _slideAnimationController;
-  late AnimationController _fabAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late Animation<double> _fabScaleAnimation;
 
   @override
   void initState() {
@@ -123,11 +121,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       vsync: this,
     );
 
-    _fabAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeOut),
     );
@@ -137,11 +130,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       end: Offset.zero,
     ).animate(CurvedAnimation(
         parent: _slideAnimationController, curve: Curves.easeOutBack));
-
-    _fabScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _fabAnimationController, curve: Curves.elasticOut),
-    );
   }
 
   @override
@@ -151,7 +139,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     _categoryScrollController.dispose();
     _fadeAnimationController.dispose();
     _slideAnimationController.dispose();
-    _fabAnimationController.dispose();
     _cartService.removeCartListener(_onCartChanged);
     super.dispose();
   }
@@ -250,13 +237,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       setState(() {
         _cartItemCount = count;
       });
-
-      // FAB animasyonu
-      if (count > 0) {
-        _fabAnimationController.forward();
-      } else {
-        _fabAnimationController.reverse();
-      }
     }
   }
 
@@ -710,92 +690,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           : _hasError
               ? _buildErrorState()
               : _buildMenuContent(),
-      floatingActionButton: _buildCartFAB(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
-
-  Widget _buildCartFAB() {
-    return AnimatedBuilder(
-      animation: _fabScaleAnimation,
-      builder: (context, child) {
-        if (_cartItemCount == 0) return const SizedBox.shrink();
-
-        return Transform.scale(
-          scale: _fabScaleAnimation.value,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(25),
-              color: AppColors.primary,
-              child: InkWell(
-                onTap: _onCartPressed,
-                borderRadius: BorderRadius.circular(25),
-                child: Container(
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(25),
-                    gradient: LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryLight],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Icon(Icons.shopping_cart_rounded,
-                              color: AppColors.white, size: 24),
-                          Positioned(
-                            right: -8,
-                            top: -8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: AppColors.white, width: 2),
-                              ),
-                              constraints: const BoxConstraints(
-                                  minWidth: 20, minHeight: 20),
-                              child: Text(
-                                _cartItemCount > 99
-                                    ? '99+'
-                                    : _cartItemCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Sepete Git ($_cartItemCount)',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
