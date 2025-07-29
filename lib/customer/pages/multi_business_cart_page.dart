@@ -15,7 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart'; // Added for Shared
 class MultiBusinessCartPage extends StatefulWidget {
   final String userId;
 
-  const MultiBusinessCartPage({Key? key, required this.userId}) : super(key: key);
+  const MultiBusinessCartPage({Key? key, required this.userId})
+      : super(key: key);
 
   @override
   State<MultiBusinessCartPage> createState() => _MultiBusinessCartPageState();
@@ -23,7 +24,8 @@ class MultiBusinessCartPage extends StatefulWidget {
 
 class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
   final CartService _cartService = CartService();
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
 
   Map<String, Cart> _businessCarts = {};
   Map<String, Business> _businesses = {};
@@ -33,6 +35,21 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
   void initState() {
     super.initState();
     _loadAllCarts();
+
+    // Cart değişikliklerini dinle
+    _cartService.addCartListener(_onCartChanged);
+  }
+
+  @override
+  void dispose() {
+    _cartService.removeCartListener(_onCartChanged);
+    super.dispose();
+  }
+
+  void _onCartChanged(Cart cart) {
+    if (mounted) {
+      _loadAllCarts(); // Tüm sepetleri yeniden yükle
+    }
   }
 
   Future<void> _loadAllCarts() async {
@@ -42,74 +59,60 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
 
     try {
       await _cartService.initialize();
-      
+
       // STEP 1: Get current cart first (most reliable)
-      print('🔍 STEP 1: Checking current cart...');
       final prefs = await SharedPreferences.getInstance();
       final currentCartJson = prefs.getString('current_cart');
-      
+
       if (currentCartJson != null) {
         try {
           final cartData = jsonDecode(currentCartJson);
-          print('📦 Current cart found: $cartData');
-          
+
           final businessId = cartData['businessId'] as String?;
           if (businessId != null && businessId.isNotEmpty) {
-            print('🏪 Current cart business ID: $businessId');
-            
             // Load this business cart
             final cart = await _cartService.getCurrentCart(businessId);
-            print('📦 Cart for $businessId has ${cart.items.length} items');
-            
+
             if (cart.items.isNotEmpty) {
               _businessCarts[businessId] = cart;
-              print('✅ Added cart for business $businessId');
-              
+
               // Load business info
-              final business = await _businessFirestoreService.getBusiness(businessId);
+              final business =
+                  await _businessFirestoreService.getBusiness(businessId);
               if (business != null) {
                 _businesses[businessId] = business;
-                print('✅ Loaded business: ${business.businessName}');
               }
             }
           }
         } catch (e) {
-          print('❌ Error parsing current cart: $e');
+          // Ignore parsing errors
         }
       }
-      
+
       // STEP 2: Check additional business IDs if any
-      print('🔍 STEP 2: Checking for additional business IDs...');
       final additionalBusinessIds = await _getAdditionalBusinessIds();
-      
+
       for (final businessId in additionalBusinessIds) {
         if (!_businessCarts.containsKey(businessId)) {
           try {
-            print('🔍 Checking additional business: $businessId');
             final cart = await _cartService.getCurrentCart(businessId);
-            
+
             if (cart.items.isNotEmpty) {
               _businessCarts[businessId] = cart;
-              print('✅ Added additional cart for business $businessId');
-              
-              final business = await _businessFirestoreService.getBusiness(businessId);
+
+              final business =
+                  await _businessFirestoreService.getBusiness(businessId);
               if (business != null) {
                 _businesses[businessId] = business;
               }
             }
           } catch (e) {
-            print('❌ Error loading additional business $businessId: $e');
+            // Ignore individual business errors
           }
         }
       }
-      
-      print('🛒 FINAL RESULT: Loaded ${_businessCarts.length} business carts');
-      for (final entry in _businessCarts.entries) {
-        print('   - ${entry.key}: ${entry.value.items.length} items');
-      }
-      
     } catch (e) {
-      print('❌ Error in _loadAllCarts: $e');
+      // Ignore general errors
     } finally {
       setState(() {
         _isLoading = false;
@@ -121,7 +124,7 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final businessIds = <String>{};
-      
+
       // Check all keys for cart-related data
       final keys = prefs.getKeys();
       for (final key in keys) {
@@ -132,7 +135,7 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
           }
         }
       }
-      
+
       return businessIds.toList();
     } catch (e) {
       print('❌ Error getting additional business IDs: $e');
@@ -170,7 +173,8 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
       child: EmptyState(
         icon: Icons.shopping_cart_outlined,
         title: 'Sepetiniz Boş',
-        message: 'Henüz hiçbir işletmeden ürün eklemediniz.\nAlışverişe başlamak için işletmeleri keşfedin!',
+        message:
+            'Henüz hiçbir işletmeden ürün eklemediniz.\nAlışverişe başlamak için işletmeleri keşfedin!',
         actionText: 'İşletmeleri Keşfet',
         onActionPressed: () => Navigator.pop(context),
       ),
@@ -188,14 +192,15 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
           final businessId = _businessCarts.keys.elementAt(index);
           final cart = _businessCarts[businessId]!;
           final business = _businesses[businessId];
-          
+
           return _buildBusinessCartCard(businessId, cart, business);
         },
       ),
     );
   }
 
-  Widget _buildBusinessCartCard(String businessId, Cart cart, Business? business) {
+  Widget _buildBusinessCartCard(
+      String businessId, Cart cart, Business? business) {
     final totalAmount = cart.items.fold<double>(
       0,
       (sum, item) => sum + (item.productPrice * item.quantity),
@@ -282,9 +287,9 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Cart items preview
                 Column(
                   children: cart.items.take(3).map((item) {
@@ -322,7 +327,7 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
                     );
                   }).toList(),
                 ),
-                
+
                 if (cart.items.length > 3) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -333,9 +338,9 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
                     ),
                   ),
                 ],
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Action button
                 SizedBox(
                   width: double.infinity,
@@ -373,4 +378,4 @@ class _MultiBusinessCartPageState extends State<MultiBusinessCartPage> {
       ),
     );
   }
-} 
+}

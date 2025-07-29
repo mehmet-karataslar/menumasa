@@ -20,7 +20,7 @@ class CustomerService {
   static const String _customerProfilesCollection = 'customer_profiles';
   static const String _businessCollection = 'businesses';
   static const String _ordersCollection = 'orders';
-  
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final StorageService _storageService = StorageService();
   CustomerUser? _currentCustomer;
@@ -36,7 +36,8 @@ class CustomerService {
   CustomerUser? get currentCustomer => _currentCustomer;
   CustomerSession? get currentSession => _currentSession;
   CustomerProfile? get currentProfile => _currentProfile;
-  bool get isLoggedIn => _currentCustomer != null && _currentSession?.isValid == true;
+  bool get isLoggedIn =>
+      _currentCustomer != null && _currentSession?.isValid == true;
 
   // PROFILE MANAGEMENT METHODS
 
@@ -61,7 +62,7 @@ class CustomerService {
   Future<CustomerProfile> createCustomerProfile(String customerId) async {
     try {
       final profile = CustomerProfile.newCustomer(customerId);
-      
+
       await _firestore
           .collection(_customerProfilesCollection)
           .doc(customerId)
@@ -89,7 +90,7 @@ class CustomerService {
       }
 
       CustomerProfile? profile = _currentProfile;
-      
+
       // Profil yoksa oluştur
       if (profile == null) {
         profile = await createCustomerProfile(_currentCustomer!.customerId);
@@ -157,7 +158,7 @@ class CustomerService {
 
       // Profildeki resim URL'ini güncelle
       CustomerProfile? profile = _currentProfile;
-      
+
       if (profile == null) {
         profile = await createCustomerProfile(_currentCustomer!.customerId);
       }
@@ -171,9 +172,9 @@ class CustomerService {
           .collection(_customerProfilesCollection)
           .doc(_currentCustomer!.customerId)
           .update({
-            'profileImageUrl': imageUrl,
-            'updatedAt': Timestamp.fromDate(DateTime.now()),
-          });
+        'profileImageUrl': imageUrl,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
 
       _currentProfile = updatedProfile;
 
@@ -191,17 +192,18 @@ class CustomerService {
       }
 
       CustomerProfile? profile = _currentProfile;
-      
+
       if (profile == null) {
         profile = await createCustomerProfile(_currentCustomer!.customerId);
       }
 
       final addresses = List<CustomerAddress>.from(profile.addresses);
-      
+
       // Eğer bu ilk adres ise veya default olarak işaretlenmişse diğerlerini default olmaktan çıkar
       if (address.isDefault || addresses.isEmpty) {
         for (int i = 0; i < addresses.length; i++) {
-          addresses[i] = CustomerAddress.fromMap(addresses[i].toMap()..['isDefault'] = false);
+          addresses[i] = CustomerAddress.fromMap(
+              addresses[i].toMap()..['isDefault'] = false);
         }
       }
 
@@ -227,14 +229,15 @@ class CustomerService {
   }
 
   /// Konum ayarlarını güncelle
-  Future<LocationSettings> updateLocationSettings(LocationSettings settings) async {
+  Future<LocationSettings> updateLocationSettings(
+      LocationSettings settings) async {
     try {
       if (_currentCustomer == null) {
         throw CustomerException('Kullanıcı girişi yapılmamış');
       }
 
       CustomerProfile? profile = _currentProfile;
-      
+
       if (profile == null) {
         profile = await createCustomerProfile(_currentCustomer!.customerId);
       }
@@ -248,9 +251,9 @@ class CustomerService {
           .collection(_customerProfilesCollection)
           .doc(_currentCustomer!.customerId)
           .update({
-            'locationSettings': settings.toMap(),
-            'updatedAt': Timestamp.fromDate(DateTime.now()),
-          });
+        'locationSettings': settings.toMap(),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
 
       _currentProfile = updatedProfile;
 
@@ -261,14 +264,15 @@ class CustomerService {
   }
 
   /// Bildirim ayarlarını güncelle
-  Future<NotificationSettings> updateNotificationSettings(NotificationSettings settings) async {
+  Future<NotificationSettings> updateNotificationSettings(
+      NotificationSettings settings) async {
     try {
       if (_currentCustomer == null) {
         throw CustomerException('Kullanıcı girişi yapılmamış');
       }
 
       CustomerProfile? profile = _currentProfile;
-      
+
       if (profile == null) {
         profile = await createCustomerProfile(_currentCustomer!.customerId);
       }
@@ -282,9 +286,9 @@ class CustomerService {
           .collection(_customerProfilesCollection)
           .doc(_currentCustomer!.customerId)
           .update({
-            'notificationSettings': settings.toMap(),
-            'updatedAt': Timestamp.fromDate(DateTime.now()),
-          });
+        'notificationSettings': settings.toMap(),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
 
       _currentProfile = updatedProfile;
 
@@ -295,14 +299,15 @@ class CustomerService {
   }
 
   /// Gizlilik ayarlarını güncelle
-  Future<PrivacySettings> updatePrivacySettings(PrivacySettings settings) async {
+  Future<PrivacySettings> updatePrivacySettings(
+      PrivacySettings settings) async {
     try {
       if (_currentCustomer == null) {
         throw CustomerException('Kullanıcı girişi yapılmamış');
       }
 
       CustomerProfile? profile = _currentProfile;
-      
+
       if (profile == null) {
         profile = await createCustomerProfile(_currentCustomer!.customerId);
       }
@@ -316,9 +321,9 @@ class CustomerService {
           .collection(_customerProfilesCollection)
           .doc(_currentCustomer!.customerId)
           .update({
-            'privacySettings': settings.toMap(),
-            'updatedAt': Timestamp.fromDate(DateTime.now()),
-          });
+        'privacySettings': settings.toMap(),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
 
       _currentProfile = updatedProfile;
 
@@ -336,7 +341,7 @@ class CustomerService {
       }
 
       CustomerProfile? profile = _currentProfile;
-      
+
       if (profile == null) {
         profile = await createCustomerProfile(_currentCustomer!.customerId);
       }
@@ -350,9 +355,9 @@ class CustomerService {
           .collection(_customerProfilesCollection)
           .doc(_currentCustomer!.customerId)
           .update({
-            'statistics': stats.toMap(),
-            'updatedAt': Timestamp.fromDate(DateTime.now()),
-          });
+        'statistics': stats.toMap(),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
 
       _currentProfile = updatedProfile;
 
@@ -367,7 +372,7 @@ class CustomerService {
     try {
       // Profili yükle
       _currentProfile = await getCustomerProfile(customerId);
-      
+
       // Profil yoksa oluştur
       if (_currentProfile == null) {
         _currentProfile = await createCustomerProfile(customerId);
@@ -382,7 +387,7 @@ class CustomerService {
     try {
       // QR kod data'sını parse et
       final qrData = _parseQRCodeData(qrCodeData);
-      
+
       if (qrData['businessId'] == null) {
         throw CustomerException('Geçersiz QR kod');
       }
@@ -406,7 +411,8 @@ class CustomerService {
         targetType: 'BUSINESS',
         targetId: businessId,
         targetName: business.businessName,
-        details: 'QR kod tarandı: ${business.businessName}${tableNumber != null ? ' - Masa $tableNumber' : ''}',
+        details:
+            'QR kod tarandı: ${business.businessName}${tableNumber != null ? ' - Masa $tableNumber' : ''}',
         businessId: businessId,
         qrCodeId: qrCodeData,
         metadata: {
@@ -502,7 +508,7 @@ class CustomerService {
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
-          
+
           await _firestore
               .collection(_customerCollection)
               .doc(customerId)
@@ -525,7 +531,8 @@ class CustomerService {
         action: CustomerActionType.login,
         targetType: 'SYSTEM',
         targetId: 'customer_app',
-        details: isAnonymous ? 'Anonim giriş yapıldı' : 'Müşteri girişi yapıldı',
+        details:
+            isAnonymous ? 'Anonim giriş yapıldı' : 'Müşteri girişi yapıldı',
       );
 
       return customer;
@@ -565,7 +572,7 @@ class CustomerService {
         'businessName': business.businessName,
         'items': orderItems,
         'totalAmount': orderItems.fold<double>(
-          0.0, 
+          0.0,
           (sum, item) => sum + (item['price'] * item['quantity']),
         ),
         'status': 'pending',
@@ -576,10 +583,7 @@ class CustomerService {
         'isPaid': false,
       };
 
-      await _firestore
-          .collection(_ordersCollection)
-          .doc(orderId)
-          .set(order);
+      await _firestore.collection(_ordersCollection).doc(orderId).set(order);
 
       // Activity log kaydet
       await _logActivity(
@@ -587,7 +591,8 @@ class CustomerService {
         targetType: 'ORDER',
         targetId: orderId,
         targetName: 'Sipariş #${orderId.substring(0, 8)}',
-        details: 'Sipariş verildi: ${business.businessName} - ${orderItems.length} ürün',
+        details:
+            'Sipariş verildi: ${business.businessName} - ${orderItems.length} ürün',
         businessId: businessId,
         metadata: {
           'orderAmount': order['totalAmount'],
@@ -615,12 +620,13 @@ class CustomerService {
         throw CustomerException('İşletme bulunamadı');
       }
 
-      final isFavorite = _currentCustomer!.favoriteBusinessIds.contains(businessId);
-      
+      final isFavorite =
+          _currentCustomer!.favoriteBusinessIds.contains(businessId);
+
       if (isFavorite) {
         // Favorilerden çıkar
         await _removeFavorite(businessId);
-        
+
         await _logActivity(
           action: CustomerActionType.favoriteRemove,
           targetType: 'BUSINESS',
@@ -632,7 +638,7 @@ class CustomerService {
       } else {
         // Favorilere ekle
         await _addFavorite(businessId, business);
-        
+
         await _logActivity(
           action: CustomerActionType.favoriteAdd,
           targetType: 'BUSINESS',
@@ -666,7 +672,9 @@ class CustomerService {
 
       final querySnapshot = await query.get();
       return querySnapshot.docs
-          .map((doc) => app_order.Order.fromJson(doc.data() as Map<String, dynamic>, id: doc.id))
+          .map((doc) => app_order.Order.fromJson(
+              doc.data() as Map<String, dynamic>,
+              id: doc.id))
           .toList();
     } catch (e) {
       throw CustomerException('Siparişler alınırken hata: $e');
@@ -674,7 +682,8 @@ class CustomerService {
   }
 
   /// Ürün favorilerine ekleme/çıkarma
-  Future<void> toggleProductFavorite(String productId, String businessId) async {
+  Future<void> toggleProductFavorite(
+      String productId, String businessId) async {
     try {
       if (_currentCustomer == null) {
         throw CustomerException('Giriş yapılması gerekli');
@@ -692,30 +701,33 @@ class CustomerService {
         throw CustomerException('İşletme bulunamadı');
       }
 
-      final isFavorite = _currentCustomer!.favoriteProductIds.contains(productId);
-      
+      final isFavorite =
+          _currentCustomer!.favoriteProductIds.contains(productId);
+
       if (isFavorite) {
         // Favorilerden çıkar
         await _removeProductFavorite(productId);
-        
+
         await _logActivity(
           action: CustomerActionType.favoriteRemove,
           targetType: 'PRODUCT',
           targetId: productId,
           targetName: product.productName,
-          details: 'Ürün favorilerden çıkarıldı: ${product.productName} (${business.businessName})',
+          details:
+              'Ürün favorilerden çıkarıldı: ${product.productName} (${business.businessName})',
           businessId: businessId,
         );
       } else {
         // Favorilere ekle
         await _addProductFavorite(productId, product, business);
-        
+
         await _logActivity(
           action: CustomerActionType.favoriteAdd,
           targetType: 'PRODUCT',
           targetId: productId,
           targetName: product.productName,
-          details: 'Ürün favorilere eklendi: ${product.productName} (${business.businessName})',
+          details:
+              'Ürün favorilere eklendi: ${product.productName} (${business.businessName})',
           businessId: businessId,
         );
       }
@@ -752,14 +764,16 @@ class CustomerService {
       }
 
       // Sipariş öğesini oluştur
-      final orderItems = [{
-        'productId': productId,
-        'productName': product.productName,
-        'price': product.price,
-        'quantity': quantity,
-        'notes': notes,
-        'businessId': businessId,
-      }];
+      final orderItems = [
+        {
+          'productId': productId,
+          'productName': product.productName,
+          'price': product.price,
+          'quantity': quantity,
+          'notes': notes,
+          'businessId': businessId,
+        }
+      ];
 
       // Sipariş ver
       final orderId = await placeOrder(
@@ -798,10 +812,11 @@ class CustomerService {
   }
 
   /// Favori ürünleri getir
-  Future<List<app_user.ProductFavorite>> getFavoriteProducts({String? customerId}) async {
+  Future<List<app_user.ProductFavorite>> getFavoriteProducts(
+      {String? customerId}) async {
     try {
       String? userId;
-      
+
       if (customerId != null) {
         userId = customerId;
       } else if (_currentCustomer != null) {
@@ -812,7 +827,8 @@ class CustomerService {
       }
 
       // CustomerProfile'dan favori ürünleri al
-      if (_currentProfile?.productFavorites != null && _currentCustomer != null) {
+      if (_currentProfile?.productFavorites != null &&
+          _currentCustomer != null) {
         return _currentProfile!.productFavorites;
       }
 
@@ -836,7 +852,8 @@ class CustomerService {
   /// Favori ürün ID'lerini getir
   Future<List<String>> getFavoriteProductIds({String? customerId}) async {
     try {
-      final favoriteProducts = await getFavoriteProducts(customerId: customerId);
+      final favoriteProducts =
+          await getFavoriteProducts(customerId: customerId);
       return favoriteProducts.map((f) => f.productId).toList();
     } catch (e) {
       print('Favori ürün ID\'leri alınırken hata: $e');
@@ -851,7 +868,7 @@ class CustomerService {
       final uri = Uri.parse(qrCodeData);
       final businessId = uri.queryParameters['businessId'];
       final tableNumber = uri.queryParameters['table'];
-      
+
       return {
         'businessId': businessId,
         'tableNumber': tableNumber,
@@ -863,7 +880,10 @@ class CustomerService {
 
   Future<Business?> _getBusiness(String businessId) async {
     try {
-      final doc = await _firestore.collection(_businessCollection).doc(businessId).get();
+      final doc = await _firestore
+          .collection(_businessCollection)
+          .doc(businessId)
+          .get();
       if (doc.exists) {
         return Business.fromJson(doc.data()!, id: doc.id);
       }
@@ -895,7 +915,8 @@ class CustomerService {
     String? deviceId,
     String? fcmToken,
   }) async {
-    final sessionId = _firestore.collection(_customerSessionsCollection).doc().id;
+    final sessionId =
+        _firestore.collection(_customerSessionsCollection).doc().id;
     final session = CustomerSession(
       sessionId: sessionId,
       customerId: customerId,
@@ -946,9 +967,7 @@ class CustomerService {
       businessId: businessId,
     );
 
-    await _firestore
-        .collection(_customerLogsCollection)
-        .add(log.toFirestore());
+    await _firestore.collection(_customerLogsCollection).add(log.toFirestore());
   }
 
   /// Convert CustomerActionType to CustomerActivityType
@@ -1007,7 +1026,10 @@ class CustomerService {
     );
 
     final updatedFavorites = [..._currentCustomer!.favorites, favorite];
-    final updatedFavoriteIds = [..._currentCustomer!.favoriteBusinessIds, businessId];
+    final updatedFavoriteIds = [
+      ..._currentCustomer!.favoriteBusinessIds,
+      businessId
+    ];
 
     final updatedCustomer = _currentCustomer!.copyWith(
       favorites: updatedFavorites,
@@ -1062,7 +1084,7 @@ class CustomerService {
     try {
       // Action string'i CustomerActionType'a map et
       CustomerActionType? actionType;
-      
+
       switch (action.toLowerCase()) {
         case 'qr_scan':
         case 'qrscan':
@@ -1117,7 +1139,8 @@ class CustomerService {
     }
   }
 
-  Future<void> _addProductFavorite(String productId, Product product, Business business) async {
+  Future<void> _addProductFavorite(
+      String productId, Product product, Business business) async {
     if (_currentCustomer == null) return;
 
     final favoriteId = _firestore.collection('product_favorites').doc().id;
@@ -1131,8 +1154,8 @@ class CustomerService {
       productDescription: product.description,
       productPrice: product.price,
       productImage: product.imageUrl,
-      businessName: business.businessName,
-             categoryName: null, // product.categoryName yerine null
+      businessName: business.businessName, // İşletme adını kaydet
+      categoryName: null,
       addedDate: DateTime.now(),
     );
 
@@ -1143,8 +1166,14 @@ class CustomerService {
         .set(favorite.toJson());
 
     // Local customer data güncelle
-    final updatedProductFavorites = [..._currentCustomer!.productFavorites, favorite];
-    final updatedFavoriteProductIds = [..._currentCustomer!.favoriteProductIds, productId];
+    final updatedProductFavorites = [
+      ..._currentCustomer!.productFavorites,
+      favorite
+    ];
+    final updatedFavoriteProductIds = [
+      ..._currentCustomer!.favoriteProductIds,
+      productId
+    ];
 
     final updatedCustomer = _currentCustomer!.copyWith(
       productFavorites: updatedProductFavorites,
@@ -1210,7 +1239,7 @@ class CustomerService {
       for (final doc in query.docs) {
         final currentData = doc.data();
         final currentOrderCount = currentData['orderCount'] ?? 0;
-        
+
         await doc.reference.update({
           'orderCount': currentOrderCount + 1,
           'lastOrderedAt': Timestamp.fromDate(DateTime.now()),
@@ -1218,7 +1247,8 @@ class CustomerService {
       }
 
       // Local data'yı da güncelle
-      final updatedProductFavorites = _currentCustomer!.productFavorites.map((favorite) {
+      final updatedProductFavorites =
+          _currentCustomer!.productFavorites.map((favorite) {
         if (favorite.productId == productId) {
           return favorite.copyWith(
             orderCount: favorite.orderCount + 1,
@@ -1243,4 +1273,4 @@ class CustomerService {
       print('Product favorite order count update error: $e');
     }
   }
-} 
+}

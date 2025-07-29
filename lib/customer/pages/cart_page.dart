@@ -19,7 +19,8 @@ class CartPage extends StatefulWidget {
   final String businessId;
   final String? userId;
 
-  const CartPage({Key? key, required this.businessId, this.userId}) : super(key: key);
+  const CartPage({Key? key, required this.businessId, this.userId})
+      : super(key: key);
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -28,7 +29,8 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   final CartService _cartService = CartService();
   final CustomerService _customerService = CustomerService();
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
   final CoreFirestoreService _coreFirestoreService = CoreFirestoreService();
 
   Cart? _cart;
@@ -38,7 +40,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
 
   // Order form controllers
   final TextEditingController _customerNameController = TextEditingController();
-  final TextEditingController _customerPhoneController = TextEditingController();
+  final TextEditingController _customerPhoneController =
+      TextEditingController();
   final TextEditingController _tableNumberController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
@@ -62,15 +65,17 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _fadeAnimationController, curve: Curves.easeInOut),
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeOutCubic));
-    
+    ).animate(CurvedAnimation(
+        parent: _slideAnimationController, curve: Curves.easeOutCubic));
+
     _loadData();
     _cartService.addCartListener(_onCartChanged);
   }
@@ -104,14 +109,15 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       await _cartService.initialize();
 
       final cart = await _cartService.getCurrentCart(widget.businessId);
-      final business = await _customerFirestoreService.getBusiness(widget.businessId);
+      final business =
+          await _customerFirestoreService.getBusiness(widget.businessId);
 
       setState(() {
         _cart = cart;
         _business = business;
         _isLoading = false;
       });
-      
+
       _fadeAnimationController.forward();
       _slideAnimationController.forward();
     } catch (e) {
@@ -124,7 +130,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             content: Text('Sepet yüklenirken hata oluştu: $e'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -168,7 +175,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -234,7 +242,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: Text('Temizle'),
           ),
@@ -258,7 +267,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               ),
               backgroundColor: AppColors.success,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           );
         }
@@ -320,12 +330,13 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
 
       final customerName = _customerNameController.text.trim();
       final customerPhone = _customerPhoneController.text.trim();
-      
+
       // Misafir modu için temporary user ID oluştur
       final authService = AuthService();
       final currentUser = authService.currentUser;
-      final customerId = currentUser?.uid ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
-      
+      final customerId =
+          currentUser?.uid ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
+
       final order = app_order.Order.fromCart(
         _cart!,
         customerId: customerId,
@@ -337,7 +348,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             : null,
       );
 
-      final orderId = await _coreFirestoreService.createOrderWithNotification(order);
+      final orderId =
+          await _coreFirestoreService.createOrderWithNotification(order);
       final savedOrder = order.copyWith(orderId: orderId);
 
       await _cartService.clearCart(widget.businessId);
@@ -364,11 +376,11 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   Future<dynamic> _checkAuthenticationForOrder() async {
     final authService = AuthService();
     final currentUser = authService.currentUser;
-    
+
     if (currentUser != null) {
       return currentUser; // Kullanıcı giriş yapmış
     }
-    
+
     // Kullanıcı giriş yapmamış, auth dialog göster
     final result = await showDialog<String>(
       context: context,
@@ -385,7 +397,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.person_add_rounded, color: AppColors.white, size: 24),
+              child: Icon(Icons.person_add_rounded,
+                  color: AppColors.white, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -411,25 +424,34 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                      Icon(Icons.check_circle_outline,
+                          color: AppColors.success, size: 20),
                       const SizedBox(width: 8),
-                      Expanded(child: Text('Sipariş takibi', style: AppTypography.bodyMedium)),
+                      Expanded(
+                          child: Text('Sipariş takibi',
+                              style: AppTypography.bodyMedium)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                      Icon(Icons.check_circle_outline,
+                          color: AppColors.success, size: 20),
                       const SizedBox(width: 8),
-                      Expanded(child: Text('Garson çağırma', style: AppTypography.bodyMedium)),
+                      Expanded(
+                          child: Text('Garson çağırma',
+                              style: AppTypography.bodyMedium)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                      Icon(Icons.check_circle_outline,
+                          color: AppColors.success, size: 20),
                       const SizedBox(width: 8),
-                      Expanded(child: Text('Sipariş geçmişi', style: AppTypography.bodyMedium)),
+                      Expanded(
+                          child: Text('Sipariş geçmişi',
+                              style: AppTypography.bodyMedium)),
                     ],
                   ),
                 ],
@@ -450,7 +472,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             onPressed: () => Navigator.pop(context, 'cancel'),
             child: Text(
               'Vazgeç',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
             ),
           ),
           Row(
@@ -461,7 +484,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   side: BorderSide(color: AppColors.primary),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text('Giriş Yap'),
               ),
@@ -471,7 +495,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text('Kayıt Ol'),
               ),
@@ -480,13 +505,13 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
         ],
       ),
     );
-    
+
     if (result == 'login') {
       Navigator.pushNamed(context, '/login');
     } else if (result == 'register') {
       Navigator.pushNamed(context, '/register');
     }
-    
+
     return null; // Auth gerekli, işlem iptal edildi
   }
 
@@ -547,9 +572,11 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               ),
               child: Column(
                 children: [
-                  _buildOrderInfoRow('Sipariş No', '#${order.orderId.substring(0, 8)}'),
+                  _buildOrderInfoRow(
+                      'Sipariş No', '#${order.orderId.substring(0, 8)}'),
                   _buildOrderInfoRow('Masa', 'Masa ${order.tableNumber}'),
-                  _buildOrderInfoRow('Toplam', '${order.totalAmount.toStringAsFixed(2)} ₺'),
+                  _buildOrderInfoRow(
+                      'Toplam', '${order.totalAmount.toStringAsFixed(2)} ₺'),
                 ],
               ),
             ),
@@ -579,7 +606,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: Text('Siparişlerimi Gör'),
           ),
@@ -620,12 +648,12 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       body: _isLoading
           ? Center(child: LoadingIndicator())
           : _cart == null || _cart!.isEmpty
-          ? _buildEmptyCart()
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              color: AppColors.primary,
-              child: _buildCartContent(),
-            ),
+              ? _buildEmptyCart()
+              : RefreshIndicator(
+                  onRefresh: _loadData,
+                  color: AppColors.primary,
+                  child: _buildCartContent(),
+                ),
     );
   }
 
@@ -797,12 +825,14 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                                 width: 80,
                                 height: 80,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Icon(
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(
                                   Icons.restaurant_rounded,
                                   color: AppColors.textSecondary,
                                   size: 32,
                                 ),
-                                loadingBuilder: (context, child, loadingProgress) {
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
                                   if (loadingProgress == null) return child;
                                   return Center(
                                     child: SizedBox(
@@ -810,7 +840,9 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                AppColors.primary),
                                       ),
                                     ),
                                   );
@@ -850,7 +882,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                         if (item.notes != null && item.notes!.isNotEmpty) ...[
                           SizedBox(height: 8),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.info.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -988,7 +1021,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
           if (_isFormExpanded)
             Container(
               constraints: BoxConstraints(
-                maxHeight: 350, // Reduced from 400 to prevent overflow
+                maxHeight: 300, // Reduced from 350 to prevent overflow
               ),
               child: _buildOrderFormContent(),
             ),
@@ -1212,8 +1245,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                     width: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.white),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.white),
                     ),
                   ),
                   SizedBox(width: 12),
@@ -1245,32 +1278,32 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   Future<bool> _validateOrderInfo() async {
     final authService = AuthService();
     final currentUser = authService.currentUser;
-    
+
     if (currentUser != null) {
       // Kayıtlı kullanıcı - direkt sipariş verebilir
       return true;
     }
-    
+
     // Misafir modu - gerekli bilgileri kontrol et
     final customerName = _customerNameController.text.trim();
     final customerPhone = _customerPhoneController.text.trim();
-    
+
     if (customerName.isEmpty) {
       _showErrorSnackBar('Misafir modunda ad-soyad zorunludur');
       return false;
     }
-    
+
     if (customerPhone.isEmpty) {
       _showErrorSnackBar('Misafir modunda telefon numarası zorunludur');
       return false;
     }
-    
+
     // Telefon numarası format kontrolü
     if (customerPhone.length < 10) {
       _showErrorSnackBar('Geçerli bir telefon numarası girin');
       return false;
     }
-    
+
     // Misafir modu bilgilendirme dialog'u göster
     final result = await showDialog<bool>(
       context: context,
@@ -1282,7 +1315,10 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.warning, AppColors.warning.withOpacity(0.8)],
+                  colors: [
+                    AppColors.warning,
+                    AppColors.warning.withOpacity(0.8)
+                  ],
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1340,7 +1376,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text('Kayıt Ol'),
                   ),
@@ -1352,7 +1389,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.warning,
                       foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text('Misafir Olarak Devam'),
                   ),
@@ -1363,7 +1401,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
         ),
       ),
     );
-    
+
     return result ?? false;
   }
 }

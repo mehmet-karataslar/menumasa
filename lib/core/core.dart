@@ -18,6 +18,9 @@ export 'permissions/business_permissions.dart';
 export 'interfaces/repository.dart';
 export 'interfaces/user_repository.dart';
 
+// Utils
+export 'utils/date_utils.dart';
+
 // Repositories
 export 'repositories/user_repository_impl.dart';
 
@@ -36,4 +39,4 @@ export 'constants/app_typography.dart';
 export 'constants/app_dimensions.dart';
 
 // Utils
-export 'utils/time_rule_utils.dart'; 
+export 'utils/time_rule_utils.dart';

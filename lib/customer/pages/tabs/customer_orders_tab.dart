@@ -8,7 +8,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../services/customer_firestore_service.dart';
 import '../../../presentation/widgets/shared/empty_state.dart';
 import '../../../core/services/url_service.dart';
-
+import '../../../core/utils/date_utils.dart' as date_utils;
 
 /// Müşteri siparişler tab'ı
 class CustomerOrdersTab extends StatefulWidget {
@@ -28,8 +28,10 @@ class CustomerOrdersTab extends StatefulWidget {
 }
 
 class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
   final UrlService _urlService = UrlService(); // Added UrlService instance
 
   List<app_order.Order> _orders = [];
@@ -50,7 +52,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
   }
 
   void _setupOrderListener() {
-    _customerFirestoreService.startCustomerOrderListener(widget.userId, _onOrdersChanged);
+    _customerFirestoreService.startCustomerOrderListener(
+        widget.userId, _onOrdersChanged);
   }
 
   void _onOrdersChanged(List<app_order.Order> orders) {
@@ -71,7 +74,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
 
     for (final businessId in businessIds) {
       try {
-        final business = await _businessFirestoreService.getBusiness(businessId);
+        final business =
+            await _businessFirestoreService.getBusiness(businessId);
         if (business != null && mounted) {
           setState(() {
             _businessCache[businessId] = business;
@@ -93,7 +97,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
     });
 
     try {
-      final orders = await _customerFirestoreService.getOrdersByCustomer(widget.userId);
+      final orders =
+          await _customerFirestoreService.getOrdersByCustomer(widget.userId);
       setState(() {
         _orders = orders;
       });
@@ -141,7 +146,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
 
   Widget _buildModernOrderCard(app_order.Order order) {
     final business = _getBusinessForOrder(order);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -184,7 +189,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  business?.businessName ?? 'İşletme Bulunamadı',
+                                  business?.businessName ??
+                                      'İşletme Bulunamadı',
                                   style: AppTypography.bodyLarge.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.primary,
@@ -204,7 +210,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _formatOrderDate(order.createdAt),
+                            date_utils.DateUtils.formatOrderListDate(
+                                order.createdAt),
                             style: AppTypography.caption.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -213,7 +220,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: _getOrderStatusColor(order.status),
                         borderRadius: BorderRadius.circular(20),
@@ -228,9 +236,9 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Orta kısım - Sipariş detayları
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -286,7 +294,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _getTimeAgo(order.createdAt),
+                            date_utils.DateUtils.formatTimeAgo(order.createdAt),
                             style: AppTypography.bodyMedium.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -296,9 +304,9 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Alt kısım - Toplam ve eylemler
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -328,7 +336,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: _getOrderStatusColor(order.status).withOpacity(0.1),
+                            color: _getOrderStatusColor(order.status)
+                                .withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -405,7 +414,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
             onPressed: () {
               // Navigate to home tab (search businesses) with URL update
               final timestamp = DateTime.now().millisecondsSinceEpoch;
-              _urlService.updateCustomerUrl(widget.userId, 'dashboard', customTitle: 'Ana Sayfa | MasaMenu');
+              _urlService.updateCustomerUrl(widget.userId, 'dashboard',
+                  customTitle: 'Ana Sayfa | MasaMenu');
               DefaultTabController.of(context)?.animateTo(0);
             },
             icon: Icon(Icons.search_rounded),
@@ -426,7 +436,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
 
   void _showOrderDetails(app_order.Order order) {
     final business = _getBusinessForOrder(order);
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -455,7 +465,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Header
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -476,7 +486,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  business?.businessName ?? 'İşletme Bulunamadı',
+                                  business?.businessName ??
+                                      'İşletme Bulunamadı',
                                   style: AppTypography.h6.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.primary,
@@ -496,7 +507,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Sipariş #${order.orderId.substring(0, 8)} • ${_formatOrderDate(order.createdAt)}',
+                            'Sipariş #${order.orderId.substring(0, 8)} • ${date_utils.DateUtils.formatCustomerDateTime(order.createdAt)}',
                             style: AppTypography.bodyMedium.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -505,7 +516,8 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: _getOrderStatusColor(order.status),
                         borderRadius: BorderRadius.circular(20),
@@ -521,7 +533,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                   ],
                 ),
               ),
-              
+
               // Content
               Expanded(
                 child: ListView(
@@ -537,7 +549,10 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                       ),
                       child: Column(
                         children: [
-                          _buildDetailRow('Tarih', _formatOrderDate(order.createdAt)),
+                          _buildDetailRow(
+                              'Tarih',
+                              date_utils.DateUtils.formatDetailedDateTime(
+                                  order.createdAt)),
                           const SizedBox(height: 12),
                           _buildDetailRow('Masa', 'Masa ${order.tableNumber}'),
                           const SizedBox(height: 12),
@@ -547,9 +562,9 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Sipariş ürünleri
                     Text(
                       'Sipariş Ürünleri',
@@ -559,66 +574,72 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ...order.items.map((item) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.greyLight),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.productName,
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
+                    ...order.items
+                        .map((item) => Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.greyLight),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.productName,
+                                          style:
+                                              AppTypography.bodyMedium.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        if (item.notes?.isNotEmpty == true) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Not: ${item.notes}',
+                                            style:
+                                                AppTypography.caption.copyWith(
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                if (item.notes?.isNotEmpty == true) ...[
-                                  const SizedBox(height: 4),
                                   Text(
-                                    'Not: ${item.notes}',
-                                    style: AppTypography.caption.copyWith(
+                                    '${item.quantity}x',
+                                    style: AppTypography.bodyMedium.copyWith(
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${(item.price * item.quantity).toStringAsFixed(2)}₺',
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
                                 ],
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '${item.quantity}x',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '${(item.price * item.quantity).toStringAsFixed(2)}₺',
-                            style: AppTypography.bodyMedium.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )).toList(),
-                    
+                              ),
+                            ))
+                        .toList(),
+
                     const SizedBox(height: 20),
-                    
+
                     // Toplam
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                        border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -640,7 +661,7 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -736,30 +757,4 @@ class _CustomerOrdersTabState extends State<CustomerOrdersTab> {
         return 'İptal Edildi';
     }
   }
-
-  String _formatOrderDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inDays == 0) {
-      return 'Bugün ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays == 1) {
-      return 'Dün ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
-
-  String _getTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} dk önce';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} sa önce';
-    } else {
-      return '${difference.inDays} gün önce';
-    }
-  }
-} 
+}

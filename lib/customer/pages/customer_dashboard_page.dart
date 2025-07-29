@@ -26,7 +26,7 @@ class CustomerDashboardPage extends StatefulWidget {
   final String userId;
   final int initialTabIndex;
   const CustomerDashboardPage({
-    super.key, 
+    super.key,
     required this.userId,
     this.initialTabIndex = 0,
   });
@@ -38,7 +38,8 @@ class CustomerDashboardPage extends StatefulWidget {
 class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     with TickerProviderStateMixin, UrlMixin {
   final AuthService _authService = AuthService();
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
   final UrlService _urlService = UrlService();
   final CartService _cartService = CartService();
 
@@ -59,8 +60,22 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   late Animation<double> _fabScaleAnimation;
 
   // Tab route mappings
-  final List<String> _tabRoutes = ['dashboard', 'orders', 'favorites', 'carts', 'services', 'profile'];
-  final List<String> _tabTitles = ['Ana Sayfa', 'Siparişlerim', 'Favorilerim', 'Sepetlerim', 'Hizmetler', 'Profil'];
+  final List<String> _tabRoutes = [
+    'dashboard',
+    'orders',
+    'favorites',
+    'carts',
+    'services',
+    'profile'
+  ];
+  final List<String> _tabTitles = [
+    'Ana Sayfa',
+    'Siparişlerim',
+    'Favorilerim',
+    'Sepetlerim',
+    'Hizmetler',
+    'Profil'
+  ];
 
   @override
   void initState() {
@@ -69,7 +84,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     _loadUserData();
     _initCartTracking();
     _initAnimations();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateCustomerUrl();
       _animationController.forward();
@@ -80,7 +95,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     await _cartService.initialize();
     // Mevcut sepet sayısını al
     _updateCartCount();
-    
+
     // Cart değişikliklerini dinle
     _cartService.addCartListener((cart) {
       if (mounted) {
@@ -96,25 +111,23 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       // Sadece current cart'ı kontrol et (en güvenilir yöntem)
       final prefs = await SharedPreferences.getInstance();
       final currentCartJson = prefs.getString('current_cart');
-      
+
       if (currentCartJson != null) {
         try {
           final cartData = jsonDecode(currentCartJson);
           final businessId = cartData['businessId'] as String?;
-          
+
           if (businessId != null && businessId.isNotEmpty) {
             final cartCount = await _cartService.getCartItemCount(businessId);
             setState(() {
               _cartItemCount = cartCount;
             });
-            print('📊 Cart count for $businessId: $cartCount');
           } else {
             setState(() {
               _cartItemCount = 0;
             });
           }
         } catch (e) {
-          print('❌ Error parsing current cart for count: $e');
           setState(() {
             _cartItemCount = 0;
           });
@@ -123,19 +136,17 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
         setState(() {
           _cartItemCount = 0;
         });
-        print('📊 No current cart found, count = 0');
       }
     } catch (e) {
       setState(() {
         _cartItemCount = 0;
       });
-      print('❌ Error updating cart count: $e');
     }
   }
 
   void _initAnimations() {
     _tabController = TabController(
-      length: 6, 
+      length: 6,
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
@@ -166,7 +177,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     );
 
     _fabScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fabAnimationController, curve: Curves.elasticOut),
+      CurvedAnimation(
+          parent: _fabAnimationController, curve: Curves.elasticOut),
     );
   }
 
@@ -201,8 +213,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     final title = '${_tabTitles[_selectedTabIndex]} | MasaMenu';
     _urlService.updateCustomerUrl(widget.userId, route, customTitle: title);
   }
-
-
 
   @override
   void onUrlChanged(String newPath) {
@@ -242,7 +252,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           _user = user;
         });
       }
-      final customerData = await _customerFirestoreService.getCustomerData(widget.userId);
+      final customerData =
+          await _customerFirestoreService.getCustomerData(widget.userId);
       setState(() {
         _customerData = customerData;
       });
@@ -261,20 +272,23 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     try {
       await _authService.signOut();
       if (mounted) {
-        _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+        _urlService.updateUrl('/',
+            customTitle: 'MasaMenu - Dijital Menü Çözümü');
         Navigator.pushReplacementNamed(context, '/');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: AppColors.white, size: 20),
+                Icon(Icons.check_circle_rounded,
+                    color: AppColors.white, size: 20),
                 const SizedBox(width: 8),
                 const Text('Başarıyla çıkış yapıldı'),
               ],
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -292,7 +306,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -383,7 +398,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final dynamicRoute = '/customer/${widget.userId}/carts?t=$timestamp';
       _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetlerim | MasaMenu');
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -466,8 +481,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: _selectedTabIndex == 0, // Sadece ana sayfada extend
-      appBar: _selectedTabIndex != 0 ? _buildSimpleAppBar() : null, // Diğer sekmelerde basit app bar
+      extendBodyBehindAppBar:
+          _selectedTabIndex == 0, // Sadece ana sayfada extend
+      appBar: _selectedTabIndex != 0
+          ? _buildSimpleAppBar()
+          : null, // Diğer sekmelerde basit app bar
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -475,30 +493,30 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
             offset: Offset(0, _slideAnimation.value),
             child: Opacity(
               opacity: _fadeAnimation.value,
-              child: _selectedTabIndex == 0 
-                ? CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    slivers: [
-                      _buildModernSliverAppBar(screenWidth, screenHeight),
-                      SliverFillRemaining(
-                        child: CustomerHomeTab(
-                          userId: widget.userId,
-                          user: _user,
-                          customerData: _customerData,
-                          onRefresh: _loadUserData,
-                          onNavigateToTab: (int tabIndex) {
-                            setState(() {
-                              _selectedTabIndex = tabIndex;
-                            });
-                            _tabController.animateTo(tabIndex);
-                          },
+              child: _selectedTabIndex == 0
+                  ? CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        _buildModernSliverAppBar(screenWidth, screenHeight),
+                        SliverFillRemaining(
+                          child: CustomerHomeTab(
+                            userId: widget.userId,
+                            user: _user,
+                            customerData: _customerData,
+                            onRefresh: _loadUserData,
+                            onNavigateToTab: (int tabIndex) {
+                              setState(() {
+                                _selectedTabIndex = tabIndex;
+                              });
+                              _tabController.animateTo(tabIndex);
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : IndexedStack(
-                    index: _selectedTabIndex,
-                    children: [
+                      ],
+                    )
+                  : IndexedStack(
+                      index: _selectedTabIndex,
+                      children: [
                         Container(), // Ana sayfa için placeholder (yukarıda zaten var)
                         CustomerOrdersTab(
                           userId: widget.userId,
@@ -544,8 +562,15 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
   }
 
   AppBar _buildSimpleAppBar() {
-    final tabTitles = ['Ana Sayfa', 'Siparişlerim', 'Favorilerim', 'Sepetlerim', 'Hizmetlerim', 'Profilim'];
-    
+    final tabTitles = [
+      'Ana Sayfa',
+      'Siparişlerim',
+      'Favorilerim',
+      'Sepetlerim',
+      'Hizmetlerim',
+      'Profilim'
+    ];
+
     return AppBar(
       backgroundColor: AppColors.primary,
       elevation: 0,
@@ -710,21 +735,21 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
           icon: Icons.search_rounded,
           onTap: _navigateToSearch,
         ),
-        
+
         // Siparişlerim butonu
         _buildAppBarActionButton(
           icon: Icons.receipt_long_rounded,
           onTap: () => _navigateToTab(1),
           badge: _hasNewOrders,
         ),
-        
+
         // Sepet butonu
         _buildAppBarActionButton(
           icon: Icons.shopping_cart_rounded,
           onTap: _navigateToCart,
           badgeCount: _cartItemCount,
         ),
-        
+
         // Çıkış Yap butonu
         _buildAppBarActionButton(
           icon: Icons.logout_rounded,
@@ -801,7 +826,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
               final tab = entry.value;
               final isSelected = index == _selectedTabIndex;
               final gradientColors = tab['gradient'] as List<Color>;
-              
+
               return Expanded(
                 child: GestureDetector(
                   onTap: () {
@@ -815,19 +840,23 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                     margin: const EdgeInsets.symmetric(horizontal: 2),
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     decoration: BoxDecoration(
-                      gradient: isSelected ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: gradientColors,
-                      ) : null,
+                      gradient: isSelected
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: gradientColors,
+                            )
+                          : null,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: isSelected ? [
-                        BoxShadow(
-                          color: gradientColors.first.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ] : null,
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: gradientColors.first.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -836,7 +865,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                           duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: isSelected 
+                            color: isSelected
                                 ? AppColors.white.withOpacity(0.3)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
@@ -844,11 +873,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                           child: Stack(
                             children: [
                               Icon(
-                                isSelected 
-                                    ? tab['selectedIcon'] as IconData 
+                                isSelected
+                                    ? tab['selectedIcon'] as IconData
                                     : tab['icon'] as IconData,
-                                color: isSelected 
-                                    ? AppColors.white 
+                                color: isSelected
+                                    ? AppColors.white
                                     : AppColors.textSecondary,
                                 size: 22,
                               ),
@@ -867,7 +896,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                                       borderRadius: BorderRadius.circular(10),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppColors.error.withOpacity(0.3),
+                                          color:
+                                              AppColors.error.withOpacity(0.3),
                                           blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
@@ -878,7 +908,9 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                                       minHeight: 16,
                                     ),
                                     child: Text(
-                                      _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
+                                      _cartItemCount > 99
+                                          ? '99+'
+                                          : _cartItemCount.toString(),
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 9,
@@ -895,12 +927,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                         AnimatedDefaultTextStyle(
                           duration: const Duration(milliseconds: 300),
                           style: AppTypography.caption.copyWith(
-                            color: isSelected 
-                                ? AppColors.white 
+                            color: isSelected
+                                ? AppColors.white
                                 : AppColors.textSecondary,
-                            fontWeight: isSelected 
-                                ? FontWeight.w700 
-                                : FontWeight.w500,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
                             fontSize: 10,
                           ),
                           child: Text(
@@ -928,9 +959,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
     int? badgeCount,
   }) {
     final showBadge = badge || (badgeCount != null && badgeCount > 0);
-    final badgeText = badgeCount != null && badgeCount > 0 
-        ? badgeCount.toString() 
-        : '!';
+    final badgeText =
+        badgeCount != null && badgeCount > 0 ? badgeCount.toString() : '!';
 
     return Container(
       margin: const EdgeInsets.only(right: 8),

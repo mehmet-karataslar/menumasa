@@ -15,6 +15,7 @@ import '../../../presentation/widgets/shared/empty_state.dart';
 import '../menu_page.dart';
 import '../business_detail_page.dart';
 import '../search_page.dart';
+import '../../../core/services/cart_service.dart';
 
 /// Müşteri favoriler tab'ı
 class CustomerFavoritesTab extends StatefulWidget {
@@ -35,15 +36,17 @@ class CustomerFavoritesTab extends StatefulWidget {
   State<CustomerFavoritesTab> createState() => _CustomerFavoritesTabState();
 }
 
-class _CustomerFavoritesTabState extends State<CustomerFavoritesTab> 
+class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     with TickerProviderStateMixin {
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
   final CustomerService _customerService = CustomerService();
   final UrlService _urlService = UrlService();
   final DataService _dataService = DataService();
+  final CartService _cartService = CartService();
 
   late TabController _tabController;
-  
+
   List<Business> _favoriteBusinesses = [];
   List<Product> _favoriteProducts = [];
   List<app_user.ProductFavorite> _productFavorites = [];
@@ -56,7 +59,6 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   @override
   void initState() {
     super.initState();
-    print('🎯 FavoritesTab: initState called for user: ${widget.userId}');
     _tabController = TabController(length: 2, vsync: this);
     _loadFavorites();
     _searchController.addListener(_onSearchChanged);
@@ -80,16 +82,13 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
       // Firebase Auth'dan current user'ı al
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        print('🔐 FavoritesTab: Initializing CustomerService with user: ${user.uid}');
         await _customerService.createOrGetCustomer(
           email: user.email,
           name: user.displayName,
           phone: user.phoneNumber,
           isAnonymous: false,
         );
-        print('✅ FavoritesTab: CustomerService initialized successfully');
       } else {
-        print('⚠️ FavoritesTab: No authenticated user found');
         // Anonim kullanıcı olarak devam et
         await _customerService.createOrGetCustomer(
           isAnonymous: true,
@@ -107,19 +106,17 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
         print('⚠️ FavoritesTab: No current customer for business favorites');
         return [];
       }
-      
-      print('🔄 FavoritesTab: Loading business favorites from Firebase for: ${currentCustomer.id}');
-      
+
       // Firebase'den customer data al
       final customerDoc = await _customerFirestoreService.firestore
           .collection('customer_users')
           .doc(currentCustomer.id)
           .get();
-      
+
       if (customerDoc.exists) {
         final data = customerDoc.data()!;
-        final favoriteBusinessIds = List<String>.from(data['favoriteBusinessIds'] ?? []);
-        print('🔥 FavoritesTab: Found ${favoriteBusinessIds.length} business favorites: $favoriteBusinessIds');
+        final favoriteBusinessIds =
+            List<String>.from(data['favoriteBusinessIds'] ?? []);
         return favoriteBusinessIds;
       } else {
         print('⚠️ FavoritesTab: Customer document not found in Firebase');
@@ -136,70 +133,72 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     int attempts = 0;
     const maxAttempts = 10;
     const delay = Duration(milliseconds: 500);
-    
+
     while (_customerService.currentCustomer == null && attempts < maxAttempts) {
-      print('⏳ FavoritesTab: Waiting for CustomerService initialization... Attempt ${attempts + 1}');
+      print(
+          '⏳ FavoritesTab: Waiting for CustomerService initialization... Attempt ${attempts + 1}');
       await Future.delayed(delay);
       attempts++;
     }
-    
+
     if (_customerService.currentCustomer == null) {
-      print('⚠️ FavoritesTab: CustomerService not initialized after $maxAttempts attempts');
+      print(
+          '⚠️ FavoritesTab: CustomerService not initialized after $maxAttempts attempts');
     } else {
       print('✅ FavoritesTab: CustomerService is ready');
     }
   }
 
-  Future<List<app_user.ProductFavorite>> _loadFavoritesFromFirebase(String customerId) async {
+  Future<List<app_user.ProductFavorite>> _loadFavoritesFromFirebase(
+      String customerId) async {
     try {
-      print('🔥 FavoritesTab: Loading favorites from Firebase for customerId: $customerId');
-      
       // Firebase'den direkt olarak favorileri yükle
       final favoritesSnapshot = await _customerFirestoreService.firestore
           .collection('product_favorites')
           .where('customerId', isEqualTo: customerId)
           .orderBy('createdAt', descending: true)
           .get();
-      
-      print('🔥 FavoritesTab: Found ${favoritesSnapshot.docs.length} favorite documents');
-      
+
       final favorites = favoritesSnapshot.docs.map((doc) {
         final data = doc.data();
-        
+
         // Firestore verilerini işle (hem Timestamp hem String formatlarını destekle)
         final processedData = Map<String, dynamic>.from(data);
-        
+
         // createdAt alanını kontrol et ve dönüştür
         if (data['createdAt'] != null) {
           if (data['createdAt'] is Timestamp) {
-            processedData['createdAt'] = (data['createdAt'] as Timestamp).toDate().toIso8601String();
+            processedData['createdAt'] =
+                (data['createdAt'] as Timestamp).toDate().toIso8601String();
           } else if (data['createdAt'] is String) {
             // Zaten string formatında, olduğu gibi bırak
             processedData['createdAt'] = data['createdAt'];
           }
         }
-        
+
         // lastOrderedAt alanını kontrol et ve dönüştür
         if (data['lastOrderedAt'] != null) {
           if (data['lastOrderedAt'] is Timestamp) {
-            processedData['lastOrderedAt'] = (data['lastOrderedAt'] as Timestamp).toDate().toIso8601String();
+            processedData['lastOrderedAt'] =
+                (data['lastOrderedAt'] as Timestamp).toDate().toIso8601String();
           } else if (data['lastOrderedAt'] is String) {
             processedData['lastOrderedAt'] = data['lastOrderedAt'];
           }
         }
-        
+
         // addedDate alanını kontrol et ve dönüştür
         if (data['addedDate'] != null) {
           if (data['addedDate'] is Timestamp) {
-            processedData['addedDate'] = (data['addedDate'] as Timestamp).toDate().toIso8601String();
+            processedData['addedDate'] =
+                (data['addedDate'] as Timestamp).toDate().toIso8601String();
           } else if (data['addedDate'] is String) {
             processedData['addedDate'] = data['addedDate'];
           }
         }
-        
+
         return app_user.ProductFavorite.fromJson(processedData);
       }).toList();
-      
+
       return favorites;
     } catch (e) {
       print('❌ FavoritesTab: Error loading favorites from Firebase: $e');
@@ -207,35 +206,34 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     }
   }
 
-  Future<List<Product>> _loadProductDetailsFromFirebase(List<app_user.ProductFavorite> productFavorites) async {
+  Future<List<Product>> _loadProductDetailsFromFirebase(
+      List<app_user.ProductFavorite> productFavorites) async {
     try {
       List<Product> products = [];
-      
+
       for (final favorite in productFavorites) {
         try {
-          print('🔍 FavoritesTab: Loading product details for: ${favorite.productId} in business: ${favorite.businessId}');
-          
           // Ürünü products collection'ından yükle (doğru path!)
           final productDoc = await _customerFirestoreService.firestore
               .collection('products')
               .doc(favorite.productId)
               .get();
-          
+
           if (productDoc.exists) {
             final productData = productDoc.data()!;
             // Product modeline çevir
             final product = Product.fromFirestore(productData, productDoc.id);
             products.add(product);
-            print('✅ FavoritesTab: Loaded product: ${product.name}');
           } else {
-            print('⚠️ FavoritesTab: Product not found in products collection: ${favorite.productId}');
+            print(
+                '⚠️ FavoritesTab: Product not found in products collection: ${favorite.productId}');
           }
         } catch (e) {
-          print('❌ FavoritesTab: Error loading product ${favorite.productId}: $e');
+          print(
+              '❌ FavoritesTab: Error loading product ${favorite.productId}: $e');
         }
       }
-      
-      print('🔥 FavoritesTab: Successfully loaded ${products.length} products from ${productFavorites.length} favorites');
+
       return products;
     } catch (e) {
       print('❌ FavoritesTab: Error loading product details: $e');
@@ -247,12 +245,12 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     if (_searchQuery.isEmpty) {
       return _favoriteBusinesses;
     }
-    
+
     return _favoriteBusinesses.where((business) {
       final query = _searchQuery.toLowerCase();
       return business.businessName.toLowerCase().contains(query) ||
-             business.businessType.toLowerCase().contains(query) ||
-             business.businessAddress.toLowerCase().contains(query);
+          business.businessType.toLowerCase().contains(query) ||
+          business.businessAddress.toLowerCase().contains(query);
     }).toList();
   }
 
@@ -260,18 +258,22 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     if (_searchQuery.isEmpty) {
       return _favoriteProducts;
     }
-    
+
     return _favoriteProducts.where((product) {
       final query = _searchQuery.toLowerCase();
       return product.name.toLowerCase().contains(query) ||
-             (product.description?.toLowerCase().contains(query) ?? false) ||
-             (_getCategoryName(product.categoryId)?.toLowerCase().contains(query) ?? false);
+          (product.description?.toLowerCase().contains(query) ?? false) ||
+          (_getCategoryName(product.categoryId)
+                  ?.toLowerCase()
+                  .contains(query) ??
+              false);
     }).toList();
   }
 
   String? _getCategoryName(String categoryId) {
     try {
-      final category = _allCategories.firstWhere((c) => c.categoryId == categoryId);
+      final category =
+          _allCategories.firstWhere((c) => c.categoryId == categoryId);
       return category.name;
     } catch (e) {
       return null;
@@ -279,65 +281,53 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   }
 
   Future<void> _loadFavorites() async {
-    print('🎯 FavoritesTab: _loadFavorites called');
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Parallel olarak tüm işlemleri başlat
+      // CustomerService'i initialize et (sadece bir kez)
+      await _initializeCustomerService();
+
+      // Paralel olarak tüm gerekli verileri yükle
       final futures = await Future.wait([
-        _initializeCustomerService(),
         _customerFirestoreService.getBusinesses(),
+        _dataService.getCategories(),
+        _loadBusinessFavoritesFromFirebase(),
       ]);
-      
-      final businesses = futures[1] as List<Business>;
+
+      final businesses = futures[0] as List<Business>;
+      final categories = futures[1] as List<Category>;
+      final businessFavoriteIds = futures[2] as List<String>;
+
+      // Cache'ler güncelle
       _allBusinesses = businesses;
-      
-      // İşletme favorilerini Firebase'den direkt yükle
-      final businessFavoriteIds = await _loadBusinessFavoritesFromFirebase();
-      print('🔥 FavoritesTab: Loaded ${businessFavoriteIds.length} business favorites from Firebase');
-      
+      _allCategories = categories;
+
       // Favori işletmeleri filtrele
-      final favoriteBusinesses = businesses.where((b) => businessFavoriteIds.contains(b.id)).toList();
-      print('🔥 FavoritesTab: Matched ${favoriteBusinesses.length} favorite businesses from ${businesses.length} total businesses');
+      final favoriteBusinesses =
+          businesses.where((b) => businessFavoriteIds.contains(b.id)).toList();
 
       // Favori ürünleri yükle
       List<app_user.ProductFavorite> productFavorites = [];
       List<Product> favoriteProducts = [];
-      
+
       try {
         final currentCustomer = _customerService.currentCustomer;
         if (currentCustomer != null) {
-          print('🔥 FavoritesTab: Loading favorites for customerId: ${currentCustomer.id}');
-          
           // Firebase'den direkt favori ürünleri yükle
-          productFavorites = await _loadFavoritesFromFirebase(currentCustomer.id);
-          
-          print('🔥 FavoritesTab: Found ${productFavorites.length} product favorites');
-          
+          productFavorites =
+              await _loadFavoritesFromFirebase(currentCustomer.id);
+
           // Favori ürünlerin detaylarını Firebase'den al
-          print('🔥 FavoritesTab: Loading product details directly from Firebase...');
-          favoriteProducts = await _loadProductDetailsFromFirebase(productFavorites);
-          
-          print('🔥 FavoritesTab: Loaded ${favoriteProducts.length} product details from Firebase');
-        } else {
-          print('🔥 FavoritesTab: CustomerService currentCustomer is null, skipping product favorites');
+          favoriteProducts =
+              await _loadProductDetailsFromFirebase(productFavorites);
         }
       } catch (e) {
         print('Favori ürünler yüklenirken hata: $e');
         // Hata durumunda boş liste kullan
         productFavorites = [];
         favoriteProducts = [];
-      }
-
-      // Kategorileri yükle
-      try {
-        final categories = await _dataService.getCategories();
-        _allCategories = categories;
-      } catch (e) {
-        print('Kategoriler yüklenirken hata: $e');
-        _allCategories = [];
       }
 
       setState(() {
@@ -362,33 +352,46 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   Future<void> _toggleBusinessFavorite(Business business) async {
     try {
       await _customerService.toggleFavorite(business.id);
-      await _loadFavorites();
-      widget.onRefresh();
-      
+
+      // Sadece local state'i güncelle, full reload yapma
       final isFavorite = _favoriteBusinesses.any((b) => b.id == business.id);
-      
+
+      if (isFavorite) {
+        // İşletmeyi favorilerden çıkar
+        setState(() {
+          _favoriteBusinesses.removeWhere((b) => b.id == business.id);
+        });
+      } else {
+        // İşletmeyi favorilere ekle
+        setState(() {
+          _favoriteBusinesses.add(business);
+        });
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 Icon(
-                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  isFavorite
+                      ? Icons.favorite_border_rounded
+                      : Icons.favorite_rounded,
                   color: AppColors.white,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isFavorite 
-                      ? '${business.businessName} favorilere eklendi'
-                      : '${business.businessName} favorilerden çıkarıldı',
+                    isFavorite
+                        ? '${business.businessName} favorilerden çıkarıldı'
+                        : '${business.businessName} favorilere eklendi',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
             ),
-            backgroundColor: isFavorite ? AppColors.success : AppColors.warning,
+            backgroundColor: isFavorite ? AppColors.warning : AppColors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -423,34 +426,47 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
 
   Future<void> _toggleProductFavorite(Product product) async {
     try {
-      await _customerService.toggleProductFavorite(product.productId, product.businessId);
-      await _loadFavorites();
-      widget.onRefresh();
-      
-      final isFavorite = _favoriteProducts.any((p) => p.productId == product.productId);
-      
+      await _customerService.toggleProductFavorite(
+          product.productId, product.businessId);
+
+      // Sadece local state'i güncelle, full reload yapma
+      final isFavorite =
+          _favoriteProducts.any((p) => p.productId == product.productId);
+
+      if (isFavorite) {
+        // Ürünü favorilerden çıkar
+        setState(() {
+          _favoriteProducts
+              .removeWhere((p) => p.productId == product.productId);
+          _productFavorites
+              .removeWhere((f) => f.productId == product.productId);
+        });
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 Icon(
-                  isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  isFavorite
+                      ? Icons.favorite_border_rounded
+                      : Icons.favorite_rounded,
                   color: AppColors.white,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isFavorite 
-                      ? '${product.productName} favorilere eklendi'
-                      : '${product.productName} favorilerden çıkarıldı',
+                    isFavorite
+                        ? '${product.name} favorilerden çıkarıldı'
+                        : '${product.name} favorilere eklendi',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
             ),
-            backgroundColor: isFavorite ? AppColors.success : AppColors.warning,
+            backgroundColor: isFavorite ? AppColors.warning : AppColors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -490,7 +506,7 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
         businessId: product.businessId,
         quantity: 1,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -539,11 +555,86 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
     }
   }
 
+  /// Ürünü sepete ekle
+  Future<void> _addToCart(Product product) async {
+    try {
+      // İşletme adını al (varsa)
+      final business =
+          _allBusinesses.where((b) => b.id == product.businessId).firstOrNull;
+      final businessName = business?.businessName ?? 'Bilinmeyen İşletme';
+
+      // CartService'i initialize et
+      await _cartService.initialize();
+
+      // CartService kullanarak sepete ekle
+      await _cartService.addToCart(
+        product,
+        product.businessId,
+        quantity: 1,
+      );
+
+      // Sepet sayısını kontrol et
+      final cartCount = await _cartService.getCartItemCount(product.businessId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${product.productName} sepete eklendi!',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+            action: SnackBarAction(
+              label: 'Sepete Git',
+              textColor: AppColors.white,
+              onPressed: () {
+                // Sepet sekmesine geç
+                widget.onNavigateToTab?.call(3); // Sepet sekmesi index 3
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_rounded, color: AppColors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Sepete ekleme hatası: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
+  }
+
   void _navigateToMenu(Business business) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final dynamicRoute = '/customer/${widget.userId}/menu/${business.id}?t=$timestamp&ref=favorites';
+    final dynamicRoute =
+        '/customer/${widget.userId}/menu/${business.id}?t=$timestamp&ref=favorites';
     _urlService.updateMenuUrl(business.id, businessName: business.businessName);
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -565,9 +656,11 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
 
   void _navigateToBusinessDetail(Business business) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final dynamicRoute = '/customer/${widget.userId}/business/${business.id}?t=$timestamp&ref=favorites';
-    _urlService.updateUrl(dynamicRoute, customTitle: '${business.businessName} | MasaMenu');
-    
+    final dynamicRoute =
+        '/customer/${widget.userId}/business/${business.id}?t=$timestamp&ref=favorites';
+    _urlService.updateUrl(dynamicRoute,
+        customTitle: '${business.businessName} | MasaMenu');
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -592,7 +685,6 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
 
   @override
   Widget build(BuildContext context) {
-    print('🎯 FavoritesTab: build called - isLoading: $_isLoading, favoriteProducts: ${_favoriteProducts.length}, favoriteBusinesses: ${_favoriteBusinesses.length}');
     return Column(
       children: [
         // Tab bar
@@ -628,7 +720,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                     if (_favoriteBusinesses.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
@@ -655,7 +748,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                     if (_favoriteProducts.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.accent.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
@@ -675,11 +769,11 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
             ],
           ),
         ),
-        
+
         // Arama alanı
         if (_favoriteBusinesses.isNotEmpty || _favoriteProducts.isNotEmpty)
           _buildSearchSection(),
-        
+
         // Tab view
         Expanded(
           child: TabBarView(
@@ -738,7 +832,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                               child: Image.network(
                                 business.logoUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Icon(
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(
                                   Icons.business_rounded,
                                   color: AppColors.white,
                                   size: 32,
@@ -770,9 +865,12 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                               ),
                               // Durum göstergesi
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: business.isOpen ? AppColors.success : AppColors.error,
+                                  color: business.isOpen
+                                      ? AppColors.success
+                                      : AppColors.error,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -787,7 +885,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                           ),
                           const SizedBox(height: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
@@ -843,9 +942,9 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Eylem butonları
                 Row(
                   children: [
@@ -889,6 +988,27 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   }
 
   Widget _buildFavoriteProductCard(Product product) {
+    // Favori ürünün işletme bilgisini al
+    final productFavorite = _productFavorites.firstWhere(
+      (f) => f.productId == product.productId,
+      orElse: () => app_user.ProductFavorite(
+        id: '',
+        productId: product.productId,
+        businessId: product.businessId,
+        customerId: widget.userId,
+        createdAt: DateTime.now(),
+        businessName: null,
+      ),
+    );
+
+    final businessName = productFavorite.businessName ??
+        _allBusinesses
+            .firstWhere(
+              (b) => b.id == product.businessId,
+              orElse: () => Business.empty(),
+            )
+            .businessName;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -904,16 +1024,16 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-                     onTap: () {
-             // İşletme bilgisini product'tan al ve menüye git
-             final business = _allBusinesses.firstWhere(
-               (b) => b.id == product.businessId,
-               orElse: () => Business.empty(),
-             );
-             if (business.id.isNotEmpty) {
-               _navigateToMenu(business);
-             }
-           },
+          onTap: () {
+            // İşletme bilgisini product'tan al ve menüye git
+            final business = _allBusinesses.firstWhere(
+              (b) => b.id == product.businessId,
+              orElse: () => Business.empty(),
+            );
+            if (business.id.isNotEmpty) {
+              _navigateToMenu(business);
+            }
+          },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -937,7 +1057,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                               child: Image.network(
                                 product.imageUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Icon(
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(
                                   Icons.fastfood_rounded,
                                   color: AppColors.white,
                                   size: 32,
@@ -956,33 +1077,67 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                                                     Text(
-                             product.name,
-                             style: AppTypography.bodyLarge.copyWith(
-                               fontWeight: FontWeight.w600,
-                               color: AppColors.textPrimary,
-                             ),
-                           ),
+                          Text(
+                            product.name,
+                            style: AppTypography.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                                                     Text(
-                             _getCategoryName(product.categoryId) ?? 'Kategori Belirtilmemiş',
-                             style: AppTypography.caption.copyWith(
-                               color: AppColors.textSecondary,
-                             ),
-                           ),
+                          // İşletme adı - direkt görünür
+                          if (businessName.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.business_rounded,
+                                    size: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      businessName,
+                                      style: AppTypography.caption.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getCategoryName(product.categoryId) ??
+                                'Kategori Belirtilmemiş',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               Icon(
                                 Icons.attach_money_rounded,
                                 size: 16,
-                                color: AppColors.textSecondary,
+                                color: AppColors.success,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 '${product.price} TL',
-                                style: AppTypography.caption.copyWith(
-                                  color: AppColors.textSecondary,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
@@ -1009,25 +1164,25 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Eylem butonları
                 Row(
                   children: [
-                                         Expanded(
-                       child: OutlinedButton.icon(
-                         onPressed: () {
-                           final business = _allBusinesses.firstWhere(
-                             (b) => b.id == product.businessId,
-                             orElse: () => Business.empty(),
-                           );
-                           if (business.id.isNotEmpty) {
-                             _navigateToBusinessDetail(business);
-                           }
-                         },
-                         icon: Icon(Icons.info_outline_rounded, size: 18),
-                         label: Text('İşletme Detayı'),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          final business = _allBusinesses.firstWhere(
+                            (b) => b.id == product.businessId,
+                            orElse: () => Business.empty(),
+                          );
+                          if (business.id.isNotEmpty) {
+                            _navigateToBusinessDetail(business);
+                          }
+                        },
+                        icon: Icon(Icons.info_outline_rounded, size: 18),
+                        label: Text('İşletme Detayı'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: BorderSide(color: AppColors.primary),
@@ -1040,7 +1195,7 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _reorderProduct(product),
+                        onPressed: () => _addToCart(product),
                         icon: Icon(Icons.shopping_cart_rounded, size: 18),
                         label: Text('Sepete Ekle'),
                         style: ElevatedButton.styleFrom(
@@ -1118,7 +1273,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   side: const BorderSide(color: AppColors.primary),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1132,7 +1288,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1182,7 +1339,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.accent.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -1197,9 +1355,9 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Arama çubuğu
           Container(
             decoration: BoxDecoration(
@@ -1230,14 +1388,15 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.textPrimary,
               ),
             ),
           ),
-          
+
           // Arama sonucu sayısı
           if (_searchQuery.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -1309,7 +1468,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
           style: AppTypography.bodyMedium.copyWith(
             color: AppColors.textPrimary,
@@ -1332,7 +1492,8 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
                     child: _buildEmptyStateCard(
                       icon: Icons.business_rounded,
                       title: 'Henüz favori işletmeniz yok',
-                      subtitle: 'Beğendiğiniz işletmeleri favorilerinize ekleyin',
+                      subtitle:
+                          'Beğendiğiniz işletmeleri favorilerinize ekleyin',
                     ),
                   ),
                 )
@@ -1410,8 +1571,9 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   void _navigateToSearch() {
     // Arama sayfasına yönlendir
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    _urlService.updateCustomerUrl(widget.userId, 'search', customTitle: 'İşletme Ara | MasaMenu');
-    
+    _urlService.updateCustomerUrl(widget.userId, 'search',
+        customTitle: 'İşletme Ara | MasaMenu');
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1434,9 +1596,10 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
   void _navigateToExplore() {
     // Ana sayfa/dashboard'a yönlendir (keşfet için)
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    _urlService.updateCustomerUrl(widget.userId, 'dashboard', customTitle: 'Ana Sayfa | MasaMenu');
-    
+    _urlService.updateCustomerUrl(widget.userId, 'dashboard',
+        customTitle: 'Ana Sayfa | MasaMenu');
+
     // Ana tab'a geç
     widget.onNavigateToTab?.call(0);
   }
-} 
+}
