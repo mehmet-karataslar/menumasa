@@ -702,7 +702,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                                 Text(
                                   'Hoşgeldin!👋',
                                   style: AppTypography.bodyLarge.copyWith(
-                                    color: AppColors.white.withOpacity(0.8),
+                                    color: AppColors.white,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -720,7 +720,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
                                 Text(
                                   'Bugün hangi lezzeti tercih edersin?',
                                   style: AppTypography.bodyMedium.copyWith(
-                                    color: AppColors.white.withOpacity(0.85),
+                                    color: AppColors.white,
                                     fontSize: isCompact ? 13 : 14,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -799,7 +799,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage>
       ),
       child: SafeArea(
         child: Container(
-          height: 75,
+          height: 78,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,

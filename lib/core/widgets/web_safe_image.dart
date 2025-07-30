@@ -65,9 +65,6 @@ class WebSafeImage extends StatelessWidget {
     return Image.network(
       processedUrl,
       fit: fit ?? BoxFit.cover,
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return placeholder?.call(context, imageUrl) ??

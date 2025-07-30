@@ -246,6 +246,17 @@ class _CustomerOrdersPageState extends State<CustomerOrdersPage>
           onPressed: _loadOrders,
           icon: Icon(Icons.refresh_rounded),
           tooltip: 'Yenile',
+          color: AppColors.white,
+          iconSize: 24,
+          padding: EdgeInsets.only(right: 16),
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            padding: EdgeInsets.all(12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
       ],
     );
