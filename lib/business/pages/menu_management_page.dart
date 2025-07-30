@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../models/business.dart';
 import '../models/product.dart';
 import '../models/category.dart' as business_category;
@@ -37,7 +38,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   Business? _business;
   List<Product> _products = [];
   List<business_category.Category> _categories = [];
-  
+
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -48,7 +49,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   final List<String> _menuTabRoutes = [
     'genel-bakis',
     'kategoriler',
-    'urunler', 
+    'urunler',
     'tasarim',
     'on-izleme',
     'analitik',
@@ -93,8 +94,8 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     final currentTab = _menuTabRoutes[_currentIndex];
     final businessName = _business?.businessName;
     _urlService.updateBusinessUrl(
-      widget.businessId, 
-      'menu/$currentTab', 
+      widget.businessId,
+      'menu/$currentTab',
       businessName: businessName,
     );
   }
@@ -109,8 +110,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       final business = await _businessService.getBusiness(widget.businessId);
       if (business == null) throw Exception('İşletme bulunamadı');
 
-      final categories = await _businessService.getCategories(businessId: widget.businessId);
-      final products = await _businessService.getProducts(businessId: widget.businessId);
+      final categories =
+          await _businessService.getCategories(businessId: widget.businessId);
+      final products =
+          await _businessService.getProducts(businessId: widget.businessId);
 
       setState(() {
         _business = business;
@@ -193,7 +196,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     );
   }
 
-    PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
       preferredSize: const Size.fromHeight(1),
       child: Container(
@@ -272,27 +275,27 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       children: [
         // Genel Bakış
         _buildOverviewTab(),
-        
+
         // Kategoriler - Mevcut kategori yönetim sayfasını kullan
         CategoryManagementPage(businessId: widget.businessId),
-        
+
         // Ürünler - Mevcut ürün yönetim sayfasını kullan
         ProductManagementPage(businessId: widget.businessId),
-        
+
         // Tasarım
         MenuDesignWidget(
           businessId: widget.businessId,
           business: _business!,
           onDesignChanged: _refreshData,
         ),
-        
+
         // Ön İzleme
         MenuPreviewWidget(
           business: _business!,
           categories: _categories,
           products: _products,
         ),
-        
+
         // Analitik
         MenuAnalyticsWidget(
           businessId: widget.businessId,
@@ -307,8 +310,9 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     final totalCategories = _categories.length;
     final totalProducts = _products.length;
     final availableProducts = _products.where((p) => p.isAvailable).length;
-    final avgPrice = _products.isNotEmpty 
-        ? _products.map((p) => p.currentPrice).reduce((a, b) => a + b) / _products.length
+    final avgPrice = _products.isNotEmpty
+        ? _products.map((p) => p.currentPrice).reduce((a, b) => a + b) /
+            _products.length
         : 0.0;
 
     return SingleChildScrollView(
@@ -331,7 +335,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
               color: AppColors.textSecondary,
             ),
           ),
-          
+
           const SizedBox(height: 32),
 
           // İstatistik kartları
@@ -470,7 +474,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             ),
           ),
           const SizedBox(height: 16),
-          
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -614,7 +617,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             ],
           ),
           const SizedBox(height: 16),
-          
           if (recentProducts.isEmpty)
             const EmptyState(
               icon: Icons.restaurant_menu,
@@ -650,10 +652,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             child: product.images.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      product.images.first.url,
+                    child: WebSafeImage(
+                      imageUrl: product.images.first.url,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Icon(
+                      errorWidget: (context, error, stackTrace) => Icon(
                         Icons.restaurant_menu,
                         color: AppColors.primary,
                       ),
@@ -664,9 +666,9 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                     color: AppColors.primary,
                   ),
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           // Ürün bilgileri
           Expanded(
             child: Column(
@@ -691,7 +693,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
               ],
             ),
           ),
-          
+
           // Fiyat ve durum
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -707,7 +709,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: product.isAvailable 
+                  color: product.isAvailable
                       ? AppColors.success.withOpacity(0.1)
                       : AppColors.error.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -715,7 +717,9 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                 child: Text(
                   product.isAvailable ? 'Aktif' : 'Pasif',
                   style: AppTypography.bodySmall.copyWith(
-                    color: product.isAvailable ? AppColors.success : AppColors.error,
+                    color: product.isAvailable
+                        ? AppColors.success
+                        : AppColors.error,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -770,4 +774,4 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       ),
     );
   }
-} 
+}

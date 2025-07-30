@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../models/business.dart';
 import '../models/product.dart';
 import '../models/category.dart' as business_category;
@@ -520,10 +521,10 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  _business!.logoUrl!,
+                child: WebSafeImage(
+                  imageUrl: _business!.logoUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
+                  errorWidget: (context, error, stackTrace) => Icon(
                     Icons.business,
                     color: AppColors.primary,
                     size: 28,
@@ -1444,29 +1445,26 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             child: product.imageUrl != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.network(
-                      product.imageUrl!,
+                    child: WebSafeImage(
+                      imageUrl: product.imageUrl!,
                       width: 56,
                       height: 56,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Icon(
+                      errorWidget: (context, error, stackTrace) => Icon(
                           Icons.restaurant_rounded,
                           color: AppColors.textSecondary,
                           size: 24),
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.primary),
-                            ),
+                      placeholder: (context, url) => Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary),
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
                   )
                 : Icon(Icons.restaurant_rounded,

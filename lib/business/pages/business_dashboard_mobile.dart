@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../models/business.dart';
 import '../models/product.dart';
 import '../models/category.dart' as business_category;
@@ -50,12 +51,14 @@ class BusinessDashboardMobile extends StatefulWidget {
   });
 
   @override
-  State<BusinessDashboardMobile> createState() => _BusinessDashboardMobileState();
+  State<BusinessDashboardMobile> createState() =>
+      _BusinessDashboardMobileState();
 }
 
 class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     with TickerProviderStateMixin {
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
   final UrlService _urlService = UrlService();
   final AuthService _authService = AuthService();
   final NotificationService _notificationService = NotificationService();
@@ -80,13 +83,13 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   // Notifications
   List<NotificationModel> _notifications = [];
   int _unreadNotificationCount = 0;
-  
+
   // Waiter calls
   List<WaiterCall> _activeWaiterCalls = [];
   List<WaiterCall> _recentWaiterCalls = [];
 
   int _currentIndex = 0;
-  
+
   // Yan menü kontrolü
   bool _isDrawerOpen = false;
   late AnimationController _drawerAnimationController;
@@ -176,7 +179,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     _loadBusinessData();
     _setupNotificationListener();
     _loadWaiterCalls();
-    
+
     // Drawer animasyonu
     _drawerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -194,12 +197,12 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   void _setInitialTab() {
     if (widget.initialTab != null) {
       String initialTab = widget.initialTab!;
-      
+
       // Eski tab route'larını yeni route'lara yönlendir
       if (initialTab == 'kategoriler' || initialTab == 'urunler') {
         initialTab = 'menu-yonetimi';
       }
-      
+
       final tabIndex = _tabRoutes.indexOf(initialTab);
       if (tabIndex != -1) {
         _currentIndex = tabIndex;
@@ -233,7 +236,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     setState(() {
       _isDrawerOpen = !_isDrawerOpen;
     });
-    
+
     if (_isDrawerOpen) {
       _drawerAnimationController.forward();
     } else {
@@ -261,12 +264,13 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
 
   Future<void> _loadWaiterCalls() async {
     try {
-      final activeCalls = await _waiterCallService.getBusinessActiveCalls(widget.businessId);
+      final activeCalls =
+          await _waiterCallService.getBusinessActiveCalls(widget.businessId);
       final recentCalls = await _waiterCallService.getBusinessCallHistory(
         widget.businessId,
         limit: 10,
       );
-      
+
       if (mounted) {
         setState(() {
           _activeWaiterCalls = activeCalls;
@@ -285,7 +289,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     });
 
     try {
-      final business = await _businessFirestoreService.getBusiness(widget.businessId);
+      final business =
+          await _businessFirestoreService.getBusiness(widget.businessId);
       if (business == null) {
         throw Exception('İşletme bulunamadı');
       }
@@ -295,7 +300,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         limit: 5,
       );
 
-      final categories = await _businessFirestoreService.getBusinessCategories(widget.businessId);
+      final categories = await _businessFirestoreService
+          .getBusinessCategories(widget.businessId);
       final products = await _businessFirestoreService.getBusinessProducts(
         widget.businessId,
         limit: 10,
@@ -330,8 +336,10 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
 
   Future<Map<String, dynamic>> _calculateStats() async {
     try {
-      final dailyStats = await _businessFirestoreService.getDailyOrderStats(widget.businessId);
-      final allOrders = await _businessFirestoreService.getOrdersByBusiness(widget.businessId);
+      final dailyStats =
+          await _businessFirestoreService.getDailyOrderStats(widget.businessId);
+      final allOrders = await _businessFirestoreService
+          .getOrdersByBusiness(widget.businessId);
 
       double totalRevenue = 0.0;
       int pendingOrders = 0;
@@ -374,10 +382,12 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 color: AppColors.error.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.logout_rounded, color: AppColors.error, size: 24),
+              child:
+                  Icon(Icons.logout_rounded, color: AppColors.error, size: 24),
             ),
             const SizedBox(width: 12),
-            const Text('Çıkış Yap', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text('Çıkış Yap',
+                style: TextStyle(fontWeight: FontWeight.w700)),
           ],
         ),
         content: const Text('Çıkış yapmak istediğinizden emin misiniz?'),
@@ -395,7 +405,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               elevation: 0,
             ),
@@ -409,14 +420,16 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
       try {
         await _authService.signOut();
         if (mounted) {
-          _urlService.updateUrl('/', customTitle: 'MasaMenu - Dijital Menü Çözümü');
+          _urlService.updateUrl('/',
+              customTitle: 'MasaMenu - Dijital Menü Çözümü');
           Navigator.pushReplacementNamed(context, '/');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Çıkış yapıldı'),
               backgroundColor: AppColors.success,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -428,7 +441,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               content: Text('Çıkış hatası: $e'),
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -464,12 +478,13 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
       return;
     }
 
-    print('🚀 Navigating from tab $_currentIndex to tab $index (${_tabTitles[index]})');
-    
+    print(
+        '🚀 Navigating from tab $_currentIndex to tab $index (${_tabTitles[index]})');
+
     setState(() {
       _currentIndex = index;
     });
-    
+
     print('✅ Current index updated to: $_currentIndex');
     _updateUrl();
   }
@@ -533,10 +548,10 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 ],
               ),
             ),
-            
+
             // Yan menü
             _buildSideDrawer(),
-            
+
             // Overlay (arka plan karartma) - sadece drawer'ın sağ tarafında
             if (_isDrawerOpen)
               AnimatedBuilder(
@@ -548,7 +563,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                     right: 0,
                     bottom: 0,
                     child: Container(
-                      color: AppColors.black.withOpacity(0.3 * _drawerAnimation.value),
+                      color: AppColors.black
+                          .withOpacity(0.3 * _drawerAnimation.value),
                       child: GestureDetector(
                         onTap: _closeDrawer,
                       ),
@@ -599,7 +615,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               ),
             ),
           ),
-          
+
           if (_business?.logoUrl != null)
             Container(
               width: 40,
@@ -617,12 +633,13 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  _business!.logoUrl!,
+                child: WebSafeImage(
+                  imageUrl: _business!.logoUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                  errorWidget: (context, error, stackTrace) => Container(
                     color: AppColors.primary.withOpacity(0.1),
-                    child: Icon(Icons.business_rounded, color: AppColors.primary, size: 24),
+                    child: Icon(Icons.business_rounded,
+                        color: AppColors.primary, size: 24),
                   ),
                 ),
               ),
@@ -699,7 +716,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           const SizedBox(width: 8),
           PopupMenuButton<String>(
             position: PopupMenuPosition.under,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             offset: const Offset(0, 8),
             child: Container(
               padding: const EdgeInsets.all(8),
@@ -707,7 +725,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 color: AppColors.textSecondary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.more_vert_rounded, color: AppColors.textSecondary, size: 24),
+              child: Icon(Icons.more_vert_rounded,
+                  color: AppColors.textSecondary, size: 24),
             ),
             onSelected: (value) {
               if (value == 'logout') {
@@ -720,7 +739,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 height: 48,
                 child: Row(
                   children: [
-                    Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+                    Icon(Icons.logout_rounded,
+                        color: AppColors.error, size: 20),
                     const SizedBox(width: 12),
                     Text('Çıkış Yap', style: TextStyle(color: AppColors.error)),
                   ],
@@ -760,8 +780,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
       toolbarHeight: 0,
     );
   }
-
-
 
   Widget _buildSideDrawer() {
     return AnimatedBuilder(
@@ -807,16 +825,19 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: AppColors.white, width: 2),
+                              border:
+                                  Border.all(color: AppColors.white, width: 2),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(13),
-                              child: Image.network(
-                                _business!.logoUrl!,
+                              child: WebSafeImage(
+                                imageUrl: _business!.logoUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Container(
+                                errorWidget: (context, error, stackTrace) =>
+                                    Container(
                                   color: AppColors.white.withOpacity(0.2),
-                                  child: Icon(Icons.business_rounded, color: AppColors.white, size: 30),
+                                  child: Icon(Icons.business_rounded,
+                                      color: AppColors.white, size: 30),
                                 ),
                               ),
                             ),
@@ -841,17 +862,18 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                     ),
                   ),
                 ),
-                
+
                 // Menü Listesi
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     physics: const BouncingScrollPhysics(),
                     itemCount: _tabTitles.length,
-                    itemBuilder: (context, index) => _buildDrawerMenuItem(index),
+                    itemBuilder: (context, index) =>
+                        _buildDrawerMenuItem(index),
                   ),
                 ),
-                
+
                 // Alt Kısım - Çıkış
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -892,7 +914,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
 
   Widget _buildDrawerMenuItem(int index) {
     final isSelected = _currentIndex == index;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Material(
@@ -902,10 +924,10 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           onTap: () async {
             print('🖱️ Drawer item tapped: $index (${_tabTitles[index]})');
             _navigateToTab(index);
-            
+
             // Drawer'ı kapat ve biraz bekle
             _closeDrawer();
-            
+
             // Sayfa değişimi için ekstra setState
             await Future.delayed(const Duration(milliseconds: 50));
             if (mounted) {
@@ -919,19 +941,25 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+              color: isSelected
+                  ? AppColors.primary.withOpacity(0.15)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? AppColors.primary.withOpacity(0.5) : Colors.transparent,
+                color: isSelected
+                    ? AppColors.primary.withOpacity(0.5)
+                    : Colors.transparent,
                 width: 2,
               ),
-              boxShadow: isSelected ? [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ] : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               children: [
@@ -939,8 +967,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: isSelected 
-                        ? AppColors.primary 
+                    color: isSelected
+                        ? AppColors.primary
                         : AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -955,8 +983,11 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   child: Text(
                     _tabTitles[index],
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -971,7 +1002,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   )
                 else if (index == 1 && _pendingOrders > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.error,
                       borderRadius: BorderRadius.circular(10),
@@ -1000,7 +1032,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     Color? color,
   }) {
     final itemColor = color ?? AppColors.textSecondary;
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1041,8 +1073,9 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
   }
 
   Widget _buildCurrentPage() {
-    print('📱 Building current page for index: $_currentIndex (${_tabTitles[_currentIndex]})');
-    
+    print(
+        '📱 Building current page for index: $_currentIndex (${_tabTitles[_currentIndex]})');
+
     switch (_currentIndex) {
       case 0:
         print('🏠 Loading Overview Page');
@@ -1310,9 +1343,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               child: Row(
                 children: [
                   Icon(Icons.calendar_today_rounded,
-                      color: AppColors.primary,
-                      size: 14
-                  ),
+                      color: AppColors.primary, size: 14),
                   const SizedBox(width: 6),
                   Text(
                     'Bugün',
@@ -1573,11 +1604,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                     ),
                   ),
                 ),
-                Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: color.withOpacity(0.5),
-                    size: 14
-                ),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    color: color.withOpacity(0.5), size: 14),
               ],
             ),
           ),
@@ -1601,11 +1629,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                      Icons.receipt_long_rounded,
-                      color: AppColors.primary,
-                      size: 18
-                  ),
+                  child: Icon(Icons.receipt_long_rounded,
+                      color: AppColors.primary, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Text(
@@ -1621,7 +1646,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               onPressed: () => _navigateToTab(1),
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               ),
               child: Row(
                 children: const [
@@ -1659,7 +1685,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         else
           ...List.generate(
             _recentOrders.take(3).length,
-                (index) => Padding(
+            (index) => Padding(
               padding: EdgeInsets.only(bottom: index < 2 ? 12.0 : 0),
               child: _buildMobileOrderCard(_recentOrders[index]),
             ),
@@ -1740,11 +1766,10 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3
-                            ),
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(order.status).withOpacity(0.1),
+                              color: _getStatusColor(order.status)
+                                  .withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -1809,11 +1834,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                     color: AppColors.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                      Icons.star_rounded,
-                      color: AppColors.success,
-                      size: 18
-                  ),
+                  child: Icon(Icons.star_rounded,
+                      color: AppColors.success, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Text(
@@ -1829,7 +1851,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               onPressed: () => _navigateToTab(2), // Menu Management
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               ),
               child: Row(
                 children: const [
@@ -1867,7 +1890,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         else
           ...List.generate(
             _popularProducts.take(4).length,
-                (index) => Padding(
+            (index) => Padding(
               padding: EdgeInsets.only(bottom: index < 3 ? 12.0 : 0),
               child: _buildMobileProductCard(_popularProducts[index]),
             ),
@@ -1916,29 +1939,27 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   child: product.imageUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: Image.network(
-                            product.imageUrl!,
+                          child: WebSafeImage(
+                            imageUrl: product.imageUrl!,
                             width: 60,
                             height: 60,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
+                            errorWidget: (context, error, stackTrace) => Icon(
                               Icons.restaurant_rounded,
                               color: AppColors.textSecondary,
                               size: 28,
                             ),
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                                  ),
+                            placeholder: (context, url) => Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.primary),
                                 ),
-                              );
-                            },
+                              ),
+                            ),
                           ),
                         )
                       : Icon(
@@ -1975,9 +1996,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                           if (product.hasDiscount)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2
-                              ),
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: AppColors.error.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
@@ -1997,7 +2016,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: product.isAvailable
                         ? AppColors.success.withOpacity(0.1)
@@ -2090,14 +2110,14 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _activeWaiterCalls.isNotEmpty 
+                    color: _activeWaiterCalls.isNotEmpty
                         ? AppColors.error.withOpacity(0.1)
                         : AppColors.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.room_service_rounded,
-                    color: _activeWaiterCalls.isNotEmpty 
+                    color: _activeWaiterCalls.isNotEmpty
                         ? AppColors.error
                         : AppColors.success,
                     size: 20,
@@ -2116,11 +2136,11 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                         ),
                       ),
                       Text(
-                        _activeWaiterCalls.isNotEmpty 
+                        _activeWaiterCalls.isNotEmpty
                             ? '${_activeWaiterCalls.length} aktif çağrı'
                             : 'Tüm çağrılar halledildi',
                         style: AppTypography.bodyMedium.copyWith(
-                          color: _activeWaiterCalls.isNotEmpty 
+                          color: _activeWaiterCalls.isNotEmpty
                               ? AppColors.error
                               : AppColors.success,
                           fontWeight: FontWeight.w500,
@@ -2138,7 +2158,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               ],
             ),
           ),
-          
+
           // Content
           if (_activeWaiterCalls.isNotEmpty) ...[
             const Divider(height: 1),
@@ -2155,7 +2175,9 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ..._activeWaiterCalls.take(2).map((call) => _buildMobileWaiterCallCard(call)),
+                  ..._activeWaiterCalls
+                      .take(2)
+                      .map((call) => _buildMobileWaiterCallCard(call)),
                   if (_activeWaiterCalls.length > 2)
                     Container(
                       margin: const EdgeInsets.only(top: 8),
@@ -2208,7 +2230,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               ),
             ),
           ],
-          
+
           // Statistics
           if (_recentWaiterCalls.isNotEmpty) ...[
             const Divider(height: 1),
@@ -2249,7 +2271,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     );
   }
 
-  Widget _buildMobileCallStat(String label, String value, IconData icon, Color color) {
+  Widget _buildMobileCallStat(
+      String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, size: 16, color: color),
@@ -2291,12 +2314,15 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Color(int.parse('0xFF${call.priorityColorCode.substring(1)}')).withOpacity(0.1),
+                color: Color(
+                        int.parse('0xFF${call.priorityColorCode.substring(1)}'))
+                    .withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(
                 _getCallTypeIcon(call.requestType),
-                color: Color(int.parse('0xFF${call.priorityColorCode.substring(1)}')),
+                color: Color(
+                    int.parse('0xFF${call.priorityColorCode.substring(1)}')),
                 size: 16,
               ),
             ),
@@ -2316,15 +2342,19 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Color(int.parse('0xFF${call.statusColorCode.substring(1)}')).withOpacity(0.1),
+                          color: Color(int.parse(
+                                  '0xFF${call.statusColorCode.substring(1)}'))
+                              .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           call.status.displayName,
                           style: AppTypography.caption.copyWith(
-                            color: Color(int.parse('0xFF${call.statusColorCode.substring(1)}')),
+                            color: Color(int.parse(
+                                '0xFF${call.statusColorCode.substring(1)}')),
                             fontWeight: FontWeight.w600,
                             fontSize: 10,
                           ),
@@ -2345,8 +2375,12 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                       Text(
                         '${call.waitingTimeMinutes} dk',
                         style: AppTypography.caption.copyWith(
-                          color: call.isOverdue ? AppColors.error : AppColors.textSecondary,
-                          fontWeight: call.isOverdue ? FontWeight.w600 : FontWeight.normal,
+                          color: call.isOverdue
+                              ? AppColors.error
+                              : AppColors.textSecondary,
+                          fontWeight: call.isOverdue
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
                       if (call.isOverdue) ...[
@@ -2399,20 +2433,24 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
-    return date.year == now.year && date.month == now.month && date.day == now.day;
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
   }
 
   int _calculateAverageResponseTime() {
     final completedCalls = _recentWaiterCalls
-        .where((c) => c.status == WaiterCallStatus.completed && c.responseTimeMinutes != null)
+        .where((c) =>
+            c.status == WaiterCallStatus.completed &&
+            c.responseTimeMinutes != null)
         .toList();
-    
+
     if (completedCalls.isEmpty) return 0;
-    
+
     final totalTime = completedCalls
         .map((c) => c.responseTimeMinutes!)
         .reduce((a, b) => a + b);
-    
+
     return (totalTime / completedCalls.length).round();
   }
 
@@ -2443,19 +2481,22 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               ),
             ),
             const SizedBox(height: 20),
-            
+
             // Header
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Color(int.parse('0xFF${call.priorityColorCode.substring(1)}')).withOpacity(0.1),
+                    color: Color(int.parse(
+                            '0xFF${call.priorityColorCode.substring(1)}'))
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     _getCallTypeIcon(call.requestType),
-                    color: Color(int.parse('0xFF${call.priorityColorCode.substring(1)}')),
+                    color: Color(int.parse(
+                        '0xFF${call.priorityColorCode.substring(1)}')),
                     size: 20,
                   ),
                 ),
@@ -2481,33 +2522,39 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Color(int.parse('0xFF${call.statusColorCode.substring(1)}')).withOpacity(0.1),
+                    color: Color(int.parse(
+                            '0xFF${call.statusColorCode.substring(1)}'))
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     call.status.displayName,
                     style: AppTypography.caption.copyWith(
-                      color: Color(int.parse('0xFF${call.statusColorCode.substring(1)}')),
+                      color: Color(int.parse(
+                          '0xFF${call.statusColorCode.substring(1)}')),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Details
             _buildMobileInfoRow('Öncelik', call.priority.displayName),
             if (call.message != null && call.message!.isNotEmpty)
               _buildMobileInfoRow('Mesaj', call.message!),
-            _buildMobileInfoRow('Çağrı Zamanı', _formatDateTime(call.createdAt)),
-            _buildMobileInfoRow('Bekleme Süresi', '${call.waitingTimeMinutes} dakika'),
+            _buildMobileInfoRow(
+                'Çağrı Zamanı', _formatDateTime(call.createdAt)),
+            _buildMobileInfoRow(
+                'Bekleme Süresi', '${call.waitingTimeMinutes} dakika'),
             if (call.waiterName != null)
               _buildMobileInfoRow('Atanan Garson', call.waiterName!),
-            
+
             if (call.isOverdue) ...[
               const SizedBox(height: 12),
               Container(
@@ -2518,7 +2565,8 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_rounded, color: AppColors.error, size: 16),
+                    Icon(Icons.warning_rounded,
+                        color: AppColors.error, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       'Bu çağrı gecikmiş!',
@@ -2531,9 +2579,9 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                 ),
               ),
             ],
-            
+
             const SizedBox(height: 20),
-            
+
             // Actions
             Row(
               children: [
@@ -2591,7 +2639,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                   ),
               ],
             ),
-            
+
             // Safe area padding
             SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
@@ -2637,7 +2685,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         waiterName: 'İşletme Yöneticisi',
       );
       _loadWaiterCalls();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2673,7 +2721,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         responseNotes: 'İşletme yöneticisi tarafından tamamlandı',
       );
       _loadWaiterCalls();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

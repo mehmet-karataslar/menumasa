@@ -11,6 +11,7 @@ import '../../presentation/widgets/shared/empty_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
 import '../models/product.dart';
@@ -32,7 +33,8 @@ class ProductManagementPage extends StatefulWidget {
 
 class _ProductManagementPageState extends State<ProductManagementPage>
     with TickerProviderStateMixin, UrlMixin {
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
@@ -89,7 +91,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     try {
       // Load products, categories and discounts in parallel
       final futures = await Future.wait([
-        _businessFirestoreService.getBusinessProducts(widget.businessId, limit: 100),
+        _businessFirestoreService.getBusinessProducts(widget.businessId,
+            limit: 100),
         _businessFirestoreService.getBusinessCategories(widget.businessId),
         _businessFirestoreService.getDiscounts(businessId: widget.businessId),
       ]);
@@ -377,14 +380,12 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(12),
                             ),
-                            child: Image.network(
-                              product.images.first.url,
+                            child: WebSafeImage(
+                              imageUrl: product.images.first.url,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return _buildImagePlaceholder();
-                              },
-                              errorBuilder: (context, error, stackTrace) =>
+                              placeholder: (context, url) =>
+                                  _buildImagePlaceholder(),
+                              errorWidget: (context, url, error) =>
                                   _buildImagePlaceholder(),
                             ),
                           )
@@ -392,10 +393,12 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                   ),
 
                   // Status badge
-                  Positioned(top: 6, right: 6, child: _buildStatusBadge(product)),
+                  Positioned(
+                      top: 6, right: 6, child: _buildStatusBadge(product)),
 
                   // Actions
-                  Positioned(top: 6, left: 6, child: _buildQuickActions(product)),
+                  Positioned(
+                      top: 6, left: 6, child: _buildQuickActions(product)),
                 ],
               ),
             ),
@@ -484,7 +487,9 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                                   size: 18,
                                 ),
                                 title: Text(
-                                  product.isAvailable ? 'Pasif Yap' : 'Aktif Yap',
+                                  product.isAvailable
+                                      ? 'Pasif Yap'
+                                      : 'Aktif Yap',
                                 ),
                                 contentPadding: EdgeInsets.zero,
                               ),
@@ -533,14 +538,11 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             color: AppColors.greyLight,
           ),
           child: product.images.isNotEmpty
-              ? Image.network(
-                  product.images.first.url,
+              ? WebSafeImage(
+                  imageUrl: product.images.first.url,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return _buildImagePlaceholder();
-                  },
-                  errorBuilder: (context, error, stackTrace) =>
+                  placeholder: (context, url) => _buildImagePlaceholder(),
+                  errorWidget: (context, url, error) =>
                       _buildImagePlaceholder(),
                 )
               : _buildImagePlaceholder(),
@@ -745,10 +747,9 @@ class _ProductManagementPageState extends State<ProductManagementPage>
   List<Product> _getFilteredProducts() {
     return _products.where((product) {
       final matchesSearch = product.name.toLowerCase().contains(
-        _searchQuery.toLowerCase(),
-      );
-      final matchesCategory =
-          _selectedCategoryId.isEmpty ||
+            _searchQuery.toLowerCase(),
+          );
+      final matchesCategory = _selectedCategoryId.isEmpty ||
           product.categoryId == _selectedCategoryId;
       return matchesSearch && matchesCategory;
     }).toList();
@@ -843,10 +844,11 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     for (final category in _categories) {
       uniqueCategories[category.categoryId] = category;
     }
-    
+
     String selectedCategoryId = product?.categoryId ?? '';
     // Validate selected category exists in unique categories
-    if (selectedCategoryId.isNotEmpty && !uniqueCategories.containsKey(selectedCategoryId)) {
+    if (selectedCategoryId.isNotEmpty &&
+        !uniqueCategories.containsKey(selectedCategoryId)) {
       selectedCategoryId = '';
     }
     // Set default if empty and categories available
@@ -914,7 +916,9 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedCategoryId.isEmpty ? null : selectedCategoryId,
+                          value: selectedCategoryId.isEmpty
+                              ? null
+                              : selectedCategoryId,
                           decoration: const InputDecoration(
                             labelText: 'Kategori',
                           ),
@@ -976,22 +980,20 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                                             child: ClipRRect(
                                               borderRadius:
                                                   BorderRadius.circular(8),
-                                              child: Image.network(
-                                                imageUrls[index],
+                                              child: WebSafeImage(
+                                                imageUrl: imageUrls[index],
                                                 fit: BoxFit.cover,
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) {
-                                                      return const Icon(
-                                                        Icons.image,
-                                                        size: 40,
-                                                        color:
-                                                            AppColors.greyLight,
-                                                      );
-                                                    },
+                                                errorWidget: (
+                                                  context,
+                                                  error,
+                                                  stackTrace,
+                                                ) {
+                                                  return const Icon(
+                                                    Icons.image,
+                                                    size: 40,
+                                                    color: AppColors.greyLight,
+                                                  );
+                                                },
                                               ),
                                             ),
                                           ),
@@ -1215,9 +1217,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                   ),
             actions: [
               TextButton(
-                onPressed: _isDialogLoading
-                    ? null
-                    : () => Navigator.pop(context),
+                onPressed:
+                    _isDialogLoading ? null : () => Navigator.pop(context),
                 child: const Text('İptal'),
               ),
               ElevatedButton(
@@ -1233,7 +1234,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                           try {
                             final price =
                                 double.tryParse(priceController.text.trim()) ??
-                                0;
+                                    0;
                             await _saveProduct(
                               product,
                               nameController.text.trim(),
@@ -1320,7 +1321,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                   double.tryParse(priceController.text.trim()) ?? product.price;
               final discount =
                   double.tryParse(discountController.text.trim()) ??
-                  product.discountPercentage;
+                      product.discountPercentage;
               await _updateProductPrice(product, price, discount);
               if (mounted) Navigator.pop(context);
             },
@@ -1381,9 +1382,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                       controller: valueController,
                       decoration: InputDecoration(
                         labelText: 'Değer',
-                        suffixText: selectedType == DiscountType.percentage
-                            ? '%'
-                            : '₺',
+                        suffixText:
+                            selectedType == DiscountType.percentage ? '%' : '₺',
                       ),
                       keyboardType: TextInputType.number,
                     ),
@@ -1618,10 +1618,10 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    urlController.text,
+                  child: WebSafeImage(
+                    imageUrl: urlController.text,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
+                    errorWidget: (context, url, error) => const Icon(
                       Icons.broken_image,
                       size: 40,
                       color: AppColors.greyLight,
@@ -1656,7 +1656,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
   ) {
     final storageService = StorageService();
     final predefinedImages = storageService.getPredefinedProductImages();
-    
+
     final List<Map<String, String>> sampleImages = [];
     predefinedImages.forEach((category, urls) {
       for (int i = 0; i < urls.length; i++) {
@@ -1701,8 +1701,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(8),
                           ),
-                          child: Image.network(
-                            image['url']!,
+                          child: WebSafeImage(
+                            imageUrl: image['url']!,
                             fit: BoxFit.cover,
                             width: double.infinity,
                           ),
@@ -1815,12 +1815,12 @@ class _ProductManagementPageState extends State<ProductManagementPage>
 
           // Close loading dialog
           if (mounted) Navigator.of(context).pop();
-          
+
           onImageSelected(uploadedUrl);
         } catch (e) {
           // Close loading dialog
           if (mounted) Navigator.of(context).pop();
-          
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1918,10 +1918,10 @@ class _ProductManagementPageState extends State<ProductManagementPage>
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  imageUrl,
+                child: WebSafeImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
+                  errorWidget: (context, url, error) => const Icon(
                     Icons.broken_image,
                     size: 40,
                     color: AppColors.greyLight,
@@ -2121,7 +2121,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     try {
       // Debug: Check if product ID is valid
       if (product.id.isEmpty) {
-        throw Exception('Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
+        throw Exception(
+            'Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
       }
 
       final discountedPrice = price * (1 - discount / 100);
@@ -2166,7 +2167,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     try {
       // Debug: Check if product ID is valid
       if (product.id.isEmpty) {
-        throw Exception('Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
+        throw Exception(
+            'Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
       }
 
       final updatedProduct = product.copyWith(
@@ -2212,7 +2214,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Ürünü Sil'),
-        content: Text('${product.name} ürününü silmek istediğinizden emin misiniz?'),
+        content:
+            Text('${product.name} ürününü silmek istediğinizden emin misiniz?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -2234,7 +2237,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     try {
       // Debug: Check if product ID is valid
       if (product.id.isEmpty) {
-        throw Exception('Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
+        throw Exception(
+            'Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
       }
 
       await _businessFirestoreService.deleteProduct(product.id);
@@ -2247,7 +2251,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${product.name} ürünü silindi'),
-            backgroundColor: AppColors.success, // Changed to success for delete confirmation
+            backgroundColor:
+                AppColors.success, // Changed to success for delete confirmation
           ),
         );
       }

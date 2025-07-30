@@ -8,6 +8,7 @@ import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../business/models/product.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../../../core/services/storage_service.dart';
 import '../models/category.dart' as category_model;
 import '../services/business_firestore_service.dart';
@@ -847,12 +848,12 @@ class _ProductEditPageState extends State<ProductEditPage>
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(7),
-                child: Image.network(
-                  imageUrl,
+                child: WebSafeImage(
+                  imageUrl: imageUrl,
                   width: double.infinity,
                   height: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
+                  errorWidget: (context, error, stackTrace) {
                     return Container(
                       color: AppColors.greyLighter,
                       child: Icon(
@@ -990,12 +991,12 @@ class _ProductEditPageState extends State<ProductEditPage>
 
   Widget _buildImageWidget(ImageData imageData) {
     if (imageData.sourceType == ImageSourceType.url) {
-      return Image.network(
-        imageData.url!,
+      return WebSafeImage(
+        imageUrl: imageData.url!,
         width: double.infinity,
         height: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
+        errorWidget: (context, error, stackTrace) {
           return Container(
             color: AppColors.greyLighter,
             child: Column(
@@ -1007,20 +1008,12 @@ class _ProductEditPageState extends State<ProductEditPage>
             ),
           );
         },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            color: AppColors.greyLighter,
-            child: Center(
-              child: CircularProgressIndicator(
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
-              ),
-            ),
-          );
-        },
+        placeholder: (context, url) => Container(
+          color: AppColors.greyLighter,
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
       );
     } else {
       // File source

@@ -8,6 +8,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/mixins/url_mixin.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../../../business/models/business.dart';
 import '../../core/widgets/app_image.dart';
 import '../services/business_firestore_service.dart';
@@ -24,7 +25,7 @@ class BusinessProfilePage extends StatefulWidget {
   State<BusinessProfilePage> createState() => _BusinessProfilePageState();
 }
 
-class _BusinessProfilePageState extends State<BusinessProfilePage> 
+class _BusinessProfilePageState extends State<BusinessProfilePage>
     with TickerProviderStateMixin, UrlMixin {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
@@ -58,14 +59,15 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
   bool _isSaving = false;
   String? _errorMessage;
   int _currentStep = 0;
-  
+
   // Platform-aware image handling
   XFile? _selectedImageFile;
   Uint8List? _selectedImageBytes;
   String? _currentLogoUrl;
   bool _isUploadingImage = false;
 
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
@@ -103,7 +105,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
     _initializeAnimations();
     _initializeWorkingHours();
     _loadBusinessData();
-    
+
     // Update URL for business profile
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _urlService.updateBusinessUrl(widget.businessId, 'ayarlar');
@@ -148,14 +150,14 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
     _instagramController.dispose();
     _facebookController.dispose();
     _twitterController.dispose();
-    
+
     for (var controller in _openHoursControllers.values) {
       controller.dispose();
     }
     for (var controller in _closeHoursControllers.values) {
       controller.dispose();
     }
-    
+
     _pageController.dispose();
     super.dispose();
   }
@@ -167,7 +169,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
     });
 
     try {
-      final business = await _businessFirestoreService.getBusiness(widget.businessId);
+      final business =
+          await _businessFirestoreService.getBusiness(widget.businessId);
       if (business != null) {
         setState(() {
           _business = business;
@@ -194,12 +197,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
     _businessNameController.text = business.businessName;
     _businessDescriptionController.text = business.businessDescription;
     _businessTypeController.text = business.businessType;
-    
+
     _streetController.text = business.address.street;
     _cityController.text = business.address.city;
     _districtController.text = business.address.district;
     _postalCodeController.text = business.address.postalCode ?? '';
-    
+
     _phoneController.text = business.contactInfo.phone ?? '';
     _emailController.text = business.contactInfo.email ?? '';
     _websiteController.text = business.contactInfo.website ?? '';
@@ -362,7 +365,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
       });
       return false;
     }
-    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_emailController.text.trim())) {
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+        .hasMatch(_emailController.text.trim())) {
       setState(() {
         _errorMessage = 'Geçerli bir e-posta adresi girin';
       });
@@ -387,11 +391,13 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
         setState(() {
           _errorMessage = 'Logo yükleniyor...';
         });
-        
-        final fileName = _storageService.generateFileName(_selectedImageFile!.name);
+
+        final fileName =
+            _storageService.generateFileName(_selectedImageFile!.name);
         logoUrl = await _storageService.uploadBusinessLogo(
           businessId: widget.businessId,
-          imageFile: kIsWeb ? _selectedImageBytes! : File(_selectedImageFile!.path),
+          imageFile:
+              kIsWeb ? _selectedImageBytes! : File(_selectedImageFile!.path),
           fileName: fileName,
         );
       }
@@ -422,10 +428,18 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
         contactInfo: ContactInfo(
           phone: _phoneController.text.trim(),
           email: _emailController.text.trim(),
-          website: _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
-          instagram: _instagramController.text.trim().isEmpty ? null : _instagramController.text.trim(),
-          facebook: _facebookController.text.trim().isEmpty ? null : _facebookController.text.trim(),
-          twitter: _twitterController.text.trim().isEmpty ? null : _twitterController.text.trim(),
+          website: _websiteController.text.trim().isEmpty
+              ? null
+              : _websiteController.text.trim(),
+          instagram: _instagramController.text.trim().isEmpty
+              ? null
+              : _instagramController.text.trim(),
+          facebook: _facebookController.text.trim().isEmpty
+              ? null
+              : _facebookController.text.trim(),
+          twitter: _twitterController.text.trim().isEmpty
+              ? null
+              : _twitterController.text.trim(),
         ),
         menuSettings: _business!.menuSettings.copyWith(
           workingHours: workingHours,
@@ -486,7 +500,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: _currentStep == 0 ? () => Navigator.pop(context) : _previousStep,
+          onPressed:
+              _currentStep == 0 ? () => Navigator.pop(context) : _previousStep,
         ),
       ),
       body: SafeArea(
@@ -559,7 +574,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
         children: List.generate(5, (index) {
           final isActive = index <= _currentStep;
           final isCompleted = index < _currentStep;
-          
+
           return Expanded(
             child: Row(
               children: [
@@ -567,9 +582,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
                   child: Container(
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isActive 
-                          ? AppColors.primary 
-                          : AppColors.greyLight,
+                      color: isActive ? AppColors.primary : AppColors.greyLight,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -635,7 +648,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
         children: [
           _buildSectionTitle('Adres Bilgileri', Icons.location_on),
           const SizedBox(height: 24),
-
           _buildTextField(
             controller: _streetController,
             label: 'Adres',
@@ -644,9 +656,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
             maxLines: 2,
             required: true,
           ),
-
           const SizedBox(height: 16),
-
           Row(
             children: [
               Expanded(
@@ -670,9 +680,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           _buildTextField(
             controller: _postalCodeController,
             label: 'Posta Kodu',
@@ -693,7 +701,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
         children: [
           _buildSectionTitle('İletişim Bilgileri', Icons.contact_phone),
           const SizedBox(height: 24),
-
           _buildTextField(
             controller: _phoneController,
             label: 'Telefon',
@@ -702,9 +709,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
             keyboardType: TextInputType.phone,
             required: true,
           ),
-
           const SizedBox(height: 16),
-
           _buildTextField(
             controller: _emailController,
             label: 'E-posta',
@@ -713,9 +718,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
             keyboardType: TextInputType.emailAddress,
             required: true,
           ),
-
           const SizedBox(height: 16),
-
           _buildTextField(
             controller: _websiteController,
             label: 'Web Sitesi',
@@ -743,25 +746,20 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
             ),
           ),
           const SizedBox(height: 24),
-
           _buildTextField(
             controller: _instagramController,
             label: 'Instagram',
             hint: '@kullaniciadi',
             icon: Icons.camera_alt,
           ),
-
           const SizedBox(height: 16),
-
           _buildTextField(
             controller: _facebookController,
             label: 'Facebook',
             hint: 'facebook.com/sayfaniz',
             icon: Icons.facebook,
           ),
-
           const SizedBox(height: 16),
-
           _buildTextField(
             controller: _twitterController,
             label: 'Twitter',
@@ -788,7 +786,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
             ),
           ),
           const SizedBox(height: 24),
-
           ..._daysOfWeek.map((day) => _buildWorkingHourRow(day)),
         ],
       ),
@@ -864,7 +861,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
           initialTime: TimeOfDay.now(),
         );
         if (time != null) {
-          controller.text = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+          controller.text =
+              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
         }
       },
       readOnly: true,
@@ -921,18 +919,22 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
       ),
       maxLines: maxLines,
       keyboardType: keyboardType,
-      validator: required ? (value) {
-        if (value?.trim().isEmpty ?? true) {
-          return '$label gerekli';
-        }
-        return null;
-      } : null,
+      validator: required
+          ? (value) {
+              if (value?.trim().isEmpty ?? true) {
+                return '$label gerekli';
+              }
+              return null;
+            }
+          : null,
     );
   }
 
   Widget _buildBusinessTypeDropdown() {
     return DropdownButtonFormField<String>(
-      value: _businessTypeController.text.isEmpty ? null : _businessTypeController.text,
+      value: _businessTypeController.text.isEmpty
+          ? null
+          : _businessTypeController.text,
       decoration: InputDecoration(
         labelText: 'İşletme Türü *',
         prefixIcon: const Icon(Icons.category),
@@ -1018,23 +1020,23 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
     if (kDebugMode && kIsWeb) {
       print('Loading logo URL: $_currentLogoUrl');
     }
-    
+
     if (_currentLogoUrl != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: AppImage(
+        child: WebSafeImage(
           imageUrl: _currentLogoUrl!,
           width: 120,
           height: 120,
           fit: BoxFit.cover,
-          errorBuilder: (context, url, error) {
+          errorWidget: (context, url, error) {
             if (kDebugMode) print('Logo load error: $error');
             return _buildLogoPlaceholder();
           },
         ),
       );
     }
-    
+
     return _buildLogoPlaceholder();
   }
 

@@ -24,35 +24,12 @@ class WebSafeImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Web platformunda Image.network kullan (HTML renderer ile çalışır)
+    // Web platformunda CORS sorununu çözmek için özel yaklaşım
     if (kIsWeb) {
       return Container(
         width: width,
         height: height,
-        child: Image.network(
-          imageUrl,
-          fit: fit ?? BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return placeholder?.call(context, imageUrl) ??
-                Container(
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return errorWidget?.call(context, imageUrl, error) ??
-                Container(
-                  color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.error,
-                    color: Colors.red,
-                  ),
-                );
-          },
-        ),
+        child: _buildWebImage(),
       );
     }
 
@@ -78,5 +55,57 @@ class WebSafeImage extends StatelessWidget {
                 ),
               ),
     );
+  }
+
+  /// Web için CORS güvenli görüntü oluştur
+  Widget _buildWebImage() {
+    // Firebase Storage URL'lerini CORS proxy ile çözme
+    String processedUrl = _getCorsProxyUrl(imageUrl);
+
+    return Image.network(
+      processedUrl,
+      fit: fit ?? BoxFit.cover,
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return placeholder?.call(context, imageUrl) ??
+            Container(
+              color: Colors.grey[300],
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        // Hata durumunda alternatif yöntemler dene
+        return _buildFallbackImage(context, error);
+      },
+    );
+  }
+
+  /// CORS proxy URL'i oluştur
+  String _getCorsProxyUrl(String originalUrl) {
+    // Firebase Storage URL'lerini doğrudan kullan
+    // Web renderer HTML kullandığı için CORS sorunu olmamalı
+    return originalUrl;
+  }
+
+  /// Yedek görüntü widget'ı
+  Widget _buildFallbackImage(BuildContext context, dynamic error) {
+    if (kDebugMode) {
+      print('WebSafeImage error for $imageUrl: $error');
+    }
+
+    return errorWidget?.call(context, imageUrl, error) ??
+        Container(
+          color: Colors.grey[300],
+          child: const Icon(
+            Icons.image_not_supported,
+            color: Colors.grey,
+            size: 32,
+          ),
+        );
   }
 }

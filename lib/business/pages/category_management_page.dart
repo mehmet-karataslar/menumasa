@@ -10,6 +10,7 @@ import '../../presentation/widgets/shared/empty_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
 import '../models/category.dart' as category_model;
@@ -32,7 +33,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     with TickerProviderStateMixin, UrlMixin {
   // --- MEVCUT İŞLEVSEL KODLAR (DEĞİŞTİRİLMEDİ) ---
   final BusinessFirestoreService _businessFirestoreService =
-  BusinessFirestoreService();
+      BusinessFirestoreService();
   final StorageService _storageService = StorageService();
   final UrlService _urlService = UrlService();
   final ImagePicker _imagePicker = ImagePicker();
@@ -153,7 +154,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       floating: true,
       elevation: 1,
       expandedHeight: 200.0,
-      title: Text('Kategori Yönetimi', style: AppTypography.h5.copyWith(color: AppColors.textPrimary)),
+      title: Text('Kategori Yönetimi',
+          style: AppTypography.h5.copyWith(color: AppColors.textPrimary)),
       flexibleSpace: FlexibleSpaceBar(
         background: Padding(
           padding: const EdgeInsets.fromLTRB(16, 90, 16, 16),
@@ -176,14 +178,16 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       onChanged: (value) => setState(() => _searchQuery = value),
       decoration: InputDecoration(
         hintText: 'Kategori ara...',
-        prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+        prefixIcon:
+            Icon(Icons.search, color: AppColors.textSecondary, size: 20),
         filled: true,
         fillColor: AppColors.backgroundLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -234,15 +238,18 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.white,
-          border: Border(bottom: BorderSide(color: AppColors.greyLighter, width: 1)),
+          border: Border(
+              bottom: BorderSide(color: AppColors.greyLighter, width: 1)),
         ),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
               _buildFilterChip('all', 'Tümü', _categories.length),
-              _buildFilterChip('active', 'Aktif', _categories.where((c) => c.isActive).length),
-              _buildFilterChip('inactive', 'Pasif', _categories.where((c) => !c.isActive).length),
+              _buildFilterChip('active', 'Aktif',
+                  _categories.where((c) => c.isActive).length),
+              _buildFilterChip('inactive', 'Pasif',
+                  _categories.where((c) => !c.isActive).length),
               const SizedBox(width: 24),
               _buildReorderButton(),
             ],
@@ -266,7 +273,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.textSecondary.withOpacity(0.7),
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.textSecondary.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -280,7 +289,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
             ),
           ],
         ),
-        backgroundColor: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.backgroundLight,
+        backgroundColor: isSelected
+            ? AppColors.primary.withOpacity(0.1)
+            : AppColors.backgroundLight,
         labelStyle: TextStyle(
           color: isSelected ? AppColors.primary : AppColors.textSecondary,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -289,7 +300,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
           color: isSelected ? AppColors.primary : AppColors.greyLight,
           width: 1,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       ),
     );
   }
@@ -297,12 +309,17 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   Widget _buildReorderButton() {
     return TextButton.icon(
       onPressed: _toggleReordering,
-      icon: Icon(_isReordering ? Icons.check_circle_outline : Icons.reorder, size: 18),
+      icon: Icon(_isReordering ? Icons.check_circle_outline : Icons.reorder,
+          size: 18),
       label: Text(_isReordering ? 'Sıralamayı Bitir' : 'Sırala'),
       style: TextButton.styleFrom(
-        foregroundColor: _isReordering ? AppColors.success : AppColors.textSecondary,
-        backgroundColor: _isReordering ? AppColors.success.withOpacity(0.1) : AppColors.backgroundLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+        foregroundColor:
+            _isReordering ? AppColors.success : AppColors.textSecondary,
+        backgroundColor: _isReordering
+            ? AppColors.success.withOpacity(0.1)
+            : AppColors.backgroundLight,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       ),
     );
   }
@@ -321,7 +338,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _searchQuery.isEmpty ? Icons.category_outlined : Icons.search_off,
+                _searchQuery.isEmpty
+                    ? Icons.category_outlined
+                    : Icons.search_off,
                 size: 60,
                 color: AppColors.primary,
               ),
@@ -337,7 +356,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
               _searchQuery.isEmpty
                   ? 'İşletmenizin menüsünü düzenlemek için yeni kategoriler ekleyin.'
                   : 'Arama kriterlerinizi değiştirerek tekrar deneyin.',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -351,7 +371,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-              (context, index) {
+          (context, index) {
             final category = categories[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -382,7 +402,7 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   Widget _buildCategoryCard(category_model.Category category, {Key? key}) {
     final categoryDiscounts = _discounts
         .where((d) =>
-    d.applicableCategories.contains(category.categoryId) && d.isActive)
+            d.applicableCategories.contains(category.categoryId) && d.isActive)
         .length;
 
     return Card(
@@ -410,7 +430,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                         Flexible(
                           child: Text(
                             category.name,
-                            style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                            style: AppTypography.bodyLarge
+                                .copyWith(fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -421,7 +442,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                       const SizedBox(height: 4),
                       Text(
                         category.description!,
-                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.textSecondary),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -450,9 +472,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
               const SizedBox(width: 8),
               _isReordering
                   ? ReorderableDragStartListener(
-                index: _categories.indexOf(category),
-                child: const Icon(Icons.drag_handle, color: AppColors.textLight),
-              )
+                      index: _categories.indexOf(category),
+                      child: const Icon(Icons.drag_handle,
+                          color: AppColors.textLight),
+                    )
                   : _buildCategoryActions(category),
             ],
           ),
@@ -462,7 +485,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   }
 
   Widget _buildCategoryIcon(category_model.Category category) {
-    Color iconColor = category.isActive ? AppColors.primary : AppColors.textLight;
+    Color iconColor =
+        category.isActive ? AppColors.primary : AppColors.textLight;
 
     return Container(
       width: 64,
@@ -474,13 +498,16 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
         child: category.imageUrl != null && category.imageUrl!.isNotEmpty
-            ? Image.network(
-          category.imageUrl!,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Icon(_getCategoryIcon(category.name), color: iconColor, size: 32),
-          loadingBuilder: (_, child, progress) =>
-          progress == null ? child : const Center(child: LoadingIndicator(size: 20)),
-        )
+            ? WebSafeImage(
+                imageUrl: category.imageUrl!,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Icon(
+                    _getCategoryIcon(category.name),
+                    color: iconColor,
+                    size: 32),
+                placeholder: (context, url) =>
+                    const Center(child: LoadingIndicator(size: 20)),
+              )
             : Icon(_getCategoryIcon(category.name), color: iconColor, size: 32),
       ),
     );
@@ -490,7 +517,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: (category.isActive ? AppColors.success : AppColors.error).withOpacity(0.1),
+        color: (category.isActive ? AppColors.success : AppColors.error)
+            .withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -513,7 +541,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     );
   }
 
-  Widget _buildInfoChip({required IconData icon, required String label, required Color color}) {
+  Widget _buildInfoChip(
+      {required IconData icon, required String label, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -540,14 +569,19 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   IconData _getCategoryIcon(String categoryName) {
     final name = categoryName.toLowerCase();
     if (name.contains('çorba')) return Icons.soup_kitchen_outlined;
-    if (name.contains('ana') || name.contains('yemek')) return Icons.restaurant_menu_outlined;
-    if (name.contains('tatlı') || name.contains('desert')) return Icons.cake_outlined;
-    if (name.contains('içecek') || name.contains('drink')) return Icons.local_bar_outlined;
-    if (name.contains('başlangıç') || name.contains('meze')) return Icons.restaurant_outlined;
+    if (name.contains('ana') || name.contains('yemek'))
+      return Icons.restaurant_menu_outlined;
+    if (name.contains('tatlı') || name.contains('desert'))
+      return Icons.cake_outlined;
+    if (name.contains('içecek') || name.contains('drink'))
+      return Icons.local_bar_outlined;
+    if (name.contains('başlangıç') || name.contains('meze'))
+      return Icons.restaurant_outlined;
     if (name.contains('salata')) return Icons.eco_outlined;
     if (name.contains('pizza')) return Icons.local_pizza_outlined;
     if (name.contains('burger')) return Icons.lunch_dining_outlined;
-    if (name.contains('kahve') || name.contains('coffee')) return Icons.local_cafe_outlined;
+    if (name.contains('kahve') || name.contains('coffee'))
+      return Icons.local_cafe_outlined;
     return Icons.category_outlined;
   }
 
@@ -558,13 +592,20 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       tooltip: 'Seçenekler',
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       itemBuilder: (context) => [
-        _buildPopupMenuItem(icon: Icons.info_outline, text: 'Detaylar', value: 'view'),
-        _buildPopupMenuItem(icon: Icons.edit_outlined, text: 'Düzenle', value: 'edit'),
-        _buildPopupMenuItem(icon: Icons.local_offer_outlined, text: 'İndirim Ekle', value: 'discount'),
+        _buildPopupMenuItem(
+            icon: Icons.info_outline, text: 'Detaylar', value: 'view'),
+        _buildPopupMenuItem(
+            icon: Icons.edit_outlined, text: 'Düzenle', value: 'edit'),
+        _buildPopupMenuItem(
+            icon: Icons.local_offer_outlined,
+            text: 'İndirim Ekle',
+            value: 'discount'),
         PopupMenuItem<String>(
           value: 'toggle',
           child: ListTile(
-            leading: Icon(category.isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+            leading: Icon(category.isActive
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined),
             title: Text(category.isActive ? 'Pasif Yap' : 'Aktif Yap'),
             contentPadding: EdgeInsets.zero,
           ),
@@ -582,7 +623,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     );
   }
 
-  PopupMenuItem<String> _buildPopupMenuItem({required IconData icon, required String text, required String value}) {
+  PopupMenuItem<String> _buildPopupMenuItem(
+      {required IconData icon, required String text, required String value}) {
     return PopupMenuItem<String>(
       value: value,
       child: ListTile(
@@ -607,9 +649,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   // --- MEVCUT SHOW DIALOG/MODAL KODLARI (TASARIMLARI YENİLENDİ) ---
 
   void _showCategoryDetails(category_model.Category category) {
-    final categoryDiscounts = _discounts.where((d) =>
-    d.applicableCategories.contains(category.categoryId) && d.isActive
-    ).toList();
+    final categoryDiscounts = _discounts
+        .where((d) =>
+            d.applicableCategories.contains(category.categoryId) && d.isActive)
+        .toList();
 
     showModalBottomSheet(
       context: context,
@@ -651,7 +694,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(category.name, style: AppTypography.h5.copyWith(fontWeight: FontWeight.bold)),
+                        Text(category.name,
+                            style: AppTypography.h5
+                                .copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         _buildStatusBadge(category),
                       ],
@@ -667,21 +712,31 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
               const Divider(height: 32),
               // Description
               if (category.description?.isNotEmpty == true) ...[
-                Text('Açıklama', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+                Text('Açıklama',
+                    style: AppTypography.bodyLarge
+                        .copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
-                Text(category.description!, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                Text(category.description!,
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: 24),
               ],
               // Stats
               Row(
                 children: [
                   Expanded(
-                      child: _buildDetailCard('Sıra Numarası', '${category.sortOrder + 1}', Icons.sort, AppColors.info)
-                  ),
+                      child: _buildDetailCard(
+                          'Sıra Numarası',
+                          '${category.sortOrder + 1}',
+                          Icons.sort,
+                          AppColors.info)),
                   const SizedBox(width: 16),
                   Expanded(
-                      child: _buildDetailCard('Aktif İndirim', '${categoryDiscounts.length}', Icons.local_offer, AppColors.warning)
-                  ),
+                      child: _buildDetailCard(
+                          'Aktif İndirim',
+                          '${categoryDiscounts.length}',
+                          Icons.local_offer,
+                          AppColors.warning)),
                 ],
               ),
               const SizedBox(height: 32),
@@ -695,7 +750,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                 label: const Text('Kategoriyi Düzenle'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0)),
                 ),
               ),
               SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
@@ -706,7 +762,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     );
   }
 
-  Widget _buildDetailCard(String label, String value, IconData icon, Color color) {
+  Widget _buildDetailCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -718,9 +775,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
         children: [
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 8),
-          Text(value, style: AppTypography.h5.copyWith(color: color, fontWeight: FontWeight.bold)),
+          Text(value,
+              style: AppTypography.h5
+                  .copyWith(color: color, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(label, style: AppTypography.caption.copyWith(color: color.withOpacity(0.8), fontWeight: FontWeight.w600)),
+          Text(label,
+              style: AppTypography.caption.copyWith(
+                  color: color.withOpacity(0.8), fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -737,7 +798,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   void _showCategoryDialog(category_model.Category? category) {
     final isEditing = category != null;
     final nameController = TextEditingController(text: category?.name ?? '');
-    final descriptionController = TextEditingController(text: category?.description ?? '');
+    final descriptionController =
+        TextEditingController(text: category?.description ?? '');
     bool isActive = category?.isActive ?? true;
 
     XFile? selectedImageFile;
@@ -749,10 +811,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
           title: Row(
             children: [
-              Icon(isEditing ? Icons.edit_note : Icons.add_circle_outline, color: AppColors.primary),
+              Icon(isEditing ? Icons.edit_note : Icons.add_circle_outline,
+                  color: AppColors.primary),
               const SizedBox(width: 8),
               Text(isEditing ? 'Kategori Düzenle' : 'Yeni Kategori Ekle'),
             ],
@@ -780,13 +844,19 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                 const SizedBox(height: 24),
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Kategori Adı *', hintText: 'Örn: Ana Yemekler', prefixIcon: Icon(Icons.category_outlined)),
+                  decoration: const InputDecoration(
+                      labelText: 'Kategori Adı *',
+                      hintText: 'Örn: Ana Yemekler',
+                      prefixIcon: Icon(Icons.category_outlined)),
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: descriptionController,
-                  decoration: const InputDecoration(labelText: 'Açıklama (İsteğe Bağlı)', hintText: 'Kısa bir açıklama girin', prefixIcon: Icon(Icons.description_outlined)),
+                  decoration: const InputDecoration(
+                      labelText: 'Açıklama (İsteğe Bağlı)',
+                      hintText: 'Kısa bir açıklama girin',
+                      prefixIcon: Icon(Icons.description_outlined)),
                   maxLines: 3,
                   minLines: 1,
                   textCapitalization: TextCapitalization.sentences,
@@ -794,11 +864,15 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                 const SizedBox(height: 16),
                 SwitchListTile.adaptive(
                   title: const Text('Aktif Kategori'),
-                  subtitle: Text(isActive ? 'Menüde görünecek' : 'Menüde gizli kalacak', style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+                  subtitle: Text(
+                      isActive ? 'Menüde görünecek' : 'Menüde gizli kalacak',
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.textSecondary)),
                   value: isActive,
                   onChanged: (value) => setDialogState(() => isActive = value),
                   activeColor: AppColors.success,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0)),
                   tileColor: AppColors.backgroundLight,
                 ),
               ],
@@ -844,8 +918,13 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((category) {
-        return category.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            (category.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+        return category.name
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            (category.description
+                    ?.toLowerCase()
+                    .contains(_searchQuery.toLowerCase()) ??
+                false);
       }).toList();
     }
 
@@ -898,17 +977,18 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   }
 
   Future<void> _saveCategory(
-      category_model.Category? category,
-      String name,
-      String description,
-      bool isActive,
-      XFile? imageFile,
-      ) async {
+    category_model.Category? category,
+    String name,
+    String description,
+    bool isActive,
+    XFile? imageFile,
+  ) async {
     try {
       String? imageUrl = category?.imageUrl;
 
       if (imageFile != null) {
-        final fileName = 'category_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final fileName =
+            'category_${DateTime.now().millisecondsSinceEpoch}.jpg';
         imageUrl = await _storageService.uploadCategoryImage(
           businessId: widget.businessId,
           categoryId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
@@ -931,7 +1011,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
           updatedAt: DateTime.now(),
         );
 
-        final categoryId = await _businessFirestoreService.saveCategory(newCategory);
+        final categoryId =
+            await _businessFirestoreService.saveCategory(newCategory);
         final savedCategory = newCategory.copyWith(categoryId: categoryId);
 
         setState(() {
@@ -964,7 +1045,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
         await _businessFirestoreService.saveCategory(updatedCategory);
 
-        final index = _categories.indexWhere((c) => c.categoryId == category.categoryId);
+        final index =
+            _categories.indexWhere((c) => c.categoryId == category.categoryId);
         if (index != -1) {
           setState(() {
             _categories[index] = updatedCategory;
@@ -1003,7 +1085,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
 
       await _businessFirestoreService.saveCategory(updatedCategory);
 
-      final index = _categories.indexWhere((c) => c.categoryId == category.categoryId);
+      final index =
+          _categories.indexWhere((c) => c.categoryId == category.categoryId);
       if (index != -1) {
         setState(() {
           _categories[index] = updatedCategory;
@@ -1041,7 +1124,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
         title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.error),
@@ -1049,7 +1133,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
             const Text('Kategoriyi Sil'),
           ],
         ),
-        content: Text('${category.name} kategorisini kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'),
+        content: Text(
+            '${category.name} kategorisini kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1123,9 +1208,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     });
 
     try {
-      final futures = _categories.map((category) =>
-          _businessFirestoreService.saveCategory(category)
-      ).toList();
+      final futures = _categories
+          .map((category) => _businessFirestoreService.saveCategory(category))
+          .toList();
 
       await Future.wait(futures);
 
@@ -1162,26 +1247,31 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   }) {
     return Center(
       child: GestureDetector(
-        onTap: isUploadingImage ? null : () => _pickCategoryImage(onImagePicked, onUploadStateChanged),
+        onTap: isUploadingImage
+            ? null
+            : () => _pickCategoryImage(onImagePicked, onUploadStateChanged),
         child: Container(
           width: 120,
           height: 120,
           decoration: BoxDecoration(
             color: AppColors.backgroundLight,
             borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: AppColors.greyLight, style: BorderStyle.solid, width: 2),
+            border: Border.all(
+                color: AppColors.greyLight, style: BorderStyle.solid, width: 2),
           ),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _buildImageContent(currentImageUrl, selectedImageFile, selectedImageBytes),
+              _buildImageContent(
+                  currentImageUrl, selectedImageFile, selectedImageBytes),
               if (isUploadingImage)
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(12.0),
                   ),
-                  child: const Center(child: LoadingIndicator(color: Colors.white)),
+                  child: const Center(
+                      child: LoadingIndicator(color: Colors.white)),
                 )
               else
                 Container(
@@ -1189,7 +1279,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                     color: Colors.black.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12.0),
                   ),
-                  child: const Icon(Icons.camera_alt, color: Colors.white70, size: 30),
+                  child: const Icon(Icons.camera_alt,
+                      color: Colors.white70, size: 30),
                 ),
             ],
           ),
@@ -1198,7 +1289,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     );
   }
 
-  Widget _buildImageContent(String? currentImageUrl, XFile? selectedImageFile, Uint8List? selectedImageBytes) {
+  Widget _buildImageContent(String? currentImageUrl, XFile? selectedImageFile,
+      Uint8List? selectedImageBytes) {
     ImageProvider? imageProvider;
 
     if (kIsWeb && selectedImageBytes != null) {
@@ -1228,9 +1320,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   }
 
   Future<void> _pickCategoryImage(
-      Function(XFile?, Uint8List?) onImagePicked,
-      Function(bool) onUploadStateChanged,
-      ) async {
+    Function(XFile?, Uint8List?) onImagePicked,
+    Function(bool) onUploadStateChanged,
+  ) async {
     try {
       onUploadStateChanged(true);
       final XFile? image = await _imagePicker.pickImage(

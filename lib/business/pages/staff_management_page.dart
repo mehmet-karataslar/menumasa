@@ -4,6 +4,7 @@ import 'dart:io';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../models/staff.dart';
 import '../services/staff_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
@@ -479,10 +480,10 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
       ),
       child: staff.profileImageUrl != null
           ? ClipOval(
-              child: Image.network(
-                staff.profileImageUrl!,
+              child: WebSafeImage(
+                imageUrl: staff.profileImageUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
+                errorWidget: (context, url, error) {
                   return _buildInitialsAvatar(staff);
                 },
               ),
@@ -1038,10 +1039,10 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     )
                   : _profileImageUrl != null
                       ? ClipOval(
-                          child: Image.network(
-                            _profileImageUrl!,
+                          child: WebSafeImage(
+                            imageUrl: _profileImageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
+                            errorWidget: (context, url, error) {
                               return _buildDefaultAvatar();
                             },
                           ),
@@ -1490,12 +1491,12 @@ class _StaffDetailsDialog extends StatelessWidget {
             backgroundColor: AppColors.white,
             child: staff.profileImageUrl != null
                 ? ClipOval(
-                    child: Image.network(
-                      staff.profileImageUrl!,
+                    child: WebSafeImage(
+                      imageUrl: staff.profileImageUrl!,
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
+                      errorWidget: (context, url, error) {
                         return Text(
                           staff.initials,
                           style: TextStyle(
