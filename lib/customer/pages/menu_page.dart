@@ -16,6 +16,7 @@ import '../../business/services/business_firestore_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../widgets/business_header.dart';
 import '../widgets/category_list.dart';
 import '../widgets/product_grid.dart';
@@ -807,10 +808,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   child: waiter.profileImageUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(25),
-                          child: Image.network(
-                            waiter.profileImageUrl!,
+                          child: WebSafeImage(
+                            imageUrl: waiter.profileImageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
+                            errorWidget: (context, url, error) =>
                                 _buildWaiterInitials(waiter),
                           ),
                         )
@@ -1490,12 +1491,11 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(17),
                               child: _business?.logoUrl != null
-                                  ? Image.network(
-                                      _business!.logoUrl!,
+                                  ? WebSafeImage(
+                                      imageUrl: _business!.logoUrl!,
                                       fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              _buildBusinessIcon(),
+                                      errorWidget: (context, url, error) =>
+                                          _buildBusinessIcon(),
                                     )
                                   : _buildBusinessIcon(),
                             ),
@@ -2141,18 +2141,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                         top: Radius.circular(16),
                       ),
                       child: product.imageUrl != null
-                          ? Image.network(
-                              product.imageUrl!,
+                          ? WebSafeImage(
+                              imageUrl: product.imageUrl!,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) =>
+                              errorWidget: (context, url, error) =>
                                   _buildCompactIcon(),
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return _buildCompactIcon();
-                              },
+                              placeholder: (context, url) =>
+                                  _buildCompactIcon(),
                             )
                           : _buildCompactIcon(),
                     ),

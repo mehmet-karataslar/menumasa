@@ -6,6 +6,7 @@ import '../widgets/qr_menu_loading.dart';
 import '../widgets/qr_menu_error.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/widgets/web_safe_image.dart';
 import '../../../customer/widgets/filter_bottom_sheet.dart';
 import '../../../business/models/product.dart';
 
@@ -171,12 +172,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(17),
                               child: state.business?.logoUrl != null
-                                  ? Image.network(
-                                      state.business!.logoUrl!,
+                                  ? WebSafeImage(
+                                      imageUrl: state.business!.logoUrl!,
                                       fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              _buildBusinessIcon(),
+                                      errorWidget: (context, url, error) =>
+                                          _buildBusinessIcon(),
                                     )
                                   : _buildBusinessIcon(),
                             ),
@@ -588,11 +588,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 ),
               ),
               child: product.imageUrl != null
-                  ? Image.network(
-                      product.imageUrl!,
+                  ? WebSafeImage(
+                      imageUrl: product.imageUrl!,
                       fit: BoxFit.cover,
                       width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) =>
+                      errorWidget: (context, url, error) =>
                           Icon(Icons.restaurant),
                     )
                   : Icon(Icons.restaurant),

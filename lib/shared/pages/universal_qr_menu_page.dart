@@ -6,6 +6,7 @@ import '../qr_menu/widgets/qr_menu_loading.dart';
 import '../qr_menu/widgets/qr_menu_error.dart';
 import '../qr_menu/widgets/qr_menu_dialogs.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/web_safe_image.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../customer/widgets/filter_bottom_sheet.dart';
 import '../../../business/models/product.dart';
@@ -172,12 +173,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(17),
                               child: state.business?.logoUrl != null
-                                  ? Image.network(
-                                      state.business!.logoUrl!,
+                                  ? WebSafeImage(
+                                      imageUrl: state.business!.logoUrl!,
                                       fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              _buildBusinessIcon(),
+                                      errorWidget: (context, url, error) =>
+                                          _buildBusinessIcon(),
                                     )
                                   : _buildBusinessIcon(),
                             ),
@@ -635,15 +635,14 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(12),
                             ),
-                            child: Image.network(
-                              product.imageUrl!,
+                            child: WebSafeImage(
+                              imageUrl: product.imageUrl!,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Center(
-                                      child: Icon(Icons.restaurant,
-                                          size: 40, color: AppColors.greyDark)),
+                              errorWidget: (context, url, error) => Center(
+                                  child: Icon(Icons.restaurant,
+                                      size: 40, color: AppColors.greyDark)),
                             ),
                           )
                         : Center(

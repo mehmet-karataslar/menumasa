@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/staff.dart';
 import '../services/staff_service.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../../business/models/product.dart';
 import '../../business/models/category.dart';
 import '../../core/services/data_service.dart';
@@ -10,7 +11,7 @@ import '../../customer/models/cart.dart';
 
 class StaffMenuPage extends StatefulWidget {
   final Staff currentStaff;
-  
+
   const StaffMenuPage({
     Key? key,
     required this.currentStaff,
@@ -23,14 +24,14 @@ class StaffMenuPage extends StatefulWidget {
 class _StaffMenuPageState extends State<StaffMenuPage> {
   final DataService _dataService = DataService();
   final OrderService _orderService = OrderService();
-  
+
   List<Product> _products = [];
   List<Category> _categories = [];
   List<CartItem> _currentOrder = [];
   Category? _selectedCategory;
   bool _isLoading = true;
   String? _error;
-  
+
   // Müşteri bilgileri
   final TextEditingController _customerNameController = TextEditingController();
   final TextEditingController _tableNumberController = TextEditingController();
@@ -58,8 +59,10 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
       });
 
       // İşletme menüsünü yükle
-      final products = await _dataService.getProducts(businessId: widget.currentStaff.businessId);
-      final categories = await _dataService.getCategories(businessId: widget.currentStaff.businessId);
+      final products = await _dataService.getProducts(
+          businessId: widget.currentStaff.businessId);
+      final categories = await _dataService.getCategories(
+          businessId: widget.currentStaff.businessId);
 
       setState(() {
         _products = products;
@@ -118,7 +121,8 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
         ],
       ),
       body: _buildBody(),
-      bottomNavigationBar: _currentOrder.isNotEmpty ? _buildOrderSummaryBar() : null,
+      bottomNavigationBar:
+          _currentOrder.isNotEmpty ? _buildOrderSummaryBar() : null,
     );
   }
 
@@ -230,7 +234,7 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
         itemBuilder: (context, index) {
           final category = _categories[index];
           final isSelected = _selectedCategory?.id == category.id;
-          
+
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
@@ -279,7 +283,8 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
   }
 
   Widget _buildProductCard(Product product) {
-    final isInCart = _currentOrder.any((item) => item.productId == product.productId);
+    final isInCart =
+        _currentOrder.any((item) => item.productId == product.productId);
     final cartItem = _currentOrder.firstWhere(
       (item) => item.productId == product.productId,
       orElse: () => CartItem(
@@ -307,17 +312,20 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(8)),
                   color: Colors.grey[200],
                 ),
                 child: product.imageUrl != null
                     ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                        child: Image.network(
-                          product.imageUrl!,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8)),
+                        child: WebSafeImage(
+                          imageUrl: product.imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(Icons.fastfood, size: 48, color: Colors.grey[400]);
+                          errorWidget: (context, url, error) {
+                            return Icon(Icons.fastfood,
+                                size: 48, color: Colors.grey[400]);
                           },
                         ),
                       )
@@ -354,7 +362,8 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
                         ),
                         if (isInCart)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.orange[700],
                               borderRadius: BorderRadius.circular(12),
@@ -437,8 +446,9 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
 
   void _addToCart(Product product) {
     setState(() {
-      final existingIndex = _currentOrder.indexWhere((item) => item.productId == product.productId);
-      
+      final existingIndex = _currentOrder
+          .indexWhere((item) => item.productId == product.productId);
+
       if (existingIndex >= 0) {
         _currentOrder[existingIndex] = _currentOrder[existingIndex].copyWith(
           quantity: _currentOrder[existingIndex].quantity + 1,
@@ -492,7 +502,8 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
                           child: Text('${item.quantity}'),
                         ),
                         title: Text(item.productName),
-                        subtitle: Text('₺${item.productPrice.toStringAsFixed(2)}'),
+                        subtitle:
+                            Text('₺${item.productPrice.toStringAsFixed(2)}'),
                         trailing: Text(
                           '₺${(item.productPrice * item.quantity).toStringAsFixed(2)}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -512,7 +523,8 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
 
   void _removeFromCart(CartItem item) {
     setState(() {
-      final index = _currentOrder.indexWhere((cartItem) => cartItem.cartItemId == item.cartItemId);
+      final index = _currentOrder
+          .indexWhere((cartItem) => cartItem.cartItemId == item.cartItemId);
       if (index >= 0) {
         if (_currentOrder[index].quantity > 1) {
           _currentOrder[index] = _currentOrder[index].copyWith(
@@ -580,7 +592,6 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
 
       // Geri dön
       Navigator.pop(context);
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -590,4 +601,4 @@ class _StaffMenuPageState extends State<StaffMenuPage> {
       );
     }
   }
-} 
+}

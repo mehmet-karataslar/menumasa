@@ -9,9 +9,11 @@ import '../../../core/services/storage_service.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/mixins/url_mixin.dart';
 import '../../../business/models/business.dart';
+import '../../core/widgets/app_image.dart';
 import '../services/business_firestore_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
+import '../../core/widgets/web_safe_image.dart';
 
 class BusinessProfilePage extends StatefulWidget {
   final String businessId;
@@ -1013,39 +1015,20 @@ class _BusinessProfilePageState extends State<BusinessProfilePage>
   }
 
   Widget _buildLogoContent() {
-    if (_selectedImageFile != null) {
-      if (kIsWeb && _selectedImageBytes != null) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.memory(
-            _selectedImageBytes!,
-            width: 120,
-            height: 120,
-            fit: BoxFit.cover,
-          ),
-        );
-      } else if (!kIsWeb) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.file(
-            File(_selectedImageFile!.path),
-            width: 120,
-            height: 120,
-            fit: BoxFit.cover,
-          ),
-        );
-      }
+    if (kDebugMode && kIsWeb) {
+      print('Loading logo URL: $_currentLogoUrl');
     }
     
     if (_currentLogoUrl != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          _currentLogoUrl!,
+        child: AppImage(
+          imageUrl: _currentLogoUrl!,
           width: 120,
           height: 120,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
+          errorBuilder: (context, url, error) {
+            if (kDebugMode) print('Logo load error: $error');
             return _buildLogoPlaceholder();
           },
         ),

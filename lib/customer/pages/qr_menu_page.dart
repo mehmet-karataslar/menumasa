@@ -11,6 +11,7 @@ import '../../core/services/url_service.dart';
 import '../../core/services/waiter_call_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/widgets/web_safe_image.dart';
 import '../services/customer_firestore_service.dart';
 import '../services/customer_service.dart';
 import '../models/waiter_call.dart';
@@ -498,10 +499,11 @@ class _QRMenuPageState extends State<QRMenuPage> with TickerProviderStateMixin {
               Positioned.fill(
                 child: Opacity(
                   opacity: 0.1,
-                  child: Image.network(
-                    'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+                  child: WebSafeImage(
+                    imageUrl:
+                        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(),
+                    errorWidget: (context, url, error) => Container(),
                   ),
                 ),
               ),
@@ -534,8 +536,8 @@ class _QRMenuPageState extends State<QRMenuPage> with TickerProviderStateMixin {
                           child: _business?.logoUrl != null
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(24),
-                                  child: Image.network(
-                                    _business!.logoUrl!,
+                                  child: WebSafeImage(
+                                    imageUrl: _business!.logoUrl!,
                                     fit: BoxFit.cover,
                                   ),
                                 )
@@ -910,18 +912,15 @@ class _QRMenuPageState extends State<QRMenuPage> with TickerProviderStateMixin {
                         top: Radius.circular(16),
                       ),
                       child: product.imageUrl != null
-                          ? Image.network(
-                              product.imageUrl!,
+                          ? WebSafeImage(
+                              imageUrl: product.imageUrl!,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) =>
+                              errorWidget: (context, url, error) =>
                                   _buildCompactIcon(),
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return _buildCompactIcon();
-                              },
+                              placeholder: (context, url) =>
+                                  _buildCompactIcon(),
                             )
                           : _buildCompactIcon(),
                     ),
@@ -1413,8 +1412,8 @@ class _QRMenuPageState extends State<QRMenuPage> with TickerProviderStateMixin {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(24),
-                        child: Image.network(
-                          product.imageUrl!,
+                        child: WebSafeImage(
+                          imageUrl: product.imageUrl!,
                           fit: BoxFit.cover,
                         ),
                       ),
