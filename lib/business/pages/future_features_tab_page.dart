@@ -235,7 +235,7 @@ class _FutureFeaturesTabPageState extends State<FutureFeaturesTabPage>
         AIPredictionPage(businessId: widget.businessId),
         DigitalMarketingPage(businessId: widget.businessId),
         DataSecurityPage(businessId: widget.businessId),
-        AnalyticsPage(),
+        AnalyticsPage(businessId: widget.businessId),
         StockManagementPage(businessId: widget.businessId),
       ],
     );

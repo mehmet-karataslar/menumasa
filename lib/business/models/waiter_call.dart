@@ -75,7 +75,9 @@ class WaiterCall {
         customerName: data['customerName'] ?? '',
         waiterId: data['waiterId'] ?? '',
         waiterName: data['waiterName'] ?? '',
-        tableNumber: data['tableNumber'] ?? 0,
+        tableNumber: data['tableNumber'] is String
+            ? int.tryParse(data['tableNumber']) ?? 0
+            : data['tableNumber'] ?? 0,
         floorNumber: data['floorNumber']?.toString(),
         message: data['message'],
         status: WaiterCallStatus.values.firstWhere(
@@ -108,7 +110,7 @@ class WaiterCall {
         customerName: 'Unknown',
         waiterId: '',
         waiterName: 'Unknown',
-        tableNumber: 0,
+        tableNumber: 999, // Bilinmeyen masa için default değer
         status: WaiterCallStatus.pending,
         createdAt: now,
         updatedAt: now,

@@ -201,7 +201,7 @@ class _HardwareIntegrationPageState extends State<HardwareIntegrationPage> {
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 0.9,
+            childAspectRatio: 1.1,
           ),
           itemCount: hardwareTypes.length,
           itemBuilder: (context, index) {

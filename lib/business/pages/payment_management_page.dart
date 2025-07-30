@@ -162,7 +162,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 1.4,
+            childAspectRatio: 1.6,
           ),
           itemCount: paymentMethods.length,
           itemBuilder: (context, index) {

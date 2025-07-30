@@ -174,7 +174,7 @@ class _BranchManagementPageState extends State<BranchManagementPage> {
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 1.3,
+            childAspectRatio: 1.5,
           ),
           itemCount: features.length,
           itemBuilder: (context, index) {
