@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:html' as html;
-import 'dart:ui_web' as ui;
 
 /// Web platformunda güvenli görüntü yükleme widget'ı
 /// CORS sorunlarını çözmek için platform kontrolü yapar
@@ -26,16 +24,58 @@ class WebSafeImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Web platformunda CORS sorununu çözmek için özel yaklaşım
     if (kIsWeb) {
-      return Container(
+      // CORS proxy ile Firebase Storage URL'lerini çöz
+      String proxiedUrl = _getProxiedUrl(imageUrl);
+
+      return Image.network(
+        proxiedUrl,
         width: width,
         height: height,
-        child: _buildWebImage(),
+        fit: fit ?? BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return placeholder?.call(context, imageUrl) ??
+              Container(
+                width: width,
+                height: height,
+                color: Colors.grey[300],
+                child: const Center(child: CircularProgressIndicator()),
+              );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print('🚨 Web image error for $imageUrl: $error');
+          // Proxy başarısız olursa orijinal URL'i dene
+          if (proxiedUrl != imageUrl) {
+            return Image.network(
+              imageUrl,
+              width: width,
+              height: height,
+              fit: fit ?? BoxFit.cover,
+              errorBuilder: (context, error2, stackTrace2) {
+                print('🚨 Original URL also failed for $imageUrl: $error2');
+                return errorWidget?.call(context, imageUrl, error2) ??
+                    Container(
+                      width: width,
+                      height: height,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.error, color: Colors.red),
+                    );
+              },
+            );
+          }
+
+          return errorWidget?.call(context, imageUrl, error) ??
+              Container(
+                width: width,
+                height: height,
+                color: Colors.grey[300],
+                child: const Icon(Icons.error, color: Colors.red),
+              );
+        },
       );
     }
 
-    // Mobil platformlarda normal CachedNetworkImage
     return CachedNetworkImage(
       imageUrl: imageUrl,
       fit: fit ?? BoxFit.cover,
@@ -44,61 +84,42 @@ class WebSafeImage extends StatelessWidget {
       placeholder: placeholder ??
           (context, url) => Container(
                 color: Colors.grey[300],
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
       errorWidget: errorWidget ??
           (context, url, error) => Container(
                 color: Colors.grey[300],
-                child: const Icon(
-                  Icons.error,
-                  color: Colors.red,
-                ),
+                child: const Icon(Icons.error, color: Colors.red),
               ),
     );
   }
 
-  /// Web için CORS güvenli görüntü oluştur
-  Widget _buildWebImage() {
-    // Firebase Storage URL'lerini CORS proxy ile çözme
-    String processedUrl = _getCorsProxyUrl(imageUrl);
-
-    // HTML img elementi oluştur ve kaydet
-    final String viewType = 'web-safe-img-${processedUrl.hashCode}';
-
-    // HTML img elementini oluştur ve platformViewRegistry'ye kaydet
-    ui.platformViewRegistry.registerViewFactory(
-      viewType,
-      (int viewId) {
-        final html.ImageElement imageElement = html.ImageElement()
-          ..src = processedUrl
-          ..style.width = '100%'
-          ..style.height = '100%'
-          ..style.objectFit = 'cover'
-          ..crossOrigin = 'anonymous'; // CORS için
-
-        // Hata durumunda placeholder göster
-        imageElement.onError.listen((event) {
-          imageElement.src =
-              'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
-        });
-
-        return imageElement;
-      },
-    );
-
-    return SizedBox(
-      width: width,
-      height: height,
-      child: HtmlElementView(viewType: viewType),
-    );
-  }
-
   /// CORS proxy URL'i oluştur
-  String _getCorsProxyUrl(String originalUrl) {
-    // Firebase Storage URL'lerini doğrudan kullan
-    // Web renderer HTML kullandığı için CORS sorunu olmamalı
+  String _getProxiedUrl(String originalUrl) {
+    // Firebase Storage URL'leri için token'sız erişim dene
+    if (originalUrl.contains('firebasestorage.googleapis.com')) {
+      try {
+        final uri = Uri.parse(originalUrl);
+        final pathSegments = uri.pathSegments;
+        if (pathSegments.isNotEmpty && pathSegments[0] == 'v0') {
+          // /v0/b/bucket/o/path?alt=media&token=xxx formatındaki URL'yi
+          // /v0/b/bucket/o/path?alt=media formatına çevir (token'sız)
+          final newUri = Uri(
+            scheme: uri.scheme,
+            host: uri.host,
+            pathSegments: pathSegments,
+            queryParameters: {'alt': 'media'}, // Sadece alt=media, token kaldır
+          );
+
+          print('🔄 Trying tokenless URL: $newUri');
+          return newUri.toString();
+        }
+      } catch (e) {
+        print('🚨 URL parsing error: $e');
+      }
+    }
+
+    // Orijinal URL'i kullan
     return originalUrl;
   }
 }

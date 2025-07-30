@@ -158,7 +158,16 @@ class StorageService {
       UploadTask uploadTask;
       
       if (kIsWeb) {
-        uploadTask = ref.putData(imageFile as Uint8List);
+        uploadTask = ref.putData(
+          imageFile as Uint8List,
+          SettableMetadata(
+            contentType: 'image/jpeg',
+            customMetadata: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            },
+          ),
+        );
       } else {
         uploadTask = ref.putFile(imageFile as File);
       }
