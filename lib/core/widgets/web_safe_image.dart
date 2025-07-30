@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:html' as html;
+import 'dart:ui_web' as ui;
 
 /// Web platformunda güvenli görüntü yükleme widget'ı
 /// CORS sorunlarını çözmek için platform kontrolü yapar
@@ -62,23 +64,34 @@ class WebSafeImage extends StatelessWidget {
     // Firebase Storage URL'lerini CORS proxy ile çözme
     String processedUrl = _getCorsProxyUrl(imageUrl);
 
-    return Image.network(
-      processedUrl,
-      fit: fit ?? BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return placeholder?.call(context, imageUrl) ??
-            Container(
-              color: Colors.grey[300],
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            );
+    // HTML img elementi oluştur ve kaydet
+    final String viewType = 'web-safe-img-${processedUrl.hashCode}';
+
+    // HTML img elementini oluştur ve platformViewRegistry'ye kaydet
+    ui.platformViewRegistry.registerViewFactory(
+      viewType,
+      (int viewId) {
+        final html.ImageElement imageElement = html.ImageElement()
+          ..src = processedUrl
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.objectFit = 'cover'
+          ..crossOrigin = 'anonymous'; // CORS için
+
+        // Hata durumunda placeholder göster
+        imageElement.onError.listen((event) {
+          imageElement.src =
+              'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
+        });
+
+        return imageElement;
       },
-      errorBuilder: (context, error, stackTrace) {
-        // Hata durumunda alternatif yöntemler dene
-        return _buildFallbackImage(context, error);
-      },
+    );
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: HtmlElementView(viewType: viewType),
     );
   }
 
@@ -87,22 +100,5 @@ class WebSafeImage extends StatelessWidget {
     // Firebase Storage URL'lerini doğrudan kullan
     // Web renderer HTML kullandığı için CORS sorunu olmamalı
     return originalUrl;
-  }
-
-  /// Yedek görüntü widget'ı
-  Widget _buildFallbackImage(BuildContext context, dynamic error) {
-    if (kDebugMode) {
-      print('WebSafeImage error for $imageUrl: $error');
-    }
-
-    return errorWidget?.call(context, imageUrl, error) ??
-        Container(
-          color: Colors.grey[300],
-          child: const Icon(
-            Icons.image_not_supported,
-            color: Colors.grey,
-            size: 32,
-          ),
-        );
   }
 }
