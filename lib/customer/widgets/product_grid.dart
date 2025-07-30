@@ -8,6 +8,7 @@ import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/cart_service.dart';
 import '../../customer/services/customer_service.dart';
+import '../../core/widgets/web_safe_image.dart';
 
 class ProductGrid extends StatelessWidget {
   final List<Product> products;
@@ -35,12 +36,12 @@ class ProductGrid extends StatelessWidget {
 
   double _calculateGridHeight() {
     if (products.isEmpty) return 200;
-    
+
     final rows = (products.length / crossAxisCount).ceil();
     final itemHeight = 200 / childAspectRatio; // Ortalama item height
     final spacingHeight = (rows - 1) * 20; // mainAxisSpacing
     final paddingHeight = 40; // padding top + bottom
-    
+
     return (rows * itemHeight) + spacingHeight + paddingHeight;
   }
 
@@ -61,12 +62,16 @@ class ProductGrid extends StatelessWidget {
           itemCount: products.length,
           itemBuilder: (context, index) {
             final product = products[index];
-            final isFavorite = favoriteProductIds?.contains(product.productId) ?? false;
+            final isFavorite =
+                favoriteProductIds?.contains(product.productId) ?? false;
             return ModernProductCard(
               product: product,
               onTap: onProductTap != null ? () => onProductTap!(product) : null,
-              onAddToCart: onAddToCart != null ? () => onAddToCart!(product) : null,
-              onToggleFavorite: onToggleFavorite != null ? () => onToggleFavorite!(product) : null,
+              onAddToCart:
+                  onAddToCart != null ? () => onAddToCart!(product) : null,
+              onToggleFavorite: onToggleFavorite != null
+                  ? () => onToggleFavorite!(product)
+                  : null,
               isFavorite: isFavorite,
               index: index,
               isQRMenu: isQRMenu,
@@ -116,12 +121,12 @@ class _ModernProductCardState extends State<ModernProductCard>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    
+
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.98,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -167,10 +172,12 @@ class _ModernProductCardState extends State<ModernProductCard>
               onTapDown: _onTapDown,
               onTapUp: _onTapUp,
               onTapCancel: _onTapCancel,
-              onTap: widget.onTap != null ? () {
-                HapticFeedback.lightImpact();
-                widget.onTap!();
-              } : null,
+              onTap: widget.onTap != null
+                  ? () {
+                      HapticFeedback.lightImpact();
+                      widget.onTap!();
+                    }
+                  : null,
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.white,
@@ -190,9 +197,10 @@ class _ModernProductCardState extends State<ModernProductCard>
                     // Image Section (60% of height)
                     Expanded(
                       flex: 6,
-                      child: _buildCompactImageSection(hasDiscount, isAvailable),
+                      child:
+                          _buildCompactImageSection(hasDiscount, isAvailable),
                     ),
-                    
+
                     // Info Section (40% of height)
                     Expanded(
                       flex: 4,
@@ -222,16 +230,14 @@ class _ModernProductCardState extends State<ModernProductCard>
           child: ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: widget.product.primaryImage?.url.isNotEmpty == true
-                ? Image.network(
-                    widget.product.primaryImage!.url,
+                ? WebSafeImage(
+                    imageUrl: widget.product.primaryImage!.url,
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return _buildImagePlaceholder();
-                    },
+                    placeholder: (context, url) => _buildImagePlaceholder(),
+                    errorWidget: (context, url, error) =>
+                        _buildImagePlaceholder(),
                   )
                 : _buildImagePlaceholder(),
           ),
@@ -249,7 +255,7 @@ class _ModernProductCardState extends State<ModernProductCard>
               Row(
                 children: _buildCompactBadges(),
               ),
-              
+
               // Right side (discount and favorite)
               Row(
                 children: [
@@ -257,7 +263,8 @@ class _ModernProductCardState extends State<ModernProductCard>
                   if (hasDiscount)
                     Container(
                       margin: const EdgeInsets.only(right: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: AppColors.accent,
                         borderRadius: BorderRadius.circular(8),
@@ -271,7 +278,7 @@ class _ModernProductCardState extends State<ModernProductCard>
                         ),
                       ),
                     ),
-                  
+
                   // Favorite button
                   if (widget.onToggleFavorite != null)
                     Material(
@@ -298,11 +305,11 @@ class _ModernProductCardState extends State<ModernProductCard>
                             ],
                           ),
                           child: Icon(
-                            widget.isFavorite 
-                                ? Icons.favorite_rounded 
+                            widget.isFavorite
+                                ? Icons.favorite_rounded
                                 : Icons.favorite_border_rounded,
-                            color: widget.isFavorite 
-                                ? AppColors.accent 
+                            color: widget.isFavorite
+                                ? AppColors.accent
                                 : AppColors.textSecondary,
                             size: 16,
                           ),
@@ -321,11 +328,13 @@ class _ModernProductCardState extends State<ModernProductCard>
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.black.withOpacity(0.7),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.error,
                     borderRadius: BorderRadius.circular(8),
@@ -364,9 +373,9 @@ class _ModernProductCardState extends State<ModernProductCard>
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          
+
           const SizedBox(height: 4),
-          
+
           // Price and button row
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -383,10 +392,11 @@ class _ModernProductCardState extends State<ModernProductCard>
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: hasDiscount ? AppColors.accent : AppColors.primary,
+                        color:
+                            hasDiscount ? AppColors.accent : AppColors.primary,
                       ),
                     ),
-                    
+
                     // Original price if discounted
                     if (hasDiscount)
                       Text(
@@ -400,7 +410,7 @@ class _ModernProductCardState extends State<ModernProductCard>
                   ],
                 ),
               ),
-              
+
               // Add button
               if (isAvailable && widget.onAddToCart != null)
                 Material(
@@ -519,12 +529,15 @@ class ModernProductList extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final product = products[index];
-        final isFavorite = favoriteProductIds?.contains(product.productId) ?? false;
+        final isFavorite =
+            favoriteProductIds?.contains(product.productId) ?? false;
         return ModernProductListItem(
           product: product,
           onTap: () => onProductTapped(product),
           onAddToCart: onAddToCart != null ? () => onAddToCart!(product) : null,
-          onToggleFavorite: onToggleFavorite != null ? () => onToggleFavorite!(product) : null,
+          onToggleFavorite: onToggleFavorite != null
+              ? () => onToggleFavorite!(product)
+              : null,
           isFavorite: isFavorite,
           index: index,
         );
@@ -568,10 +581,10 @@ class _ModernProductListItemState extends State<ModernProductListItem>
       duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.3, 0),
       end: Offset.zero,
@@ -642,25 +655,29 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                               borderRadius: const BorderRadius.horizontal(
                                 left: Radius.circular(16),
                               ),
-                              child: widget.product.primaryImage?.url.isNotEmpty == true
-                                  ? Image.network(
-                                      widget.product.primaryImage!.url,
-                                      fit: BoxFit.cover,
-                                      width: 100,
-                                      height: 100,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          _buildListImagePlaceholder(),
-                                    )
-                                  : _buildListImagePlaceholder(),
+                              child:
+                                  widget.product.primaryImage?.url.isNotEmpty ==
+                                          true
+                                      ? WebSafeImage(
+                                          imageUrl:
+                                              widget.product.primaryImage!.url,
+                                          fit: BoxFit.cover,
+                                          width: 100,
+                                          height: 100,
+                                          errorWidget: (context, url, error) =>
+                                              _buildListImagePlaceholder(),
+                                        )
+                                      : _buildListImagePlaceholder(),
                             ),
-                            
+
                             // Top overlays
                             Positioned(
                               top: 6,
                               left: 6,
                               right: 6,
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   // Discount Badge
                                   if (hasDiscount)
@@ -674,7 +691,8 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        widget.product.formattedDiscountPercentage,
+                                        widget.product
+                                            .formattedDiscountPercentage,
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 9,
@@ -682,7 +700,7 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                         ),
                                       ),
                                     ),
-                                  
+
                                   // Favorite button
                                   if (widget.onToggleFavorite != null)
                                     Material(
@@ -698,22 +716,25 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                           width: 32,
                                           height: 32,
                                           decoration: BoxDecoration(
-                                            color: AppColors.white.withOpacity(0.95),
-                                            borderRadius: BorderRadius.circular(10),
+                                            color: AppColors.white
+                                                .withOpacity(0.95),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: AppColors.shadow.withOpacity(0.15),
+                                                color: AppColors.shadow
+                                                    .withOpacity(0.15),
                                                 blurRadius: 6,
                                                 offset: const Offset(0, 2),
                                               ),
                                             ],
                                           ),
                                           child: Icon(
-                                            widget.isFavorite 
-                                                ? Icons.favorite_rounded 
+                                            widget.isFavorite
+                                                ? Icons.favorite_rounded
                                                 : Icons.favorite_border_rounded,
-                                            color: widget.isFavorite 
-                                                ? AppColors.accent 
+                                            color: widget.isFavorite
+                                                ? AppColors.accent
                                                 : AppColors.textSecondary,
                                             size: 18,
                                           ),
@@ -748,9 +769,9 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  
+
                                   const SizedBox(height: 4),
-                                  
+
                                   // Compact badges
                                   Row(
                                     children: _buildCompactListBadges(),
@@ -765,25 +786,28 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                   // Price
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           widget.product.formattedPrice,
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
-                                            color: hasDiscount 
-                                                ? AppColors.accent 
+                                            color: hasDiscount
+                                                ? AppColors.accent
                                                 : AppColors.primary,
                                           ),
                                         ),
                                         if (hasDiscount)
                                           Text(
-                                            widget.product.formattedOriginalPrice,
+                                            widget
+                                                .product.formattedOriginalPrice,
                                             style: TextStyle(
                                               fontSize: 11,
                                               color: AppColors.textSecondary,
-                                              decoration: TextDecoration.lineThrough,
+                                              decoration:
+                                                  TextDecoration.lineThrough,
                                             ),
                                           ),
                                       ],
@@ -806,7 +830,8 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                           height: 36,
                                           decoration: BoxDecoration(
                                             color: AppColors.primary,
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
                                           child: const Icon(
                                             Icons.add_rounded,

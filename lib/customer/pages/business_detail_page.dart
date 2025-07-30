@@ -3,21 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../business/models/business.dart';
-import '../../business/models/category.dart';
+
 import '../../business/models/category.dart' as category_model;
 import '../../business/models/product.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
+
 import '../../data/models/user.dart' as app_user;
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
-import '../widgets/business_header.dart';
 import '../services/customer_firestore_service.dart';
 import '../services/customer_service.dart';
-import '../widgets/category_list.dart';
-import '../widgets/product_grid.dart';
 import 'menu_page.dart';
 
 class BusinessDetailPage extends StatefulWidget {

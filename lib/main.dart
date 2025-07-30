@@ -19,7 +19,6 @@ import 'core/constants/app_colors.dart';
 import 'core/constants/app_typography.dart';
 import 'core/services/core_firestore_service.dart';
 import 'admin/admin.dart';
-import 'core/services/data_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/location_service.dart';
 import 'core/routing/app_router.dart';

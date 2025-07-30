@@ -41,6 +41,27 @@
   <title>Masa Menü - Dijital Menü Çözümü</title>
   <link rel="manifest" href="manifest.json">
   
+  <!-- Web renderer ayarı - Görüntü yükleme sorunları için HTML renderer kullan -->
+  <script type="text/javascript">
+    window.flutterWebRenderer = "html";
+    
+    // CORS bypass için global ayarlar
+    window.addEventListener('DOMContentLoaded', function() {
+      // HTML renderer'ı zorla
+      if (window.flutterConfiguration) {
+        window.flutterConfiguration.renderer = "html";
+      }
+      
+      // Image loading için CORS bypass
+      document.addEventListener('error', function(e) {
+        if (e.target.tagName === 'IMG') {
+          console.log('Image loading error:', e.target.src);
+          // Fallback URL veya placeholder göster
+        }
+      }, true);
+    });
+  </script>
+  
   <!-- QR Menu compatible routing script -->
   <script>
 // Enhanced QR Menu and normal route handler

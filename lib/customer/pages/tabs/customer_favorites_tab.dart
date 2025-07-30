@@ -10,8 +10,6 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/services/data_service.dart';
 import '../../services/customer_firestore_service.dart';
-import '../../services/customer_service.dart';
-import '../../../presentation/widgets/shared/empty_state.dart';
 import '../menu_page.dart';
 import '../business_detail_page.dart';
 import '../search_page.dart';
