@@ -1,8 +1,14 @@
 [
   {
-    "origin": ["*"],
-    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "origin": ["https://menumebak.web.app", "https://menumebak.firebaseapp.com"],
+    "method": ["GET", "HEAD"],
     "maxAgeSeconds": 3600,
-    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"]
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin", "Cache-Control"]
+  },
+  {
+    "origin": ["http://localhost:*", "https://localhost:*"],
+    "method": ["GET", "HEAD"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin", "Cache-Control"]
   }
 ] 

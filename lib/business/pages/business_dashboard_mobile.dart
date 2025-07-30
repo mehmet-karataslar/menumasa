@@ -22,23 +22,10 @@ import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_management_page.dart';
 import 'discount_management_page.dart';
-import 'staff_management_page.dart';
 import 'table_management_page.dart';
-import 'kitchen_integration_page.dart';
-import 'delivery_management_page.dart';
-import 'payment_management_page.dart';
-import 'staff_tracking_page.dart';
-import 'crm_management_page.dart';
-import 'hardware_integration_page.dart';
-import 'multi_branch_page.dart';
-import 'remote_access_page.dart';
-import 'legal_compliance_page.dart';
-import 'cost_control_page.dart';
-import 'ai_prediction_page.dart';
-import 'digital_marketing_page.dart';
-import 'data_security_page.dart';
-import 'analytics_page.dart';
-import 'stock_management_page.dart';
+import 'staff_management_page.dart';
+import 'coming_soon_features_page.dart';
+import 'future_features_tab_page.dart';
 
 class BusinessDashboardMobile extends StatefulWidget {
   final String businessId;
@@ -103,46 +90,20 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     'indirimler',
     'qr-kodlar',
     'masa-yonetimi',
-    'mutfak-entegrasyonu',
-    'teslimat-yonetimi',
-    'odeme-yonetimi',
     'personel-takibi',
-    'crm-yonetimi',
-    'donanim-entegrasyonu',
-    'sube-yonetimi',
-    'uzaktan-erisim',
-    'yasal-uyumluluk',
-    'maliyet-kontrolu',
-    'ai-tahminleme',
-    'dijital-pazarlama',
-    'veri-guvenligi',
-    'analitikler',
-    'stok-yonetimi',
+    'gelecek-ozellikler',
     'ayarlar',
   ];
 
   final List<String> _tabTitles = [
-    'Genel Bakış',
+    'Ana Sayfa',
     'Siparişler',
     'Menü Yönetimi',
     'İndirimler',
     'QR Kodlar',
     'Masa Yönetimi',
-    'Mutfak Entegrasyonu',
-    'Teslimat Yönetimi',
-    'Ödeme Yönetimi',
     'Personel Takibi',
-    'CRM Yönetimi',
-    'Donanım Entegrasyonu',
-    'Şube Yönetimi',
-    'Uzaktan Erişim',
-    'Yasal Uyumluluk',
-    'Maliyet Kontrolü',
-    'AI Tahminleme',
-    'Dijital Pazarlama',
-    'Veri Güvenliği',
-    'Analitikler',
-    'Stok Yönetimi',
+    'Gelecek Özellikler',
     'Ayarlar',
   ];
 
@@ -150,25 +111,11 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
     Icons.dashboard_rounded,
     Icons.receipt_long_rounded,
     Icons.restaurant_menu_outlined,
-    Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
     Icons.table_restaurant_rounded,
-    Icons.kitchen_rounded,
-    Icons.delivery_dining_rounded,
-    Icons.payment_rounded,
     Icons.group_rounded,
-    Icons.people_rounded,
-    Icons.devices_rounded,
-    Icons.store_mall_directory_rounded,
-    Icons.cloud_rounded,
-    Icons.gavel_rounded,
-    Icons.trending_up_rounded,
-    Icons.psychology_rounded,
-    Icons.campaign_rounded,
-    Icons.security_rounded,
-    Icons.analytics_rounded,
-    Icons.inventory_rounded,
+    Icons.rocket_launch_rounded,
     Icons.settings_rounded,
   ];
 
@@ -1114,96 +1061,18 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
           child: TableManagementPage(businessId: widget.businessId),
         );
       case 6:
-        print('👨‍🍳 Loading Kitchen Integration Page');
-        return Container(
-          key: const ValueKey('kitchen-integration'),
-          child: KitchenIntegrationPage(businessId: widget.businessId),
-        );
-      case 7:
-        print('🚚 Loading Delivery Management Page');
-        return Container(
-          key: const ValueKey('delivery-management'),
-          child: DeliveryManagementPage(businessId: widget.businessId),
-        );
-      case 8:
-        print('💳 Loading Payment Management Page');
-        return Container(
-          key: const ValueKey('payment-management'),
-          child: PaymentManagementPage(businessId: widget.businessId),
-        );
-      case 9:
         print('👥 Loading Staff Management Page');
         return Container(
           key: const ValueKey('staff-management'),
           child: StaffManagementPage(businessId: widget.businessId),
         );
-      case 10:
-        print('📊 Loading CRM Management Page');
+      case 7:
+        print('🚀 Loading Future Features Page');
         return Container(
-          key: const ValueKey('crm-management'),
-          child: CRMManagementPage(businessId: widget.businessId),
+          key: const ValueKey('future-features'),
+          child: FutureFeaturesTabPage(businessId: widget.businessId),
         );
-      case 11:
-        print('🖥️ Loading Hardware Integration Page');
-        return Container(
-          key: const ValueKey('hardware-integration'),
-          child: HardwareIntegrationPage(businessId: widget.businessId),
-        );
-      case 12:
-        print('🏪 Loading Multi Branch Page');
-        return Container(
-          key: const ValueKey('multi-branch'),
-          child: MultiBranchPage(businessId: widget.businessId),
-        );
-      case 13:
-        print('☁️ Loading Remote Access Page');
-        return Container(
-          key: const ValueKey('remote-access'),
-          child: RemoteAccessPage(businessId: widget.businessId),
-        );
-      case 14:
-        print('⚖️ Loading Legal Compliance Page');
-        return Container(
-          key: const ValueKey('legal-compliance'),
-          child: LegalCompliancePage(businessId: widget.businessId),
-        );
-      case 15:
-        print('💰 Loading Cost Control Page');
-        return Container(
-          key: const ValueKey('cost-control'),
-          child: CostControlPage(businessId: widget.businessId),
-        );
-      case 16:
-        print('🤖 Loading AI Prediction Page');
-        return Container(
-          key: const ValueKey('ai-prediction'),
-          child: AIPredictionPage(businessId: widget.businessId),
-        );
-      case 17:
-        print('📢 Loading Digital Marketing Page');
-        return Container(
-          key: const ValueKey('digital-marketing'),
-          child: DigitalMarketingPage(businessId: widget.businessId),
-        );
-      case 18:
-        print('🔒 Loading Data Security Page');
-        return Container(
-          key: const ValueKey('data-security'),
-          child: DataSecurityPage(businessId: widget.businessId),
-        );
-      case 19:
-        print('📊 Loading Analytics Page');
-        return Container(
-          key: const ValueKey('analytics'),
-          child: AnalyticsPage(),
-        );
-      case 20:
-        print('📦 Loading Stock Management Page');
-        return Container(
-          key: const ValueKey('stock-management'),
-          child: StockManagementPage(),
-        );
-      case 21:
+      case 8:
         print('⚙️ Loading Profile Page');
         return Container(
           key: const ValueKey('profile'),
@@ -1534,22 +1403,34 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
               onTap: () => _navigateToTab(2), // Menu Management
             ),
             _buildQuickActionCard(
-              title: 'Garson',
-              icon: Icons.people_rounded,
+              title: 'Masa Yönetimi',
+              icon: Icons.table_restaurant_rounded,
               color: const Color(0xFF6C63FF),
-              onTap: () => _navigateToTab(3), // Waiters
+              onTap: () => _navigateToTab(5), // Table Management
             ),
             _buildQuickActionCard(
               title: 'İndirim',
               icon: Icons.local_offer_rounded,
               color: const Color(0xFFFFA502),
-              onTap: () => _navigateToTab(4),
+              onTap: () => _navigateToTab(3),
             ),
             _buildQuickActionCard(
               title: 'QR Kod',
               icon: Icons.qr_code_rounded,
               color: const Color(0xFF4E9FF7),
-              onTap: () => _navigateToTab(5),
+              onTap: () => _navigateToTab(4),
+            ),
+            _buildQuickActionCard(
+              title: 'Personel',
+              icon: Icons.group_rounded,
+              color: const Color(0xFF607D8B),
+              onTap: () => _navigateToTab(6),
+            ),
+            _buildQuickActionCard(
+              title: 'Ayarlar',
+              icon: Icons.settings_rounded,
+              color: const Color(0xFF795548),
+              onTap: () => _navigateToTab(8),
             ),
           ],
         ),

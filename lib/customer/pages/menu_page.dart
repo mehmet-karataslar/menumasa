@@ -953,14 +953,14 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       final user = _authService.currentUser;
 
       // Use extracted table number or fallback to URL parsing
-      String tableNumber = _tableNumber?.toString() ?? 'Bilinmeyen Masa';
+      int tableNumber = _tableNumber ?? 0;
       if (_tableNumber == null) {
         try {
           final params = _urlService.getCurrentParams();
           final tableParam = params['table'] ?? params['tableNumber'];
           if (tableParam != null) {
-            tableNumber = tableParam.toString();
-            _tableNumber = int.tryParse(tableNumber);
+            _tableNumber = int.tryParse(tableParam.toString());
+            tableNumber = _tableNumber ?? 0;
           }
         } catch (e) {
           print('Fallback table number extraction failed: $e');

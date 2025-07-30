@@ -8,7 +8,7 @@ class WaiterCall {
   final String customerName;
   final String waiterId;
   final String waiterName;
-  final String tableNumber;
+  final int tableNumber;
   final String? floorNumber;
   final String? message;
   final WaiterCallStatus status;
@@ -41,7 +41,7 @@ class WaiterCall {
     required String customerName,
     required String waiterId,
     required String waiterName,
-    required String tableNumber,
+    required int tableNumber,
     String? floorNumber,
     String? message,
   }) {
@@ -75,8 +75,8 @@ class WaiterCall {
         customerName: data['customerName'] ?? '',
         waiterId: data['waiterId'] ?? '',
         waiterName: data['waiterName'] ?? '',
-        tableNumber: data['tableNumber'] ?? '',
-        floorNumber: data['floorNumber'],
+        tableNumber: data['tableNumber'] ?? 0,
+        floorNumber: data['floorNumber']?.toString(),
         message: data['message'],
         status: WaiterCallStatus.values.firstWhere(
           (status) => status.value == data['status'],
@@ -108,7 +108,7 @@ class WaiterCall {
         customerName: 'Unknown',
         waiterId: '',
         waiterName: 'Unknown',
-        tableNumber: 'Unknown',
+        tableNumber: 0,
         status: WaiterCallStatus.pending,
         createdAt: now,
         updatedAt: now,
@@ -169,7 +169,7 @@ class WaiterCall {
     String? customerName,
     String? waiterId,
     String? waiterName,
-    String? tableNumber,
+    int? tableNumber,
     String? floorNumber,
     String? message,
     WaiterCallStatus? status,

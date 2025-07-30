@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 
-/// Ödeme Yönetimi Sayfası
-class PaymentManagementPage extends StatefulWidget {
+/// Şube Yönetimi Sayfası
+class BranchManagementPage extends StatefulWidget {
   final String businessId;
 
-  const PaymentManagementPage({
+  const BranchManagementPage({
     super.key,
     required this.businessId,
   });
 
   @override
-  State<PaymentManagementPage> createState() => _PaymentManagementPageState();
+  State<BranchManagementPage> createState() => _BranchManagementPageState();
 }
 
-class _PaymentManagementPageState extends State<PaymentManagementPage> {
+class _BranchManagementPageState extends State<BranchManagementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,7 +29,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
           color: AppColors.textPrimary,
         ),
         title: Text(
-          'Ödeme Yönetimi',
+          'Şube Yönetimi',
           style: AppTypography.h6.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
@@ -43,9 +43,9 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
           children: [
             _buildHeaderCard(),
             const SizedBox(height: 24),
-            _buildPaymentMethodsSection(),
+            _buildFeaturesGrid(),
             const SizedBox(height: 24),
-            _buildFeaturesSection(),
+            _buildBenefitsSection(),
             const SizedBox(height: 24),
             _buildTimelineCard(),
           ],
@@ -60,8 +60,8 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFFFFA502),
-            const Color(0xFFFFA502).withOpacity(0.8),
+            const Color(0xFF2ECC71),
+            const Color(0xFF2ECC71).withOpacity(0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -69,7 +69,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFA502).withOpacity(0.3),
+            color: const Color(0xFF2ECC71).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -84,7 +84,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
-              Icons.payment_rounded,
+              Icons.store_mall_directory_rounded,
               color: AppColors.white,
               size: 40,
             ),
@@ -95,7 +95,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Gelişmiş Ödeme Sistemi',
+                  'Merkezi Şube Yönetimi',
                   style: AppTypography.h5.copyWith(
                     color: AppColors.white,
                     fontWeight: FontWeight.w700,
@@ -103,7 +103,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Çoklu ödeme yöntemleri ve güvenli işlem altyapısı',
+                  'Tüm şubelerinizi tek yerden yönetin ve kontrol edin',
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.white.withOpacity(0.9),
                   ),
@@ -116,31 +116,43 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
     );
   }
 
-  Widget _buildPaymentMethodsSection() {
-    final paymentMethods = [
+  Widget _buildFeaturesGrid() {
+    final features = [
       {
-        'name': 'Kredi Kartı',
-        'icon': Icons.credit_card_rounded,
-        'color': const Color(0xFF4E9FF7),
-        'description': 'Visa, MasterCard, American Express',
+        'icon': Icons.dashboard_rounded,
+        'title': 'Merkezi Kontrol',
+        'description': 'Tüm şubeleri tek ekrandan yönetin',
+        'color': const Color(0xFF3498DB),
       },
       {
-        'name': 'Mobil Ödeme',
-        'icon': Icons.smartphone_rounded,
-        'color': const Color(0xFF1DD1A1),
-        'description': 'Apple Pay, Google Pay, Samsung Pay',
+        'icon': Icons.analytics_rounded,
+        'title': 'Şube Performansı',
+        'description': 'Her şubenin detaylı performans raporları',
+        'color': const Color(0xFF9B59B6),
       },
       {
-        'name': 'QR Kod',
-        'icon': Icons.qr_code_rounded,
-        'color': const Color(0xFF6C63FF),
-        'description': 'Hızlı ve temassız ödeme',
+        'icon': Icons.inventory_rounded,
+        'title': 'Stok Transferi',
+        'description': 'Şubeler arası stok transfer işlemleri',
+        'color': const Color(0xFFE67E22),
       },
       {
-        'name': 'Nakit',
-        'icon': Icons.payments_rounded,
-        'color': const Color(0xFF9C27B0),
-        'description': 'Geleneksel nakit ödemeler',
+        'icon': Icons.people_rounded,
+        'title': 'Personel Yönetimi',
+        'description': 'Tüm şube personellerini tek yerden yönetin',
+        'color': const Color(0xFF1ABC9C),
+      },
+      {
+        'icon': Icons.receipt_long_rounded,
+        'title': 'Konsolide Raporlar',
+        'description': 'Tüm şubelerin birleşik raporları',
+        'color': const Color(0xFFE74C3C),
+      },
+      {
+        'icon': Icons.settings_rounded,
+        'title': 'Merkezi Konfigürasyon',
+        'description': 'Ayarları tüm şubelere tek seferde uygulayın',
+        'color': const Color(0xFF34495E),
       },
     ];
 
@@ -148,7 +160,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Desteklenen Ödeme Yöntemleri',
+          'Şube Yönetimi Özellikleri',
           style: AppTypography.h5.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -162,11 +174,11 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 1.4,
+            childAspectRatio: 1.3,
           ),
-          itemCount: paymentMethods.length,
+          itemCount: features.length,
           itemBuilder: (context, index) {
-            final method = paymentMethods[index];
+            final feature = features[index];
             return Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -174,7 +186,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: (method['color'] as Color).withOpacity(0.1),
+                    color: (feature['color'] as Color).withOpacity(0.1),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -186,18 +198,18 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: (method['color'] as Color).withOpacity(0.1),
+                      color: (feature['color'] as Color).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      method['icon'] as IconData,
-                      color: method['color'] as Color,
+                      feature['icon'] as IconData,
+                      color: feature['color'] as Color,
                       size: 24,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    method['name'] as String,
+                    feature['title'] as String,
                     style: AppTypography.bodyLarge.copyWith(
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -205,7 +217,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    method['description'] as String,
+                    feature['description'] as String,
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                       height: 1.4,
@@ -220,14 +232,14 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
     );
   }
 
-  Widget _buildFeaturesSection() {
-    final features = [
-      'PCI DSS uyumlu güvenli ödeme altyapısı',
-      '3D Secure doğrulama sistemi',
-      'Otomatik geri ödeme işlemleri',
-      'Taksitli ödeme seçenekleri',
-      'Günlük ödeme raporları',
-      'Çoklu para birimi desteği',
+  Widget _buildBenefitsSection() {
+    final benefits = [
+      'Merkezi kontrol ile operasyonel verimlilik artışı',
+      'Şubeler arası performans karşılaştırması',
+      'Stok yönetimi optimizasyonu',
+      'Personel koordinasyonu ve eğitim takibi',
+      'Konsolide finansal raporlama',
+      'Standardizasyon ve kalite kontrolü',
     ];
 
     return Container(
@@ -255,14 +267,14 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  Icons.security_rounded,
+                  Icons.trending_up_rounded,
                   color: AppColors.success,
                   size: 24,
                 ),
               ),
               const SizedBox(width: 12),
               Text(
-                'Güvenlik Özellikleri',
+                'İşletmenize Faydaları',
                 style: AppTypography.h6.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -271,7 +283,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
             ],
           ),
           const SizedBox(height: 20),
-          ...features.map((feature) => Padding(
+          ...benefits.map((benefit) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   children: [
@@ -290,7 +302,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        feature,
+                        benefit,
                         style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.textPrimary,
                         ),
@@ -337,14 +349,14 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  Icons.schedule_rounded,
+                  Icons.rocket_launch_rounded,
                   color: AppColors.white,
                   size: 24,
                 ),
               ),
               const SizedBox(width: 12),
               Text(
-                'Kullanıma Sunulma',
+                'Yakında Geliyor',
                 style: AppTypography.h6.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.white,
@@ -354,7 +366,7 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Gelişmiş Ödeme Sistemi yakında kullanıma sunulacak. Önce temel kredi kartı entegrasyonu başlayacak, ardından mobil ödeme seçenekleri eklenecek.',
+            'Şube Yönetimi sistemi yakında kullanıma sunulacak. Çoklu şube işletmelerinin tüm operasyonlarını merkezi olarak yönetebilecekleri kapsamlı bir platform.',
             style: AppTypography.bodyMedium.copyWith(
               color: AppColors.white.withOpacity(0.9),
               height: 1.5,
@@ -374,13 +386,13 @@ class _PaymentManagementPageState extends State<PaymentManagementPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.shield_rounded,
+                  Icons.business_rounded,
                   color: AppColors.white,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Güvenli ve Hızlı Ödemeler',
+                  'Çoklu Şube Desteği',
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.white,
                     fontWeight: FontWeight.w600,

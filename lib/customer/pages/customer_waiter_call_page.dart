@@ -8,9 +8,9 @@ class CustomerWaiterCallPage extends StatefulWidget {
   final String businessId;
   final String customerId;
   final String customerName;
-  final String? tableNumber;
+  final int? tableNumber;
   final String? floorNumber;
-  
+
   const CustomerWaiterCallPage({
     Key? key,
     required this.businessId,
@@ -27,11 +27,11 @@ class CustomerWaiterCallPage extends StatefulWidget {
 class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
   final WaiterCallService _waiterCallService = WaiterCallService();
   final StaffService _staffService = StaffService();
-  
+
   List<Staff> _availableWaiters = [];
   bool _isLoading = true;
   String? _error;
-  
+
   // Form controllers
   final TextEditingController _tableController = TextEditingController();
   final TextEditingController _floorController = TextEditingController();
@@ -40,15 +40,15 @@ class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
   @override
   void initState() {
     super.initState();
-    
+
     // Masa ve kat bilgilerini önceden doldur
     if (widget.tableNumber != null) {
-      _tableController.text = widget.tableNumber!;
+      _tableController.text = widget.tableNumber!.toString();
     }
     if (widget.floorNumber != null) {
       _floorController.text = widget.floorNumber!;
     }
-    
+
     _loadAvailableWaiters();
   }
 
@@ -67,7 +67,8 @@ class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
         _error = null;
       });
 
-      final waiters = await _waiterCallService.getAvailableWaitersForCustomer(widget.businessId);
+      final waiters = await _waiterCallService
+          .getAvailableWaitersForCustomer(widget.businessId);
 
       setState(() {
         _availableWaiters = waiters;
@@ -340,7 +341,8 @@ class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.green[100],
                         borderRadius: BorderRadius.circular(12),
@@ -418,12 +420,12 @@ class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
         customerName: widget.customerName,
         waiterId: waiter.staffId,
         waiterName: waiter.fullName,
-        tableNumber: _tableController.text.trim(),
-        floorNumber: _floorController.text.trim().isNotEmpty 
-            ? _floorController.text.trim() 
+        tableNumber: int.tryParse(_tableController.text.trim()) ?? 0,
+        floorNumber: _floorController.text.trim().isNotEmpty
+            ? _floorController.text.trim()
             : null,
-        message: _messageController.text.trim().isNotEmpty 
-            ? _messageController.text.trim() 
+        message: _messageController.text.trim().isNotEmpty
+            ? _messageController.text.trim()
             : null,
       );
 
@@ -447,7 +449,8 @@ class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
             children: [
               Text('${waiter.fullName} çağrınızı aldı.'),
               const SizedBox(height: 8),
-              Text('Masa: ${_tableController.text}${_floorController.text.isNotEmpty ? ' (${_floorController.text}. Kat)' : ''}'),
+              Text(
+                  'Masa: ${_tableController.text}${_floorController.text.isNotEmpty ? ' (${_floorController.text}. Kat)' : ''}'),
               const SizedBox(height: 8),
               const Text(
                 'Garsonunuz en kısa sürede sizinle iletişime geçecektir.',
@@ -466,11 +469,10 @@ class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
           ],
         ),
       );
-
     } catch (e) {
       // Loading dialog'ı kapat
       Navigator.pop(context);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Garson çağrılırken hata oluştu: $e'),
@@ -479,4 +481,4 @@ class _CustomerWaiterCallPageState extends State<CustomerWaiterCallPage> {
       );
     }
   }
-} 
+}

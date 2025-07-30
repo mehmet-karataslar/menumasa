@@ -1161,7 +1161,7 @@ class _QRMenuPageState extends State<QRMenuPage> with TickerProviderStateMixin {
             businessId: widget.businessId,
             customerId: currentUser.uid,
             customerName: currentUser.displayName ?? 'Müşteri',
-            tableNumber: _currentTableNumber?.toString(),
+            tableNumber: _currentTableNumber,
           ),
         ),
       );

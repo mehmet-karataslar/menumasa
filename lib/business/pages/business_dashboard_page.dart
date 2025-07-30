@@ -22,25 +22,13 @@ import 'order_management_page.dart';
 import 'qr_management_page.dart';
 import 'menu_management_page.dart';
 import 'discount_management_page.dart';
-import 'staff_management_page.dart';
 import 'business_dashboard_mobile.dart';
 import 'table_management_page.dart';
-import 'kitchen_integration_page.dart';
-import 'delivery_management_page.dart';
-import 'payment_management_page.dart';
+import 'staff_management_page.dart';
 
 import 'staff_call_management_page.dart';
-import 'crm_management_page.dart';
-import 'hardware_integration_page.dart';
-import 'multi_branch_page.dart';
-import 'remote_access_page.dart';
-import 'legal_compliance_page.dart';
-import 'cost_control_page.dart';
-import 'ai_prediction_page.dart';
-import 'digital_marketing_page.dart';
-import 'data_security_page.dart';
-import 'analytics_page.dart';
-import 'stock_management_page.dart';
+import 'coming_soon_features_page.dart';
+import 'future_features_tab_page.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 
 class BusinessDashboard extends StatefulWidget {
@@ -102,46 +90,20 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     'indirimler',
     'qr-kodlar',
     'masa-yonetimi',
-    'mutfak-entegrasyonu',
-    'teslimat-yonetimi',
-    'odeme-yonetimi',
     'personel-takibi',
-    'crm-yonetimi',
-    'donanim-entegrasyonu',
-    'sube-yonetimi',
-    'uzaktan-erisim',
-    'yasal-uyumluluk',
-    'maliyet-kontrolu',
-    'ai-tahminleme',
-    'dijital-pazarlama',
-    'veri-guvenligi',
-    'analitikler',
-    'stok-yonetimi',
+    'gelecek-ozellikler',
     'ayarlar',
   ];
 
   final List<String> _tabTitles = [
-    'Genel Bakış',
+    'Ana Sayfa',
     'Siparişler',
     'Menü Yönetimi',
     'İndirimler',
     'QR Kodlar',
     'Masa Yönetimi',
-    'Mutfak Entegrasyonu',
-    'Teslimat Yönetimi',
-    'Ödeme Yönetimi',
     'Personel Takibi',
-    'CRM Yönetimi',
-    'Donanım Entegrasyonu',
-    'Şube Yönetimi',
-    'Uzaktan Erişim',
-    'Yasal Uyumluluk',
-    'Maliyet Kontrolü',
-    'AI Tahminleme',
-    'Dijital Pazarlama',
-    'Veri Güvenliği',
-    'Analitikler',
-    'Stok Yönetimi',
+    'Gelecek Özellikler',
     'Ayarlar',
   ];
 
@@ -149,25 +111,11 @@ class _BusinessDashboardState extends State<BusinessDashboard>
     Icons.dashboard_rounded,
     Icons.receipt_long_rounded,
     Icons.restaurant_menu_outlined,
-    Icons.people_rounded,
     Icons.local_offer_rounded,
     Icons.qr_code_rounded,
     Icons.table_restaurant_rounded,
-    Icons.kitchen_rounded,
-    Icons.delivery_dining_rounded,
-    Icons.payment_rounded,
     Icons.group_rounded,
-    Icons.people_rounded,
-    Icons.devices_rounded,
-    Icons.store_mall_directory_rounded,
-    Icons.cloud_rounded,
-    Icons.gavel_rounded,
-    Icons.trending_up_rounded,
-    Icons.psychology_rounded,
-    Icons.campaign_rounded,
-    Icons.security_rounded,
-    Icons.analytics_rounded,
-    Icons.inventory_rounded,
+    Icons.rocket_launch_rounded,
     Icons.settings_rounded,
   ];
 
@@ -176,7 +124,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 23, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _setInitialTab();
     _tabController.addListener(_onTabChanged);
     _loadBusinessData();
@@ -771,22 +719,22 @@ class _BusinessDashboardState extends State<BusinessDashboard>
 
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      padding: const EdgeInsets.all(6),
+      margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: TabBar(
         controller: _tabController,
-        isScrollable: true, // Çok sayıda tab olduğu için kaydırılabilir yapıldı
+        isScrollable: false, // Eşit dağıtım için kaydırma kapalı
         labelColor: AppColors.white,
         unselectedLabelColor: AppColors.textSecondary,
         indicatorSize: TabBarIndicatorSize.tab,
@@ -796,63 +744,81 @@ class _BusinessDashboardState extends State<BusinessDashboard>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.primary.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        labelStyle:
-            AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
-        unselectedLabelStyle:
-            AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+        splashFactory: NoSplash.splashFactory,
+        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        labelStyle: AppTypography.bodySmall.copyWith(
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
+        unselectedLabelStyle: AppTypography.bodySmall.copyWith(
+          fontWeight: FontWeight.w500,
+          fontSize: 10,
+        ),
+        tabAlignment: TabAlignment.fill, // Eşit dağıtım
+        dividerColor: Colors.transparent,
         tabs: List.generate(
           _tabTitles.length,
           (index) => Tab(
-            height: 72, // Artırıldı çünkü dikey layout daha fazla yer kaplıyor
-            child: Stack(
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(_tabIcons[index], size: 22),
-                    const SizedBox(height: 6),
-                    Flexible(
-                      child: Text(
-                        _tabTitles[index],
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+            height: 76,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Stack(
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(_tabIcons[index], size: 20),
+                      const SizedBox(height: 6),
+                      Flexible(
+                        child: Text(
+                          _tabTitles[index],
+                          style: const TextStyle(fontSize: 9),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                if (index == 1 && _pendingOrders > 0)
-                  Positioned(
-                    top: 2,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '$_pendingOrders',
-                        style: const TextStyle(
-                          color: AppColors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                    ],
+                  ),
+                  if (index == 1 && _pendingOrders > 0)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.error.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '$_pendingOrders',
+                          style: const TextStyle(
+                            color: AppColors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -870,21 +836,8 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         DiscountManagementPage(businessId: widget.businessId),
         QRManagementPage(businessId: widget.businessId),
         TableManagementPage(businessId: widget.businessId),
-        KitchenIntegrationPage(businessId: widget.businessId),
-        DeliveryManagementPage(businessId: widget.businessId),
-        PaymentManagementPage(businessId: widget.businessId),
         StaffManagementPage(businessId: widget.businessId),
-        CRMManagementPage(businessId: widget.businessId),
-        HardwareIntegrationPage(businessId: widget.businessId),
-        MultiBranchPage(businessId: widget.businessId),
-        RemoteAccessPage(businessId: widget.businessId),
-        LegalCompliancePage(businessId: widget.businessId),
-        CostControlPage(businessId: widget.businessId),
-        AIPredictionPage(businessId: widget.businessId),
-        DigitalMarketingPage(businessId: widget.businessId),
-        DataSecurityPage(businessId: widget.businessId),
-        AnalyticsPage(),
-        StockManagementPage(),
+        FutureFeaturesTabPage(businessId: widget.businessId),
         BusinessProfilePage(businessId: widget.businessId),
       ],
     );
@@ -1259,7 +1212,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               title: 'Yeni Ürün Ekle',
               icon: Icons.add_circle_rounded,
               color: const Color(0xFF1DD1A1),
-              onTap: () => _navigateToTab(3),
+              onTap: () => _navigateToTab(2),
             ),
             const SizedBox(height: 12),
             _buildQuickActionButton(
@@ -1273,14 +1226,14 @@ class _BusinessDashboardState extends State<BusinessDashboard>
               title: 'İndirim Oluştur',
               icon: Icons.local_offer_rounded,
               color: const Color(0xFFFFA502),
-              onTap: () => _navigateToTab(4),
+              onTap: () => _navigateToTab(3),
             ),
             const SizedBox(height: 12),
             _buildQuickActionButton(
               title: 'QR Kod Oluştur',
               icon: Icons.qr_code_rounded,
               color: const Color(0xFF4E9FF7),
-              onTap: () => _navigateToTab(5),
+              onTap: () => _navigateToTab(4),
             ),
           ],
         ),
@@ -1377,7 +1330,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
                   ],
                 ),
                 TextButton(
-                  onPressed: () => _navigateToTab(3),
+                  onPressed: () => _navigateToTab(2),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     padding:

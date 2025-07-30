@@ -1,919 +1,408 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../services/stock_service.dart';
-import '../services/business_service.dart';
-import '../models/stock_models.dart';
-import '../../presentation/widgets/shared/loading_indicator.dart';
-import '../../presentation/widgets/shared/error_message.dart';
-import '../../presentation/widgets/shared/empty_state.dart';
 
+/// Stok Yönetimi Sayfası
 class StockManagementPage extends StatefulWidget {
-  const StockManagementPage({super.key});
+  final String businessId;
+
+  const StockManagementPage({
+    super.key,
+    required this.businessId,
+  });
 
   @override
   State<StockManagementPage> createState() => _StockManagementPageState();
 }
 
-class _StockManagementPageState extends State<StockManagementPage> with TickerProviderStateMixin {
-  final StockService _stockService = StockService();
-  final BusinessService _businessService = BusinessService();
-
-  late TabController _tabController;
-  
-  List<StockItem> _allStock = [];
-  List<StockAlert> _alerts = [];
-  Map<String, dynamic>? _statistics;
-  bool _isLoading = true;
-  String? _errorMessage;
-  String _searchQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 5, vsync: this);
-    _loadStockData();
-    _setupListeners();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _stockService.removeStockListener(_onStockUpdate);
-    _stockService.removeAlertListener(_onAlertUpdate);
-    super.dispose();
-  }
-
-  void _setupListeners() {
-    _stockService.addStockListener(_onStockUpdate);
-    _stockService.addAlertListener(_onAlertUpdate);
-  }
-
-  void _onStockUpdate(List<StockItem> stocks) {
-    if (mounted) {
-      setState(() {
-        _allStock = stocks;
-      });
-    }
-  }
-
-  void _onAlertUpdate(List<StockAlert> alerts) {
-    if (mounted) {
-      setState(() {
-        _alerts = alerts;
-      });
-    }
-  }
-
-  Future<void> _loadStockData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final business = _businessService.currentBusiness;
-      if (business == null) {
-        throw Exception('İşletme bilgisi bulunamadı');
-      }
-
-      final futures = await Future.wait([
-        _stockService.getBusinessStock(business.businessId),
-        _stockService.getActiveAlerts(business.businessId),
-        _stockService.getStockStatistics(business.businessId),
-      ]);
-
-      setState(() {
-        _allStock = futures[0] as List<StockItem>;
-        _alerts = futures[1] as List<StockAlert>;
-        _statistics = futures[2] as Map<String, dynamic>;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Stok verileri yüklenirken hata: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
+class _StockManagementPageState extends State<StockManagementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      body: Column(
-        children: [
-          // Header
-          _buildHeader(),
-          
-          // Alerts banner
-          if (_alerts.isNotEmpty) _buildAlertsBanner(),
-          
-          // Statistics cards
-          if (_statistics != null) _buildStatisticsCards(),
-          
-          // Tabs
-          _buildTabBar(),
-          
-          // Content
-          Expanded(
-            child: _isLoading
-                ? const Center(child: LoadingIndicator())
-                : _errorMessage != null
-                    ? Center(child: ErrorMessage(message: _errorMessage!))
-                    : _buildTabContent(),
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded),
+          color: AppColors.textPrimary,
+        ),
+        title: Text(
+          'Stok Yönetimi',
+          style: AppTypography.h6.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
           ),
-        ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddStockDialog,
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Stok Ekle'),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeaderCard(),
+            const SizedBox(height: 24),
+            _buildFeaturesGrid(),
+            const SizedBox(height: 24),
+            _buildBenefitsSection(),
+            const SizedBox(height: 24),
+            _buildTimelineCard(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeaderCard() {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF8E44AD),
+            const Color(0xFF8E44AD).withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF8E44AD).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Stok Yönetimi',
-                style: AppTypography.h3.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: _exportStock,
-                    icon: const Icon(Icons.download),
-                    tooltip: 'Stok Dışa Aktar',
-                  ),
-                  IconButton(
-                    onPressed: _checkAlerts,
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Kontrol Et',
-                  ),
-                  IconButton(
-                    onPressed: _showBulkUpdateDialog,
-                    icon: const Icon(Icons.edit_note),
-                    tooltip: 'Toplu Güncelleme',
-                  ),
-                ],
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Search bar
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Ürün ara...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.borderLight),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.borderLight),
-              ),
-              filled: true,
-              fillColor: AppColors.white,
-            ),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAlertsBanner() {
-    final highPriorityAlerts = _alerts.where((alert) => 
-        alert.priority == AlertPriority.high || alert.priority == AlertPriority.critical
-    ).toList();
-
-    if (highPriorityAlerts.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning, color: AppColors.error),
-          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.inventory_rounded,
+              color: AppColors.white,
+              size: 40,
+            ),
+          ),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Dikkat: ${highPriorityAlerts.length} Kritik Uyarı',
-                  style: AppTypography.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.error,
+                  'Akıllı Stok Yönetimi',
+                  style: AppTypography.h5.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: 8),
                 Text(
-                  highPriorityAlerts.map((a) => a.message).join(', '),
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textLight,
+                  'Envanterinizi otomatik takip edin, stok sıkıntısı yaşamayın',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.white.withOpacity(0.9),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          TextButton(
-            onPressed: () => _tabController.animateTo(4), // Alerts tab
-            child: const Text('Görüntüle'),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatisticsCards() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              'Toplam Ürün',
-              _statistics!['totalItems'].toString(),
-              Icons.inventory,
-              AppColors.primary,
-            ),
+  Widget _buildFeaturesGrid() {
+    final features = [
+      {
+        'icon': Icons.qr_code_scanner_rounded,
+        'title': 'Barkod Takibi',
+        'description': 'Her ürünün barkod ile takibi',
+        'color': const Color(0xFF3498DB),
+      },
+      {
+        'icon': Icons.notifications_active_rounded,
+        'title': 'Stok Uyarıları',
+        'description': 'Minimum seviye altına düşünce bildirim',
+        'color': const Color(0xFFE74C3C),
+      },
+      {
+        'icon': Icons.local_shipping_rounded,
+        'title': 'Tedarikçi Entegrasyonu',
+        'description': 'Otomatik sipariş oluşturma',
+        'color': const Color(0xFF2ECC71),
+      },
+      {
+        'icon': Icons.analytics_rounded,
+        'title': 'Stok Analitikleri',
+        'description': 'Detaylı envanter raporları',
+        'color': const Color(0xFF9B59B6),
+      },
+      {
+        'icon': Icons.timer_rounded,
+        'title': 'Son Kullanma Takibi',
+        'description': 'Tarih aşımı kontrolü',
+        'color': const Color(0xFFE67E22),
+      },
+      {
+        'icon': Icons.trending_up_rounded,
+        'title': 'Talep Tahmini',
+        'description': 'Geçmiş verilere dayalı tahmin',
+        'color': const Color(0xFF1ABC9C),
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Stok Yönetimi Özellikleri',
+          style: AppTypography.h5.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              'Düşük Stok',
-              _statistics!['lowStockItems'].toString(),
-              Icons.warning,
-              AppColors.warning,
-            ),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.3,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              'Stokta Yok',
-              _statistics!['outOfStockItems'].toString(),
-              Icons.error,
-              AppColors.error,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              'Toplam Değer',
-              '₺${_statistics!['totalValue'].toStringAsFixed(2)}',
-              Icons.monetization_on,
-              AppColors.success,
-            ),
-          ),
-        ],
-      ),
+          itemCount: features.length,
+          itemBuilder: (context, index) {
+            final feature = features[index];
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: (feature['color'] as Color).withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (feature['color'] as Color).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      feature['icon'] as IconData,
+                      color: feature['color'] as Color,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    feature['title'] as String,
+                    style: AppTypography.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    feature['description'] as String,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildBenefitsSection() {
+    final benefits = [
+      'Stok sıkıntısı yaşamayın, müşteri kaybetmeyin',
+      'Fazla stok maliyetlerinden kurtulun',
+      'Bozulma kayıplarını %60 azaltın',
+      'Tedarikçi siparişlerini otomatikleştirin',
+      'Envanter sayımını dakikalar içinde tamamlayın',
+      'Satış trendlerini analiz ederek doğru kararlar alın',
+    ];
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: color, size: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.savings_rounded,
+                  color: AppColors.success,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
               Text(
-                value,
-                style: AppTypography.h5.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
+                'Maliyet Tasarrufu',
+                style: AppTypography.h6.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textLight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Container(
-      color: AppColors.white,
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: true,
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.textLight,
-        indicatorColor: AppColors.primary,
-        tabs: [
-          Tab(text: 'Tüm Stok (${_allStock.length})'),
-          Tab(text: 'Düşük Stok (${_allStock.where((s) => s.isLowStock).length})'),
-          Tab(text: 'Stokta Yok (${_allStock.where((s) => s.isOutOfStock).length})'),
-          Tab(text: 'Son Kullanma (${_allStock.where((s) => s.isNearExpiry || s.isExpired).length})'),
-          Tab(text: 'Uyarılar (${_alerts.length})'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabContent() {
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildAllStockTab(),
-        _buildLowStockTab(),
-        _buildOutOfStockTab(),
-        _buildExpiryTab(),
-        _buildAlertsTab(),
-      ],
-    );
-  }
-
-  Widget _buildAllStockTab() {
-    final filteredStock = _getFilteredStock(_allStock);
-    
-    if (filteredStock.isEmpty) {
-      return const EmptyState(
-        icon: Icons.inventory,
-        title: 'Henüz stok yok',
-        message: 'İlk stok kaydınızı oluşturun',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredStock.length,
-      itemBuilder: (context, index) {
-        return _buildStockCard(filteredStock[index]);
-      },
-    );
-  }
-
-  Widget _buildLowStockTab() {
-    final lowStockItems = _getFilteredStock(_allStock.where((s) => s.isLowStock).toList());
-    
-    if (lowStockItems.isEmpty) {
-      return const EmptyState(
-        icon: Icons.check_circle,
-        title: 'Harika!',
-        message: 'Düşük stok bulunamadı',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: lowStockItems.length,
-      itemBuilder: (context, index) {
-        return _buildStockCard(lowStockItems[index]);
-      },
-    );
-  }
-
-  Widget _buildOutOfStockTab() {
-    final outOfStockItems = _getFilteredStock(_allStock.where((s) => s.isOutOfStock).toList());
-    
-    if (outOfStockItems.isEmpty) {
-      return const EmptyState(
-        icon: Icons.check_circle,
-        title: 'Harika!',
-        message: 'Stokta olmayan ürün yok',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: outOfStockItems.length,
-      itemBuilder: (context, index) {
-        return _buildStockCard(outOfStockItems[index]);
-      },
-    );
-  }
-
-  Widget _buildExpiryTab() {
-    final expiringItems = _getFilteredStock(_allStock.where((s) => s.isNearExpiry || s.isExpired).toList());
-    
-    if (expiringItems.isEmpty) {
-      return const EmptyState(
-        icon: Icons.check_circle,
-        title: 'Harika!',
-        message: 'Yakında süresi dolacak ürün yok',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: expiringItems.length,
-      itemBuilder: (context, index) {
-        return _buildStockCard(expiringItems[index]);
-      },
-    );
-  }
-
-  Widget _buildAlertsTab() {
-    if (_alerts.isEmpty) {
-      return const EmptyState(
-        icon: Icons.notifications_off,
-        title: 'Uyarı yok',
-        message: 'Şu anda aktif uyarı bulunmuyor',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _alerts.length,
-      itemBuilder: (context, index) {
-        return _buildAlertCard(_alerts[index]);
-      },
-    );
-  }
-
-  Widget _buildStockCard(StockItem stock) {
-    Color statusColor;
-    IconData statusIcon;
-    
-    switch (stock.status) {
-      case StockStatus.inStock:
-        statusColor = AppColors.success;
-        statusIcon = Icons.check_circle;
-        break;
-      case StockStatus.lowStock:
-        statusColor = AppColors.warning;
-        statusIcon = Icons.warning;
-        break;
-      case StockStatus.outOfStock:
-        statusColor = AppColors.error;
-        statusIcon = Icons.error;
-        break;
-      case StockStatus.nearExpiry:
-        statusColor = AppColors.warning;
-        statusIcon = Icons.schedule;
-        break;
-      case StockStatus.expired:
-        statusColor = AppColors.error;
-        statusIcon = Icons.dangerous;
-        break;
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        stock.productName,
-                        style: AppTypography.bodyLarge.copyWith(
-                          fontWeight: FontWeight.w600,
+          const SizedBox(height: 20),
+          ...benefits.map((benefit) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.success,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check_rounded,
+                        color: AppColors.white,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        benefit,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(statusIcon, color: statusColor, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            stock.status.displayName,
-                            style: AppTypography.bodySmall.copyWith(
-                              color: statusColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (action) => _handleStockAction(action, stock),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'edit', child: Text('Düzenle')),
-                    const PopupMenuItem(value: 'add', child: Text('Stok Ekle')),
-                    const PopupMenuItem(value: 'reduce', child: Text('Stok Azalt')),
-                    const PopupMenuItem(value: 'movements', child: Text('Hareketleri Görüntüle')),
-                    const PopupMenuItem(value: 'delete', child: Text('Sil')),
-                  ],
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 12),
-            
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoItem(
-                    'Mevcut Stok',
-                    '${stock.currentStock.toStringAsFixed(1)} ${stock.unit}',
-                    Icons.inventory,
-                  ),
-                ),
-                Expanded(
-                  child: _buildInfoItem(
-                    'Min. Stok',
-                    '${stock.minimumStock.toStringAsFixed(1)} ${stock.unit}',
-                    Icons.warning,
-                  ),
-                ),
-                Expanded(
-                  child: _buildInfoItem(
-                    'Birim Fiyat',
-                    '₺${stock.unitCost.toStringAsFixed(2)}',
-                    Icons.monetization_on,
-                  ),
-                ),
-              ],
-            ),
-            
-            if (stock.expiryDate != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.schedule, size: 16, color: AppColors.textLight),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Son Kullanma: ${_formatDate(stock.expiryDate!)}',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Toplam Değer: ₺${stock.stockValue.toStringAsFixed(2)}',
-                    style: AppTypography.bodySmall.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 14, color: AppColors.textLight),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textLight,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: AppTypography.bodySmall.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAlertCard(StockAlert alert) {
-    Color priorityColor;
-    IconData priorityIcon;
-    
-    switch (alert.priority) {
-      case AlertPriority.low:
-        priorityColor = AppColors.success;
-        priorityIcon = Icons.info;
-        break;
-      case AlertPriority.medium:
-        priorityColor = AppColors.warning;
-        priorityIcon = Icons.warning;
-        break;
-      case AlertPriority.high:
-        priorityColor = AppColors.error;
-        priorityIcon = Icons.error;
-        break;
-      case AlertPriority.critical:
-        priorityColor = AppColors.error;
-        priorityIcon = Icons.dangerous;
-        break;
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(priorityIcon, color: priorityColor, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    alert.alertType.displayName,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: priorityColor,
-                    ),
-                  ),
-                ),
-                Chip(
-                  label: Text(
-                    alert.priority.displayName,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.white,
-                    ),
-                  ),
-                  backgroundColor: priorityColor,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 8),
-            
-            Text(
-              alert.message,
-              style: AppTypography.bodyMedium,
-            ),
-            
-            const SizedBox(height: 12),
-            
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _formatDateTime(alert.createdAt),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textLight,
-                  ),
-                ),
-                Row(
-                  children: [
-                    if (!alert.isRead)
-                      TextButton(
-                        onPressed: () => _markAlertAsRead(alert.alertId),
-                        child: const Text('Okundu İşaretle'),
-                      ),
-                    TextButton(
-                      onPressed: () => _markAlertAsResolved(alert.alertId),
-                      child: const Text('Çözüldü'),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<StockItem> _getFilteredStock(List<StockItem> stock) {
-    if (_searchQuery.isEmpty) return stock;
-    
-    return stock.where((item) =>
-        item.productName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        item.productId.toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
-
-  String _formatDateTime(DateTime date) {
-    return '${_formatDate(date)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _handleStockAction(String action, StockItem stock) {
-    switch (action) {
-      case 'edit':
-        _showEditStockDialog(stock);
-        break;
-      case 'add':
-        _showAddStockQuantityDialog(stock);
-        break;
-      case 'reduce':
-        _showReduceStockDialog(stock);
-        break;
-      case 'movements':
-        _showMovementsDialog(stock);
-        break;
-      case 'delete':
-        _showDeleteConfirmation(stock);
-        break;
-    }
-  }
-
-  void _showAddStockDialog() {
-    // TODO: Implement add stock dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Stok ekleme özelliği yakında eklenecek')),
-    );
-  }
-
-  void _showEditStockDialog(StockItem stock) {
-    // TODO: Implement edit stock dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${stock.productName} düzenleme özelliği yakında eklenecek')),
-    );
-  }
-
-  void _showAddStockQuantityDialog(StockItem stock) {
-    // TODO: Implement add stock quantity dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${stock.productName} stok ekleme özelliği yakında eklenecek')),
-    );
-  }
-
-  void _showReduceStockDialog(StockItem stock) {
-    // TODO: Implement reduce stock dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${stock.productName} stok azaltma özelliği yakında eklenecek')),
-    );
-  }
-
-  void _showMovementsDialog(StockItem stock) {
-    // TODO: Implement movements dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${stock.productName} hareketleri görüntüleme özelliği yakında eklenecek')),
-    );
-  }
-
-  void _showDeleteConfirmation(StockItem stock) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Stok Silme Onayı'),
-        content: Text('${stock.productName} ürününün stok kaydını silmek istediğinizden emin misiniz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteStock(stock);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Sil'),
-          ),
+              )),
         ],
       ),
     );
   }
 
-  void _showBulkUpdateDialog() {
-    // TODO: Implement bulk update dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Toplu güncelleme özelliği yakında eklenecek')),
+  Widget _buildTimelineCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.rocket_launch_rounded,
+                  color: AppColors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Yakında Geliyor',
+                style: AppTypography.h6.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Stok Yönetimi sistemi yakında kullanıma sunulacak. İlk aşamada temel envanter takibi başlayacak, ardından gelişmiş analitik özellikler eklenecek.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.white.withOpacity(0.9),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.white.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.inventory_2_rounded,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Akıllı Envanter Takibi',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
-
-  Future<void> _deleteStock(StockItem stock) async {
-    try {
-      await _stockService.deleteStockItem(stock.stockId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${stock.productName} stok kaydı silindi')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Stok silme hatası: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
-  Future<void> _markAlertAsRead(String alertId) async {
-    try {
-      await _stockService.markAlertAsRead(alertId);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Uyarı güncelleme hatası: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
-  Future<void> _markAlertAsResolved(String alertId) async {
-    try {
-      await _stockService.markAlertAsResolved(alertId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Uyarı çözüldü olarak işaretlendi')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Uyarı güncelleme hatası: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
-  Future<void> _checkAlerts() async {
-    try {
-      final business = _businessService.currentBusiness;
-      if (business != null) {
-        await _stockService.checkAllAlerts(business.businessId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Stok kontrolleri tamamlandı')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Kontrol hatası: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
-  Future<void> _exportStock() async {
-    try {
-      final business = _businessService.currentBusiness;
-      if (business != null) {
-        final data = await _stockService.exportStockData(business.businessId);
-        // TODO: Implement actual export (save to file or share)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Stok verileri dışa aktarıldı')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Dışa aktarma hatası: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-} 
+}

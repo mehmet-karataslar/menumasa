@@ -217,7 +217,7 @@ class WaiterCallService {
     required String customerName,
     required String waiterId,
     required String waiterName,
-    required String tableNumber,
+    required int tableNumber,
     String? floorNumber,
     String? message,
   }) async {
