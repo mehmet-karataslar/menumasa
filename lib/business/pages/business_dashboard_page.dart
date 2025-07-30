@@ -28,7 +28,6 @@ import 'staff_management_page.dart';
 
 import 'staff_call_management_page.dart';
 import 'coming_soon_features_page.dart';
-import 'future_features_tab_page.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 
 class BusinessDashboard extends StatefulWidget {
@@ -837,7 +836,7 @@ class _BusinessDashboardState extends State<BusinessDashboard>
         QRManagementPage(businessId: widget.businessId),
         TableManagementPage(businessId: widget.businessId),
         StaffManagementPage(businessId: widget.businessId),
-        FutureFeaturesTabPage(businessId: widget.businessId),
+        ComingSoonFeaturesPage(businessId: widget.businessId),
         BusinessProfilePage(businessId: widget.businessId),
       ],
     );

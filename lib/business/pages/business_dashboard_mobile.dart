@@ -25,7 +25,6 @@ import 'discount_management_page.dart';
 import 'table_management_page.dart';
 import 'staff_management_page.dart';
 import 'coming_soon_features_page.dart';
-import 'future_features_tab_page.dart';
 
 class BusinessDashboardMobile extends StatefulWidget {
   final String businessId;
@@ -1070,7 +1069,7 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
         print('🚀 Loading Future Features Page');
         return Container(
           key: const ValueKey('future-features'),
-          child: FutureFeaturesTabPage(businessId: widget.businessId),
+          child: ComingSoonFeaturesPage(businessId: widget.businessId),
         );
       case 8:
         print('⚙️ Loading Profile Page');

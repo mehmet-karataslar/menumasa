@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import 'table_management_page.dart';
-import 'kitchen_integration_page.dart';
+import 'kitchen_integration_page.dart' hide AppColors, AppTypography;
 import 'delivery_management_page.dart';
 import 'payment_management_page.dart';
 import 'staff_tracking_page.dart';

@@ -1,243 +1,411 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import 'kitchen_integration_page.dart';
-import 'delivery_management_page.dart';
-import 'payment_management_page.dart';
-import 'crm_management_page.dart';
-import 'hardware_integration_page.dart';
-import 'multi_branch_page.dart';
-import 'remote_access_page.dart';
-import 'legal_compliance_page.dart';
-import 'cost_control_page.dart';
-import 'ai_prediction_page.dart';
-import 'digital_marketing_page.dart';
-import 'data_security_page.dart';
-import 'analytics_page.dart';
-import 'stock_management_page.dart';
 
-class FutureFeaturesTabPage extends StatefulWidget {
+/// Mutfak Entegrasyonu (KDS) Sayfası
+class KitchenIntegrationPage extends StatefulWidget {
   final String businessId;
 
-  const FutureFeaturesTabPage({
+  const KitchenIntegrationPage({
     super.key,
     required this.businessId,
   });
 
   @override
-  State<FutureFeaturesTabPage> createState() => _FutureFeaturesTabPageState();
+  State<KitchenIntegrationPage> createState() => _KitchenIntegrationPageState();
 }
 
-class _FutureFeaturesTabPageState extends State<FutureFeaturesTabPage>
-    with TickerProviderStateMixin {
-  late TabController _subTabController;
-
-  final List<String> _subTabTitles = [
-    'Mutfak Entegrasyonu',
-    'Teslimat Yönetimi',
-    'Ödeme Yönetimi',
-    'CRM Yönetimi',
-    'Donanım Entegrasyonu',
-    'Şube Yönetimi',
-    'Uzaktan Erişim',
-    'Yasal Uyumluluk',
-    'Maliyet Kontrolü',
-    'AI Tahminleme',
-    'Dijital Pazarlama',
-    'Veri Güvenliği',
-    'Analitikler',
-    'Stok Yönetimi',
-  ];
-
-  final List<IconData> _subTabIcons = [
-    Icons.kitchen_rounded,
-    Icons.delivery_dining_rounded,
-    Icons.payment_rounded,
-    Icons.people_rounded,
-    Icons.devices_rounded,
-    Icons.store_mall_directory_rounded,
-    Icons.cloud_rounded,
-    Icons.gavel_rounded,
-    Icons.trending_up_rounded,
-    Icons.psychology_rounded,
-    Icons.campaign_rounded,
-    Icons.security_rounded,
-    Icons.analytics_rounded,
-    Icons.inventory_rounded,
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _subTabController =
-        TabController(length: _subTabTitles.length, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _subTabController.dispose();
-    super.dispose();
-  }
-
+class _KitchenIntegrationPageState extends State<KitchenIntegrationPage> {
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded),
+          color: AppColors.textPrimary,
+        ),
+        title: Text(
+          'Mutfak Entegrasyonu',
+          style: AppTypography.h6.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeaderCard(),
+            const SizedBox(height: 24),
+            _buildFeaturesSection(),
+            const SizedBox(height: 24),
+            _buildBenefitsSection(),
+            const SizedBox(height: 24),
+            _buildTimelineCard(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF4E9FF7),
+            const Color(0xFF4E9FF7).withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4E9FF7).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.kitchen_rounded,
+              color: AppColors.white,
+              size: 40,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Kitchen Display System (KDS)',
+                  style: AppTypography.h5.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Mutfağınızı dijitalleştirin ve siparişleri daha verimli yönetin',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturesSection() {
+    final features = [
+      {
+        'icon': Icons.monitor_rounded,
+        'title': 'Dijital Mutfak Ekranı',
+        'description':
+        'Kağıt fiş yerine büyük ekranlarda siparişleri görüntüleyin',
+        'color': const Color(0xFF1DD1A1),
+      },
+      {
+        'icon': Icons.timer_rounded,
+        'title': 'Anlık Sipariş Takibi',
+        'description':
+        'Siparişlerin hazırlanma sürelerini gerçek zamanlı takip edin',
+        'color': const Color(0xFFFFA502),
+      },
+      {
+        'icon': Icons.notifications_active_rounded,
+        'title': 'Akıllı Bildirimler',
+        'description': 'Yeni siparişler için sesli ve görsel uyarılar alın',
+        'color': const Color(0xFF6C63FF),
+      },
+      {
+        'icon': Icons.check_circle_rounded,
+        'title': 'Durum Güncelleme',
+        'description': 'Siparişleri hazırlandıkça tek tıkla güncelleyin',
+        'color': const Color(0xFF4ECDC4),
+      },
+      {
+        'icon': Icons.priority_high_rounded,
+        'title': 'Öncelik Sıralaması',
+        'description':
+        'Önemli siparişleri önceliklendir ve daha hızlı servis yapın',
+        'color': const Color(0xFFFF6B6B),
+      },
+      {
+        'icon': Icons.analytics_rounded,
+        'title': 'Mutfak Analitiği',
+        'description':
+        'Hazırlama süreleri ve performans raporları görüntüleyin',
+        'color': const Color(0xFF9C27B0),
+      },
+    ];
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSubTabBar(),
-        Expanded(child: _buildSubTabView()),
+        Text(
+          'Özellikler',
+          style: AppTypography.h5.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.5,
+          ),
+          itemCount: features.length,
+          itemBuilder: (context, index) {
+            final feature = features[index];
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: (feature['color'] as Color).withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (feature['color'] as Color).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      feature['icon'] as IconData,
+                      color: feature['color'] as Color,
+                      size: 10,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    feature['title'] as String,
+                    style: AppTypography.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    feature['description'] as String,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget _buildSubTabBar() {
+  Widget _buildBenefitsSection() {
+    final benefits = [
+      'Kağıt fişlerden kurtulun, çevre dostu olun',
+      'Sipariş hatalarını %80 oranında azaltın',
+      'Mutfak verimliliğini %40 artırın',
+      'Hazırlama sürelerini optimize edin',
+      'Müşteri memnuniyetini artırın',
+    ];
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.06),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
+            color: AppColors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.trending_up_rounded,
+                  color: AppColors.success,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'İşletmenize Faydaları',
+                style: AppTypography.h6.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ...benefits.map((benefit) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary,
-                        AppColors.primary.withOpacity(0.8),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.rocket_launch_rounded,
+                    Icons.check_rounded,
                     color: AppColors.white,
-                    size: 20,
+                    size: 16,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Yakında Gelecek Özellikler',
-                      style: AppTypography.h6.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
+                Expanded(
+                  child: Text(
+                    benefit,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textPrimary,
                     ),
-                    Text(
-                      'İşletmenizi güçlendirecek gelişmiş özellikler',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          TabBar(
-            controller: _subTabController,
-            isScrollable: true,
-            labelColor: AppColors.white,
-            unselectedLabelColor: AppColors.textSecondary,
-            indicatorSize: TabBarIndicatorSize.tab,
-            indicator: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary,
-                  AppColors.primary.withBlue(180),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            splashFactory: NoSplash.splashFactory,
-            overlayColor: MaterialStateProperty.all(Colors.transparent),
-            labelStyle: AppTypography.caption.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 10,
-            ),
-            unselectedLabelStyle: AppTypography.caption.copyWith(
-              fontWeight: FontWeight.w500,
-              fontSize: 10,
-            ),
-            dividerColor: Colors.transparent,
-            tabs: List.generate(
-              _subTabTitles.length,
-              (index) => Tab(
-                height: 64,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(_subTabIcons[index], size: 18),
-                      const SizedBox(height: 4),
-                      Flexible(
-                        child: Text(
-                          _subTabTitles[index],
-                          style: const TextStyle(fontSize: 9),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-              ),
+              ],
             ),
-          ),
+          )),
         ],
       ),
     );
   }
 
-  Widget _buildSubTabView() {
-    return TabBarView(
-      controller: _subTabController,
-      children: [
-        KitchenIntegrationPage(businessId: widget.businessId),
-        DeliveryManagementPage(businessId: widget.businessId),
-        PaymentManagementPage(businessId: widget.businessId),
-        CRMManagementPage(businessId: widget.businessId),
-        HardwareIntegrationPage(businessId: widget.businessId),
-        MultiBranchPage(businessId: widget.businessId),
-        RemoteAccessPage(businessId: widget.businessId),
-        LegalCompliancePage(businessId: widget.businessId),
-        CostControlPage(businessId: widget.businessId),
-        AIPredictionPage(businessId: widget.businessId),
-        DigitalMarketingPage(businessId: widget.businessId),
-        DataSecurityPage(businessId: widget.businessId),
-        AnalyticsPage(businessId: widget.businessId),
-        StockManagementPage(businessId: widget.businessId),
-      ],
+  Widget _buildTimelineCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.schedule_rounded,
+                  color: AppColors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Ne Zaman Hazır Olacak?',
+                style: AppTypography.h6.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Mutfak Entegrasyonu özelliği yakında kullanıma sunulacak. Şimdi bile ön kayıt yaptırabilir ve ilk kullanıcılardan olabilirsiniz!',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.white.withOpacity(0.9),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.white.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.notifications_rounded,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Hazır olduğunda bildirim alın',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
