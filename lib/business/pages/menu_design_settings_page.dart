@@ -981,6 +981,11 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
           const SizedBox(height: 16),
           _buildPrimaryColorPicker(),
           const SizedBox(height: 24),
+          _buildTextColorControls(),
+          const SizedBox(height: 24),
+          _buildBackgroundColorControls(),
+          const SizedBox(height: 24),
+          _buildAccentColorControls(),
           const SizedBox(height: 24),
         ],
       ),
@@ -1132,7 +1137,6 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
       ],
     );
   }
-
 
   // ============================================================================
   // TİPOGRAFİ BÖLÜMÜ
@@ -2065,6 +2069,149 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
               _saveSettings(); // Kaydet
             },
             child: const Text('Kaydet ve Çık'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackgroundColorControls() {
+    return _buildSettingsCard(
+      title: 'Arkaplan Renkleri',
+      child: Column(
+        children: [
+          // Ana arkaplan rengi
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color:
+                    _parseColor(_currentSettings.colorScheme.backgroundColor),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            title: const Text('Arkaplan Rengi'),
+            subtitle: Text(_currentSettings.colorScheme.backgroundColor),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showColorPicker(
+              title: 'Arkaplan Rengi Seç',
+              currentColor:
+                  _parseColor(_currentSettings.colorScheme.backgroundColor),
+              onColorChanged: (color) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      backgroundColor:
+                          '#${color.value.toRadixString(16).substring(2)}',
+                    ),
+                  );
+                });
+              },
+            ),
+          ),
+          const Divider(),
+          // Kart arkaplan rengi
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _parseColor(_currentSettings.colorScheme.cardColor),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            title: const Text('Kart Rengi'),
+            subtitle: Text(_currentSettings.colorScheme.cardColor),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showColorPicker(
+              title: 'Kart Rengi Seç',
+              currentColor: _parseColor(_currentSettings.colorScheme.cardColor),
+              onColorChanged: (color) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      cardColor:
+                          '#${color.value.toRadixString(16).substring(2)}',
+                    ),
+                  );
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccentColorControls() {
+    return _buildSettingsCard(
+      title: 'Vurgu Renkleri',
+      child: Column(
+        children: [
+          // Buton rengi
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _parseColor(_currentSettings.colorScheme.primaryColor),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            title: const Text('Buton Rengi'),
+            subtitle: Text(_currentSettings.colorScheme.primaryColor),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showColorPicker(
+              title: 'Buton Rengi Seç',
+              currentColor:
+                  _parseColor(_currentSettings.colorScheme.primaryColor),
+              onColorChanged: (color) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      primaryColor:
+                          '#${color.value.toRadixString(16).substring(2)}',
+                    ),
+                  );
+                  _selectedColor = color;
+                });
+              },
+            ),
+          ),
+          const Divider(),
+          // İkincil renk
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _parseColor(_currentSettings.colorScheme.secondaryColor),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            title: const Text('İkincil Renk'),
+            subtitle: Text(_currentSettings.colorScheme.secondaryColor),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showColorPicker(
+              title: 'İkincil Renk Seç',
+              currentColor:
+                  _parseColor(_currentSettings.colorScheme.secondaryColor),
+              onColorChanged: (color) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      secondaryColor:
+                          '#${color.value.toRadixString(16).substring(2)}',
+                    ),
+                  );
+                });
+              },
+            ),
           ),
         ],
       ),
