@@ -160,13 +160,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Page title
-          Text(
-            'Ürün Yönetimi',
-            style: AppTypography.h4.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+
 
           const SizedBox(height: 16),
 
