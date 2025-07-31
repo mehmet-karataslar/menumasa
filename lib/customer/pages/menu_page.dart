@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../business/models/business.dart';
 import '../../business/models/category.dart';
 import '../../business/models/product.dart';
@@ -2610,71 +2611,77 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Product Name (single line)
-                    Text(
-                      product.name,
-                      style: TextStyle(
-                        fontSize: menuSettings?.typography.titleFontSize ?? 14,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
-                        color: textPrimaryColor,
-                        fontFamily:
-                            menuSettings?.typography.fontFamily ?? 'Poppins',
+                    Flexible(
+                      child: Text(
+                        product.name,
+                        style: _buildGoogleFontTextStyle(
+                          fontSize:
+                              menuSettings?.typography.titleFontSize ?? 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                          color: textPrimaryColor,
+                          fontFamily:
+                              menuSettings?.typography.fontFamily ?? 'Poppins',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
 
                     const SizedBox(height: 4),
 
                     // Price and Button Row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Price Section
-                        if (menuSettings?.showPrices ?? true)
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Product Price
-                                Text(
-                                  '${product.price.toStringAsFixed(0)} ₺',
-                                  style: TextStyle(
-                                    fontSize: menuSettings
-                                            ?.typography.headingFontSize ??
-                                        16,
-                                    fontWeight: FontWeight.bold,
-                                    color: accentColor,
-                                    fontFamily:
-                                        menuSettings?.typography.fontFamily ??
-                                            'Poppins',
+                    Flexible(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Price Section
+                          if (menuSettings?.showPrices ?? true)
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Product Price
+                                  Text(
+                                    '${product.price.toStringAsFixed(0)} ₺',
+                                    style: _buildGoogleFontTextStyle(
+                                      fontSize: menuSettings
+                                              ?.typography.headingFontSize ??
+                                          16,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.2,
+                                      color: accentColor,
+                                      fontFamily:
+                                          menuSettings?.typography.fontFamily ??
+                                              'Poppins',
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
 
-                        // Add Button
-                        if (product.isAvailable)
-                          GestureDetector(
-                            onTap: () => _addToCart(product),
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: primaryColor,
-                                borderRadius:
-                                    BorderRadius.circular(borderRadius / 2),
-                              ),
-                              child: const Icon(
-                                Icons.add_rounded,
-                                color: Colors.white,
-                                size: 16,
+                          // Add Button
+                          if (product.isAvailable)
+                            GestureDetector(
+                              onTap: () => _addToCart(product),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius:
+                                      BorderRadius.circular(borderRadius / 2),
+                                ),
+                                child: const Icon(
+                                  Icons.add_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2856,6 +2863,98 @@ extension MenuPageTheme on _MenuPageState {
         return isTopImage
             ? BorderRadius.vertical(top: Radius.circular(borderRadius))
             : BorderRadius.circular(borderRadius);
+    }
+  }
+
+  /// Google Fonts ile TextStyle oluşturur
+  TextStyle _buildGoogleFontTextStyle({
+    required double fontSize,
+    required FontWeight fontWeight,
+    required double height,
+    required Color color,
+    required String fontFamily,
+  }) {
+    try {
+      // Google Fonts'tan font ailesi al
+      switch (fontFamily.toLowerCase()) {
+        case 'poppins':
+          return GoogleFonts.poppins(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'roboto':
+          return GoogleFonts.roboto(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'open sans':
+        case 'opensans':
+          return GoogleFonts.openSans(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'lato':
+          return GoogleFonts.lato(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'nunito':
+          return GoogleFonts.nunito(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'montserrat':
+          return GoogleFonts.montserrat(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'source sans pro':
+        case 'sourcesanspro':
+          return GoogleFonts.sourceSans3(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'playfair display':
+        case 'playfairdisplay':
+          return GoogleFonts.playfairDisplay(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        default:
+          // Fallback: Varsayılan Poppins kullan
+          return GoogleFonts.poppins(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+      }
+    } catch (e) {
+      // Google Fonts yüklenemezse standart TextStyle kullan
+      print('🔤 Google Fonts yükleme hatası: $e');
+      return TextStyle(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        height: height,
+        color: color,
+        fontFamily: fontFamily,
+      );
     }
   }
 }
