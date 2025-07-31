@@ -1247,14 +1247,68 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
     // Fallback tema
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      body: _isLoading
-          ? _buildLoadingState(null)
-          : _hasError
-              ? _buildErrorState(null)
-              : _buildMenuContent(null),
+      body: Container(
+        decoration: _buildBackgroundDecoration(null),
+        child: _isLoading
+            ? _buildLoadingState(null)
+            : _hasError
+                ? _buildErrorState(null)
+                : _buildMenuContent(null),
+      ),
     );
+  }
+
+  BoxDecoration _buildBackgroundDecoration(MenuSettings? menuSettings) {
+    final backgroundSettings = menuSettings?.backgroundSettings;
+
+    if (backgroundSettings == null) {
+      return BoxDecoration(color: AppColors.background);
+    }
+
+    switch (backgroundSettings.type) {
+      case 'color':
+        return BoxDecoration(
+          color: _parseColor(backgroundSettings.primaryColor)
+              .withOpacity(backgroundSettings.opacity),
+        );
+
+      case 'gradient':
+        return BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _parseColor(backgroundSettings.primaryColor)
+                  .withOpacity(backgroundSettings.opacity),
+              _parseColor(backgroundSettings.secondaryColor)
+                  .withOpacity(backgroundSettings.opacity),
+            ],
+          ),
+        );
+
+      case 'pattern':
+        return BoxDecoration(
+          color: Colors.white,
+          image: _getPatternDecoration(backgroundSettings),
+        );
+
+      default:
+        return BoxDecoration(color: AppColors.background);
+    }
+  }
+
+  DecorationImage? _getPatternDecoration(
+      MenuBackgroundSettings backgroundSettings) {
+    // Pattern oluşturma - CSS pattern benzeri yaklaşım
+    final patternColors = [
+      _parseColor(backgroundSettings.primaryColor),
+      _parseColor(backgroundSettings.secondaryColor),
+    ];
+
+    // Bu örnekte basit bir pattern implementasyonu
+    return null; // Gerçek implementasyon için pattern generator gerekli
   }
 
   Widget _buildLoadingState(MenuSettings? menuSettings) {

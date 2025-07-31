@@ -915,6 +915,70 @@ class MenuColorScheme {
   }
 }
 
+class MenuBackgroundSettings {
+  final String type; // 'color', 'pattern', 'gradient'
+  final String backgroundImage; // URL or pattern name
+  final String primaryColor;
+  final String secondaryColor;
+  final double opacity;
+  final String blendMode; // 'normal', 'multiply', 'overlay', etc.
+  final bool isRepeating;
+
+  const MenuBackgroundSettings({
+    this.type = 'color',
+    this.backgroundImage = '',
+    this.primaryColor = '#FFFFFF',
+    this.secondaryColor = '#F8F9FA',
+    this.opacity = 1.0,
+    this.blendMode = 'normal',
+    this.isRepeating = true,
+  });
+
+  factory MenuBackgroundSettings.fromMap(Map<String, dynamic> map) {
+    return MenuBackgroundSettings(
+      type: map['type'] ?? 'color',
+      backgroundImage: map['backgroundImage'] ?? '',
+      primaryColor: map['primaryColor'] ?? '#FFFFFF',
+      secondaryColor: map['secondaryColor'] ?? '#F8F9FA',
+      opacity: (map['opacity'] ?? 1.0).toDouble(),
+      blendMode: map['blendMode'] ?? 'normal',
+      isRepeating: map['isRepeating'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type,
+      'backgroundImage': backgroundImage,
+      'primaryColor': primaryColor,
+      'secondaryColor': secondaryColor,
+      'opacity': opacity,
+      'blendMode': blendMode,
+      'isRepeating': isRepeating,
+    };
+  }
+
+  MenuBackgroundSettings copyWith({
+    String? type,
+    String? backgroundImage,
+    String? primaryColor,
+    String? secondaryColor,
+    double? opacity,
+    String? blendMode,
+    bool? isRepeating,
+  }) {
+    return MenuBackgroundSettings(
+      type: type ?? this.type,
+      backgroundImage: backgroundImage ?? this.backgroundImage,
+      primaryColor: primaryColor ?? this.primaryColor,
+      secondaryColor: secondaryColor ?? this.secondaryColor,
+      opacity: opacity ?? this.opacity,
+      blendMode: blendMode ?? this.blendMode,
+      isRepeating: isRepeating ?? this.isRepeating,
+    );
+  }
+}
+
 class MenuTypography {
   final String fontFamily;
   final double titleFontSize;
@@ -1192,6 +1256,7 @@ class MenuSettings {
   final MenuDesignTheme designTheme;
   final MenuLayoutStyle layoutStyle;
   final MenuColorScheme colorScheme;
+  final MenuBackgroundSettings backgroundSettings;
   final MenuTypography typography;
   final MenuVisualStyle visualStyle;
   final MenuInteractionSettings interactionSettings;
@@ -1215,6 +1280,7 @@ class MenuSettings {
     MenuDesignTheme? designTheme,
     MenuLayoutStyle? layoutStyle,
     MenuColorScheme? colorScheme,
+    MenuBackgroundSettings? backgroundSettings,
     MenuTypography? typography,
     MenuVisualStyle? visualStyle,
     MenuInteractionSettings? interactionSettings,
@@ -1222,6 +1288,8 @@ class MenuSettings {
   })  : designTheme = designTheme ?? MenuDesignTheme.modern(),
         layoutStyle = layoutStyle ?? const MenuLayoutStyle(),
         colorScheme = colorScheme ?? const MenuColorScheme(),
+        backgroundSettings =
+            backgroundSettings ?? const MenuBackgroundSettings(),
         typography = typography ?? const MenuTypography(),
         visualStyle = visualStyle ?? const MenuVisualStyle(),
         interactionSettings =
@@ -1336,6 +1404,9 @@ class MenuSettings {
       colorScheme: map['colorScheme'] != null
           ? MenuColorScheme.fromMap(map['colorScheme'])
           : const MenuColorScheme(),
+      backgroundSettings: map['backgroundSettings'] != null
+          ? MenuBackgroundSettings.fromMap(map['backgroundSettings'])
+          : const MenuBackgroundSettings(),
       typography: map['typography'] != null
           ? MenuTypography.fromMap(map['typography'])
           : const MenuTypography(),
@@ -1368,6 +1439,7 @@ class MenuSettings {
       'designTheme': designTheme.toMap(),
       'layoutStyle': layoutStyle.toMap(),
       'colorScheme': colorScheme.toMap(),
+      'backgroundSettings': backgroundSettings.toMap(),
       'typography': typography.toMap(),
       'visualStyle': visualStyle.toMap(),
       'interactionSettings': interactionSettings.toMap(),
@@ -1393,6 +1465,7 @@ class MenuSettings {
     MenuDesignTheme? designTheme,
     MenuLayoutStyle? layoutStyle,
     MenuColorScheme? colorScheme,
+    MenuBackgroundSettings? backgroundSettings,
     MenuTypography? typography,
     MenuVisualStyle? visualStyle,
     MenuInteractionSettings? interactionSettings,
@@ -1416,6 +1489,7 @@ class MenuSettings {
       designTheme: designTheme ?? this.designTheme,
       layoutStyle: layoutStyle ?? this.layoutStyle,
       colorScheme: colorScheme ?? this.colorScheme,
+      backgroundSettings: backgroundSettings ?? this.backgroundSettings,
       typography: typography ?? this.typography,
       visualStyle: visualStyle ?? this.visualStyle,
       interactionSettings: interactionSettings ?? this.interactionSettings,
