@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../models/business.dart';
@@ -385,6 +386,8 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
         return _buildGridPreview();
       case MenuThemeType.magazine:
         return _buildMagazinePreview();
+      case MenuThemeType.dark:
+        return _buildDarkPreview();
     }
   }
 
@@ -521,6 +524,51 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
     );
   }
 
+  Widget _buildDarkPreview() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[700],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[700],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   MenuDesignTheme _getThemeForType(MenuThemeType type) {
     switch (type) {
       case MenuThemeType.modern:
@@ -531,6 +579,8 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
         return MenuDesignTheme.grid();
       case MenuThemeType.magazine:
         return MenuDesignTheme.magazine();
+      case MenuThemeType.dark:
+        return MenuDesignTheme.dark();
     }
   }
 
@@ -809,7 +859,20 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
             title: Text(_colorToHex(_selectedColor)),
             subtitle: const Text('Menünüzün ana teması'),
             trailing: ElevatedButton(
-              onPressed: () => _showColorPicker(),
+              onPressed: () => _showColorPicker(
+                title: 'Ana Renk Seçin',
+                currentColor: _selectedColor,
+                onColorChanged: (color) {
+                  setState(() {
+                    _selectedColor = color;
+                    _currentSettings = _currentSettings.copyWith(
+                      colorScheme: _currentSettings.colorScheme.copyWith(
+                        primaryColor: _colorToHex(color),
+                      ),
+                    );
+                  });
+                },
+              ),
               child: const Text('Değiştir'),
             ),
           ),
@@ -1671,30 +1734,58 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
     );
   }
 
-  void _showColorPicker() {
+  void _showColorPicker({
+    required String title,
+    required Color currentColor,
+    required Function(Color) onColorChanged,
+  }) {
+    Color pickerColor = currentColor;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Renk Seçin'),
+        title: Text(title),
         content: SingleChildScrollView(
-          child: BlockPicker(
-            pickerColor: _selectedColor,
-            onColorChanged: (color) {
-              setState(() {
-                _selectedColor = color;
-                _currentSettings = _currentSettings.copyWith(
-                  colorScheme: _currentSettings.colorScheme.copyWith(
-                    primaryColor: _colorToHex(color),
-                  ),
-                );
-              });
-            },
+          child: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Renk dairesi
+                ColorPicker(
+                  pickerColor: pickerColor,
+                  onColorChanged: (color) {
+                    pickerColor = color;
+                  },
+                  colorPickerWidth: 300,
+                  pickerAreaHeightPercent: 0.7,
+                  enableAlpha: false,
+                  displayThumbColor: true,
+                  paletteType: PaletteType.hueWheel,
+                  labelTypes: const [],
+                  hexInputBar: true,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              onColorChanged(pickerColor);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: pickerColor,
+              foregroundColor: pickerColor.computeLuminance() > 0.5
+                  ? Colors.black
+                  : Colors.white,
+            ),
+            child: const Text('Seç'),
           ),
         ],
       ),

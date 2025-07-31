@@ -1441,10 +1441,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
             controller: _scrollController,
             physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildModernHeader(),
-              if (_showSearchBar) _buildSearchSection(),
-              _buildCategorySection(),
-              _buildProductSection(),
+              _buildModernHeader(menuSettings),
+              if (_showSearchBar) _buildSearchSection(menuSettings),
+              _buildCategorySection(menuSettings),
+              _buildProductSection(menuSettings),
             ],
           ),
         );
@@ -1452,13 +1452,20 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildModernHeader() {
+  Widget _buildModernHeader(MenuSettings? menuSettings) {
+    final primaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.primaryColor)
+        : AppColors.primary;
+    final secondaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.secondaryColor)
+        : AppColors.secondary;
+
     return SliverAppBar(
       expandedHeight: 200,
       floating: false,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppColors.primary,
+      backgroundColor: primaryColor,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           children: [
@@ -1468,9 +1475,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary,
-                    AppColors.primaryLight,
-                    AppColors.secondary.withOpacity(0.9),
+                    primaryColor,
+                    primaryColor.withOpacity(0.8),
+                    secondaryColor.withOpacity(0.9),
                   ],
                 ),
               ),
@@ -1793,7 +1800,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSearchSection() {
+  Widget _buildSearchSection(MenuSettings? menuSettings) {
     return SliverToBoxAdapter(
       child: SlideTransition(
         position: _slideAnimation,
@@ -1852,7 +1859,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCategorySection() {
+  Widget _buildCategorySection(MenuSettings? menuSettings) {
     if (_categories.isEmpty)
       return const SliverToBoxAdapter(child: SizedBox.shrink());
 
@@ -2006,18 +2013,22 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     return Icons.restaurant_menu_rounded;
   }
 
-  Widget _buildProductSection() {
+  Widget _buildProductSection(MenuSettings? menuSettings) {
     return SliverToBoxAdapter(
       child: SlideTransition(
         position: _slideAnimation,
         child: Container(
-          color: AppColors.background,
+          color: menuSettings != null
+              ? _parseColor(menuSettings.colorScheme.backgroundColor)
+              : AppColors.background,
           child: _filteredProducts.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(
                   onRefresh: _loadMenuData,
-                  color: AppColors.primary,
-                  child: _buildProductGrid(),
+                  color: menuSettings != null
+                      ? _parseColor(menuSettings.colorScheme.primaryColor)
+                      : AppColors.primary,
+                  child: _buildProductGrid(menuSettings),
                 ),
         ),
       ),
@@ -2106,45 +2117,294 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildProductGrid() {
+  Widget _buildProductGrid(MenuSettings? menuSettings) {
+    // Layout tipine göre farklı grid ayarları
+    final layoutType =
+        menuSettings?.layoutStyle.layoutType ?? MenuLayoutType.grid;
+    final columnsCount = menuSettings?.layoutStyle.columnsCount ?? 2;
+
+    SliverGridDelegate gridDelegate;
+
+    switch (layoutType) {
+      case MenuLayoutType.list:
+        gridDelegate = const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 1,
+          crossAxisSpacing: 0,
+          mainAxisSpacing: 8,
+          childAspectRatio: 3.0, // Geniş liste kartları
+        );
+        break;
+      case MenuLayoutType.grid:
+        gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columnsCount,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.85, // Kare benzeri kartlar
+        );
+        break;
+      case MenuLayoutType.masonry:
+        gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columnsCount,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.7, // Daha uzun kartlar
+        );
+        break;
+      case MenuLayoutType.carousel:
+        // Carousel için farklı widget kullanılacak
+        return _buildProductCarousel(menuSettings);
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85, // More square ratio for compact design
-      ),
+      gridDelegate: gridDelegate,
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
         final product = _filteredProducts[index];
-        return _buildCompactProductCard(product, index);
+        return _buildDynamicProductCard(
+            product, index, menuSettings, layoutType);
       },
     );
   }
 
-  Widget _buildCompactProductCard(Product product, int index) {
+  Widget _buildProductCarousel(MenuSettings? menuSettings) {
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _filteredProducts.length,
+        itemBuilder: (context, index) {
+          final product = _filteredProducts[index];
+          return Container(
+            width: 160,
+            margin: const EdgeInsets.only(right: 12),
+            child: _buildDynamicProductCard(
+                product, index, menuSettings, MenuLayoutType.carousel),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDynamicProductCard(Product product, int index,
+      MenuSettings? menuSettings, MenuLayoutType layoutType) {
+    // Layout tipine göre farklı card tasarımları
+    switch (layoutType) {
+      case MenuLayoutType.list:
+        return _buildListProductCard(product, index, menuSettings);
+      case MenuLayoutType.carousel:
+        return _buildCarouselProductCard(product, index, menuSettings);
+      case MenuLayoutType.masonry:
+        return _buildMasonryProductCard(product, index, menuSettings);
+      case MenuLayoutType.grid:
+        return _buildCompactProductCard(product, index, menuSettings);
+    }
+  }
+
+  Widget _buildListProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
+    final hasDiscount =
+        product.currentPrice != null && product.currentPrice! < product.price;
+
+    // Dinamik renkler ve style
+    final cardColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.cardColor)
+        : AppColors.white;
+    final borderRadius = menuSettings?.visualStyle.borderRadius ?? 12.0;
+    final primaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.primaryColor)
+        : AppColors.primary;
+    final textPrimaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.textPrimaryColor)
+        : AppColors.textPrimary;
+
+    return GestureDetector(
+      onTap: () => _navigateToProductDetail(product),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: menuSettings?.visualStyle.showShadows ?? true
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          children: [
+            // Image Section
+            Container(
+              width: 100,
+              height: 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(borderRadius)),
+                color: _parseColor(
+                        menuSettings?.colorScheme.surfaceColor ?? '#F8F9FA')
+                    .withOpacity(0.3),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(borderRadius)),
+                child: product.imageUrl != null
+                    ? WebSafeImage(
+                        imageUrl: product.imageUrl!,
+                        fit: BoxFit.cover,
+                        width: 100,
+                        height: 80,
+                      )
+                    : Icon(
+                        Icons.restaurant_menu,
+                        size: 40,
+                        color: primaryColor.withOpacity(0.3),
+                      ),
+              ),
+            ),
+            // Content Section
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: menuSettings?.typography.titleFontSize ?? 14,
+                        fontWeight: FontWeight.w600,
+                        color: textPrimaryColor,
+                        fontFamily:
+                            menuSettings?.typography.fontFamily ?? 'Poppins',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (product.description != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        product.description!,
+                        style: TextStyle(
+                          fontSize:
+                              (menuSettings?.typography.bodyFontSize ?? 12) - 1,
+                          color: textPrimaryColor.withOpacity(0.7),
+                          fontFamily:
+                              menuSettings?.typography.fontFamily ?? 'Poppins',
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
+                          style: TextStyle(
+                            fontSize:
+                                menuSettings?.typography.headingFontSize ?? 16,
+                            fontWeight: FontWeight.bold,
+                            color: hasDiscount
+                                ? _parseColor(
+                                    menuSettings?.colorScheme.accentColor ??
+                                        '#FF6B35')
+                                : primaryColor,
+                            fontFamily: menuSettings?.typography.fontFamily ??
+                                'Poppins',
+                          ),
+                        ),
+                        if (product.isAvailable)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius:
+                                  BorderRadius.circular(borderRadius / 2),
+                            ),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCarouselProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
+    return _buildCompactProductCard(product, index, menuSettings);
+  }
+
+  Widget _buildMasonryProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
+    return _buildCompactProductCard(product, index, menuSettings);
+  }
+
+  Widget _buildCompactProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
     final hasDiscount =
         product.currentPrice != null && product.currentPrice! < product.price;
     final discountPercentage = hasDiscount
         ? ((1 - (product.currentPrice! / product.price)) * 100).round()
         : 0;
 
+    // Dinamik renkler ve style
+    final cardColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.cardColor)
+        : AppColors.white;
+    final borderRadius = menuSettings?.visualStyle.borderRadius ?? 16.0;
+    final shadowColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.shadowColor)
+        : AppColors.shadow;
+    final primaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.primaryColor)
+        : AppColors.primary;
+    final textPrimaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.textPrimaryColor)
+        : AppColors.textPrimary;
+    final accentColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.accentColor)
+        : AppColors.accent;
+
     return GestureDetector(
       onTap: () => _navigateToProductDetail(product),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: cardColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: menuSettings?.visualStyle.showShadows ?? true
+              ? [
+                  BoxShadow(
+                    color: shadowColor.withOpacity(0.1),
+                    blurRadius: menuSettings?.visualStyle.cardElevation ?? 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+          border: menuSettings?.visualStyle.showBorders ?? false
+              ? Border.all(
+                  color: _parseColor(menuSettings!.colorScheme.borderColor),
+                  width: 1,
+                )
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2157,14 +2417,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(borderRadius),
                       ),
-                      color: AppColors.greyLighter.withOpacity(0.3),
+                      color: _parseColor(
+                              menuSettings?.colorScheme.surfaceColor ??
+                                  '#F8F9FA')
+                          .withOpacity(0.3),
                     ),
                     child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(borderRadius),
                       ),
                       child: product.imageUrl != null
                           ? WebSafeImage(
@@ -2295,10 +2558,13 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     // Product Name (single line)
                     Text(
                       product.name,
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: TextStyle(
+                        fontSize: menuSettings?.typography.titleFontSize ?? 12,
                         fontWeight: FontWeight.w600,
                         height: 1.1,
+                        color: textPrimaryColor,
+                        fontFamily:
+                            menuSettings?.typography.fontFamily ?? 'Poppins',
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -2320,11 +2586,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               Text(
                                 '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: menuSettings
+                                          ?.typography.headingFontSize ??
+                                      13,
                                   fontWeight: FontWeight.bold,
-                                  color: hasDiscount
-                                      ? AppColors.accent
-                                      : AppColors.primary,
+                                  color:
+                                      hasDiscount ? accentColor : primaryColor,
+                                  fontFamily:
+                                      menuSettings?.typography.fontFamily ??
+                                          'Poppins',
                                 ),
                               ),
 
@@ -2333,9 +2603,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                 Text(
                                   '${product.price.toStringAsFixed(0)} ₺',
                                   style: TextStyle(
-                                    fontSize: 9,
-                                    color: AppColors.textSecondary,
+                                    fontSize: (menuSettings
+                                                ?.typography.bodyFontSize ??
+                                            9) -
+                                        2,
+                                    color: textPrimaryColor.withOpacity(0.6),
                                     decoration: TextDecoration.lineThrough,
+                                    fontFamily:
+                                        menuSettings?.typography.fontFamily ??
+                                            'Poppins',
                                   ),
                                 ),
                             ],
@@ -2350,8 +2626,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(10),
+                                color: primaryColor,
+                                borderRadius:
+                                    BorderRadius.circular(borderRadius / 2),
                               ),
                               child: const Icon(
                                 Icons.add_rounded,

@@ -607,7 +607,8 @@ enum MenuThemeType {
   modern('modern', 'Modern', 'Temiz ve minimalist görünüm'),
   classic('classic', 'Klasik', 'Geleneksel ve zarif tasarım'),
   grid('grid', 'Izgara', 'Kart tabanlı ızgara düzeni'),
-  magazine('magazine', 'Dergi', 'Dergi tarzı görsel yoğun tasarım');
+  magazine('magazine', 'Dergi', 'Dergi tarzı görsel yoğun tasarım'),
+  dark('dark', 'Koyu', 'Karanlık tema ve koyu renkler');
 
   const MenuThemeType(this.value, this.displayName, this.description);
   final String value;
@@ -685,6 +686,14 @@ class MenuDesignTheme {
       themeType: MenuThemeType.magazine,
       name: 'Dergi',
       description: 'Görsel yoğun dergi tarzı tasarım',
+    );
+  }
+
+  factory MenuDesignTheme.dark() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.dark,
+      name: 'Koyu',
+      description: 'Karanlık tema ve koyu renkler',
     );
   }
 

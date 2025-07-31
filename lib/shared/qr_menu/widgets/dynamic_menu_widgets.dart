@@ -97,6 +97,8 @@ class DynamicMenuWidgets {
         return _buildGridProductCard(product, menuSettings, onTap, context);
       case MenuThemeType.magazine:
         return _buildMagazineProductCard(product, menuSettings, onTap, context);
+      case MenuThemeType.dark:
+        return _buildModernProductCard(product, menuSettings, onTap, context);
     }
   }
 
