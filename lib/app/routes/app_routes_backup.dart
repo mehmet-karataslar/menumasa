@@ -14,7 +14,6 @@ import '../../customer/pages/cart_page.dart';
 import '../../customer/pages/business_detail_page.dart';
 import '../../customer/pages/search_page.dart';
 import '../../customer/pages/qr_scanner_page.dart';
-import '../../customer/pages/qr_menu_page.dart';
 import '../../shared/pages/universal_qr_menu_page.dart';
 import '../../business/pages/business_dashboard_page.dart';
 import '../../business/models/category.dart' as app_category;
@@ -31,7 +30,7 @@ class AppRoutes {
   // =============================================================================
   // ROUTE NAMES - Tüm Route Sabitleri
   // =============================================================================
-  
+
   // Ana route'lar
   static const String home = '/';
   static const String router = '/router';
@@ -53,7 +52,7 @@ class AppRoutes {
   static const String search = '/search';
   static const String qrScanner = '/qr-scanner';
   static const String qrMenu = '/qr-menu';
-  
+
   // Evrensel QR Menü
   static const String universalQR = '/qr';
 
@@ -70,45 +69,45 @@ class AppRoutes {
   // =============================================================================
   // ROUTE MAP - Statik Route Tanımları
   // =============================================================================
-  
+
   static Map<String, WidgetBuilder> get routes => {
-    // Ana route'lar
-    home: (context) => const RouterPage(),
-    router: (context) => const RouterPage(),
+        // Ana route'lar
+        home: (context) => const RouterPage(),
+        router: (context) => const RouterPage(),
 
-    // Auth route'ları
-    login: (context) => const LoginPage(userType: 'customer'),
-    register: (context) => const RegisterPage(userType: 'customer'),
-    businessLogin: (context) => const BusinessLoginPage(),
-    businessRegister: (context) => const BusinessRegisterPage(),
+        // Auth route'ları
+        login: (context) => const LoginPage(userType: 'customer'),
+        register: (context) => const RegisterPage(userType: 'customer'),
+        businessLogin: (context) => const BusinessLoginPage(),
+        businessRegister: (context) => const BusinessRegisterPage(),
 
-    // Customer route'ları
-    customerDashboard: (context) => const CustomerDashboardRouterPage(),
-    customerOrders: (context) => const CustomerOrdersRouterPage(),
-    customerProfile: (context) => const CustomerProfileRouterPage(),
-    customerCart: (context) => const CustomerCartRouterPage(),
-    menu: (context) => const MenuRouterPage(),
-    productDetail: (context) => const ProductDetailRouterPage(),
-    businessDetail: (context) => const BusinessDetailRouterPage(),
-    search: (context) => const SearchRouterPage(),
-    qrScanner: (context) => const QRScannerRouterPage(),
-    qrMenu: (context) => const QRMenuRouterPage(),
-    
-    // Evrensel QR Menü
-    universalQR: (context) => const UniversalQRMenuPage(),
+        // Customer route'ları
+        customerDashboard: (context) => const CustomerDashboardRouterPage(),
+        customerOrders: (context) => const CustomerOrdersRouterPage(),
+        customerProfile: (context) => const CustomerProfileRouterPage(),
+        customerCart: (context) => const CustomerCartRouterPage(),
+        menu: (context) => const MenuRouterPage(),
+        productDetail: (context) => const ProductDetailRouterPage(),
+        businessDetail: (context) => const BusinessDetailRouterPage(),
+        search: (context) => const SearchRouterPage(),
+        qrScanner: (context) => const QRScannerRouterPage(),
+        qrMenu: (context) => const QRMenuRouterPage(),
 
-    // Business route'ları
-    businessHome: (context) => const BusinessHomeRouterPage(),
-    businessDashboard: (context) => const BusinessDashboardRouterPage(),
-  };
+        // Evrensel QR Menü
+        universalQR: (context) => const UniversalQRMenuPage(),
+
+        // Business route'ları
+        businessHome: (context) => const BusinessHomeRouterPage(),
+        businessDashboard: (context) => const BusinessDashboardRouterPage(),
+      };
 
   // =============================================================================
   // DYNAMIC ROUTE GENERATOR - Dinamik Route Yönetimi
   // =============================================================================
-  
+
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
-    
+
     // Debug: URL routing'i logla
     print('🔗 Route Debug: ${settings.name}');
     print('🔗 URI path: ${uri.path}');
@@ -180,20 +179,16 @@ class AppRoutes {
     return null;
   }
 
-
-
   // =============================================================================
   // CUSTOMER ROUTE HANDLER
   // =============================================================================
-  
+
   static Route<dynamic>? _handleCustomerRoutes(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
     final pathSegments = uri.pathSegments;
 
     if (pathSegments.length >= 2) {
       switch (pathSegments[1]) {
-
-
         case 'dashboard':
           final args = settings.arguments as Map<String, dynamic>?;
           final userId = args?['userId'] as String? ?? 'guest';
@@ -280,7 +275,7 @@ class AppRoutes {
                 );
             }
           }
-          
+
           // Handle /customer/{userId}/search and /customer/{userId}/profile
           if (pathSegments.length >= 3) {
             final userId = pathSegments[1];
@@ -333,7 +328,7 @@ class AppRoutes {
   // =============================================================================
   // BUSINESS ROUTE HANDLER
   // =============================================================================
-  
+
   static Route<dynamic>? _handleBusinessRoutes(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
     final pathSegments = uri.pathSegments;
@@ -341,13 +336,13 @@ class AppRoutes {
     if (pathSegments.length >= 2) {
       switch (pathSegments[1]) {
         case 'dashboard':
-        case 'genel-bakis':  // Ana dashboard sayfası
-        case 'siparisler':   // Siparişler sekmesi
+        case 'genel-bakis': // Ana dashboard sayfası
+        case 'siparisler': // Siparişler sekmesi
         case 'menu-yonetimi': // Menü Yönetimi sekmesi
-        case 'garsonlar':    // Garsonlar sekmesi
-        case 'indirimler':   // İndirimler sekmesi
-        case 'qr-kodlar':    // QR Kodlar sekmesi
-        case 'ayarlar':      // Ayarlar sekmesi
+        case 'garsonlar': // Garsonlar sekmesi
+        case 'indirimler': // İndirimler sekmesi
+        case 'qr-kodlar': // QR Kodlar sekmesi
+        case 'ayarlar': // Ayarlar sekmesi
           return MaterialPageRoute(
             builder: (context) => const BusinessDashboardRouterPage(),
             settings: settings,
@@ -373,11 +368,11 @@ class AppRoutes {
   // =============================================================================
   // MENU ROUTE HANDLER
   // =============================================================================
-  
+
   static Route<dynamic>? _handleMenuRoutes(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
     final pathSegments = uri.pathSegments;
-    
+
     print('🍽️ Menu Routes Handler:');
     print('   🔗 URL: ${settings.name}');
     print('   📂 Path segments: $pathSegments');
@@ -387,25 +382,23 @@ class AppRoutes {
       final businessId = pathSegments[1];
       final isQRMenu = pathSegments[0] == 'qr-menu';
       final isMenu = pathSegments[0] == 'menu';
-      
+
       print('   🏢 Business ID: $businessId');
       print('   📱 Is QR Menu: $isQRMenu');
       print('   🍽️ Is Menu: $isMenu');
-      
+
       if (isQRMenu || isMenu) {
         // Hem /qr-menu/ hem /menu/ için QRMenuPage'e yönlendir
-        final tableNumber = uri.queryParameters['table'] != null 
-            ? int.tryParse(uri.queryParameters['table']!) 
+        final tableNumber = uri.queryParameters['table'] != null
+            ? int.tryParse(uri.queryParameters['table']!)
             : null;
-        
+
         print('   🪑 Table number: $tableNumber');
         print('   ✅ Yönlendiriliyor QRMenuPage\'e');
-        
+
         return MaterialPageRoute(
-          builder: (context) => QRMenuPage(
+          builder: (context) => MenuPage(
             businessId: businessId,
-            qrCode: settings.name,
-            tableNumber: tableNumber,
           ),
           settings: settings,
         );
@@ -419,66 +412,68 @@ class AppRoutes {
   // =============================================================================
   // QR MENU ROUTE HELPERS
   // =============================================================================
-  
+
   // =============================================================================
   // QR MENU ROUTE CHECKER - Geliştirilmiş QR URL Tanıma
   // =============================================================================
-  
+
   static bool _isQRMenuRoute(String routeName, Uri uri) {
     // 1. /qr ile başlayan route'lar (evrensel QR)
     if (routeName == universalQR || routeName.startsWith('/qr?')) {
       return true;
     }
-    
+
     // 2. /qr-menu/{businessId} formatı
     if (routeName.startsWith('/qr-menu/')) {
       return true;
     }
-    
+
     // 3. Query parametrelerinde business var mı?
-    if (uri.queryParameters.containsKey('business') || 
+    if (uri.queryParameters.containsKey('business') ||
         uri.queryParameters.containsKey('businessId')) {
       return true;
     }
-    
+
     // 4. Eski format desteği: /menu/ içeren URL'ler
     if (routeName.contains('/menu/') && uri.queryParameters.isNotEmpty) {
       return true;
     }
-    
+
     return false;
   }
-  
+
   /// QR menü route'unu handle eder
   static Route<dynamic> _handleQRMenuRoute(RouteSettings settings, Uri uri) {
     print('🔗 QR Menu Route Handler - Processing: ${settings.name}');
-    
+
     try {
       // Business ID ve table number çıkar
       String? businessId;
       int? tableNumber;
-      
+
       // Query parametrelerinden
-      businessId = uri.queryParameters['business'] ?? 
-                  uri.queryParameters['businessId'];
-      final tableString = uri.queryParameters['table'] ?? 
-                         uri.queryParameters['tableNumber'];
+      businessId =
+          uri.queryParameters['business'] ?? uri.queryParameters['businessId'];
+      final tableString =
+          uri.queryParameters['table'] ?? uri.queryParameters['tableNumber'];
       if (tableString != null) {
         tableNumber = int.tryParse(tableString);
       }
-      
+
       // Path'den çıkar (/qr-menu/{businessId} formatı)
       if (businessId == null && uri.pathSegments.isNotEmpty) {
-        if (uri.pathSegments.contains('qr-menu') && uri.pathSegments.length > 1) {
+        if (uri.pathSegments.contains('qr-menu') &&
+            uri.pathSegments.length > 1) {
           final index = uri.pathSegments.indexOf('qr-menu');
           if (index + 1 < uri.pathSegments.length) {
             businessId = uri.pathSegments[index + 1];
           }
         }
       }
-      
-      print('✅ QR Parameters extracted - Business: $businessId, Table: $tableNumber');
-      
+
+      print(
+          '✅ QR Parameters extracted - Business: $businessId, Table: $tableNumber');
+
       // UniversalQRMenuPage'e yönlendir
       return MaterialPageRoute(
         builder: (context) => const UniversalQRMenuPage(),
@@ -492,10 +487,9 @@ class AppRoutes {
           },
         ),
       );
-      
     } catch (e) {
       print('❌ QR Menu Route Error: $e');
-      
+
       // Hata durumunda da UniversalQRMenuPage'e git (kendi hata yönetimi var)
       return MaterialPageRoute(
         builder: (context) => const UniversalQRMenuPage(),
@@ -513,7 +507,7 @@ class AppRoutes {
   // =============================================================================
   // ERROR ROUTE HANDLER
   // =============================================================================
-  
+
   static Route<dynamic> onUnknownRoute(RouteSettings settings) {
     print('❓ Unknown route: ${settings.name}');
     return MaterialPageRoute(
@@ -587,10 +581,12 @@ class BusinessDashboardRouterPage extends StatefulWidget {
   const BusinessDashboardRouterPage({super.key});
 
   @override
-  State<BusinessDashboardRouterPage> createState() => _BusinessDashboardRouterPageState();
+  State<BusinessDashboardRouterPage> createState() =>
+      _BusinessDashboardRouterPageState();
 }
 
-class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPage> {
+class _BusinessDashboardRouterPageState
+    extends State<BusinessDashboardRouterPage> {
   final AuthService _authService = AuthService();
   String? _businessId;
   bool _isLoading = true;
@@ -611,41 +607,48 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
     try {
       final user = _authService.currentUser;
       print('BusinessDashboard - Current user: ${user?.uid}'); // Debug log
-      
+
       if (user != null) {
         // Get user data to check if it's a business user
         final userData = await _authService.getCurrentUserData();
-        print('BusinessDashboard - User data: ${userData?.toJson()}'); // Debug log
-        print('BusinessDashboard - User type: ${userData?.userType}'); // Debug log
-        
+        print(
+            'BusinessDashboard - User data: ${userData?.toJson()}'); // Debug log
+        print(
+            'BusinessDashboard - User type: ${userData?.userType}'); // Debug log
+
         if (userData != null && userData.userType.value == 'business') {
           // Get business ID from business_users collection
           final businessUserDoc = await FirebaseFirestore.instance
               .collection('business_users')
               .doc(user.uid)
               .get();
-          
-          print('BusinessDashboard - Business user doc exists: ${businessUserDoc.exists}'); // Debug log
-          
+
+          print(
+              'BusinessDashboard - Business user doc exists: ${businessUserDoc.exists}'); // Debug log
+
           if (businessUserDoc.exists) {
             final businessData = businessUserDoc.data()!;
-            print('BusinessDashboard - Business data: $businessData'); // Debug log
+            print(
+                'BusinessDashboard - Business data: $businessData'); // Debug log
             setState(() {
               _businessId = businessData['businessId'] ?? user.uid;
               _isLoading = false;
             });
           } else {
             // Fallback: use user ID as business ID
-            print('BusinessDashboard - Using fallback business ID: ${user.uid}'); // Debug log
+            print(
+                'BusinessDashboard - Using fallback business ID: ${user.uid}'); // Debug log
             setState(() {
               _businessId = user.uid;
               _isLoading = false;
             });
           }
         } else {
-          print('BusinessDashboard - User is not business type: ${userData?.userType}'); // Debug log
+          print(
+              'BusinessDashboard - User is not business type: ${userData?.userType}'); // Debug log
           setState(() {
-            _error = 'Bu kullanıcı işletme hesabı değil. User type: ${userData?.userType}';
+            _error =
+                'Bu kullanıcı işletme hesabı değil. User type: ${userData?.userType}';
             _isLoading = false;
           });
         }
@@ -671,7 +674,7 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     if (_error != null) {
       return Scaffold(
         body: Center(
@@ -695,31 +698,29 @@ class _BusinessDashboardRouterPageState extends State<BusinessDashboardRouterPag
         ),
       );
     }
-    
+
     if (_businessId == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     // URL'den hangi sekmenin açılacağını belirle
     final routeName = ModalRoute.of(context)?.settings.name;
     final uri = Uri.parse(routeName ?? '');
     final pathSegments = uri.pathSegments;
     String? initialTab;
-    
+
     if (pathSegments.length >= 2) {
       initialTab = pathSegments[1];
     }
-    
+
     return BusinessDashboard(
       businessId: _businessId!,
       initialTab: initialTab,
     );
   }
 }
-
-
 
 class CustomerDashboardRouterPage extends StatelessWidget {
   const CustomerDashboardRouterPage({super.key});
@@ -787,7 +788,7 @@ class BusinessDetailRouterPage extends StatelessWidget {
   // =============================================================================
   // QR MENU ROUTE HANDLER
   // =============================================================================
-  
+
   static Route<dynamic>? _handleQRMenuRoutes(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
     final pathSegments = uri.pathSegments;
@@ -800,10 +801,8 @@ class BusinessDetailRouterPage extends StatelessWidget {
       final qrCode = args?['qrCode'] as String?;
 
       return MaterialPageRoute(
-        builder: (context) => QRMenuPage(
+        builder: (context) => MenuPage(
           businessId: businessId,
-          userId: userId,
-          qrCode: qrCode,
         ),
         settings: settings,
       );
@@ -878,7 +877,8 @@ class QRScannerRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final userId = args?['userId'] as String?;
 
     return QRScannerPage(userId: userId);
@@ -890,7 +890,8 @@ class QRMenuRouterPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final businessId = args?['businessId'] as String?;
     final userId = args?['userId'] as String?;
     final qrCode = args?['qrCode'] as String?;
@@ -900,11 +901,8 @@ class QRMenuRouterPage extends StatelessWidget {
       return const RouterPage();
     }
 
-    return QRMenuPage(
+    return MenuPage(
       businessId: businessId,
-      userId: userId,
-      qrCode: qrCode,
-      tableNumber: tableNumber,
     );
   }
 }

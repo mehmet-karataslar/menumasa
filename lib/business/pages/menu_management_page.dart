@@ -13,6 +13,7 @@ import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../widgets/menu_preview_widget.dart';
 import '../widgets/menu_design_widget.dart';
+import 'menu_design_settings_page.dart';
 import '../widgets/menu_analytics_widget.dart';
 import 'category_management_page.dart';
 import 'product_management_page.dart';
@@ -283,11 +284,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
         // Ürünler - Mevcut ürün yönetim sayfasını kullan
         ProductManagementPage(businessId: widget.businessId),
 
-        // Tasarım
-        MenuDesignWidget(
+        // Tasarım - Gelişmiş Tasarım Ayarları
+        MenuDesignSettingsPage(
           businessId: widget.businessId,
-          business: _business!,
-          onDesignChanged: _refreshData,
+          business: _business,
         ),
 
         // Ön İzleme

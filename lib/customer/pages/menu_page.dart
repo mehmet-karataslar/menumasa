@@ -35,6 +35,8 @@ import '../../business/models/staff.dart';
 import '../../business/models/waiter_call.dart';
 import '../../business/services/staff_service.dart';
 import '../../business/services/waiter_call_service.dart';
+import '../../core/services/dynamic_theme_service.dart';
+import '../../shared/qr_menu/widgets/dynamic_menu_widgets.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
@@ -1227,18 +1229,42 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Eğer business yüklenmişse dinamik tema kullan
+    if (_business != null) {
+      return DynamicThemeWrapper(
+        businessId: _business!.id,
+        fallbackSettings: _business!.menuSettings,
+        builder: (menuSettings, themeData) {
+          return Theme(
+            data: themeData,
+            child: Scaffold(
+              backgroundColor:
+                  _parseColor(menuSettings.colorScheme.backgroundColor),
+              extendBodyBehindAppBar: true,
+              body: _isLoading
+                  ? _buildLoadingState(menuSettings)
+                  : _hasError
+                      ? _buildErrorState(menuSettings)
+                      : _buildMenuContent(menuSettings),
+            ),
+          );
+        },
+      );
+    }
+
+    // Fallback tema
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
       body: _isLoading
-          ? _buildLoadingState()
+          ? _buildLoadingState(null)
           : _hasError
-              ? _buildErrorState()
-              : _buildMenuContent(),
+              ? _buildErrorState(null)
+              : _buildMenuContent(null),
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildLoadingState(MenuSettings? menuSettings) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1335,7 +1361,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(MenuSettings? menuSettings) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1405,7 +1431,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMenuContent() {
+  Widget _buildMenuContent(MenuSettings? menuSettings) {
     return AnimatedBuilder(
       animation: _fadeAnimation,
       builder: (context, child) {
@@ -2488,4 +2514,17 @@ class _HeaderPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// MenuPage extension for dynamic theme support
+extension MenuPageTheme on _MenuPageState {
+  /// Hex string'i Color'a çevir
+  Color _parseColor(String hex) {
+    try {
+      final hexCode = hex.replaceAll('#', '');
+      return Color(int.parse('FF$hexCode', radix: 16));
+    } catch (e) {
+      return AppColors.primary; // Fallback color
+    }
+  }
 }
