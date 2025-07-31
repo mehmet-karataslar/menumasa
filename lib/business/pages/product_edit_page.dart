@@ -60,9 +60,7 @@ class _ProductEditPageState extends State<ProductEditPage>
   // Form controllers
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _detailedDescriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _currentPriceController = TextEditingController();
 
   // Form state
   String _selectedCategoryId = '';
@@ -140,9 +138,7 @@ class _ProductEditPageState extends State<ProductEditPage>
       final product = widget.product!;
       _nameController.text = product.name;
       _descriptionController.text = product.description;
-      _detailedDescriptionController.text = product.detailedDescription;
       _priceController.text = product.price.toString();
-      _currentPriceController.text = product.currentPrice.toString();
       _selectedCategoryId = product.categoryId;
       _isActive = product.isActive;
       _isAvailable = product.isAvailable;
@@ -160,16 +156,7 @@ class _ProductEditPageState extends State<ProductEditPage>
       if (uniqueCategories.isNotEmpty) {
         _selectedCategoryId = uniqueCategories.values.first.categoryId;
       }
-      _currentPriceController.text = _priceController.text;
     }
-
-    // Listen to price changes to auto-update current price
-    _priceController.addListener(() {
-      if (_currentPriceController.text.isEmpty ||
-          _currentPriceController.text == _priceController.text) {
-        _currentPriceController.text = _priceController.text;
-      }
-    });
   }
 
   @override
@@ -177,9 +164,7 @@ class _ProductEditPageState extends State<ProductEditPage>
     _animationController.dispose();
     _nameController.dispose();
     _descriptionController.dispose();
-    _detailedDescriptionController.dispose();
     _priceController.dispose();
-    _currentPriceController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -400,18 +385,6 @@ class _ProductEditPageState extends State<ProductEditPage>
           _buildSectionTitle('Detaylı Bilgiler', Icons.article_outlined),
           const SizedBox(height: 24),
 
-          // Detailed description
-          _buildTextField(
-            controller: _detailedDescriptionController,
-            label: 'Detaylı Açıklama',
-            hint:
-                'Ürününüzün malzemeleri, hazırlanış şekli, servis bilgileri vb.',
-            icon: Icons.article,
-            maxLines: 6,
-          ),
-
-          const SizedBox(height: 16),
-
           // Allergens section
           _buildAllergensSection(),
         ],
@@ -431,7 +404,7 @@ class _ProductEditPageState extends State<ProductEditPage>
           // Original price
           _buildTextField(
             controller: _priceController,
-            label: 'Liste Fiyatı (₺)',
+            label: 'Fiyat (₺)',
             hint: '0.00',
             icon: Icons.attach_money,
             keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -439,21 +412,6 @@ class _ProductEditPageState extends State<ProductEditPage>
           ),
 
           const SizedBox(height: 16),
-
-          // Current price (with discount)
-          _buildTextField(
-            controller: _currentPriceController,
-            label: 'Satış Fiyatı (₺)',
-            hint: '0.00',
-            icon: Icons.price_check,
-            keyboardType: TextInputType.numberWithOptions(decimal: true),
-            required: true,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Price difference info
-          _buildPriceInfo(),
         ],
       ),
     );
@@ -776,55 +734,6 @@ class _ProductEditPageState extends State<ProductEditPage>
         ),
       ],
     );
-  }
-
-  Widget _buildPriceInfo() {
-    final originalPrice = double.tryParse(_priceController.text) ?? 0.0;
-    final currentPrice = double.tryParse(_currentPriceController.text) ?? 0.0;
-
-    if (originalPrice > 0 &&
-        currentPrice > 0 &&
-        originalPrice != currentPrice) {
-      final discount = ((originalPrice - currentPrice) / originalPrice * 100);
-      final isDiscount = currentPrice < originalPrice;
-
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDiscount
-              ? AppColors.success.withOpacity(0.1)
-              : AppColors.warning.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isDiscount
-                ? AppColors.success.withOpacity(0.3)
-                : AppColors.warning.withOpacity(0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isDiscount ? Icons.trending_down : Icons.trending_up,
-              color: isDiscount ? AppColors.success : AppColors.warning,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                isDiscount
-                    ? '${discount.toStringAsFixed(1)}% İndirimli Fiyat'
-                    : '${discount.abs().toStringAsFixed(1)}% Fiyat Artışı',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: isDiscount ? AppColors.success : AppColors.warning,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
   }
 
   Widget _buildExistingImagesGrid() {
@@ -1349,17 +1258,10 @@ class _ProductEditPageState extends State<ProductEditPage>
         break;
       case 2:
         final price = double.tryParse(_priceController.text);
-        final currentPrice = double.tryParse(_currentPriceController.text);
 
         if (price == null || price <= 0) {
           setState(() {
-            _errorMessage = 'Geçerli bir liste fiyatı girin';
-          });
-          return false;
-        }
-        if (currentPrice == null || currentPrice <= 0) {
-          setState(() {
-            _errorMessage = 'Geçerli bir satış fiyatı girin';
+            _errorMessage = 'Geçerli bir fiyat girin';
           });
           return false;
         }
@@ -1414,7 +1316,6 @@ class _ProductEditPageState extends State<ProductEditPage>
       }
 
       final price = double.parse(_priceController.text);
-      final currentPrice = double.parse(_currentPriceController.text);
 
       if (widget.product == null) {
         // Create new product
@@ -1424,9 +1325,7 @@ class _ProductEditPageState extends State<ProductEditPage>
           categoryId: _selectedCategoryId,
           name: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
-          detailedDescription: _detailedDescriptionController.text.trim(),
           price: price,
-          currentPrice: currentPrice,
           currency: 'TL',
           images: allImageUrls.asMap().entries.map((entry) {
             return ProductImage(
@@ -1453,9 +1352,7 @@ class _ProductEditPageState extends State<ProductEditPage>
           categoryId: _selectedCategoryId,
           name: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
-          detailedDescription: _detailedDescriptionController.text.trim(),
           price: price,
-          currentPrice: currentPrice,
           images: allImageUrls.asMap().entries.map((entry) {
             return ProductImage(
               url: entry.value,

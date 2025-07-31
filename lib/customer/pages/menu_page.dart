@@ -487,12 +487,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       );
     }).toList();
 
-    // İndirim hesapla
-    _filteredProducts = _filteredProducts.map((product) {
-      final finalPrice = product.calculateFinalPrice(_discounts);
-      return product.copyWith(currentPrice: finalPrice);
-    }).toList();
-
     // Kategorileri filtrele
     _categories = _categories.where((category) {
       return TimeRuleUtils.isCategoryVisible(category);
@@ -1152,7 +1146,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       print('🛒 Adding to cart: ${product.name}');
       print('   Product ID: ${product.productId}');
       print('   Price: ${product.price}');
-      print('   Current Price: ${product.currentPrice}');
 
       await _cartService.addToCart(product, widget.businessId,
           quantity: quantity);
@@ -2206,8 +2199,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   Widget _buildListProductCard(
       Product product, int index, MenuSettings? menuSettings) {
-    final hasDiscount =
-        product.currentPrice != null && product.currentPrice! < product.price;
+    // Tek fiyat sistemi - discount hesaplaması kaldırıldı
 
     // Dinamik renkler ve style
     final cardColor = menuSettings != null
@@ -2313,17 +2305,13 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                       children: [
                         if (menuSettings?.showPrices ?? true)
                           Text(
-                            '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
+                            '${product.price.toStringAsFixed(0)} ₺',
                             style: TextStyle(
                               fontSize:
                                   menuSettings?.typography.headingFontSize ??
                                       16,
                               fontWeight: FontWeight.bold,
-                              color: hasDiscount
-                                  ? _parseColor(
-                                      menuSettings?.colorScheme.accentColor ??
-                                          '#FF6B35')
-                                  : primaryColor,
+                              color: primaryColor,
                               fontFamily: menuSettings?.typography.fontFamily ??
                                   'Poppins',
                             ),
@@ -2367,11 +2355,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   Widget _buildCompactProductCard(
       Product product, int index, MenuSettings? menuSettings) {
-    final hasDiscount =
-        product.currentPrice != null && product.currentPrice! < product.price;
-    final discountPercentage = hasDiscount
-        ? ((1 - (product.currentPrice! / product.price)) * 100).round()
-        : 0;
+    // Tek fiyat sistemi - discount hesaplaması kaldırıldı
 
     // Dinamik renkler ve style
     final cardColor = menuSettings != null
@@ -2495,27 +2479,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               ),
                             ),
                           ),
-
-                          // Discount Badge
-                          if (hasDiscount)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '-%$discountPercentage',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
@@ -2593,39 +2556,20 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Current Price
+                                // Product Price
                                 Text(
-                                  '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
+                                  '${product.price.toStringAsFixed(0)} ₺',
                                   style: TextStyle(
                                     fontSize: menuSettings
                                             ?.typography.headingFontSize ??
                                         16,
                                     fontWeight: FontWeight.bold,
-                                    color: hasDiscount
-                                        ? accentColor
-                                        : primaryColor,
+                                    color: primaryColor,
                                     fontFamily:
                                         menuSettings?.typography.fontFamily ??
                                             'Poppins',
                                   ),
                                 ),
-
-                                // Original Price (if discounted)
-                                if (hasDiscount)
-                                  Text(
-                                    '${product.price.toStringAsFixed(0)} ₺',
-                                    style: TextStyle(
-                                      fontSize: (menuSettings
-                                                  ?.typography.bodyFontSize ??
-                                              9) -
-                                          2,
-                                      color: textPrimaryColor.withOpacity(0.6),
-                                      decoration: TextDecoration.lineThrough,
-                                      fontFamily:
-                                          menuSettings?.typography.fontFamily ??
-                                              'Poppins',
-                                    ),
-                                  ),
                               ],
                             ),
                           ),

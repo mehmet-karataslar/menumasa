@@ -981,9 +981,7 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
           const SizedBox(height: 16),
           _buildPrimaryColorPicker(),
           const SizedBox(height: 24),
-          _buildColorPresets(),
           const SizedBox(height: 24),
-          _buildAdvancedColorControls(),
         ],
       ),
     );
@@ -1135,118 +1133,6 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
     );
   }
 
-  Widget _buildColorPresets() {
-    final presetColors = [
-      const Color(0xFFFF6B35), // Turuncu
-      const Color(0xFF2ECC71), // Yeşil
-      const Color(0xFF3498DB), // Mavi
-      const Color(0xFF9B59B6), // Mor
-      const Color(0xFFE74C3C), // Kırmızı
-      const Color(0xFFF39C12), // Sarı
-      const Color(0xFF1ABC9C), // Turkuaz
-      const Color(0xFF34495E), // Gri
-    ];
-
-    return _buildSettingsCard(
-      title: 'Hazır Renkler',
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          childAspectRatio: 1,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: presetColors.length,
-        itemBuilder: (context, index) {
-          final color = presetColors[index];
-          final isSelected = _selectedColor.value == color.value;
-
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedColor = color;
-                _currentSettings = _currentSettings.copyWith(
-                  colorScheme: _currentSettings.colorScheme.copyWith(
-                    primaryColor: _colorToHex(color),
-                  ),
-                );
-              });
-              HapticFeedback.lightImpact();
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected ? AppColors.white : Colors.transparent,
-                  width: 3,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.3),
-                    blurRadius: isSelected ? 8 : 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: isSelected
-                  ? const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    )
-                  : null,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildAdvancedColorControls() {
-    return _buildSettingsCard(
-      title: 'Gelişmiş Renk Ayarları',
-      child: Column(
-        children: [
-          SwitchListTile(
-            title: const Text('Koyu Tema'),
-            subtitle: const Text('Koyu tema kullan'),
-            value: _currentSettings.colorScheme.isDark,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  colorScheme: _currentSettings.colorScheme.copyWith(
-                    isDark: value,
-                  ),
-                );
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-          _buildSliderSetting(
-            label: 'Saydamlık',
-            value: _currentSettings.colorScheme.opacity,
-            min: 0.5,
-            max: 1.0,
-            divisions: 10,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  colorScheme: _currentSettings.colorScheme.copyWith(
-                    opacity: value,
-                  ),
-                );
-              });
-            },
-            suffix: '%',
-            formatValue: (value) => '${(value * 100).round()}%',
-          ),
-        ],
-      ),
-    );
-  }
 
   // ============================================================================
   // TİPOGRAFİ BÖLÜMÜ
