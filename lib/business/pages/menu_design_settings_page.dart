@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
+
 // import 'package:flutter_colorpicker/flutter_colorpicker.dart'; // Removed for now
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
@@ -2518,28 +2520,52 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
     try {
       final ImagePicker picker = ImagePicker();
 
-      // Show selection dialog
-      final source = await showDialog<ImageSource>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Fotoğraf Seç'),
-          content: const Text('Fotoğrafı nereden seçmek istiyorsunuz?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
-              child: const Text('Galeriden Seç'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(ImageSource.camera),
-              child: const Text('Kamera'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('İptal'),
-            ),
-          ],
-        ),
-      );
+      // Platform bazında kaynak seçimi
+      ImageSource? source;
+
+      if (kIsWeb) {
+        // Web'de sadece galeri seçeneği
+        source = await showDialog<ImageSource>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Fotoğraf Seç'),
+            content: const Text('Web tarayıcısından fotoğraf seçin'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
+                child: const Text('Dosya Seç'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('İptal'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Mobile'da hem galeri hem kamera
+        source = await showDialog<ImageSource>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Fotoğraf Seç'),
+            content: const Text('Fotoğrafı nereden seçmek istiyorsunuz?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
+                child: const Text('Galeriden Seç'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(ImageSource.camera),
+                child: const Text('Kamera'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('İptal'),
+              ),
+            ],
+          ),
+        );
+      }
 
       if (source == null) return;
 
@@ -2578,8 +2604,21 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
       final Reference storageRef =
           FirebaseStorage.instance.ref().child(filePath);
 
-      final File file = File(pickedFile.path);
-      final UploadTask uploadTask = storageRef.putFile(file);
+      // Universal upload - Hem web hem mobile için Uint8List kullan
+      print(
+          '📱 Platform: ${kIsWeb ? "Web" : "Mobile"} - Uint8List kullanılıyor');
+
+      final Uint8List fileBytes = await pickedFile.readAsBytes();
+      final UploadTask uploadTask = storageRef.putData(
+        fileBytes,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'originalName': pickedFile.name,
+            'platform': kIsWeb ? 'web' : 'mobile',
+          },
+        ),
+      );
 
       final TaskSnapshot snapshot = await uploadTask;
       final String downloadUrl = await snapshot.ref.getDownloadURL();
