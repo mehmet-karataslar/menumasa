@@ -77,14 +77,14 @@ class WaiterCall {
   /// Firestore'dan oluşturma
   factory WaiterCall.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return WaiterCall(
       callId: doc.id,
       businessId: data['businessId'] ?? '',
       customerId: data['customerId'] ?? '',
       customerName: data['customerName'],
       customerPhone: data['customerPhone'],
-      tableNumber: data['tableNumber'] ?? 0,
+      tableNumber: _parseTableNumber(data['tableNumber']),
       requestType: WaiterCallType.values.firstWhere(
         (type) => type.toString() == data['requestType'],
         orElse: () => WaiterCallType.service,
@@ -129,9 +129,12 @@ class WaiterCall {
       'priority': priority.toString(),
       'status': status.toString(),
       'createdAt': Timestamp.fromDate(createdAt),
-      'acknowledgedAt': acknowledgedAt != null ? Timestamp.fromDate(acknowledgedAt!) : null,
-      'respondedAt': respondedAt != null ? Timestamp.fromDate(respondedAt!) : null,
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'acknowledgedAt':
+          acknowledgedAt != null ? Timestamp.fromDate(acknowledgedAt!) : null,
+      'respondedAt':
+          respondedAt != null ? Timestamp.fromDate(respondedAt!) : null,
+      'completedAt':
+          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'waiterId': waiterId,
       'waiterName': waiterName,
       'responseNotes': responseNotes,
@@ -219,15 +222,22 @@ class WaiterCall {
       status: WaiterCallStatus.cancelled,
       completedAt: DateTime.now(),
       responseNotes: reason,
-      actionsTaken: [...actionsTaken, 'İptal edildi: ${reason ?? "Sebep belirtilmedi"}'],
+      actionsTaken: [
+        ...actionsTaken,
+        'İptal edildi: ${reason ?? "Sebep belirtilmedi"}'
+      ],
     );
   }
 
   /// Eskalt et
-  WaiterCall escalate({required WaiterCallPriority newPriority, String? reason}) {
+  WaiterCall escalate(
+      {required WaiterCallPriority newPriority, String? reason}) {
     return copyWith(
       priority: newPriority,
-      actionsTaken: [...actionsTaken, 'Eskalat edildi: ${reason ?? "Yüksek öncelik"}'],
+      actionsTaken: [
+        ...actionsTaken,
+        'Eskalat edildi: ${reason ?? "Yüksek öncelik"}'
+      ],
       metadata: {...metadata, 'escalated': true, 'escalation_reason': reason},
     );
   }
@@ -257,56 +267,57 @@ class WaiterCall {
   /// Aktif mi?
   bool get isActive {
     return status == WaiterCallStatus.pending ||
-           status == WaiterCallStatus.acknowledged ||
-           status == WaiterCallStatus.inProgress;
+        status == WaiterCallStatus.acknowledged ||
+        status == WaiterCallStatus.inProgress;
   }
 
   /// Tamamlanmış mı?
   bool get isCompleted {
     return status == WaiterCallStatus.completed ||
-           status == WaiterCallStatus.cancelled;
+        status == WaiterCallStatus.cancelled;
   }
 
   /// Gecikmiş mi?
   bool get isOverdue {
     if (!isActive) return false;
-    
-    final expectedResponseTime = _getExpectedResponseTime(requestType, priority);
+
+    final expectedResponseTime =
+        _getExpectedResponseTime(requestType, priority);
     return waitingTimeMinutes > expectedResponseTime;
   }
 
   /// Acil mi?
   bool get isUrgent {
     return priority == WaiterCallPriority.urgent ||
-           priority == WaiterCallPriority.emergency ||
-           isOverdue;
+        priority == WaiterCallPriority.emergency ||
+        isOverdue;
   }
 
   /// Müşteri memnuniyet puanı hesapla
   double calculateSatisfactionScore() {
     if (!isCompleted) return 0.0;
-    
+
     double score = 100.0;
-    
+
     // Yanıt süresine göre puan düşür
     final responseTime = responseTimeMinutes ?? waitingTimeMinutes;
     final expectedTime = _getExpectedResponseTime(requestType, priority);
-    
+
     if (responseTime > expectedTime) {
       final overTime = responseTime - expectedTime;
       score -= (overTime * 2); // Her fazla dakika için 2 puan düş
     }
-    
+
     // İptal edildiyse ciddi puan düşür
     if (status == WaiterCallStatus.cancelled) {
       score -= 50;
     }
-    
+
     // Eskalt edildiyse puan düşür
     if (metadata['escalated'] == true) {
       score -= 20;
     }
-    
+
     return score.clamp(0.0, 100.0);
   }
 
@@ -343,7 +354,8 @@ class WaiterCall {
   }
 
   /// Beklenen yanıt süresi hesapla (dakika)
-  static int _getExpectedResponseTime(WaiterCallType type, WaiterCallPriority priority) {
+  static int _getExpectedResponseTime(
+      WaiterCallType type, WaiterCallPriority priority) {
     final baseTime = switch (type) {
       WaiterCallType.service => 3,
       WaiterCallType.order => 2,
@@ -355,7 +367,7 @@ class WaiterCall {
       WaiterCallType.cleaning => 8,
       WaiterCallType.emergency => 1,
     };
-    
+
     final priorityMultiplier = switch (priority) {
       WaiterCallPriority.low => 2.0,
       WaiterCallPriority.normal => 1.0,
@@ -363,7 +375,7 @@ class WaiterCall {
       WaiterCallPriority.urgent => 0.5,
       WaiterCallPriority.emergency => 0.3,
     };
-    
+
     return (baseTime * priorityMultiplier).round();
   }
 
@@ -386,6 +398,25 @@ class WaiterCall {
         return WaiterCallPriority.normal;
       case WaiterCallType.cleaning:
         return WaiterCallPriority.low;
+    }
+  }
+
+  /// Masa numarasını parse eder (String veya int olabilir)
+  static int _parseTableNumber(dynamic tableNumber) {
+    if (tableNumber == null) return 0;
+
+    if (tableNumber is int) {
+      return tableNumber;
+    } else if (tableNumber is String) {
+      // "Masa 5" gibi metinlerden sayıyı çıkar
+      final match = RegExp(r'\d+').firstMatch(tableNumber);
+      if (match != null) {
+        return int.tryParse(match.group(0)!) ?? 0;
+      }
+      // Sadece sayı string'i ise
+      return int.tryParse(tableNumber) ?? 0;
+    } else {
+      return 0; // Fallback
     }
   }
 
@@ -503,6 +534,8 @@ class WaiterCallStats {
     required this.callsByPriority,
   });
 
-  double get completionRate => totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
-  double get cancellationRate => totalCalls > 0 ? (cancelledCalls / totalCalls) * 100 : 0;
-} 
+  double get completionRate =>
+      totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
+  double get cancellationRate =>
+      totalCalls > 0 ? (cancelledCalls / totalCalls) * 100 : 0;
+}

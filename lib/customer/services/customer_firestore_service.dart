@@ -560,6 +560,7 @@ class CustomerFirestoreService {
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
           .where('businessId', isEqualTo: businessId)
+          .orderBy('sortOrder') // Firestore'dan sortOrder'a göre sıralı al
           .get();
 
       return snapshot.docs

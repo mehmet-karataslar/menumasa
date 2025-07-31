@@ -158,7 +158,7 @@ class _ModernProductCardState extends State<ModernProductCard>
 
   @override
   Widget build(BuildContext context) {
-    final hasDiscount = widget.product.hasDiscount;
+    final hasDiscount = false; // Tek fiyat sistemi - discount kaldırıldı
     final isAvailable = widget.product.isAvailable;
 
     return AnimatedBuilder(
@@ -270,7 +270,7 @@ class _ModernProductCardState extends State<ModernProductCard>
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        widget.product.formattedDiscountPercentage,
+                        '0%', // Tek fiyat sistemi - discount kaldırıldı
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 9,
@@ -400,7 +400,7 @@ class _ModernProductCardState extends State<ModernProductCard>
                     // Original price if discounted
                     if (hasDiscount)
                       Text(
-                        widget.product.formattedOriginalPrice,
+                        widget.product.formattedPrice,
                         style: TextStyle(
                           fontSize: 10,
                           color: AppColors.textSecondary,
@@ -604,7 +604,7 @@ class _ModernProductListItemState extends State<ModernProductListItem>
 
   @override
   Widget build(BuildContext context) {
-    final hasDiscount = widget.product.hasDiscount;
+    final hasDiscount = false; // Tek fiyat sistemi - discount kaldırıldı
     final isAvailable = widget.product.isAvailable;
 
     return AnimatedBuilder(
@@ -691,8 +691,7 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        widget.product
-                                            .formattedDiscountPercentage,
+                                        '0%', // Tek fiyat sistemi - discount kaldırıldı
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 9,
@@ -799,17 +798,7 @@ class _ModernProductListItemState extends State<ModernProductListItem>
                                                 : AppColors.primary,
                                           ),
                                         ),
-                                        if (hasDiscount)
-                                          Text(
-                                            widget
-                                                .product.formattedOriginalPrice,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: AppColors.textSecondary,
-                                              decoration:
-                                                  TextDecoration.lineThrough,
-                                            ),
-                                          ),
+                                        // Tek fiyat sistemi - original price kaldırıldı
                                       ],
                                     ),
                                   ),

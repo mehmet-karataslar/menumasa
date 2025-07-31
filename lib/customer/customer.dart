@@ -19,7 +19,7 @@ export 'pages/cart_page.dart';
 export 'pages/multi_business_cart_page.dart';
 export 'pages/product_detail_page.dart';
 export 'pages/search_page.dart';
-export 'pages/qr_menu_page.dart';
+// export 'pages/qr_menu_page.dart'; // Removed - using MenuPage for QR codes
 export 'pages/qr_scanner_page.dart';
 export 'pages/customer_orders_page.dart';
 export 'pages/category_filter_page.dart';
@@ -37,45 +37,43 @@ export 'widgets/product_grid.dart';
 export 'widgets/search_bar.dart';
 export 'widgets/filter_bottom_sheet.dart';
 
-
-
 // Customer Module Configuration
 class CustomerModule {
   static const String moduleName = 'Customer';
   static const String version = '1.0.0';
-  
+
   // Module initialization
   static void initialize() {
     // Customer module initialization logic
     print('$moduleName Module v$version initialized');
   }
-  
+
   // Module configuration
   static Map<String, dynamic> get config => {
-    'name': moduleName,
-    'version': version,
-    'features': [
-      'QR Code Scanning',
-      'Business Discovery',
-      'Menu Browsing',
-      'Cart Management',
-      'Order Placement',
-      'Order Tracking',
-      'Favorites Management',
-      'Search & Filter',
-    ],
-    'pages': [
-      'Customer Home',
-      'Business Detail',
-      'Menu',
-      'Cart',
-      'Orders',
-      'Search',
-    ],
-    'services': [
-      'Customer Service',
-    ],
-  };
+        'name': moduleName,
+        'version': version,
+        'features': [
+          'QR Code Scanning',
+          'Business Discovery',
+          'Menu Browsing',
+          'Cart Management',
+          'Order Placement',
+          'Order Tracking',
+          'Favorites Management',
+          'Search & Filter',
+        ],
+        'pages': [
+          'Customer Home',
+          'Business Detail',
+          'Menu',
+          'Cart',
+          'Orders',
+          'Search',
+        ],
+        'services': [
+          'Customer Service',
+        ],
+      };
 }
 
 // Customer Module Constants
@@ -84,25 +82,25 @@ class CustomerConstants {
   static const double cardElevation = 2.0;
   static const double borderRadius = 12.0;
   static const double iconSize = 24.0;
-  
+
   // Customer Colors (uses main app colors)
   static const String primaryColorName = 'primary';
   static const String secondaryColorName = 'secondary';
   static const String accentColorName = 'accent';
-  
+
   // Customer Text Styles
   static const String customerFontFamily = 'Poppins';
   static const double customerFontSize = 14.0;
   static const double customerHeaderFontSize = 18.0;
-  
+
   // Customer Spacing
   static const double customerPadding = 16.0;
   static const double customerMargin = 8.0;
   static const double customerSpacing = 12.0;
-  
+
   // Customer Animation
   static const Duration customerAnimationDuration = Duration(milliseconds: 300);
-  
+
   // Order Status
   static const List<String> orderStatuses = [
     'pending',
@@ -112,7 +110,7 @@ class CustomerConstants {
     'delivered',
     'cancelled'
   ];
-  
+
   // Payment Methods
   static const List<String> paymentMethods = [
     'cash',
@@ -144,7 +142,7 @@ class CustomerUtils {
         return 'Bilinmeyen';
     }
   }
-  
+
   /// Payment method'u Türkçe'ye çevir
   static String getPaymentMethodText(String method) {
     switch (method.toLowerCase()) {
@@ -162,4 +160,4 @@ class CustomerUtils {
         return 'Diğer';
     }
   }
-} 
+}

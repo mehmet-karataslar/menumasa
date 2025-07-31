@@ -1873,23 +1873,6 @@ class _BusinessDashboardMobileState extends State<BusinessDashboardMobile>
                             ),
                           ),
                           const SizedBox(width: 12),
-                          if (product.hasDiscount)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.error.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '-%${product.discountPercentage.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  color: AppColors.error,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ],

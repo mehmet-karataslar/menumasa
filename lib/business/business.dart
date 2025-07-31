@@ -1,6 +1,7 @@
 // Business Module - İşletme Yönetimi Modülü
 
 // Models
+export 'models/business.dart';
 export 'models/business_user.dart';
 export 'models/business_session.dart';
 export 'models/business_activity_log.dart';
@@ -9,6 +10,7 @@ export 'models/stock_models.dart';
 
 // Services
 export 'services/business_service.dart';
+export 'services/business_firestore_service.dart';
 export 'services/analytics_service.dart';
 export 'services/stock_service.dart';
 
@@ -30,6 +32,4 @@ class BusinessModule {
     // Business modülü başlatma işlemleri
     print('Business Module initialized');
   }
-
-
-} 
+}

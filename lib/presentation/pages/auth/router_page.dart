@@ -9,7 +9,7 @@ import 'login_page.dart';
 import 'business_register_page.dart';
 import 'register_page.dart';
 import '../../../business/pages/business_login_page.dart';
-import '../../../customer/pages/qr_menu_page.dart';
+import '../../../customer/pages/menu_page.dart';
 import '../../../shared/pages/universal_qr_menu_page.dart';
 
 class RouterPage extends StatefulWidget {

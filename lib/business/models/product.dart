@@ -8,9 +8,7 @@ class Product {
   final String categoryId;
   final String name;
   final String description;
-  final String detailedDescription;
   final double price;
-  final double currentPrice;
   final String currency;
   final List<ProductImage> images;
   final NutritionInfo? nutritionInfo;
@@ -32,9 +30,7 @@ class Product {
     required this.categoryId,
     required this.name,
     required this.description,
-    required this.detailedDescription,
     required this.price,
-    required this.currentPrice,
     required this.currency,
     required this.images,
     this.nutritionInfo,
@@ -55,11 +51,7 @@ class Product {
       categoryId: data['categoryId'] ?? '',
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      detailedDescription: data['detailedDescription'] ?? '',
       price: _parsePrice(data['price']),
-      currentPrice: _parsePrice(data['currentPrice']) > 0 
-          ? _parsePrice(data['currentPrice']) 
-          : _parsePrice(data['price']),
       currency: data['currency'] ?? 'TL',
       images: (data['images'] as List<dynamic>? ?? [])
           .map((image) => ProductImage.fromMap(image))
@@ -87,7 +79,7 @@ class Product {
 
   static double _parsePrice(dynamic value) {
     if (value == null) return 0.0;
-    
+
     if (value is num) {
       return value.toDouble();
     } else if (value is String) {
@@ -96,22 +88,23 @@ class Product {
       if (parsed != null) {
         return parsed;
       } else {
-        print('Warning: Could not parse price value "$value" as double, using 0.0');
+        print(
+            'Warning: Could not parse price value "$value" as double, using 0.0');
         return 0.0;
       }
     }
-    
+
     return 0.0;
   }
 
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
-    
+
     // Handle Firestore Timestamp
     if (value.runtimeType.toString() == 'Timestamp') {
       return (value as dynamic).toDate();
     }
-    
+
     // Handle String
     if (value is String) {
       try {
@@ -120,12 +113,12 @@ class Product {
         return DateTime.now();
       }
     }
-    
+
     // Handle DateTime (already parsed)
     if (value is DateTime) {
       return value;
     }
-    
+
     return DateTime.now();
   }
 
@@ -136,9 +129,7 @@ class Product {
       'categoryId': categoryId,
       'name': name,
       'description': description,
-      'detailedDescription': detailedDescription,
       'price': price,
-      'currentPrice': currentPrice,
       'currency': currency,
       'images': images.map((image) => image.toMap()).toList(),
       'nutritionInfo': nutritionInfo?.toMap(),
@@ -159,9 +150,7 @@ class Product {
     String? categoryId,
     String? name,
     String? description,
-    String? detailedDescription,
     double? price,
-    double? currentPrice,
     String? currency,
     List<ProductImage>? images,
     NutritionInfo? nutritionInfo,
@@ -180,9 +169,7 @@ class Product {
       categoryId: categoryId ?? this.categoryId,
       name: name ?? this.name,
       description: description ?? this.description,
-      detailedDescription: detailedDescription ?? this.detailedDescription,
       price: price ?? this.price,
-      currentPrice: currentPrice ?? this.currentPrice,
       currency: currency ?? this.currency,
       images: images ?? this.images,
       nutritionInfo: nutritionInfo ?? this.nutritionInfo,
@@ -198,25 +185,14 @@ class Product {
   }
 
   // Helper getters
-  String get formattedCurrentPrice => '${currentPrice.toStringAsFixed(2)} $currency';
-  
-  String get displayName => name;
-  
-  bool get hasDiscount => currentPrice < price;
-  
-  double get discountAmount => price - currentPrice;
-  
-  double get discountPercentage => hasDiscount ? ((discountAmount / price) * 100) : 0.0;
+  String get formattedPrice => '${price.toStringAsFixed(2)} $currency';
 
-  String get formattedPrice => '${currentPrice.toStringAsFixed(2)} $currency';
-  String get formattedOriginalPrice => '${price.toStringAsFixed(2)} $currency';
-  String get formattedDiscountPercentage =>
-      '%${discountPercentage.toStringAsFixed(0)}';
+  String get displayName => name;
 
   ProductImage? get primaryImage => images.firstWhere(
-    (img) => img.isPrimary,
-    orElse: () => images.isNotEmpty ? images.first : ProductImage.empty(),
-  );
+        (img) => img.isPrimary,
+        orElse: () => images.isNotEmpty ? images.first : ProductImage.empty(),
+      );
 
   List<ProductImage> get secondaryImages =>
       images.where((img) => !img.isPrimary).toList();
@@ -283,7 +259,7 @@ class Product {
 
   @override
   String toString() {
-    return 'Product(productId: $productId, name: $name, price: $price, currentPrice: $currentPrice, isActive: $isActive, isAvailable: $isAvailable)';
+    return 'Product(productId: $productId, name: $name, price: $price, isActive: $isActive, isAvailable: $isAvailable)';
   }
 
   // Convenience getters for backward compatibility
@@ -378,7 +354,7 @@ class NutritionInfo {
 
   static double? _parseNutritionValue(dynamic value) {
     if (value == null) return null;
-    
+
     if (value is num) {
       return value.toDouble();
     } else if (value is String) {
@@ -386,11 +362,12 @@ class NutritionInfo {
       if (parsed != null) {
         return parsed;
       } else {
-        print('Warning: Could not parse nutrition value "$value" as double, using null');
+        print(
+            'Warning: Could not parse nutrition value "$value" as double, using null');
         return null;
       }
     }
-    
+
     return null;
   }
 
@@ -464,9 +441,7 @@ class ProductDefaults {
       categoryId: categoryId,
       name: name,
       description: description ?? '',
-      detailedDescription: '',
       price: price,
-      currentPrice: price,
       currency: currency,
       images: [],
       allergens: [],
@@ -563,9 +538,6 @@ extension ProductExtensions on Product {
 
   /// Ürünün fiyat bilgilerini formatted string olarak döndürür
   String getPriceDisplay() {
-    if (hasDiscount) {
-      return '$formattedPrice (${formattedDiscountPercentage} indirim)';
-    }
     return formattedPrice;
   }
 
@@ -602,7 +574,6 @@ extension ProductExtensions on Product {
     final lowerQuery = query.toLowerCase();
     return name.toLowerCase().contains(lowerQuery) ||
         description.toLowerCase().contains(lowerQuery) ||
-        detailedDescription.toLowerCase().contains(lowerQuery) ||
         tags.any((tag) => tag.toLowerCase().contains(lowerQuery)) ||
         allergens.any(
           (allergen) => allergen.toLowerCase().contains(lowerQuery),
@@ -635,8 +606,8 @@ extension ProductExtensions on Product {
     }
 
     // Fiyat filtreleri
-    if (minPrice != null && currentPrice < minPrice) return false;
-    if (maxPrice != null && currentPrice > maxPrice) return false;
+    if (minPrice != null && price < minPrice) return false;
+    if (maxPrice != null && price > maxPrice) return false;
 
     // Özel filtreler
     if (isVegetarian == true && !this.isVegetarian) return false;
@@ -653,7 +624,7 @@ extension ProductExtensions on Product {
     List<Discount> discounts, {
     PriceRoundingRule? roundingRule,
   }) {
-    double finalPrice = currentPrice;
+    double finalPrice = price; // Tek fiyat sistemi - price kullan
 
     for (final discount in discounts) {
       if (discount.isCurrentlyActive &&
@@ -677,8 +648,7 @@ extension ProductExtensions on Product {
     for (final discount in discounts) {
       if (discount.isCurrentlyActive &&
           discount.appliesToProduct(productId, categoryId)) {
-        final discountAmount =
-            currentPrice - discount.calculateDiscountedPrice(currentPrice);
+        final discountAmount = price - discount.calculateDiscountedPrice(price);
         if (discountAmount > maxDiscountAmount) {
           maxDiscountAmount = discountAmount;
           bestDiscount = discount;
@@ -711,7 +681,7 @@ extension ProductExtensions on Product {
     );
     final bestDiscount = getBestDiscount(discounts);
 
-    if (bestDiscount != null && finalPrice < currentPrice) {
+    if (bestDiscount != null && finalPrice < price) {
       return '${finalPrice.toStringAsFixed(2)} $currency (${bestDiscount.formattedDescription})';
     }
 

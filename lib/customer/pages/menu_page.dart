@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../business/models/business.dart';
 import '../../business/models/category.dart';
 import '../../business/models/product.dart';
@@ -35,6 +36,8 @@ import '../../business/models/staff.dart';
 import '../../business/models/waiter_call.dart';
 import '../../business/services/staff_service.dart';
 import '../../business/services/waiter_call_service.dart';
+import '../../core/services/dynamic_theme_service.dart';
+import '../../shared/qr_menu/widgets/dynamic_menu_widgets.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
@@ -483,12 +486,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         isHalal: _filters['isHalal'],
         isSpicy: _filters['isSpicy'],
       );
-    }).toList();
-
-    // İndirim hesapla
-    _filteredProducts = _filteredProducts.map((product) {
-      final finalPrice = product.calculateFinalPrice(_discounts);
-      return product.copyWith(currentPrice: finalPrice);
     }).toList();
 
     // Kategorileri filtrele
@@ -1150,7 +1147,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       print('🛒 Adding to cart: ${product.name}');
       print('   Product ID: ${product.productId}');
       print('   Price: ${product.price}');
-      print('   Current Price: ${product.currentPrice}');
 
       await _cartService.addToCart(product, widget.businessId,
           quantity: quantity);
@@ -1227,18 +1223,120 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Eğer business yüklenmişse dinamik tema kullan
+    if (_business != null) {
+      return DynamicThemeWrapper(
+        businessId: _business!.id,
+        fallbackSettings: _business!.menuSettings,
+        builder: (menuSettings, themeData) {
+          return Theme(
+            data: themeData,
+            child: Scaffold(
+              backgroundColor:
+                  _parseColor(menuSettings.colorScheme.backgroundColor),
+              extendBodyBehindAppBar: true,
+              body: _isLoading
+                  ? _buildLoadingState(menuSettings)
+                  : _hasError
+                      ? _buildErrorState(menuSettings)
+                      : _buildMenuContent(menuSettings),
+            ),
+          );
+        },
+      );
+    }
+
+    // Fallback tema
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      body: _isLoading
-          ? _buildLoadingState()
-          : _hasError
-              ? _buildErrorState()
-              : _buildMenuContent(),
+      body: Container(
+        decoration: _buildBackgroundDecoration(null),
+        child: _isLoading
+            ? _buildLoadingState(null)
+            : _hasError
+                ? _buildErrorState(null)
+                : _buildMenuContent(null),
+      ),
     );
   }
 
-  Widget _buildLoadingState() {
+  BoxDecoration _buildBackgroundDecoration(MenuSettings? menuSettings) {
+    final backgroundSettings = menuSettings?.backgroundSettings;
+
+    print('🎨 DEBUG: backgroundSettings = $backgroundSettings');
+    print('🎨 DEBUG: type = ${backgroundSettings?.type}');
+    print('🎨 DEBUG: backgroundImage = ${backgroundSettings?.backgroundImage}');
+
+    if (backgroundSettings == null) {
+      print('🎨 DEBUG: backgroundSettings is null, using default');
+      return BoxDecoration(color: AppColors.background);
+    }
+
+    switch (backgroundSettings.type) {
+      case 'color':
+        return BoxDecoration(
+          color: _parseColor(backgroundSettings.primaryColor)
+              .withOpacity(backgroundSettings.opacity),
+        );
+
+      case 'gradient':
+        return BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _parseColor(backgroundSettings.primaryColor)
+                  .withOpacity(backgroundSettings.opacity),
+              _parseColor(backgroundSettings.secondaryColor)
+                  .withOpacity(backgroundSettings.opacity),
+            ],
+          ),
+        );
+
+      case 'pattern':
+        return BoxDecoration(
+          color: Colors.white,
+          image: _getPatternDecoration(backgroundSettings),
+        );
+
+      case 'image':
+        print(
+            '🎨 DEBUG: Image case - backgroundImage = ${backgroundSettings.backgroundImage}');
+        print(
+            '🎨 DEBUG: Image case - isEmpty = ${backgroundSettings.backgroundImage.isEmpty}');
+        return BoxDecoration(
+          image: backgroundSettings.backgroundImage.isNotEmpty
+              ? DecorationImage(
+                  image: NetworkImage(backgroundSettings.backgroundImage),
+                  fit: BoxFit.cover,
+                  opacity: backgroundSettings.opacity,
+                )
+              : null,
+          color: backgroundSettings.backgroundImage.isEmpty
+              ? _parseColor(backgroundSettings.primaryColor)
+                  .withOpacity(backgroundSettings.opacity)
+              : null,
+        );
+
+      default:
+        return BoxDecoration(color: AppColors.background);
+    }
+  }
+
+  DecorationImage? _getPatternDecoration(
+      MenuBackgroundSettings backgroundSettings) {
+    // Pattern oluşturma - CSS pattern benzeri yaklaşım
+    final patternColors = [
+      _parseColor(backgroundSettings.primaryColor),
+      _parseColor(backgroundSettings.secondaryColor),
+    ];
+
+    // Bu örnekte basit bir pattern implementasyonu
+    return null; // Gerçek implementasyon için pattern generator gerekli
+  }
+
+  Widget _buildLoadingState(MenuSettings? menuSettings) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1335,7 +1433,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(MenuSettings? menuSettings) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1405,7 +1503,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMenuContent() {
+  Widget _buildMenuContent(MenuSettings? menuSettings) {
     return AnimatedBuilder(
       animation: _fadeAnimation,
       builder: (context, child) {
@@ -1415,10 +1513,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
             controller: _scrollController,
             physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildModernHeader(),
-              if (_showSearchBar) _buildSearchSection(),
-              _buildCategorySection(),
-              _buildProductSection(),
+              _buildModernHeader(menuSettings),
+              if (_showSearchBar) _buildSearchSection(menuSettings),
+              _buildCategorySection(menuSettings),
+              _buildProductSection(menuSettings),
             ],
           ),
         );
@@ -1426,13 +1524,20 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildModernHeader() {
+  Widget _buildModernHeader(MenuSettings? menuSettings) {
+    final primaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.primaryColor)
+        : AppColors.primary;
+    final secondaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.secondaryColor)
+        : AppColors.secondary;
+
     return SliverAppBar(
       expandedHeight: 200,
       floating: false,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppColors.primary,
+      backgroundColor: primaryColor,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           children: [
@@ -1442,9 +1547,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary,
-                    AppColors.primaryLight,
-                    AppColors.secondary.withOpacity(0.9),
+                    primaryColor,
+                    primaryColor.withOpacity(0.8),
+                    secondaryColor.withOpacity(0.9),
                   ],
                 ),
               ),
@@ -1767,7 +1872,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSearchSection() {
+  Widget _buildSearchSection(MenuSettings? menuSettings) {
     return SliverToBoxAdapter(
       child: SlideTransition(
         position: _slideAnimation,
@@ -1826,7 +1931,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCategorySection() {
+  Widget _buildCategorySection(MenuSettings? menuSettings) {
     if (_categories.isEmpty)
       return const SliverToBoxAdapter(child: SizedBox.shrink());
 
@@ -1980,18 +2085,22 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     return Icons.restaurant_menu_rounded;
   }
 
-  Widget _buildProductSection() {
+  Widget _buildProductSection(MenuSettings? menuSettings) {
     return SliverToBoxAdapter(
       child: SlideTransition(
         position: _slideAnimation,
         child: Container(
-          color: AppColors.background,
+          color: menuSettings != null
+              ? _parseColor(menuSettings.colorScheme.backgroundColor)
+              : AppColors.background,
           child: _filteredProducts.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(
                   onRefresh: _loadMenuData,
-                  color: AppColors.primary,
-                  child: _buildProductGrid(),
+                  color: menuSettings != null
+                      ? _parseColor(menuSettings.colorScheme.primaryColor)
+                      : AppColors.primary,
+                  child: _buildProductGrid(menuSettings),
                 ),
         ),
       ),
@@ -2080,186 +2189,421 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildProductGrid() {
+  Widget _buildProductGrid(MenuSettings? menuSettings) {
+    // Layout tipine göre farklı grid ayarları
+    final layoutType =
+        menuSettings?.layoutStyle.layoutType ?? MenuLayoutType.grid;
+    final columnsCount = menuSettings?.layoutStyle.columnsCount ?? 2;
+
+    SliverGridDelegate gridDelegate;
+
+    switch (layoutType) {
+      case MenuLayoutType.list:
+        gridDelegate = const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 1,
+          crossAxisSpacing: 0,
+          mainAxisSpacing: 8,
+          childAspectRatio: 3.5, // Geniş liste kartları
+        );
+        break;
+      case MenuLayoutType.grid:
+        gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columnsCount,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.85, // Kare benzeri kartlar
+        );
+        break;
+      case MenuLayoutType.masonry:
+        gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columnsCount,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.7, // Daha uzun kartlar
+        );
+        break;
+      case MenuLayoutType.carousel:
+        // Carousel için farklı widget kullanılacak
+        return _buildProductCarousel(menuSettings);
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85, // More square ratio for compact design
-      ),
+      gridDelegate: gridDelegate,
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
         final product = _filteredProducts[index];
-        return _buildCompactProductCard(product, index);
+        return _buildDynamicProductCard(
+            product, index, menuSettings, layoutType);
       },
     );
   }
 
-  Widget _buildCompactProductCard(Product product, int index) {
-    final hasDiscount =
-        product.currentPrice != null && product.currentPrice! < product.price;
-    final discountPercentage = hasDiscount
-        ? ((1 - (product.currentPrice! / product.price)) * 100).round()
-        : 0;
+  Widget _buildProductCarousel(MenuSettings? menuSettings) {
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _filteredProducts.length,
+        itemBuilder: (context, index) {
+          final product = _filteredProducts[index];
+          return Container(
+            width: 160,
+            margin: const EdgeInsets.only(right: 12),
+            child: _buildDynamicProductCard(
+                product, index, menuSettings, MenuLayoutType.carousel),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDynamicProductCard(Product product, int index,
+      MenuSettings? menuSettings, MenuLayoutType layoutType) {
+    // Layout tipine göre farklı card tasarımları
+    switch (layoutType) {
+      case MenuLayoutType.list:
+        return _buildListProductCard(product, index, menuSettings);
+      case MenuLayoutType.carousel:
+        return _buildCarouselProductCard(product, index, menuSettings);
+      case MenuLayoutType.masonry:
+        return _buildMasonryProductCard(product, index, menuSettings);
+      case MenuLayoutType.grid:
+        return _buildCompactProductCard(product, index, menuSettings);
+    }
+  }
+
+  Widget _buildListProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
+    // Tek fiyat sistemi - discount hesaplaması kaldırıldı
+
+    // Dinamik renkler ve style
+    final cardColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.cardColor)
+        : AppColors.white;
+    final borderRadius = menuSettings?.visualStyle.borderRadius ?? 12.0;
+    final primaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.primaryColor)
+        : AppColors.primary;
+    final textPrimaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.textPrimaryColor)
+        : AppColors.textPrimary;
+    final accentColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.accentColor)
+        : AppColors.accent;
+
+    return GestureDetector(
+      onTap: () => _navigateToProductDetail(product),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: menuSettings?.visualStyle.showShadows ?? true
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          children: [
+            // Image Section
+            Container(
+              width: 100,
+              height: 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(borderRadius)),
+                color: _parseColor(
+                        menuSettings?.colorScheme.surfaceColor ?? '#F8F9FA')
+                    .withOpacity(0.3),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(borderRadius)),
+                child: product.imageUrl != null
+                    ? WebSafeImage(
+                        imageUrl: product.imageUrl!,
+                        fit: BoxFit.cover,
+                        width: 100,
+                        height: 80,
+                      )
+                    : Icon(
+                        Icons.restaurant_menu,
+                        size: 40,
+                        color: primaryColor.withOpacity(0.3),
+                      ),
+              ),
+            ),
+            // Content Section
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: menuSettings?.typography.titleFontSize ?? 14,
+                        fontWeight: FontWeight.w600,
+                        color: textPrimaryColor,
+                        fontFamily:
+                            menuSettings?.typography.fontFamily ?? 'Poppins',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (product.description != null &&
+                        (menuSettings?.showDescriptions ?? true)) ...[
+                      const SizedBox(height: 4),
+                      Flexible(
+                        child: Text(
+                          product.description!,
+                          style: TextStyle(
+                            fontSize:
+                                (menuSettings?.typography.bodyFontSize ?? 12) -
+                                    1,
+                            color: textPrimaryColor.withOpacity(0.7),
+                            fontFamily: menuSettings?.typography.fontFamily ??
+                                'Poppins',
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (menuSettings?.showPrices ?? true)
+                          Text(
+                            '${product.price.toStringAsFixed(0)} ₺',
+                            style: TextStyle(
+                              fontSize:
+                                  menuSettings?.typography.headingFontSize ??
+                                      16,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                              fontFamily: menuSettings?.typography.fontFamily ??
+                                  'Poppins',
+                            ),
+                          ),
+                        if (product.isAvailable)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius:
+                                  BorderRadius.circular(borderRadius / 2),
+                            ),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCarouselProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
+    return _buildCompactProductCard(product, index, menuSettings);
+  }
+
+  Widget _buildMasonryProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
+    return _buildCompactProductCard(product, index, menuSettings);
+  }
+
+  Widget _buildCompactProductCard(
+      Product product, int index, MenuSettings? menuSettings) {
+    // Tek fiyat sistemi - discount hesaplaması kaldırıldı
+
+    // Dinamik renkler ve style
+    final cardColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.cardColor)
+        : AppColors.white;
+    final borderRadius = menuSettings?.visualStyle.borderRadius ?? 16.0;
+    final shadowColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.shadowColor)
+        : AppColors.shadow;
+    final primaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.primaryColor)
+        : AppColors.primary;
+    final textPrimaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.textPrimaryColor)
+        : AppColors.textPrimary;
+    final accentColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.accentColor)
+        : AppColors.accent;
+    final imageShape = menuSettings?.visualStyle.imageShape ?? 'rounded';
 
     return GestureDetector(
       onTap: () => _navigateToProductDetail(product),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: cardColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: menuSettings?.visualStyle.showShadows ?? true
+              ? [
+                  BoxShadow(
+                    color: shadowColor.withOpacity(0.1),
+                    blurRadius: menuSettings?.visualStyle.cardElevation ?? 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+          border: menuSettings?.visualStyle.showBorders ?? false
+              ? Border.all(
+                  color: _parseColor(menuSettings!.colorScheme.borderColor),
+                  width: 1,
+                )
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section (65% of height)
-            Expanded(
-              flex: 65,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+            // Image Section (65% of height) - Conditional based on showImages
+            if (menuSettings?.showImages ?? true)
+              Expanded(
+                flex: 65,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: _getImageBorderRadius(
+                            imageShape, borderRadius,
+                            isTopImage: true),
+                        color: _parseColor(
+                                menuSettings?.colorScheme.surfaceColor ??
+                                    '#F8F9FA')
+                            .withOpacity(0.3),
                       ),
-                      color: AppColors.greyLighter.withOpacity(0.3),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+                      child: ClipRRect(
+                        borderRadius: _getImageBorderRadius(
+                            imageShape, borderRadius,
+                            isTopImage: true),
+                        child: product.imageUrl != null
+                            ? WebSafeImage(
+                                imageUrl: product.imageUrl!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                errorWidget: (context, url, error) =>
+                                    _buildCompactIcon(),
+                                placeholder: (context, url) =>
+                                    _buildCompactIcon(),
+                              )
+                            : _buildCompactIcon(),
                       ),
-                      child: product.imageUrl != null
-                          ? WebSafeImage(
-                              imageUrl: product.imageUrl!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorWidget: (context, url, error) =>
-                                  _buildCompactIcon(),
-                              placeholder: (context, url) =>
-                                  _buildCompactIcon(),
-                            )
-                          : _buildCompactIcon(),
                     ),
-                  ),
 
-                  // Top buttons row
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    right: 6,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Favorite button
-                        Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          child: InkWell(
-                            onTap: () => _toggleProductFavorite(product),
+                    // Top buttons row
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      right: 6,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Favorite button
+                          Material(
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: AppColors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.shadow.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                _favoriteProductIds.contains(product.id)
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                color: _favoriteProductIds.contains(product.id)
-                                    ? AppColors.accent
-                                    : AppColors.textSecondary,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Discount Badge
-                        if (hasDiscount)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent,
+                            child: InkWell(
+                              onTap: () => _toggleProductFavorite(product),
                               borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '-%$discountPercentage',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: AppColors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.shadow.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _favoriteProductIds.contains(product.id)
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color:
+                                      _favoriteProductIds.contains(product.id)
+                                          ? AppColors.accent
+                                          : AppColors.textSecondary,
+                                  size: 14,
+                                ),
                               ),
                             ),
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // Unavailable Overlay
-                  if (!product.isAvailable)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.black.withOpacity(0.7),
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
+                    // Unavailable Overlay
+                    if (!product.isAvailable)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.black.withOpacity(0.7),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.error,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Tükendi',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.error,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Tükendi',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Info Section (35% of height)
+            // Info Section (35% of height, 100% if no image)
             Expanded(
-              flex: 35,
+              flex: (menuSettings?.showImages ?? true) ? 35 : 100,
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Column(
@@ -2267,74 +2611,77 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Product Name (single line)
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        height: 1.1,
+                    Flexible(
+                      child: Text(
+                        product.name,
+                        style: _buildGoogleFontTextStyle(
+                          fontSize:
+                              menuSettings?.typography.titleFontSize ?? 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                          color: textPrimaryColor,
+                          fontFamily:
+                              menuSettings?.typography.fontFamily ?? 'Poppins',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
 
                     const SizedBox(height: 4),
 
                     // Price and Button Row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Price Section
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Current Price
-                              Text(
-                                '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: hasDiscount
-                                      ? AppColors.accent
-                                      : AppColors.primary,
-                                ),
-                              ),
-
-                              // Original Price (if discounted)
-                              if (hasDiscount)
-                                Text(
-                                  '${product.price.toStringAsFixed(0)} ₺',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: AppColors.textSecondary,
-                                    decoration: TextDecoration.lineThrough,
+                    Flexible(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Price Section
+                          if (menuSettings?.showPrices ?? true)
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Product Price
+                                  Text(
+                                    '${product.price.toStringAsFixed(0)} ₺',
+                                    style: _buildGoogleFontTextStyle(
+                                      fontSize: menuSettings
+                                              ?.typography.headingFontSize ??
+                                          16,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.2,
+                                      color: accentColor,
+                                      fontFamily:
+                                          menuSettings?.typography.fontFamily ??
+                                              'Poppins',
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                        ),
-
-                        // Add Button
-                        if (product.isAvailable)
-                          GestureDetector(
-                            onTap: () => _addToCart(product),
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.add_rounded,
-                                color: Colors.white,
-                                size: 16,
+                                ],
                               ),
                             ),
-                          ),
-                      ],
+
+                          // Add Button
+                          if (product.isAvailable)
+                            GestureDetector(
+                              onTap: () => _addToCart(product),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius:
+                                      BorderRadius.circular(borderRadius / 2),
+                                ),
+                                child: const Icon(
+                                  Icons.add_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2488,4 +2835,126 @@ class _HeaderPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// MenuPage extension for dynamic theme support
+extension MenuPageTheme on _MenuPageState {
+  /// Hex string'i Color'a çevir
+  Color _parseColor(String hex) {
+    try {
+      final hexCode = hex.replaceAll('#', '');
+      return Color(int.parse('FF$hexCode', radix: 16));
+    } catch (e) {
+      return AppColors.primary; // Fallback color
+    }
+  }
+
+  /// Image shape'e göre border radius belirle
+  BorderRadius _getImageBorderRadius(String imageShape, double borderRadius,
+      {bool isTopImage = false}) {
+    switch (imageShape) {
+      case 'circle':
+        return BorderRadius.circular(
+            borderRadius * 2); // Daire için yüksek radius
+      case 'rectangle':
+        return BorderRadius.zero; // Dikdörtgen için radius yok
+      case 'rounded':
+      default:
+        return isTopImage
+            ? BorderRadius.vertical(top: Radius.circular(borderRadius))
+            : BorderRadius.circular(borderRadius);
+    }
+  }
+
+  /// Google Fonts ile TextStyle oluşturur
+  TextStyle _buildGoogleFontTextStyle({
+    required double fontSize,
+    required FontWeight fontWeight,
+    required double height,
+    required Color color,
+    required String fontFamily,
+  }) {
+    try {
+      // Google Fonts'tan font ailesi al
+      switch (fontFamily.toLowerCase()) {
+        case 'poppins':
+          return GoogleFonts.poppins(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'roboto':
+          return GoogleFonts.roboto(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'open sans':
+        case 'opensans':
+          return GoogleFonts.openSans(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'lato':
+          return GoogleFonts.lato(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'nunito':
+          return GoogleFonts.nunito(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'montserrat':
+          return GoogleFonts.montserrat(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'source sans pro':
+        case 'sourcesanspro':
+          return GoogleFonts.sourceSans3(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        case 'playfair display':
+        case 'playfairdisplay':
+          return GoogleFonts.playfairDisplay(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+        default:
+          // Fallback: Varsayılan Poppins kullan
+          return GoogleFonts.poppins(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            height: height,
+            color: color,
+          );
+      }
+    } catch (e) {
+      // Google Fonts yüklenemezse standart TextStyle kullan
+      print('🔤 Google Fonts yükleme hatası: $e');
+      return TextStyle(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        height: height,
+        color: color,
+        fontFamily: fontFamily,
+      );
+    }
+  }
 }

@@ -26,10 +26,10 @@ class MenuAnalyticsWidget extends StatefulWidget {
 
 class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
   final BusinessFirestoreService _businessService = BusinessFirestoreService();
-  
+
   bool _isLoading = false;
   String _selectedPeriod = '7days'; // 7days, 30days, 90days
-  
+
   // Analytics data
   Map<String, int> _categoryViews = {};
   Map<String, int> _productViews = {};
@@ -51,37 +51,41 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
     try {
       // Simulated analytics data - gerçek uygulamada API'den gelecek
       await Future.delayed(const Duration(seconds: 1));
-      
+
       setState(() {
         _categoryViews = {
           for (var category in widget.categories)
             category.name: (100 + (category.name.hashCode % 500)).abs()
         };
-        
+
         _productViews = {
           for (var product in widget.products)
             product.name: (50 + (product.name.hashCode % 200)).abs()
         };
-        
+
         _categoryRevenue = {
           for (var category in widget.categories)
-            category.name: ((category.name.hashCode % 10000) + 1000).abs().toDouble()
+            category.name:
+                ((category.name.hashCode % 10000) + 1000).abs().toDouble()
         };
-        
+
         _popularProducts = widget.products
             .map((p) => {
-              'name': p.name,
-              'views': (50 + (p.name.hashCode % 200)).abs(),
-              'revenue': ((p.name.hashCode % 5000) + 500).abs().toDouble(),
-              'price': p.currentPrice,
-            })
+                  'name': p.name,
+                  'views': (50 + (p.name.hashCode % 200)).abs(),
+                  'revenue': ((p.name.hashCode % 5000) + 500).abs().toDouble(),
+                  'price': p.price,
+                })
             .toList()
           ..sort((a, b) => (b['views'] as int).compareTo(a['views'] as int));
-        
-        _revenueByDay = List.generate(7, (index) => {
-          'day': DateTime.now().subtract(Duration(days: 6 - index)),
-          'revenue': (500 + (index * 100) + (index.hashCode % 300)).toDouble(),
-        });
+
+        _revenueByDay = List.generate(
+            7,
+            (index) => {
+                  'day': DateTime.now().subtract(Duration(days: 6 - index)),
+                  'revenue':
+                      (500 + (index * 100) + (index.hashCode % 300)).toDouble(),
+                });
       });
     } catch (e) {
       print('Analytics yükleme hatası: $e');
@@ -135,7 +139,7 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
               ),
             ],
           ),
-          
+
           // Period selector
           Container(
             padding: const EdgeInsets.all(4),
@@ -158,7 +162,7 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
 
   Widget _buildPeriodButton(String title, String period) {
     final isSelected = _selectedPeriod == period;
-    
+
     return InkWell(
       onTap: () => setState(() => _selectedPeriod = period),
       borderRadius: BorderRadius.circular(6),
@@ -167,13 +171,15 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
         decoration: BoxDecoration(
           color: isSelected ? AppColors.white : null,
           borderRadius: BorderRadius.circular(6),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           title,
@@ -204,17 +210,14 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
         children: [
           // Özet kartları
           _buildSummaryCards(),
-          
+
           const SizedBox(height: 32),
-          
+
           // Grafik alanı
-          if (_isMobile)
-            ..._buildMobileCharts()
-          else
-            _buildDesktopCharts(),
-          
+          if (_isMobile) ..._buildMobileCharts() else _buildDesktopCharts(),
+
           const SizedBox(height: 32),
-          
+
           // Popüler ürünler listesi
           _buildPopularProductsList(),
         ],
@@ -223,10 +226,13 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
   }
 
   Widget _buildSummaryCards() {
-    final totalViews = _productViews.values.fold(0, (sum, views) => sum + views);
-    final totalRevenue = _categoryRevenue.values.fold(0.0, (sum, revenue) => sum + revenue);
-    final avgPrice = widget.products.isNotEmpty 
-        ? widget.products.map((p) => p.currentPrice).reduce((a, b) => a + b) / widget.products.length
+    final totalViews =
+        _productViews.values.fold(0, (sum, views) => sum + views);
+    final totalRevenue =
+        _categoryRevenue.values.fold(0.0, (sum, revenue) => sum + revenue);
+    final avgPrice = widget.products.isNotEmpty
+        ? widget.products.map((p) => p.price).reduce((a, b) => a + b) /
+            widget.products.length
         : 0.0;
 
     return GridView.count(
@@ -303,7 +309,6 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
-              
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -320,9 +325,7 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
               ),
             ],
           ),
-          
           const Spacer(),
-          
           Text(
             value,
             style: AppTypography.h3.copyWith(
@@ -330,9 +333,7 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          
           const SizedBox(height: 4),
-          
           Text(
             title,
             style: AppTypography.bodySmall.copyWith(
@@ -386,9 +387,9 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           SizedBox(
             height: 300,
             child: PieChart(
@@ -399,9 +400,9 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Legend
           Wrap(
             spacing: 16,
@@ -415,7 +416,7 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
                 AppColors.warning,
                 AppColors.info,
               ];
-              
+
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -451,14 +452,15 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
       AppColors.warning,
       AppColors.info,
     ];
-    
-    final totalViews = _categoryViews.values.fold(0, (sum, views) => sum + views);
-    
+
+    final totalViews =
+        _categoryViews.values.fold(0, (sum, views) => sum + views);
+
     return widget.categories.take(5).map((category) {
       final index = widget.categories.indexOf(category);
       final views = _categoryViews[category.name] ?? 0;
       final percentage = totalViews > 0 ? (views / totalViews * 100) : 0;
-      
+
       return PieChartSectionData(
         color: colors[index % colors.length],
         value: views.toDouble(),
@@ -496,9 +498,7 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          
           const SizedBox(height: 24),
-          
           SizedBox(
             height: 300,
             child: LineChart(
@@ -535,8 +535,10 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
                       },
                     ),
                   ),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
@@ -592,23 +594,20 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              
               TextButton(
                 onPressed: () {},
                 child: const Text('Tümünü Gör'),
               ),
             ],
           ),
-          
           const SizedBox(height: 16),
-          
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _popularProducts.take(5).length,
             itemBuilder: (context, index) {
               final product = _popularProducts[index];
-              
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
@@ -623,8 +622,12 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: index < 3 
-                            ? [AppColors.warning, AppColors.textSecondary, AppColors.warning.withOpacity(0.7)][index]
+                        color: index < 3
+                            ? [
+                                AppColors.warning,
+                                AppColors.textSecondary,
+                                AppColors.warning.withOpacity(0.7)
+                              ][index]
                             : AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -632,15 +635,16 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
                         child: Text(
                           '${index + 1}',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: index < 3 ? AppColors.white : AppColors.primary,
+                            color:
+                                index < 3 ? AppColors.white : AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(width: 16),
-                    
+
                     // Product info
                     Expanded(
                       child: Column(
@@ -663,7 +667,7 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
                         ],
                       ),
                     ),
-                    
+
                     // Revenue
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -693,4 +697,4 @@ class _MenuAnalyticsWidgetState extends State<MenuAnalyticsWidget> {
       ),
     );
   }
-} 
+}

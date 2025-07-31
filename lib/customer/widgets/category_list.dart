@@ -20,10 +20,9 @@ class CategoryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Aktif kategorileri filtrele
-    final activeCategories = categories
-        .where((cat) => cat.isActive)
-        .toList();
+    // Aktif kategorileri filtrele ve sortOrder'a göre sırala
+    final activeCategories = categories.where((cat) => cat.isActive).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     // "Tümü" seçeneğini ekle
     final displayCategories = showAll
@@ -39,8 +38,7 @@ class CategoryList extends StatelessWidget {
         itemCount: displayCategories.length,
         itemBuilder: (context, index) {
           final category = displayCategories[index];
-          final isSelected =
-              selectedCategoryId == category.categoryId ||
+          final isSelected = selectedCategoryId == category.categoryId ||
               (selectedCategoryId == null && category.categoryId == 'all');
 
           return Padding(
@@ -120,9 +118,8 @@ class CategoryChip extends StatelessWidget {
                   Icon(
                     Icons.grid_view,
                     size: 16,
-                    color: isSelected
-                        ? AppColors.white
-                        : AppColors.textSecondary,
+                    color:
+                        isSelected ? AppColors.white : AppColors.textSecondary,
                   ),
 
                 if (category.categoryId == 'all') const SizedBox(width: 6),
@@ -159,9 +156,8 @@ class VerticalCategoryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeCategories = categories
-        .where((cat) => cat.isActive)
-        .toList();
+    final activeCategories = categories.where((cat) => cat.isActive).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     return ListView.separated(
       shrinkWrap: true,
@@ -222,11 +218,10 @@ class _CategoryTreeState extends State<CategoryTree> {
 
   @override
   Widget build(BuildContext context) {
-    final mainCategories =
-        widget.categories
-            .where((cat) => cat.parentCategoryId == null && cat.isActive)
-            .toList()
-          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final mainCategories = widget.categories
+        .where((cat) => cat.parentCategoryId == null && cat.isActive)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     return ListView.builder(
       shrinkWrap: true,
@@ -235,8 +230,10 @@ class _CategoryTreeState extends State<CategoryTree> {
       itemBuilder: (context, index) {
         final category = mainCategories[index];
         final subCategories = widget.categories
-            .where((cat) => cat.parentCategoryId == category.categoryId && cat.isActive)
-            .toList();
+            .where((cat) =>
+                cat.parentCategoryId == category.categoryId && cat.isActive)
+            .toList()
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
         final hasSubCategories = subCategories.isNotEmpty;
         final isExpanded = _expandedCategories.contains(category.categoryId);
         final isSelected = widget.selectedCategoryId == category.categoryId;
@@ -299,9 +296,8 @@ class _CategoryTreeState extends State<CategoryTree> {
                         color: isSubSelected
                             ? AppColors.primary
                             : AppColors.textPrimary,
-                        fontWeight: isSubSelected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+                        fontWeight:
+                            isSubSelected ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
                     subtitle: subCategory.description.isNotEmpty

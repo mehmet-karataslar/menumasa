@@ -74,15 +74,37 @@ class BusinessFirestoreService {
     try {
       final doc = await _businessesRef.doc(businessId).get();
       if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        print('Business raw data: $data'); // Debug için
+
         return Business.fromJson({
-          ...doc.data() as Map<String, dynamic>,
+          ...data,
           'id': doc.id,
         });
       }
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error getting business: $e');
+      print('Stack trace: $stackTrace');
       return null;
+    }
+  }
+
+  /// Gets a specific business by ID (alias for getBusiness)
+  Future<Business?> getBusinessById(String businessId) async {
+    return getBusiness(businessId);
+  }
+
+  /// Updates an existing business
+  Future<void> updateBusiness(Business business) async {
+    try {
+      final data = business.toJson();
+      data['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _businessesRef.doc(business.id).update(data);
+    } catch (e) {
+      print('Error updating business: $e');
+      throw e;
     }
   }
 
@@ -321,8 +343,10 @@ class BusinessFirestoreService {
   /// Gets categories for a specific business
   Future<List<Category>> getBusinessCategories(String businessId) async {
     try {
-      final snapshot =
-          await _categoriesRef.where('businessId', isEqualTo: businessId).get();
+      final snapshot = await _categoriesRef
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('sortOrder') // Firestore'dan sortOrder'a göre sıralı al
+          .get();
 
       return snapshot.docs
           .map((doc) => Category.fromJson(

@@ -4,9 +4,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/services/url_service.dart';
-import 'qr_menu_page.dart';
-import '../../shared/pages/universal_qr_menu_page.dart';
 import 'menu_page.dart';
+
 import 'dart:convert'; // Added for jsonDecode
 
 /// QR Kod Tarayıcı Sayfası

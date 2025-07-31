@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'base_route_handler.dart';
 import 'route_constants.dart';
 import '../../shared/pages/universal_qr_menu_page.dart';
-import '../../customer/pages/qr_menu_page.dart';
 import '../../customer/pages/menu_page.dart';
 import '../../customer/pages/product_detail_page.dart';
 import '../../customer/pages/qr_scanner_page.dart';
@@ -180,10 +179,10 @@ class QRRouteHandler implements BaseRouteHandler {
         ...?settings.arguments as Map<String, dynamic>?,
       };
 
-      // Route directly to UniversalQRMenuPage if we have a businessId
+      // Route directly to MenuPage if we have a businessId
       if (businessId != null && businessId.isNotEmpty) {
         return RouteUtils.createRoute(
-          (context) => const UniversalQRMenuPage(),
+          (context) => MenuPage(businessId: businessId),
           RouteSettings(
             name: routeName,
             arguments: enhancedArguments,
@@ -385,7 +384,7 @@ class QRRouteHandler implements BaseRouteHandler {
       final businessId = pathSegments[1];
       print('🔗 QR Route: Legacy menu format detected - /menu/$businessId');
 
-      // QR route olduğu için UniversalQRMenuPage kullan
+      // QR route olduğu için MenuPage kullan
       final enhancedArguments = <String, dynamic>{
         'businessId': businessId,
         'isQRRoute': true,
@@ -394,7 +393,7 @@ class QRRouteHandler implements BaseRouteHandler {
         ...?settings.arguments as Map<String, dynamic>?,
       };
       return RouteUtils.createRoute(
-        (context) => const UniversalQRMenuPage(),
+        (context) => MenuPage(businessId: businessId),
         RouteSettings(
           name: settings.name,
           arguments: enhancedArguments,
@@ -472,11 +471,8 @@ class QRMenuRouterPage extends StatelessWidget {
       return const RouterPage();
     }
 
-    return QRMenuPage(
+    return MenuPage(
       businessId: businessId,
-      userId: userId,
-      qrCode: qrCode,
-      tableNumber: tableNumber,
     );
   }
 }

@@ -136,7 +136,6 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
           productId: productFav.productId,
           name: productFav.productName ?? 'Unknown Product',
           price: productFav.productPrice?.toDouble() ?? 0.0,
-          currentPrice: productFav.productPrice?.toDouble() ?? 0.0,
           currency: 'TL',
           images: productFav.productImage != null
               ? [
@@ -149,7 +148,6 @@ class _CustomerFavoritesTabState extends State<CustomerFavoritesTab>
           businessId: productFav.businessId,
           categoryId: '', // Will be filled if needed
           description: '',
-          detailedDescription: '',
           allergens: [],
           tags: [],
           isActive: true,
