@@ -4,13 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import '../../presentation/widgets/shared/loading_indicator.dart';
-import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
 import '../../core/widgets/web_safe_image.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
@@ -358,7 +355,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: SizedBox(
-        height: 180, // Fixed height for consistency
+        height: 170, // Reduced height to prevent overflow
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -407,111 +404,122 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(6), // Reduced from 8
+                padding: const EdgeInsets.all(4), // Further reduced from 6
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Product name and category
-                    Flexible(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            product.name,
-                            style: AppTypography.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10, // Further reduced from 12
+                          Flexible(
+                            child: Text(
+                              product.name,
+                              style: AppTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10, // Further reduced from 12
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            _getCategoryName(product.categoryId),
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: 8, // Further reduced from 9
+                          Flexible(
+                            child: Text(
+                              _getCategoryName(product.categoryId),
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 8, // Further reduced from 9
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 2), // Reduced from 4
                     // Price and actions
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${product.price.toStringAsFixed(2)} ₺',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.priceColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11, // Reduced from 12
+                    SizedBox(
+                      height: 24, // Reduced height to prevent overflow
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${product.price.toStringAsFixed(2)} ₺',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.priceColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10, // Further reduced from 11
+                              ),
                             ),
                           ),
-                        ),
-                        PopupMenuButton<String>(
-                          padding: EdgeInsets.zero,
-                          iconSize: 20,
-                          onSelected: (value) =>
-                              _handleProductAction(value, product),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: ListTile(
-                                leading: Icon(Icons.edit, size: 18),
-                                title: Text('Düzenle'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'price',
-                              child: ListTile(
-                                leading: Icon(Icons.price_change, size: 18),
-                                title: Text('Fiyat Güncelle'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'toggle',
-                              child: ListTile(
-                                leading: Icon(
-                                  product.isAvailable
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  size: 18,
+                          SizedBox(
+                            width: 24, // Reduced width for menu button
+                            height: 24, // Reduced height for menu button
+                            child: PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              iconSize: 16, // Reduced from 18
+                              onSelected: (value) =>
+                                  _handleProductAction(value, product),
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: ListTile(
+                                    leading: Icon(Icons.edit, size: 16),
+                                    title: Text('Düzenle'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
-                                title: Text(
-                                  product.isAvailable
-                                      ? 'Pasif Yap'
-                                      : 'Aktif Yap',
+                                const PopupMenuItem(
+                                  value: 'price',
+                                  child: ListTile(
+                                    leading: Icon(Icons.price_change, size: 16),
+                                    title: Text('Fiyat Güncelle'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
-                                contentPadding: EdgeInsets.zero,
-                              ),
+                                PopupMenuItem(
+                                  value: 'toggle',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      product.isAvailable
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      size: 16,
+                                    ),
+                                    title: Text(
+                                      product.isAvailable
+                                          ? 'Pasif Yap'
+                                          : 'Aktif Yap',
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.delete,
+                                      color: AppColors.error,
+                                      size: 16,
+                                    ),
+                                    title: Text(
+                                      'Sil',
+                                      style: TextStyle(color: AppColors.error),
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: ListTile(
-                                leading: Icon(
-                                  Icons.delete,
-                                  color: AppColors.error,
-                                  size: 18,
-                                ),
-                                title: Text(
-                                  'Sil',
-                                  style: TextStyle(color: AppColors.error),
-                                ),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
