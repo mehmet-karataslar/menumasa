@@ -2212,6 +2212,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     final textPrimaryColor = menuSettings != null
         ? _parseColor(menuSettings.colorScheme.textPrimaryColor)
         : AppColors.textPrimary;
+    final accentColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.accentColor)
+        : AppColors.accent;
 
     return GestureDetector(
       onTap: () => _navigateToProductDetail(product),
@@ -2311,7 +2314,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                   menuSettings?.typography.headingFontSize ??
                                       16,
                               fontWeight: FontWeight.bold,
-                              color: primaryColor,
+                              color: accentColor,
                               fontFamily: menuSettings?.typography.fontFamily ??
                                   'Poppins',
                             ),
@@ -2564,7 +2567,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                                             ?.typography.headingFontSize ??
                                         16,
                                     fontWeight: FontWeight.bold,
-                                    color: primaryColor,
+                                    color: accentColor,
                                     fontFamily:
                                         menuSettings?.typography.fontFamily ??
                                             'Poppins',

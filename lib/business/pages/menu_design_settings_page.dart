@@ -1039,6 +1039,8 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
 
   Widget _buildQuickColorPalette() {
     final quickColors = [
+      const Color(0xFFFFFFFF), // Beyaz
+      const Color(0xFF000000), // Siyah
       const Color(0xFFFF6B35), // Modern Turuncu
       const Color(0xFF2ECC71), // Yeşil
       const Color(0xFF3498DB), // Mavi
@@ -2234,6 +2236,7 @@ class BlockPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = [
+      Colors.white,
       Colors.red,
       Colors.pink,
       Colors.purple,
