@@ -1263,7 +1263,12 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   BoxDecoration _buildBackgroundDecoration(MenuSettings? menuSettings) {
     final backgroundSettings = menuSettings?.backgroundSettings;
 
+    print('🎨 DEBUG: backgroundSettings = $backgroundSettings');
+    print('🎨 DEBUG: type = ${backgroundSettings?.type}');
+    print('🎨 DEBUG: backgroundImage = ${backgroundSettings?.backgroundImage}');
+
     if (backgroundSettings == null) {
+      print('🎨 DEBUG: backgroundSettings is null, using default');
       return BoxDecoration(color: AppColors.background);
     }
 
@@ -1295,6 +1300,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         );
 
       case 'image':
+        print(
+            '🎨 DEBUG: Image case - backgroundImage = ${backgroundSettings.backgroundImage}');
+        print(
+            '🎨 DEBUG: Image case - isEmpty = ${backgroundSettings.backgroundImage.isEmpty}');
         return BoxDecoration(
           image: backgroundSettings.backgroundImage.isNotEmpty
               ? DecorationImage(

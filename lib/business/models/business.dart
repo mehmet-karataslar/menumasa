@@ -916,7 +916,7 @@ class MenuColorScheme {
 }
 
 class MenuBackgroundSettings {
-  final String type; // 'color', 'pattern', 'gradient'
+  final String type; // 'color', 'pattern', 'gradient', 'image'
   final String backgroundImage; // URL or pattern name
   final String primaryColor;
   final String secondaryColor;

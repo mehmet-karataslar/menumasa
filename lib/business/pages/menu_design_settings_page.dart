@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 // import 'package:flutter_colorpicker/flutter_colorpicker.dart'; // Removed for now
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
@@ -2146,9 +2149,19 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
             ),
           ),
           const SizedBox(height: 16),
+          // Hızlı Kart Renkleri
+          Text(
+            'Hızlı Kart Renkleri:',
+            style: AppTypography.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildQuickCardColors(),
+          const SizedBox(height: 16),
           // Hızlı Arka Plan Renkleri
           Text(
-            'Hızlı Seçenekler:',
+            'Hızlı Arka Plan Renkleri:',
             style: AppTypography.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -2216,6 +2229,79 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
                 const SizedBox(height: 2),
                 Text(
                   bgColor['name'] as String,
+                  style: AppTypography.caption.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildQuickCardColors() {
+    final quickCardColors = [
+      {'name': 'Beyaz', 'color': Colors.white, 'value': '#FFFFFF'},
+      {'name': 'Açık Gri', 'color': Colors.grey.shade100, 'value': '#F5F5F5'},
+      {'name': 'Krem', 'color': Colors.orange.shade50, 'value': '#FFF7ED'},
+      {'name': 'Açık Mavi', 'color': Colors.blue.shade50, 'value': '#EFF6FF'},
+      {'name': 'Açık Yeşil', 'color': Colors.green.shade50, 'value': '#F0FDF4'},
+      {'name': 'Açık Pembe', 'color': Colors.pink.shade50, 'value': '#FDF2F8'},
+      {'name': 'Açık Mor', 'color': Colors.purple.shade50, 'value': '#FAF5FF'},
+      {'name': 'Açık Sarı', 'color': Colors.yellow.shade50, 'value': '#FEFCE8'},
+    ];
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      children: quickCardColors.map((cardColor) {
+        final isSelected =
+            _currentSettings.colorScheme.cardColor == cardColor['value'];
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _currentSettings = _currentSettings.copyWith(
+                colorScheme: _currentSettings.colorScheme.copyWith(
+                  cardColor: cardColor['value'] as String,
+                ),
+              );
+            });
+          },
+          child: Container(
+            width: 60,
+            height: 45,
+            decoration: BoxDecoration(
+              color: cardColor['color'] as Color,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.primary,
+                    size: 16,
+                  ),
+                const SizedBox(height: 2),
+                Text(
+                  cardColor['name'] as String,
                   style: AppTypography.caption.copyWith(
                     fontSize: 8,
                     fontWeight: FontWeight.w500,
@@ -2430,28 +2516,101 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
 
   Future<void> _selectBackgroundImage() async {
     try {
-      // Web platformu için file_picker kullan, mobil için image_picker kullan
-      // Şu an için basit implementasyon
-      showDialog(
+      final ImagePicker picker = ImagePicker();
+
+      // Show selection dialog
+      final source = await showDialog<ImageSource>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Fotoğraf Seç'),
-          content: const Text(
-            'Bu özellik yakında eklenecek. Şu anda hazır arka planları kullanabilirsiniz.',
-          ),
+          content: const Text('Fotoğrafı nereden seçmek istiyorsunuz?'),
           actions: [
             TextButton(
+              onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
+              child: const Text('Galeriden Seç'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(ImageSource.camera),
+              child: const Text('Kamera'),
+            ),
+            TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tamam'),
+              child: const Text('İptal'),
             ),
           ],
         ),
       );
-    } catch (e) {
+
+      if (source == null) return;
+
+      // Pick image
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      // Show loading
       if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Fotoğraf yükleniyor...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // Upload to Firebase Storage
+      final String fileName =
+          'background_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final String filePath = 'background_images/${_business!.id}/$fileName';
+
+      final Reference storageRef =
+          FirebaseStorage.instance.ref().child(filePath);
+
+      final File file = File(pickedFile.path);
+      final UploadTask uploadTask = storageRef.putFile(file);
+
+      final TaskSnapshot snapshot = await uploadTask;
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Update settings
+      setState(() {
+        _currentSettings = _currentSettings.copyWith(
+          backgroundSettings: _currentSettings.backgroundSettings.copyWith(
+            type: 'image',
+            backgroundImage: downloadUrl,
+          ),
+        );
+      });
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Arka plan fotoğrafı başarıyla yüklendi!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) {
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fotoğraf seçimi hatası: $e'),
+            content: Text('Fotoğraf yükleme hatası: $e'),
             backgroundColor: Colors.red,
           ),
         );
