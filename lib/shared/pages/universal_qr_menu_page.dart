@@ -745,9 +745,9 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          if (product.currentPrice != product.price)
+                          if (product.price != product.price)
                             Text(
-                              '${product.currentPrice.toStringAsFixed(0)} ₺',
+                              '${product.price.toStringAsFixed(0)} ₺',
                               style: AppTypography.bodySmall.copyWith(
                                 color: AppColors.textSecondary,
                                 decoration: TextDecoration.lineThrough,

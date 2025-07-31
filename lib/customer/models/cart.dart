@@ -69,7 +69,7 @@ class Cart {
 
   bool get isNotEmpty => items.isNotEmpty;
 
-    // Cart operations
+  // Cart operations
   Cart addItem(Product product, {int quantity = 1, String? notes}) {
     final existingItemIndex = items.indexWhere(
       (item) => item.productId == product.productId,
@@ -90,7 +90,7 @@ class Cart {
         cartItemId: 'cart_item_${DateTime.now().millisecondsSinceEpoch}',
         productId: product.productId,
         productName: product.name,
-        productPrice: product.currentPrice,
+        productPrice: product.price,
         productImage: product.primaryImage?.url,
         quantity: quantity,
         notes: notes,
@@ -104,9 +104,8 @@ class Cart {
   }
 
   Cart removeItem(String productId) {
-    final newItems = items
-        .where((item) => item.productId != productId)
-        .toList();
+    final newItems =
+        items.where((item) => item.productId != productId).toList();
     return copyWith(items: newItems, updatedAt: DateTime.now());
   }
 
@@ -198,7 +197,7 @@ class CartItem {
 
   static double _parsePrice(dynamic value) {
     if (value == null) return 0.0;
-    
+
     if (value is num) {
       return value.toDouble();
     } else if (value is String) {
@@ -206,11 +205,12 @@ class CartItem {
       if (parsed != null) {
         return parsed;
       } else {
-        print('Warning: Could not parse price value "$value" as double, using 0.0');
+        print(
+            'Warning: Could not parse price value "$value" as double, using 0.0');
         return 0.0;
       }
     }
-    
+
     return 0.0;
   }
 

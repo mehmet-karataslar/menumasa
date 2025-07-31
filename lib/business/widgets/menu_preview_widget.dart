@@ -83,7 +83,6 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
                   ),
                 ],
               ),
-              
               Row(
                 children: [
                   // Görünüm ayarları
@@ -117,9 +116,9 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Kategori filtresi ve görünüm seçenekleri
           Row(
             children: [
@@ -141,19 +140,21 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
                           value: null,
                           child: Text('Tüm Kategoriler'),
                         ),
-                        ...widget.categories.map((category) => DropdownMenuItem<String>(
-                          value: category.categoryId,
-                          child: Text(category.name),
-                        )),
+                        ...widget.categories
+                            .map((category) => DropdownMenuItem<String>(
+                                  value: category.categoryId,
+                                  child: Text(category.name),
+                                )),
                       ],
-                      onChanged: (value) => setState(() => _selectedCategoryId = value),
+                      onChanged: (value) =>
+                          setState(() => _selectedCategoryId = value),
                     ),
                   ),
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Görünüm seçenekleri
               Row(
                 children: [
@@ -165,33 +166,40 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: _showPrices ? AppColors.primary.withOpacity(0.1) : null,
+                          color: _showPrices
+                              ? AppColors.primary.withOpacity(0.1)
+                              : null,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.monetization_on_rounded,
-                          color: _showPrices ? AppColors.primary : AppColors.textSecondary,
+                          color: _showPrices
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ),
                   ),
-                  
                   const SizedBox(width: 8),
-                  
                   Tooltip(
                     message: 'Açıklamaları göster/gizle',
                     child: InkWell(
-                      onTap: () => setState(() => _showDescriptions = !_showDescriptions),
+                      onTap: () => setState(
+                          () => _showDescriptions = !_showDescriptions),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: _showDescriptions ? AppColors.primary.withOpacity(0.1) : null,
+                          color: _showDescriptions
+                              ? AppColors.primary.withOpacity(0.1)
+                              : null,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.description_rounded,
-                          color: _showDescriptions ? AppColors.primary : AppColors.textSecondary,
+                          color: _showDescriptions
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ),
@@ -207,7 +215,7 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
 
   Widget _buildToggleButton(String title, String mode, IconData icon) {
     final isSelected = _previewMode == mode;
-    
+
     return InkWell(
       onTap: () => setState(() => _previewMode = mode),
       borderRadius: BorderRadius.circular(6),
@@ -216,13 +224,15 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
         decoration: BoxDecoration(
           color: isSelected ? AppColors.white : null,
           borderRadius: BorderRadius.circular(6),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -260,16 +270,17 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
     }
 
     return Container(
-      color: _previewMode == 'print' ? AppColors.white : const Color(0xFFF5F7FA),
+      color:
+          _previewMode == 'print' ? AppColors.white : const Color(0xFFF5F7FA),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             // İşletme header'ı
             _buildBusinessHeader(),
-            
+
             const SizedBox(height: 32),
-            
+
             // Kategoriler (eğer tümü gösteriliyorsa)
             if (_selectedCategoryId == null || _selectedCategoryId!.isEmpty)
               ..._buildCategorySections()
@@ -287,13 +298,15 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: _previewMode == 'print' ? null : [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: _previewMode == 'print'
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         children: [
@@ -332,7 +345,7 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
                 ),
               ),
             ),
-          
+
           Text(
             widget.business.businessName,
             style: AppTypography.h3.copyWith(
@@ -341,7 +354,7 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
             ),
             textAlign: TextAlign.center,
           ),
-          
+
           if (widget.business.businessDescription.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
@@ -352,13 +365,14 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
               textAlign: TextAlign.center,
             ),
           ],
-          
+
           if (widget.business.businessAddress.isNotEmpty) ...[
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.location_on_rounded, color: AppColors.textSecondary, size: 16),
+                Icon(Icons.location_on_rounded,
+                    color: AppColors.textSecondary, size: 16),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
@@ -379,18 +393,18 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
 
   List<Widget> _buildCategorySections() {
     final sections = <Widget>[];
-    
+
     for (final category in widget.categories) {
       final categoryProducts = widget.products
           .where((p) => p.categoryId == category.categoryId && p.isAvailable)
           .toList();
-      
+
       if (categoryProducts.isNotEmpty) {
         sections.add(_buildCategorySection(category, categoryProducts));
         sections.add(const SizedBox(height: 32));
       }
     }
-    
+
     return sections;
   }
 
@@ -406,13 +420,15 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
             color: AppColors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-            boxShadow: _previewMode == 'print' ? null : [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: _previewMode == 'print'
+                ? null
+                : [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Row(
             children: [
@@ -443,7 +459,6 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
                     ),
                   ),
                 ),
-              
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,7 +470,8 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (_showDescriptions && category.description.isNotEmpty) ...[
+                    if (_showDescriptions &&
+                        category.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         category.description,
@@ -470,9 +486,9 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
             ],
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Ürünler
         _buildProductsList(products),
       ],
@@ -481,119 +497,129 @@ class _MenuPreviewWidgetState extends State<MenuPreviewWidget> {
 
   Widget _buildProductsList(List<Product> products) {
     return Column(
-      children: products.map((product) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: _previewMode == 'print' ? null : [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Ürün resmi
-            if (product.images.isNotEmpty)
-              Container(
-                width: 80,
-                height: 80,
-                margin: const EdgeInsets.only(right: 16),
+      children: products
+          .map((product) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
+                  color: AppColors.white,
                   borderRadius: BorderRadius.circular(12),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    product.images.first.url,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.restaurant_menu_rounded,
-                        color: AppColors.primary,
-                        size: 32,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            
-            // Ürün bilgileri
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          product.name,
-                          style: AppTypography.h5.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
+                  boxShadow: _previewMode == 'print'
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: AppColors.black.withOpacity(0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                        ),
-                      ),
-                      
-                      if (_showPrices)
-                        Text(
-                          '${product.currentPrice.toStringAsFixed(0)} ₺',
-                          style: AppTypography.h5.copyWith(
-                            color: AppColors.success,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                    ],
-                  ),
-                  
-                  if (_showDescriptions && product.description.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      product.description,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                  
-                  // Allergen bilgileri
-                  if (product.allergens.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 4,
-                      children: product.allergens.map((allergen) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ürün resmi
+                    if (product.images.isNotEmpty)
+                      Container(
+                        width: 80,
+                        height: 80,
+                        margin: const EdgeInsets.only(right: 16),
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(
-                          allergen,
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.warning,
-                            fontWeight: FontWeight.w500,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            product.images.first.url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.restaurant_menu_rounded,
+                                color: AppColors.primary,
+                                size: 32,
+                              ),
+                            ),
                           ),
                         ),
-                      )).toList(),
+                      ),
+
+                    // Ürün bilgileri
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  product.name,
+                                  style: AppTypography.h5.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              if (_showPrices)
+                                Text(
+                                  '${product.price.toStringAsFixed(0)} ₺',
+                                  style: AppTypography.h5.copyWith(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
+
+                          if (_showDescriptions &&
+                              product.description.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              product.description,
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+
+                          // Allergen bilgileri
+                          if (product.allergens.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 4,
+                              children: product.allergens
+                                  .map((allergen) => Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.warning
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          allergen,
+                                          style: AppTypography.caption.copyWith(
+                                            color: AppColors.warning,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ))
+                                  .toList(),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      )).toList(),
+                ),
+              ))
+          .toList(),
     );
   }
-} 
+}

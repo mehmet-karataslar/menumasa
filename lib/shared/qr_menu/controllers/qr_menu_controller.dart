@@ -343,13 +343,8 @@ class QRMenuController extends ChangeNotifier {
       );
     }).toList();
 
-    // Apply discounts
-    final discountedProducts = filtered.map((product) {
-      final finalPrice = product.calculateFinalPrice(_state.discounts);
-      return product.copyWith(currentPrice: finalPrice);
-    }).toList();
-
-    _state.setFilteredProducts(discountedProducts);
+    // Tek fiyat sistemi - discount uygulaması kaldırıldı
+    _state.setFilteredProducts(filtered);
   }
 
   /// Event handlers

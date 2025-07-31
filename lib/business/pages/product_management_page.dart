@@ -161,7 +161,6 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         children: [
           // Page title
 
-
           const SizedBox(height: 16),
 
           // Search bar
@@ -603,44 +602,17 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Current price
+                    // Product price
                     Text(
-                      '${product.currentPrice.toStringAsFixed(2)} ₺',
+                      '${product.price.toStringAsFixed(2)} ₺',
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.priceColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    // Original price if discounted
-                    if (product.hasDiscount)
-                      Text(
-                        '${product.price.toStringAsFixed(2)} ₺',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
                   ],
                 ),
-                // Discount badge
-                if (product.hasDiscount)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      product.formattedDiscountPercentage,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+
                 _buildStatusBadge(product),
               ],
             ),
@@ -1344,9 +1316,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     final priceController = TextEditingController(
       text: product.price.toString(),
     );
-    final discountController = TextEditingController(
-      text: product.discountPercentage.toString(),
-    );
+    // Tek fiyat sistemi - discount controller kaldırıldı
 
     showDialog(
       context: context,
@@ -1363,15 +1333,6 @@ class _ProductManagementPageState extends State<ProductManagementPage>
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: discountController,
-              decoration: const InputDecoration(
-                labelText: 'İndirim (%)',
-                hintText: '0',
-              ),
-              keyboardType: TextInputType.number,
-            ),
           ],
         ),
         actions: [
@@ -1383,10 +1344,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             onPressed: () async {
               final price =
                   double.tryParse(priceController.text.trim()) ?? product.price;
-              final discount =
-                  double.tryParse(discountController.text.trim()) ??
-                      product.discountPercentage;
-              await _updateProductPrice(product, price, discount);
+              await _updateProductPrice(product, price);
               if (mounted) Navigator.pop(context);
             },
             child: const Text('Güncelle'),
@@ -2090,9 +2048,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
           categoryId: categoryId,
           name: name,
           description: description,
-          detailedDescription: description,
           price: price,
-          currentPrice: price,
           currency: 'TL',
           images: imageUrls
               .map(
@@ -2133,9 +2089,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         final updatedProduct = product.copyWith(
           name: name,
           description: description,
-          detailedDescription: description,
           price: price,
-          currentPrice: price,
           categoryId: categoryId,
           isAvailable: isAvailable,
           images: imageUrls
@@ -2180,7 +2134,6 @@ class _ProductManagementPageState extends State<ProductManagementPage>
   Future<void> _updateProductPrice(
     Product product,
     double price,
-    double discount,
   ) async {
     try {
       // Debug: Check if product ID is valid
@@ -2189,10 +2142,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             'Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
       }
 
-      final discountedPrice = price * (1 - discount / 100);
       final updatedProduct = product.copyWith(
         price: price,
-        currentPrice: discountedPrice,
         updatedAt: DateTime.now(),
       );
 

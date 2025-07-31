@@ -312,7 +312,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     final totalProducts = _products.length;
     final availableProducts = _products.where((p) => p.isAvailable).length;
     final avgPrice = _products.isNotEmpty
-        ? (_products.map((p) => p.currentPrice).reduce((a, b) => a + b) /
+        ? (_products.map((p) => p.price).reduce((a, b) => a + b) /
             _products.length)
         : 0.0;
 
@@ -724,7 +724,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${product.currentPrice.toStringAsFixed(0)} ₺',
+                '${product.price.toStringAsFixed(0)} ₺',
                 style: AppTypography.bodyLarge.copyWith(
                   color: AppColors.success,
                   fontWeight: FontWeight.bold,
