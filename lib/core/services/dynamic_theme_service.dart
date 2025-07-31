@@ -36,7 +36,8 @@ class DynamicThemeService {
         _parseColor(menuSettings.colorScheme.backgroundColor);
     final textColor = _parseColor(menuSettings.colorScheme.textPrimaryColor);
 
-    final isDark = menuSettings.colorScheme.isDark;
+    final isDark = menuSettings.designTheme.themeType == MenuThemeType.dark ||
+        menuSettings.colorScheme.isDark;
 
     return ThemeData(
       useMaterial3: true,

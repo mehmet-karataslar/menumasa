@@ -2131,7 +2131,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           crossAxisCount: 1,
           crossAxisSpacing: 0,
           mainAxisSpacing: 8,
-          childAspectRatio: 3.0, // Geniş liste kartları
+          childAspectRatio: 3.5, // Geniş liste kartları
         );
         break;
       case MenuLayoutType.grid:
@@ -2274,6 +2274,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       product.name,
@@ -2287,40 +2288,46 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (product.description != null) ...[
+                    if (product.description != null &&
+                        (menuSettings?.showDescriptions ?? true)) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        product.description!,
-                        style: TextStyle(
-                          fontSize:
-                              (menuSettings?.typography.bodyFontSize ?? 12) - 1,
-                          color: textPrimaryColor.withOpacity(0.7),
-                          fontFamily:
-                              menuSettings?.typography.fontFamily ?? 'Poppins',
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
+                      Flexible(
+                        child: Text(
+                          product.description!,
                           style: TextStyle(
                             fontSize:
-                                menuSettings?.typography.headingFontSize ?? 16,
-                            fontWeight: FontWeight.bold,
-                            color: hasDiscount
-                                ? _parseColor(
-                                    menuSettings?.colorScheme.accentColor ??
-                                        '#FF6B35')
-                                : primaryColor,
+                                (menuSettings?.typography.bodyFontSize ?? 12) -
+                                    1,
+                            color: textPrimaryColor.withOpacity(0.7),
                             fontFamily: menuSettings?.typography.fontFamily ??
                                 'Poppins',
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (menuSettings?.showPrices ?? true)
+                          Text(
+                            '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
+                            style: TextStyle(
+                              fontSize:
+                                  menuSettings?.typography.headingFontSize ??
+                                      16,
+                              fontWeight: FontWeight.bold,
+                              color: hasDiscount
+                                  ? _parseColor(
+                                      menuSettings?.colorScheme.accentColor ??
+                                          '#FF6B35')
+                                  : primaryColor,
+                              fontFamily: menuSettings?.typography.fontFamily ??
+                                  'Poppins',
+                            ),
+                          ),
                         if (product.isAvailable)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -2383,6 +2390,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     final accentColor = menuSettings != null
         ? _parseColor(menuSettings.colorScheme.accentColor)
         : AppColors.accent;
+    final imageShape = menuSettings?.visualStyle.imageShape ?? 'rounded';
 
     return GestureDetector(
       onTap: () => _navigateToProductDetail(product),
@@ -2409,146 +2417,148 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section (65% of height)
-            Expanded(
-              flex: 65,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(borderRadius),
+            // Image Section (65% of height) - Conditional based on showImages
+            if (menuSettings?.showImages ?? true)
+              Expanded(
+                flex: 65,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: _getImageBorderRadius(
+                            imageShape, borderRadius,
+                            isTopImage: true),
+                        color: _parseColor(
+                                menuSettings?.colorScheme.surfaceColor ??
+                                    '#F8F9FA')
+                            .withOpacity(0.3),
                       ),
-                      color: _parseColor(
-                              menuSettings?.colorScheme.surfaceColor ??
-                                  '#F8F9FA')
-                          .withOpacity(0.3),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(borderRadius),
+                      child: ClipRRect(
+                        borderRadius: _getImageBorderRadius(
+                            imageShape, borderRadius,
+                            isTopImage: true),
+                        child: product.imageUrl != null
+                            ? WebSafeImage(
+                                imageUrl: product.imageUrl!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                errorWidget: (context, url, error) =>
+                                    _buildCompactIcon(),
+                                placeholder: (context, url) =>
+                                    _buildCompactIcon(),
+                              )
+                            : _buildCompactIcon(),
                       ),
-                      child: product.imageUrl != null
-                          ? WebSafeImage(
-                              imageUrl: product.imageUrl!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorWidget: (context, url, error) =>
-                                  _buildCompactIcon(),
-                              placeholder: (context, url) =>
-                                  _buildCompactIcon(),
-                            )
-                          : _buildCompactIcon(),
                     ),
-                  ),
 
-                  // Top buttons row
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    right: 6,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Favorite button
-                        Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          child: InkWell(
-                            onTap: () => _toggleProductFavorite(product),
+                    // Top buttons row
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      right: 6,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Favorite button
+                          Material(
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 24,
-                              height: 24,
+                            child: InkWell(
+                              onTap: () => _toggleProductFavorite(product),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: AppColors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.shadow.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _favoriteProductIds.contains(product.id)
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color:
+                                      _favoriteProductIds.contains(product.id)
+                                          ? AppColors.accent
+                                          : AppColors.textSecondary,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Discount Badge
+                          if (hasDiscount)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppColors.white.withOpacity(0.9),
+                                color: AppColors.accent,
                                 borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.shadow.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
                               ),
-                              child: Icon(
-                                _favoriteProductIds.contains(product.id)
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                color: _favoriteProductIds.contains(product.id)
-                                    ? AppColors.accent
-                                    : AppColors.textSecondary,
-                                size: 14,
+                              child: Text(
+                                '-%$discountPercentage',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-
-                        // Discount Badge
-                        if (hasDiscount)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '-%$discountPercentage',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // Unavailable Overlay
-                  if (!product.isAvailable)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.black.withOpacity(0.7),
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
+                    // Unavailable Overlay
+                    if (!product.isAvailable)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.black.withOpacity(0.7),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.error,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Tükendi',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.error,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Tükendi',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Info Section (35% of height)
+            // Info Section (35% of height, 100% if no image)
             Expanded(
-              flex: 35,
+              flex: (menuSettings?.showImages ?? true) ? 35 : 100,
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Column(
@@ -2559,9 +2569,9 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                     Text(
                       product.name,
                       style: TextStyle(
-                        fontSize: menuSettings?.typography.titleFontSize ?? 12,
+                        fontSize: menuSettings?.typography.titleFontSize ?? 14,
                         fontWeight: FontWeight.w600,
-                        height: 1.1,
+                        height: 1.2,
                         color: textPrimaryColor,
                         fontFamily:
                             menuSettings?.typography.fontFamily ?? 'Poppins',
@@ -2577,46 +2587,48 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         // Price Section
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Current Price
-                              Text(
-                                '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
-                                style: TextStyle(
-                                  fontSize: menuSettings
-                                          ?.typography.headingFontSize ??
-                                      13,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      hasDiscount ? accentColor : primaryColor,
-                                  fontFamily:
-                                      menuSettings?.typography.fontFamily ??
-                                          'Poppins',
-                                ),
-                              ),
-
-                              // Original Price (if discounted)
-                              if (hasDiscount)
+                        if (menuSettings?.showPrices ?? true)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Current Price
                                 Text(
-                                  '${product.price.toStringAsFixed(0)} ₺',
+                                  '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
                                   style: TextStyle(
-                                    fontSize: (menuSettings
-                                                ?.typography.bodyFontSize ??
-                                            9) -
-                                        2,
-                                    color: textPrimaryColor.withOpacity(0.6),
-                                    decoration: TextDecoration.lineThrough,
+                                    fontSize: menuSettings
+                                            ?.typography.headingFontSize ??
+                                        16,
+                                    fontWeight: FontWeight.bold,
+                                    color: hasDiscount
+                                        ? accentColor
+                                        : primaryColor,
                                     fontFamily:
                                         menuSettings?.typography.fontFamily ??
                                             'Poppins',
                                   ),
                                 ),
-                            ],
+
+                                // Original Price (if discounted)
+                                if (hasDiscount)
+                                  Text(
+                                    '${product.price.toStringAsFixed(0)} ₺',
+                                    style: TextStyle(
+                                      fontSize: (menuSettings
+                                                  ?.typography.bodyFontSize ??
+                                              9) -
+                                          2,
+                                      color: textPrimaryColor.withOpacity(0.6),
+                                      decoration: TextDecoration.lineThrough,
+                                      fontFamily:
+                                          menuSettings?.typography.fontFamily ??
+                                              'Poppins',
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
 
                         // Add Button
                         if (product.isAvailable)
@@ -2802,6 +2814,23 @@ extension MenuPageTheme on _MenuPageState {
       return Color(int.parse('FF$hexCode', radix: 16));
     } catch (e) {
       return AppColors.primary; // Fallback color
+    }
+  }
+
+  /// Image shape'e göre border radius belirle
+  BorderRadius _getImageBorderRadius(String imageShape, double borderRadius,
+      {bool isTopImage = false}) {
+    switch (imageShape) {
+      case 'circle':
+        return BorderRadius.circular(
+            borderRadius * 2); // Daire için yüksek radius
+      case 'rectangle':
+        return BorderRadius.zero; // Dikdörtgen için radius yok
+      case 'rounded':
+      default:
+        return isTopImage
+            ? BorderRadius.vertical(top: Radius.circular(borderRadius))
+            : BorderRadius.circular(borderRadius);
     }
   }
 }

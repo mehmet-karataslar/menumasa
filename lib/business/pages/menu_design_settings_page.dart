@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+// import 'package:flutter_colorpicker/flutter_colorpicker.dart'; // Removed for now
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../models/business.dart';
@@ -55,6 +55,96 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
     super.initState();
     _tabController = TabController(length: 6, vsync: this);
     _loadBusinessData();
+  }
+
+  /// Hex string'i Color'a çevir
+  Color _parseColor(String hex) {
+    try {
+      final hexCode = hex.replaceAll('#', '');
+      return Color(int.parse('FF$hexCode', radix: 16));
+    } catch (e) {
+      return AppColors.primary; // Fallback color
+    }
+  }
+
+  /// Tüm mevcut renkleri getir
+  List<Color> _getAllColors() {
+    final quickColors = [
+      const Color(0xFFE53E3E), // Kırmızı
+      const Color(0xFFDD6B20), // Turuncu
+      const Color(0xFFD69E2E), // Sarı
+      const Color(0xFF38A169), // Yeşil
+      const Color(0xFF3182CE), // Mavi
+      const Color(0xFF805AD5), // Mor
+      const Color(0xFFD53F8C), // Pembe
+      const Color(0xFF319795), // Teal
+      const Color(0xFF2B6CB0), // Lacivert
+      const Color(0xFF2D3748), // Koyu gri
+      const Color(0xFF4A5568), // Gri
+      const Color(0xFF718096), // Açık gri
+    ];
+
+    final materialColors = [
+      Colors.red.shade300,
+      Colors.red.shade500,
+      Colors.red.shade700,
+      Colors.pink.shade300,
+      Colors.pink.shade500,
+      Colors.pink.shade700,
+      Colors.purple.shade300,
+      Colors.purple.shade500,
+      Colors.purple.shade700,
+      Colors.deepPurple.shade300,
+      Colors.deepPurple.shade500,
+      Colors.deepPurple.shade700,
+      Colors.indigo.shade300,
+      Colors.indigo.shade500,
+      Colors.indigo.shade700,
+      Colors.blue.shade300,
+      Colors.blue.shade500,
+      Colors.blue.shade700,
+      Colors.lightBlue.shade300,
+      Colors.lightBlue.shade500,
+      Colors.lightBlue.shade700,
+      Colors.cyan.shade300,
+      Colors.cyan.shade500,
+      Colors.cyan.shade700,
+      Colors.teal.shade300,
+      Colors.teal.shade500,
+      Colors.teal.shade700,
+      Colors.green.shade300,
+      Colors.green.shade500,
+      Colors.green.shade700,
+      Colors.lightGreen.shade300,
+      Colors.lightGreen.shade500,
+      Colors.lightGreen.shade700,
+      Colors.lime.shade300,
+      Colors.lime.shade500,
+      Colors.lime.shade700,
+      Colors.yellow.shade300,
+      Colors.yellow.shade500,
+      Colors.yellow.shade700,
+      Colors.amber.shade300,
+      Colors.amber.shade500,
+      Colors.amber.shade700,
+      Colors.orange.shade300,
+      Colors.orange.shade500,
+      Colors.orange.shade700,
+      Colors.deepOrange.shade300,
+      Colors.deepOrange.shade500,
+      Colors.deepOrange.shade700,
+      Colors.brown.shade300,
+      Colors.brown.shade500,
+      Colors.brown.shade700,
+      Colors.grey.shade300,
+      Colors.grey.shade500,
+      Colors.grey.shade700,
+      Colors.blueGrey.shade300,
+      Colors.blueGrey.shade500,
+      Colors.blueGrey.shade700,
+    ];
+
+    return [...quickColors, ...materialColors];
   }
 
   @override
@@ -303,7 +393,14 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
           _selectedTheme = theme;
           _currentSettings = _currentSettings.copyWith(
             designTheme: _getThemeForType(theme),
+            colorScheme: _currentSettings.colorScheme.copyWith(
+              primaryColor: _getThemeDefaultColor(theme),
+              isDark: theme == MenuThemeType.dark,
+            ),
           );
+
+          // Seçilen renge göre color picker'ı da güncelle
+          _selectedColor = _hexToColor(_getThemeDefaultColor(theme));
         });
         HapticFeedback.lightImpact();
       },
@@ -584,6 +681,21 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
     }
   }
 
+  String _getThemeDefaultColor(MenuThemeType themeType) {
+    switch (themeType) {
+      case MenuThemeType.modern:
+        return '#2196F3'; // Modern mavi
+      case MenuThemeType.classic:
+        return '#8B4513'; // Klasik kahverengi
+      case MenuThemeType.grid:
+        return '#4CAF50'; // Grid yeşil
+      case MenuThemeType.magazine:
+        return '#E91E63'; // Dergi pembe
+      case MenuThemeType.dark:
+        return '#BB86FC'; // Dark purple
+    }
+  }
+
   Widget _buildThemePreview() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -807,6 +919,45 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
             },
             activeColor: AppColors.primary,
           ),
+          SwitchListTile(
+            title: const Text('Fiyatları Göster'),
+            subtitle: const Text('Ürün fiyatlarını menüde göster/gizle'),
+            value: _currentSettings.showPrices,
+            onChanged: (value) {
+              setState(() {
+                _currentSettings = _currentSettings.copyWith(
+                  showPrices: value,
+                );
+              });
+            },
+            activeColor: AppColors.primary,
+          ),
+          SwitchListTile(
+            title: const Text('Açıklamaları Göster'),
+            subtitle: const Text('Ürün açıklamalarını göster/gizle'),
+            value: _currentSettings.showDescriptions,
+            onChanged: (value) {
+              setState(() {
+                _currentSettings = _currentSettings.copyWith(
+                  showDescriptions: value,
+                );
+              });
+            },
+            activeColor: AppColors.primary,
+          ),
+          SwitchListTile(
+            title: const Text('Görselleri Göster'),
+            subtitle: const Text('Ürün görsellerini göster/gizle'),
+            value: _currentSettings.showImages,
+            onChanged: (value) {
+              setState(() {
+                _currentSettings = _currentSettings.copyWith(
+                  showImages: value,
+                );
+              });
+            },
+            activeColor: AppColors.primary,
+          ),
         ],
       ),
     );
@@ -877,33 +1028,110 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
             ),
           ),
           const SizedBox(height: 16),
-          _buildColorPreviewRow(),
+          _buildQuickColorPalette(),
         ],
       ),
     );
   }
 
-  Widget _buildColorPreviewRow() {
-    final colors = [
-      _selectedColor,
-      _selectedColor.withOpacity(0.7),
-      _selectedColor.withOpacity(0.3),
-      _selectedColor.withOpacity(0.1),
+  Widget _buildQuickColorPalette() {
+    final quickColors = [
+      const Color(0xFFFF6B35), // Modern Turuncu
+      const Color(0xFF2ECC71), // Yeşil
+      const Color(0xFF3498DB), // Mavi
+      const Color(0xFF9B59B6), // Mor
+      const Color(0xFFE74C3C), // Kırmızı
+      const Color(0xFFF39C12), // Sarı
+      const Color(0xFF1ABC9C), // Turkuaz
+      const Color(0xFF34495E), // Koyu Gri
+      const Color(0xFFE91E63), // Pembe
+      const Color(0xFF8BC34A), // Açık Yeşil
+      const Color(0xFF00BCD4), // Cyan
+      const Color(0xFFFF9800), // Turuncu
+
+      // Ekstra Canlı ve Modern Renkler
+      const Color(0xFF3F51B5), // İndigo
+      const Color(0xFFCDDC39), // Limon Yeşili
+      const Color(0xFF009688), // Teal (Soğuk Yeşil)
+      const Color(0xFF795548), // Toprak Kahverengi
+      const Color(0xFFFF4081), // Neon Pembe
+      const Color(0xFF607D8B), // Mavi Gri
+      const Color(0xFF673AB7), // Derin Mor
+      const Color(0xFF4CAF50), // Doygun Yeşil
+      const Color(0xFF00E676), // Fosforlu Yeşil
+      const Color(0xFFAA00FF), // Parlak Mor
+      const Color(0xFFFFC107), // Altın Sarı
+      const Color(0xFFFF1744), // Parlak Kırmızı
+      const Color(0xFF18FFFF), // Açık Turkuaz
+      const Color(0xFF1E88E5), // Doygun Mavi
     ];
 
-    return Row(
-      children: colors
-          .map((color) => Expanded(
-                child: Container(
-                  height: 40,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(6),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hızlı Renkler',
+          style: AppTypography.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: quickColors.map((color) {
+            final isSelected = _selectedColor.value == color.value;
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedColor = color;
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      primaryColor: _colorToHex(color),
+                    ),
+                  );
+                });
+                HapticFeedback.lightImpact();
+              },
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    width: 2,
                   ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: color.withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                 ),
-              ))
-          .toList(),
+                child: isSelected
+                    ? const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      )
+                    : null,
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -1038,6 +1266,8 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
           const SizedBox(height: 16),
           _buildFontFamilySelection(),
           const SizedBox(height: 24),
+          _buildTextColorControls(),
+          const SizedBox(height: 24),
           _buildFontSizeControls(),
           const SizedBox(height: 24),
           _buildTypographyPreview(),
@@ -1081,6 +1311,110 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
             activeColor: AppColors.primary,
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildTextColorControls() {
+    return _buildSettingsCard(
+      title: 'Yazı Renkleri',
+      child: Column(
+        children: [
+          // Başlık rengi
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color:
+                    _parseColor(_currentSettings.colorScheme.textPrimaryColor),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            title: const Text('Başlık Rengi'),
+            subtitle: Text(_currentSettings.colorScheme.textPrimaryColor),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showColorPicker(
+              title: 'Başlık Rengi Seç',
+              currentColor:
+                  _parseColor(_currentSettings.colorScheme.textPrimaryColor),
+              onColorChanged: (color) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      textPrimaryColor:
+                          '#${color.value.toRadixString(16).substring(2)}',
+                    ),
+                  );
+                });
+              },
+            ),
+          ),
+          const Divider(),
+          // Açıklama rengi
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _parseColor(
+                    _currentSettings.colorScheme.textSecondaryColor),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            title: const Text('Açıklama Rengi'),
+            subtitle: Text(_currentSettings.colorScheme.textSecondaryColor),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showColorPicker(
+              title: 'Açıklama Rengi Seç',
+              currentColor:
+                  _parseColor(_currentSettings.colorScheme.textSecondaryColor),
+              onColorChanged: (color) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      textSecondaryColor:
+                          '#${color.value.toRadixString(16).substring(2)}',
+                    ),
+                  );
+                });
+              },
+            ),
+          ),
+          const Divider(),
+          // Fiyat rengi
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _parseColor(_currentSettings.colorScheme.accentColor),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            title: const Text('Fiyat Rengi'),
+            subtitle: Text(_currentSettings.colorScheme.accentColor),
+            trailing: const Icon(Icons.edit),
+            onTap: () => _showColorPicker(
+              title: 'Fiyat Rengi Seç',
+              currentColor:
+                  _parseColor(_currentSettings.colorScheme.accentColor),
+              onColorChanged: (color) {
+                setState(() {
+                  _currentSettings = _currentSettings.copyWith(
+                    colorScheme: _currentSettings.colorScheme.copyWith(
+                      accentColor:
+                          '#${color.value.toRadixString(16).substring(2)}',
+                    ),
+                  );
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1751,19 +2085,43 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Renk dairesi
-                ColorPicker(
-                  pickerColor: pickerColor,
-                  onColorChanged: (color) {
-                    pickerColor = color;
-                  },
-                  colorPickerWidth: 300,
-                  pickerAreaHeightPercent: 0.7,
-                  enableAlpha: false,
-                  displayThumbColor: true,
-                  paletteType: PaletteType.hueWheel,
-                  labelTypes: const [],
-                  hexInputBar: true,
+                // Basit renk seçim grid'i
+                Container(
+                  height: 280,
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 8,
+                      childAspectRatio: 1,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: _getAllColors().length,
+                    itemBuilder: (context, index) {
+                      final color = _getAllColors()[index];
+                      final isSelected = color.value == pickerColor.value;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            pickerColor = color;
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(8),
+                            border: isSelected
+                                ? Border.all(color: Colors.black, width: 3)
+                                : Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check, color: Colors.white)
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
