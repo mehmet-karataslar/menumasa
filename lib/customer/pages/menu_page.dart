@@ -1294,6 +1294,21 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           image: _getPatternDecoration(backgroundSettings),
         );
 
+      case 'image':
+        return BoxDecoration(
+          image: backgroundSettings.backgroundImage.isNotEmpty
+              ? DecorationImage(
+                  image: NetworkImage(backgroundSettings.backgroundImage),
+                  fit: BoxFit.cover,
+                  opacity: backgroundSettings.opacity,
+                )
+              : null,
+          color: backgroundSettings.backgroundImage.isEmpty
+              ? _parseColor(backgroundSettings.primaryColor)
+                  .withOpacity(backgroundSettings.opacity)
+              : null,
+        );
+
       default:
         return BoxDecoration(color: AppColors.background);
     }

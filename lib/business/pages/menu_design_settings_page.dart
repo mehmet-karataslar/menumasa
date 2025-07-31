@@ -987,6 +987,8 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
           const SizedBox(height: 24),
           _buildAccentColorControls(),
           const SizedBox(height: 24),
+          _buildBackgroundImageControls(),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -2143,9 +2145,340 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
               },
             ),
           ),
+          const SizedBox(height: 16),
+          // Hızlı Arka Plan Renkleri
+          Text(
+            'Hızlı Seçenekler:',
+            style: AppTypography.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildQuickBackgroundColors(),
         ],
       ),
     );
+  }
+
+  Widget _buildQuickBackgroundColors() {
+    final quickBackgroundColors = [
+      {'name': 'Beyaz', 'color': Colors.white, 'value': '#FFFFFF'},
+      {'name': 'Açık Gri', 'color': Colors.grey.shade50, 'value': '#FAFAFA'},
+      {'name': 'Krem', 'color': Colors.orange.shade50, 'value': '#FFF7ED'},
+      {'name': 'Açık Mavi', 'color': Colors.blue.shade50, 'value': '#EFF6FF'},
+      {'name': 'Açık Yeşil', 'color': Colors.green.shade50, 'value': '#F0FDF4'},
+      {'name': 'Açık Pembe', 'color': Colors.pink.shade50, 'value': '#FDF2F8'},
+    ];
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      children: quickBackgroundColors.map((bgColor) {
+        final isSelected =
+            _currentSettings.colorScheme.backgroundColor == bgColor['value'];
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _currentSettings = _currentSettings.copyWith(
+                colorScheme: _currentSettings.colorScheme.copyWith(
+                  backgroundColor: bgColor['value'] as String,
+                ),
+              );
+            });
+          },
+          child: Container(
+            width: 60,
+            height: 45,
+            decoration: BoxDecoration(
+              color: bgColor['color'] as Color,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.primary,
+                    size: 16,
+                  ),
+                const SizedBox(height: 2),
+                Text(
+                  bgColor['name'] as String,
+                  style: AppTypography.caption.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildBackgroundImageControls() {
+    return _buildSettingsCard(
+      title: 'Arka Plan Fotoğrafı',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Current Background Image Preview
+          if (_currentSettings.backgroundSettings.backgroundImage.isNotEmpty &&
+              _currentSettings.backgroundSettings.type == 'image')
+            Container(
+              width: double.infinity,
+              height: 120,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+                image: DecorationImage(
+                  image: NetworkImage(
+                      _currentSettings.backgroundSettings.backgroundImage),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.black.withOpacity(0.3),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.photo,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+              ),
+            ),
+
+          // Upload Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _selectBackgroundImage,
+              icon: const Icon(Icons.cloud_upload),
+              label: Text(
+                _currentSettings.backgroundSettings.backgroundImage.isEmpty
+                    ? 'Arka Plan Fotoğrafı Seç'
+                    : 'Fotoğrafı Değiştir',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Preset Background Images
+          Text(
+            'Hazır Arka Planlar:',
+            style: AppTypography.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildPresetBackgrounds(),
+
+          if (_currentSettings.backgroundSettings.backgroundImage.isNotEmpty)
+            Column(
+              children: [
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _removeBackgroundImage,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Arka Plan Fotoğrafını Kaldır'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPresetBackgrounds() {
+    final presetBackgrounds = [
+      {
+        'name': 'Ahşap',
+        'url':
+            'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80',
+        'preview':
+            'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=150&q=80',
+      },
+      {
+        'name': 'Mermer',
+        'url':
+            'https://images.unsplash.com/photo-1540553016722-983e48a2cd10?w=800&q=80',
+        'preview':
+            'https://images.unsplash.com/photo-1540553016722-983e48a2cd10?w=150&q=80',
+      },
+      {
+        'name': 'Kağıt',
+        'url':
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
+        'preview':
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=150&q=80',
+      },
+      {
+        'name': 'Beton',
+        'url':
+            'https://images.unsplash.com/photo-1553395297-9c4296f7d21e?w=800&q=80',
+        'preview':
+            'https://images.unsplash.com/photo-1553395297-9c4296f7d21e?w=150&q=80',
+      },
+    ];
+
+    return SizedBox(
+      height: 80,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: presetBackgrounds.length,
+        itemBuilder: (context, index) {
+          final bg = presetBackgrounds[index];
+          final isSelected =
+              _currentSettings.backgroundSettings.backgroundImage == bg['url'];
+
+          return Container(
+            width: 80,
+            margin: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () => _selectPresetBackground(bg['url']!),
+              child: Column(
+                children: [
+                  Container(
+                    width: 80,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.grey.shade300,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      image: DecorationImage(
+                        image: NetworkImage(bg['preview']!),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: isSelected
+                        ? Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              color: AppColors.primary.withOpacity(0.3),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.check_circle,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    bg['name']!,
+                    style: AppTypography.caption.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _selectBackgroundImage() async {
+    try {
+      // Web platformu için file_picker kullan, mobil için image_picker kullan
+      // Şu an için basit implementasyon
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Fotoğraf Seç'),
+          content: const Text(
+            'Bu özellik yakında eklenecek. Şu anda hazır arka planları kullanabilirsiniz.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Tamam'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fotoğraf seçimi hatası: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _selectPresetBackground(String imageUrl) {
+    setState(() {
+      _currentSettings = _currentSettings.copyWith(
+        backgroundSettings: _currentSettings.backgroundSettings.copyWith(
+          type: 'image',
+          backgroundImage: imageUrl,
+        ),
+      );
+    });
+  }
+
+  void _removeBackgroundImage() {
+    setState(() {
+      _currentSettings = _currentSettings.copyWith(
+        backgroundSettings: _currentSettings.backgroundSettings.copyWith(
+          type: 'color',
+          backgroundImage: '',
+        ),
+      );
+    });
   }
 
   Widget _buildAccentColorControls() {
