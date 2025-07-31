@@ -119,53 +119,36 @@ class _ProductManagementPageState extends State<ProductManagementPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
       body: _buildBody(),
       floatingActionButton: _buildFAB(),
     );
   }
 
-  AppBar _buildAppBar() {
-    return AppBar(
-      title: Text(
-        'Ürün Yönetimi',
-        style: AppTypography.h3.copyWith(color: AppColors.white),
-      ),
-      backgroundColor: AppColors.primary,
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: Icon(
-            _viewMode == 'grid' ? Icons.view_list : Icons.view_module,
-            color: AppColors.white,
-          ),
-          onPressed: _toggleViewMode,
-        ),
-      ],
-    );
-  }
-
   Widget _buildBody() {
     if (_isLoading) {
-      return const LoadingIndicator();
+      return const SafeArea(
+        child: LoadingIndicator(),
+      );
     }
 
-    return Column(
-      children: [
-        // Search and filter section
-        _buildSearchAndFilterSection(),
+    return SafeArea(
+      child: Column(
+        children: [
+          // Search and filter section
+          _buildSearchAndFilterSection(),
 
-        // Product stats
-        _buildProductStats(),
+          // Product stats
+          _buildProductStats(),
 
-        // Product list
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadData,
-            child: _buildProductList(),
+          // Product list
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadData,
+              child: _buildProductList(),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -174,7 +157,19 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       padding: const EdgeInsets.all(16),
       color: AppColors.white,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Page title
+          Text(
+            'Ürün Yönetimi',
+            style: AppTypography.h4.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
           // Search bar
           TextField(
             onChanged: (value) {
@@ -194,6 +189,43 @@ class _ProductManagementPageState extends State<ProductManagementPage>
           ),
 
           const SizedBox(height: 16),
+
+          // View mode button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Kategoriler',
+                style: AppTypography.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildViewModeButton(
+                      icon: Icons.view_module,
+                      mode: 'grid',
+                      tooltip: 'Kart Görünümü',
+                    ),
+                    _buildViewModeButton(
+                      icon: Icons.view_list,
+                      mode: 'list',
+                      tooltip: 'Liste Görünümü',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
 
           // Category filter
           SizedBox(
@@ -781,10 +813,40 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     return category.name;
   }
 
-  void _toggleViewMode() {
-    setState(() {
-      _viewMode = _viewMode == 'grid' ? 'list' : 'grid';
-    });
+  Widget _buildViewModeButton({
+    required IconData icon,
+    required String mode,
+    required String tooltip,
+  }) {
+    final isSelected = _viewMode == mode;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (!isSelected) {
+              setState(() {
+                _viewMode = mode;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: isSelected ? AppColors.white : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _clearFilters() {
