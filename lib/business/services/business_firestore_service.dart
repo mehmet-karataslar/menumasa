@@ -321,8 +321,10 @@ class BusinessFirestoreService {
   /// Gets categories for a specific business
   Future<List<Category>> getBusinessCategories(String businessId) async {
     try {
-      final snapshot =
-          await _categoriesRef.where('businessId', isEqualTo: businessId).get();
+      final snapshot = await _categoriesRef
+          .where('businessId', isEqualTo: businessId)
+          .orderBy('sortOrder') // Firestore'dan sortOrder'a göre sıralı al
+          .get();
 
       return snapshot.docs
           .map((doc) => Category.fromJson(

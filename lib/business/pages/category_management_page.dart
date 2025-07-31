@@ -5,11 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import '../../presentation/widgets/shared/loading_indicator.dart';
-import '../../presentation/widgets/shared/error_message.dart';
-import '../../presentation/widgets/shared/empty_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
 import '../../core/widgets/web_safe_image.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
@@ -92,7 +89,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       ]);
 
       setState(() {
-        _categories = futures[0] as List<category_model.Category>;
+        _categories = (futures[0] as List<category_model.Category>)
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
         _discounts = futures[1] as List<Discount>;
         _isLoading = false;
       });
@@ -438,10 +436,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                         _buildStatusBadge(category),
                       ],
                     ),
-                    if (category.description?.isNotEmpty == true) ...[
+                    if (category.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        category.description!,
+                        category.description,
                         style: AppTypography.bodySmall
                             .copyWith(color: AppColors.textSecondary),
                         maxLines: 2,
@@ -711,12 +709,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
               ),
               const Divider(height: 32),
               // Description
-              if (category.description?.isNotEmpty == true) ...[
+              if (category.description.isNotEmpty) ...[
                 Text('Açıklama',
                     style: AppTypography.bodyLarge
                         .copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
-                Text(category.description!,
+                Text(category.description,
                     style: AppTypography.bodyMedium
                         .copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: 24),
@@ -916,15 +914,17 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   List<category_model.Category> _getFilteredCategories() {
     List<category_model.Category> filtered = List.from(_categories);
 
+    // Önce sortOrder'a göre sırala
+    filtered.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((category) {
         return category.name
                 .toLowerCase()
                 .contains(_searchQuery.toLowerCase()) ||
-            (category.description
-                    ?.toLowerCase()
-                    .contains(_searchQuery.toLowerCase()) ??
-                false);
+            category.description
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
@@ -998,13 +998,21 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       }
 
       if (category == null) {
+        // En büyük sortOrder'ı bul ve 1 ekle
+        final maxSortOrder = _categories.isEmpty
+            ? 0
+            : _categories
+                    .map((c) => c.sortOrder)
+                    .reduce((a, b) => a > b ? a : b) +
+                1;
+
         final newCategory = category_model.Category(
           categoryId: '',
           businessId: widget.businessId,
           name: name,
           description: description,
           imageUrl: imageUrl,
-          sortOrder: _categories.length,
+          sortOrder: maxSortOrder,
           isActive: isActive,
           timeRules: [],
           createdAt: DateTime.now(),
@@ -1199,16 +1207,35 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       if (oldIndex < newIndex) {
         newIndex -= 1;
       }
-      final category = _categories.removeAt(oldIndex);
-      _categories.insert(newIndex, category);
 
-      for (int i = 0; i < _categories.length; i++) {
-        _categories[i] = _categories[i].copyWith(sortOrder: i);
+      // Filtrelenmiş kategorileri kullan
+      final filteredCategories = _getFilteredCategories();
+      final category = filteredCategories.removeAt(oldIndex);
+      filteredCategories.insert(newIndex, category);
+
+      // Tüm kategoriler listesini güncelle ve sortOrder'ları yeniden ata
+      for (int i = 0; i < filteredCategories.length; i++) {
+        final categoryToUpdate = filteredCategories[i];
+        final originalIndex = _categories
+            .indexWhere((c) => c.categoryId == categoryToUpdate.categoryId);
+        if (originalIndex != -1) {
+          _categories[originalIndex] =
+              _categories[originalIndex].copyWith(sortOrder: i);
+        }
       }
+
+      // Kategorileri sortOrder'a göre sırala
+      _categories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     });
 
     try {
-      final futures = _categories
+      // Sadece güncellenmiş kategorileri kaydet
+      final updatedCategories = _categories
+          .where((cat) => _getFilteredCategories()
+              .any((filtered) => filtered.categoryId == cat.categoryId))
+          .toList();
+
+      final futures = updatedCategories
           .map((category) => _businessFirestoreService.saveCategory(category))
           .toList();
 
