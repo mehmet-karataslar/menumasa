@@ -17,12 +17,13 @@ import '../../presentation/widgets/shared/loading_indicator.dart';
 class MenuStateWidgets {
   /// Loading state widget'ı
   static Widget buildLoadingState(MenuSettings? menuSettings) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           LoadingIndicator(
             color: menuSettings != null
                 ? _parseColor(menuSettings.colorScheme.primaryColor)
@@ -41,6 +42,7 @@ class MenuStateWidgets {
           _buildShimmerContent(menuSettings),
         ],
       ),
+    ),
     );
   }
 
@@ -50,12 +52,13 @@ class MenuStateWidgets {
     String errorMessage,
     VoidCallback? onRetry,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -109,6 +112,7 @@ class MenuStateWidgets {
             ),
         ],
       ),
+    ),
     );
   }
 
@@ -120,12 +124,13 @@ class MenuStateWidgets {
     IconData? icon,
     Widget? action,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -165,6 +170,7 @@ class MenuStateWidgets {
           ],
         ],
       ),
+    ),
     );
   }
 

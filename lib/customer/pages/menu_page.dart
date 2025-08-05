@@ -476,14 +476,16 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
           ),
 
         // Category section
-        SlideTransition(
-          position: _slideAnimation,
-          child: MenuCategoryWidget(
-            menuSettings: menuSettings,
-            categories: _categories,
-            selectedCategoryId: _selectedCategoryId,
-            onCategorySelected: _onCategorySelected,
-            scrollController: _categoryScrollController,
+        SliverToBoxAdapter(
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: MenuCategoryWidget(
+              menuSettings: menuSettings,
+              categories: _categories,
+              selectedCategoryId: _selectedCategoryId,
+              onCategorySelected: _onCategorySelected,
+              scrollController: _categoryScrollController,
+            ),
           ),
         ),
 
