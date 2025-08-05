@@ -11,8 +11,8 @@ import '../../core/services/url_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
-import '../widgets/menu_preview_widget.dart';
-import '../widgets/menu_design_widget.dart';
+
+
 import 'menu_design_settings_page.dart';
 import '../widgets/menu_analytics_widget.dart';
 import 'category_management_page.dart';
@@ -52,7 +52,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     'kategoriler',
     'urunler',
     'tasarim',
-    'on-izleme',
     'analitik',
   ];
 
@@ -61,7 +60,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     'Kategoriler',
     'Ürünler',
     'Tasarım',
-    'Ön İzleme',
     'Analitik',
   ];
 
@@ -70,7 +68,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     Icons.category_rounded,
     Icons.restaurant_menu_rounded,
     Icons.palette_rounded,
-    Icons.preview_rounded,
     Icons.analytics_rounded,
   ];
 
@@ -80,7 +77,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadMenuData();
   }
@@ -288,13 +285,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
         MenuDesignSettingsPage(
           businessId: widget.businessId,
           business: _business,
-        ),
-
-        // Ön İzleme
-        MenuPreviewWidget(
-          business: _business!,
-          categories: _categories,
-          products: _products,
         ),
 
         // Analitik
