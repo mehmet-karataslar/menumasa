@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
+
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -1496,25 +1496,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       );
 
       if (image != null) {
-        // Web'de cropping desteklenmediği için sadece mobile'da crop yap
-        if (!kIsWeb) {
-          final croppedFile = await _cropImage(image);
-          if (croppedFile != null) {
-            // Crop edilmiş resmi kullan
-            onImagePicked(XFile(croppedFile.path), null);
-          } else {
-            // Crop iptal edildi, orijinal resmi kullan
-            Uint8List? bytes;
-            if (kIsWeb) {
-              bytes = await image.readAsBytes();
-            }
-            onImagePicked(image, bytes);
-          }
-        } else {
-          // Web için direkt resmi kullan
-          final bytes = await image.readAsBytes();
-          onImagePicked(image, bytes);
+        // Doğrudan resmi kullan (crop olmadan)
+        Uint8List? bytes;
+        if (kIsWeb) {
+          bytes = await image.readAsBytes();
         }
+        onImagePicked(image, bytes);
       }
     } catch (e) {
       if (mounted) {
@@ -1555,56 +1542,5 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
         ),
       ),
     );
-  }
-
-  Future<CroppedFile?> _cropImage(XFile imageFile) async {
-    try {
-      final croppedFile = await ImageCropper().cropImage(
-        sourcePath: imageFile.path,
-        aspectRatio:
-            const CropAspectRatio(ratioX: 1.0, ratioY: 1.0), // Kare format
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Resmi Düzenle',
-            toolbarColor: AppColors.primary,
-            toolbarWidgetColor: AppColors.white,
-            initAspectRatio: CropAspectRatioPreset.square,
-            lockAspectRatio: true,
-            showCropGrid: true,
-            cropGridStrokeWidth: 2,
-            cropGridColor: AppColors.primary,
-            activeControlsWidgetColor: AppColors.primary,
-          ),
-          IOSUiSettings(
-            title: 'Resmi Düzenle',
-            doneButtonTitle: 'Tamam',
-            cancelButtonTitle: 'İptal',
-            aspectRatioLockEnabled: true,
-            resetAspectRatioEnabled: false,
-            minimumAspectRatio: 1.0,
-          ),
-          WebUiSettings(
-            context: context,
-            presentStyle: CropperPresentStyle.dialog,
-            boundary: const CroppieBoundary(
-              width: 520,
-              height: 520,
-            ),
-            viewPort: const CroppieViewPort(
-              width: 480,
-              height: 480,
-              type: 'square',
-            ),
-            enableExif: true,
-            enableZoom: true,
-            showZoomer: true,
-          ),
-        ],
-      );
-      return croppedFile;
-    } catch (e) {
-      print('Crop error: $e');
-      return null;
-    }
   }
 }
