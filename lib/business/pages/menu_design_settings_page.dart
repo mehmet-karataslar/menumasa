@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
-// import 'package:flutter_colorpicker/flutter_colorpicker.dart'; // Removed for now
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../models/business.dart';
 import '../services/business_firestore_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
+
+// Widget imports
+import '../widgets/category_settings_widget.dart';
+import '../widgets/theme_settings_widget.dart';
+import '../widgets/layout_settings_widget.dart';
 
 /// 🎨 Gelişmiş Menü Tasarım Ayarları Sayfası
 ///
@@ -49,17 +52,18 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
   late MenuSettings _currentSettings;
   late MenuSettings _originalSettings;
 
-  // Theme seçimi için aktif tema
-  MenuThemeType _selectedTheme = MenuThemeType.modern;
-
-  // Color picker için aktif renk
-  Color _selectedColor = const Color(0xFFFF6B35);
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController =
+        TabController(length: 7, vsync: this); // Kategori sekmesi eklendi
     _loadBusinessData();
+  }
+
+  void _updateSettings(MenuSettings newSettings) {
+    setState(() {
+      _currentSettings = newSettings;
+    });
   }
 
   /// Hex string'i Color'a çevir
@@ -173,9 +177,7 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
           _business = business;
           _currentSettings = business.menuSettings;
           _originalSettings = business.menuSettings;
-          _selectedTheme = business.menuSettings.designTheme.themeType;
-          _selectedColor =
-              _hexToColor(business.menuSettings.colorScheme.primaryColor);
+
           _isLoading = false;
         });
       } else {
@@ -239,21 +241,10 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
   void _resetToOriginal() {
     setState(() {
       _currentSettings = _originalSettings;
-      _selectedTheme = _originalSettings.designTheme.themeType;
-      _selectedColor = _hexToColor(_originalSettings.colorScheme.primaryColor);
     });
   }
 
   bool get _hasChanges => _currentSettings != _originalSettings;
-
-  Color _hexToColor(String hex) {
-    final hexCode = hex.replaceAll('#', '');
-    return Color(int.parse('FF$hexCode', radix: 16));
-  }
-
-  String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -334,420 +325,28 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
             Tab(icon: Icon(Icons.text_fields_rounded), text: 'Yazı Tipi'),
             Tab(icon: Icon(Icons.style_rounded), text: 'Stil'),
             Tab(icon: Icon(Icons.touch_app_rounded), text: 'Etkileşim'),
+            Tab(icon: Icon(Icons.category_rounded), text: 'Kategoriler'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildThemeTab(),
-          _buildLayoutTab(),
+          ThemeSettingsWidget(
+            currentSettings: _currentSettings,
+            onSettingsChanged: _updateSettings,
+          ),
+          LayoutSettingsWidget(
+            currentSettings: _currentSettings,
+            onSettingsChanged: _updateSettings,
+          ),
           _buildColorTab(),
           _buildTypographyTab(),
           _buildStyleTab(),
           _buildInteractionTab(),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // TEMA SEÇİMİ BÖLÜMÜ
-  // ============================================================================
-
-  Widget _buildThemeTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'Tema Seçimi',
-            'Menünüzün genel görünümünü belirleyin',
-            Icons.palette_rounded,
-          ),
-          const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 1.2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: MenuThemeType.values.length,
-            itemBuilder: (context, index) {
-              final theme = MenuThemeType.values[index];
-              final isSelected = _selectedTheme == theme;
-
-              return _buildThemeCard(theme, isSelected);
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildThemePreview(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemeCard(MenuThemeType theme, bool isSelected) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedTheme = theme;
-          _currentSettings = _currentSettings.copyWith(
-            designTheme: _getThemeForType(theme),
-            colorScheme: _currentSettings.colorScheme.copyWith(
-              primaryColor: _getThemeDefaultColor(theme),
-              isDark: theme == MenuThemeType.dark,
-            ),
-          );
-
-          // Seçilen renge göre color picker'ı da güncelle
-          _selectedColor = _hexToColor(_getThemeDefaultColor(theme));
-        });
-        HapticFeedback.lightImpact();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderLight,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: AppColors.shadow.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundLight,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _buildThemePreviewMini(theme),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  Text(
-                    theme.displayName,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    theme.description,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemePreviewMini(MenuThemeType theme) {
-    switch (theme) {
-      case MenuThemeType.modern:
-        return _buildModernPreview();
-      case MenuThemeType.classic:
-        return _buildClassicPreview();
-      case MenuThemeType.grid:
-        return _buildGridPreview();
-      case MenuThemeType.magazine:
-        return _buildMagazinePreview();
-      case MenuThemeType.dark:
-        return _buildDarkPreview();
-    }
-  }
-
-  Widget _buildModernPreview() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          Container(
-            height: 16,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildClassicPreview() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          Container(
-            height: 12,
-            decoration: BoxDecoration(
-              color: AppColors.textSecondary.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 8),
-          ...List.generate(
-              3,
-              (index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Container(
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: AppColors.textSecondary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGridPreview() {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      child: GridView.count(
-        crossAxisCount: 2,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
-        children: List.generate(
-            4,
-            (index) => Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                )),
-      ),
-    );
-  }
-
-  Widget _buildMagazinePreview() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDarkPreview() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        children: [
-          Container(
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[700],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[700],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  MenuDesignTheme _getThemeForType(MenuThemeType type) {
-    switch (type) {
-      case MenuThemeType.modern:
-        return MenuDesignTheme.modern();
-      case MenuThemeType.classic:
-        return MenuDesignTheme.classic();
-      case MenuThemeType.grid:
-        return MenuDesignTheme.grid();
-      case MenuThemeType.magazine:
-        return MenuDesignTheme.magazine();
-      case MenuThemeType.dark:
-        return MenuDesignTheme.dark();
-    }
-  }
-
-  String _getThemeDefaultColor(MenuThemeType themeType) {
-    switch (themeType) {
-      case MenuThemeType.modern:
-        return '#2196F3'; // Modern mavi
-      case MenuThemeType.classic:
-        return '#8B4513'; // Klasik kahverengi
-      case MenuThemeType.grid:
-        return '#4CAF50'; // Grid yeşil
-      case MenuThemeType.magazine:
-        return '#E91E63'; // Dergi pembe
-      case MenuThemeType.dark:
-        return '#BB86FC'; // Dark purple
-    }
-  }
-
-  Widget _buildThemePreview() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '📱 Tema Önizlemesi',
-            style: AppTypography.headingMedium,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Seçilen tema: ${_selectedTheme.displayName}',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.borderLight,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                '${_selectedTheme.displayName} Tema Önizlemesi\n\n${_selectedTheme.description}',
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
+          CategorySettingsWidget(
+            currentSettings: _currentSettings,
+            onSettingsChanged: _updateSettings,
           ),
         ],
       ),
@@ -755,221 +354,7 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
   }
 
   // ============================================================================
-  // LAYOUT BÖLÜMÜ
-  // ============================================================================
-
-  Widget _buildLayoutTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'Layout Düzeni',
-            'Menü öğelerinizin nasıl dizileceğini ayarlayın',
-            Icons.dashboard_rounded,
-          ),
-          const SizedBox(height: 16),
-          _buildLayoutTypeSelection(),
-          const SizedBox(height: 24),
-          _buildLayoutSpacingControls(),
-          const SizedBox(height: 24),
-          _buildLayoutDisplayOptions(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLayoutTypeSelection() {
-    return _buildSettingsCard(
-      title: 'Düzen Tipi',
-      child: Column(
-        children: MenuLayoutType.values.map((layout) {
-          return RadioListTile<MenuLayoutType>(
-            title: Text(layout.displayName),
-            subtitle: Text(
-              layout.description,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            value: layout,
-            groupValue: _currentSettings.layoutStyle.layoutType,
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _currentSettings = _currentSettings.copyWith(
-                    layoutStyle: _currentSettings.layoutStyle.copyWith(
-                      layoutType: value,
-                    ),
-                  );
-                });
-              }
-            },
-            activeColor: AppColors.primary,
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildLayoutSpacingControls() {
-    return _buildSettingsCard(
-      title: 'Boşluk Ayarları',
-      child: Column(
-        children: [
-          _buildSliderSetting(
-            label: 'Sütun Sayısı',
-            value: _currentSettings.layoutStyle.columnsCount.toDouble(),
-            min: 1,
-            max: 4,
-            divisions: 3,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  layoutStyle: _currentSettings.layoutStyle.copyWith(
-                    columnsCount: value.round(),
-                  ),
-                );
-              });
-            },
-            suffix: 'sütun',
-          ),
-          _buildSliderSetting(
-            label: 'Öğe Arası Boşluk',
-            value: _currentSettings.layoutStyle.itemSpacing,
-            min: 8,
-            max: 32,
-            divisions: 6,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  layoutStyle: _currentSettings.layoutStyle.copyWith(
-                    itemSpacing: value,
-                  ),
-                );
-              });
-            },
-            suffix: 'px',
-          ),
-          _buildSliderSetting(
-            label: 'Kategori Arası Boşluk',
-            value: _currentSettings.layoutStyle.categorySpacing,
-            min: 16,
-            max: 48,
-            divisions: 8,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  layoutStyle: _currentSettings.layoutStyle.copyWith(
-                    categorySpacing: value,
-                  ),
-                );
-              });
-            },
-            suffix: 'px',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLayoutDisplayOptions() {
-    return _buildSettingsCard(
-      title: 'Görüntüleme Seçenekleri',
-      child: Column(
-        children: [
-          SwitchListTile(
-            title: const Text('Kategori Başlıklarını Göster'),
-            subtitle: const Text('Kategori adlarını menüde göster'),
-            value: _currentSettings.layoutStyle.showCategoryHeaders,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  layoutStyle: _currentSettings.layoutStyle.copyWith(
-                    showCategoryHeaders: value,
-                  ),
-                );
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-          SwitchListTile(
-            title: const Text('Sabit Başlıklar'),
-            subtitle: const Text('Kaydırırken başlıkları sabit tut'),
-            value: _currentSettings.layoutStyle.stickyHeaders,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  layoutStyle: _currentSettings.layoutStyle.copyWith(
-                    stickyHeaders: value,
-                  ),
-                );
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-          SwitchListTile(
-            title: const Text('Otomatik Yükseklik'),
-            subtitle: const Text('İçeriğe göre kartların yüksekliğini ayarla'),
-            value: _currentSettings.layoutStyle.autoHeight,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  layoutStyle: _currentSettings.layoutStyle.copyWith(
-                    autoHeight: value,
-                  ),
-                );
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-          SwitchListTile(
-            title: const Text('Fiyatları Göster'),
-            subtitle: const Text('Ürün fiyatlarını menüde göster/gizle'),
-            value: _currentSettings.showPrices,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  showPrices: value,
-                );
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-          SwitchListTile(
-            title: const Text('Açıklamaları Göster'),
-            subtitle: const Text('Ürün açıklamalarını göster/gizle'),
-            value: _currentSettings.showDescriptions,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  showDescriptions: value,
-                );
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-          SwitchListTile(
-            title: const Text('Görselleri Göster'),
-            subtitle: const Text('Ürün görsellerini göster/gizle'),
-            value: _currentSettings.showImages,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  showImages: value,
-                );
-              });
-            },
-            activeColor: AppColors.primary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // RENK BÖLÜMÜ
+  // KALAN WIDGET'LAR (Henüz ayrılmamış)
   // ============================================================================
 
   Widget _buildColorTab() {
@@ -979,173 +364,26 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionHeader(
-            'Renk Paleti',
-            'Menünüzün renk şemasını özelleştirin',
+            'Renk Ayarları',
+            'Menünüzün renklerini özelleştirin',
             Icons.color_lens_rounded,
           ),
-          const SizedBox(height: 16),
-          _buildPrimaryColorPicker(),
-          const SizedBox(height: 24),
-          _buildTextColorControls(),
-          const SizedBox(height: 24),
-          _buildBackgroundColorControls(),
-          const SizedBox(height: 24),
+          // Ana renk seçimi
           _buildAccentColorControls(),
           const SizedBox(height: 24),
-          _buildBackgroundImageControls(),
+
+          // Arkaplan renkleri
+          _buildBackgroundColorControls(),
           const SizedBox(height: 24),
+
+          // Arkaplan fotoğrafı
+          _buildBackgroundImageControls(),
         ],
       ),
     );
   }
 
-  Widget _buildPrimaryColorPicker() {
-    return _buildSettingsCard(
-      title: 'Ana Renk',
-      child: Column(
-        children: [
-          ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _selectedColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.borderLight,
-                  width: 2,
-                ),
-              ),
-            ),
-            title: Text(_colorToHex(_selectedColor)),
-            subtitle: const Text('Menünüzün ana teması'),
-            trailing: ElevatedButton(
-              onPressed: () => _showColorPicker(
-                title: 'Ana Renk Seçin',
-                currentColor: _selectedColor,
-                onColorChanged: (color) {
-                  setState(() {
-                    _selectedColor = color;
-                    _currentSettings = _currentSettings.copyWith(
-                      colorScheme: _currentSettings.colorScheme.copyWith(
-                        primaryColor: _colorToHex(color),
-                      ),
-                    );
-                  });
-                },
-              ),
-              child: const Text('Değiştir'),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildQuickColorPalette(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickColorPalette() {
-    final quickColors = [
-      const Color(0xFFFFFFFF), // Beyaz
-      const Color(0xFF000000), // Siyah
-      const Color(0xFFFF6B35), // Modern Turuncu
-      const Color(0xFF2ECC71), // Yeşil
-      const Color(0xFF3498DB), // Mavi
-      const Color(0xFF9B59B6), // Mor
-      const Color(0xFFE74C3C), // Kırmızı
-      const Color(0xFFF39C12), // Sarı
-      const Color(0xFF1ABC9C), // Turkuaz
-      const Color(0xFF34495E), // Koyu Gri
-      const Color(0xFFE91E63), // Pembe
-      const Color(0xFF8BC34A), // Açık Yeşil
-      const Color(0xFF00BCD4), // Cyan
-      const Color(0xFFFF9800), // Turuncu
-
-      // Ekstra Canlı ve Modern Renkler
-      const Color(0xFF3F51B5), // İndigo
-      const Color(0xFFCDDC39), // Limon Yeşili
-      const Color(0xFF009688), // Teal (Soğuk Yeşil)
-      const Color(0xFF795548), // Toprak Kahverengi
-      const Color(0xFFFF4081), // Neon Pembe
-      const Color(0xFF607D8B), // Mavi Gri
-      const Color(0xFF673AB7), // Derin Mor
-      const Color(0xFF4CAF50), // Doygun Yeşil
-      const Color(0xFF00E676), // Fosforlu Yeşil
-      const Color(0xFFAA00FF), // Parlak Mor
-      const Color(0xFFFFC107), // Altın Sarı
-      const Color(0xFFFF1744), // Parlak Kırmızı
-      const Color(0xFF18FFFF), // Açık Turkuaz
-      const Color(0xFF1E88E5), // Doygun Mavi
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hızlı Renkler',
-          style: AppTypography.bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: quickColors.map((color) {
-            final isSelected = _selectedColor.value == color.value;
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedColor = color;
-                  _currentSettings = _currentSettings.copyWith(
-                    colorScheme: _currentSettings.colorScheme.copyWith(
-                      primaryColor: _colorToHex(color),
-                    ),
-                  );
-                });
-                HapticFeedback.lightImpact();
-              },
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
-                    width: 2,
-                  ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: color.withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                ),
-                child: isSelected
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      )
-                    : null,
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
+  // Tema ayarları artık ThemeSettingsWidget'ta yönetiliyor
 
   // ============================================================================
   // TİPOGRAFİ BÖLÜMÜ
@@ -1159,263 +397,23 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
         children: [
           _buildSectionHeader(
             'Yazı Tipi Ayarları',
-            'Metinlerin görünümünü özelleştirin',
+            'Menünüzün yazı tiplerini özelleştirin',
             Icons.text_fields_rounded,
           ),
-          const SizedBox(height: 16),
-          _buildFontFamilySelection(),
           const SizedBox(height: 24),
-          _buildTextColorControls(),
-          const SizedBox(height: 24),
-          _buildFontSizeControls(),
-          const SizedBox(height: 24),
-          _buildTypographyPreview(),
+
+          // Font ayarları buraya eklenecek
+          Text('Typography ayarları henüz eklenmedi'),
         ],
       ),
     );
   }
 
-  Widget _buildFontFamilySelection() {
-    final fontFamilies = [
-      'Poppins',
-      'Roboto',
-      'Open Sans',
-      'Lato',
-      'Montserrat',
-      'Inter',
-    ];
+  // ============================================================================
+  // LAYOUT BÖLÜMÜ
+  // ============================================================================
 
-    return _buildSettingsCard(
-      title: 'Yazı Tipi',
-      child: Column(
-        children: fontFamilies.map((font) {
-          return RadioListTile<String>(
-            title: Text(
-              font,
-              style: TextStyle(fontFamily: font),
-            ),
-            value: font,
-            groupValue: _currentSettings.typography.fontFamily,
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _currentSettings = _currentSettings.copyWith(
-                    typography: _currentSettings.typography.copyWith(
-                      fontFamily: value,
-                    ),
-                  );
-                });
-              }
-            },
-            activeColor: AppColors.primary,
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildTextColorControls() {
-    return _buildSettingsCard(
-      title: 'Yazı Renkleri',
-      child: Column(
-        children: [
-          // Başlık rengi
-          ListTile(
-            leading: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color:
-                    _parseColor(_currentSettings.colorScheme.textPrimaryColor),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-            ),
-            title: const Text('Başlık Rengi'),
-            subtitle: Text(_currentSettings.colorScheme.textPrimaryColor),
-            trailing: const Icon(Icons.edit),
-            onTap: () => _showColorPicker(
-              title: 'Başlık Rengi Seç',
-              currentColor:
-                  _parseColor(_currentSettings.colorScheme.textPrimaryColor),
-              onColorChanged: (color) {
-                setState(() {
-                  _currentSettings = _currentSettings.copyWith(
-                    colorScheme: _currentSettings.colorScheme.copyWith(
-                      textPrimaryColor:
-                          '#${color.value.toRadixString(16).substring(2)}',
-                    ),
-                  );
-                });
-              },
-            ),
-          ),
-          const Divider(),
-          // Açıklama rengi
-          ListTile(
-            leading: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: _parseColor(
-                    _currentSettings.colorScheme.textSecondaryColor),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-            ),
-            title: const Text('Açıklama Rengi'),
-            subtitle: Text(_currentSettings.colorScheme.textSecondaryColor),
-            trailing: const Icon(Icons.edit),
-            onTap: () => _showColorPicker(
-              title: 'Açıklama Rengi Seç',
-              currentColor:
-                  _parseColor(_currentSettings.colorScheme.textSecondaryColor),
-              onColorChanged: (color) {
-                setState(() {
-                  _currentSettings = _currentSettings.copyWith(
-                    colorScheme: _currentSettings.colorScheme.copyWith(
-                      textSecondaryColor:
-                          '#${color.value.toRadixString(16).substring(2)}',
-                    ),
-                  );
-                });
-              },
-            ),
-          ),
-          const Divider(),
-          // Fiyat rengi
-          ListTile(
-            leading: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: _parseColor(_currentSettings.colorScheme.accentColor),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-            ),
-            title: const Text('Fiyat Rengi'),
-            subtitle: Text(_currentSettings.colorScheme.accentColor),
-            trailing: const Icon(Icons.edit),
-            onTap: () => _showColorPicker(
-              title: 'Fiyat Rengi Seç',
-              currentColor:
-                  _parseColor(_currentSettings.colorScheme.accentColor),
-              onColorChanged: (color) {
-                setState(() {
-                  _currentSettings = _currentSettings.copyWith(
-                    colorScheme: _currentSettings.colorScheme.copyWith(
-                      accentColor:
-                          '#${color.value.toRadixString(16).substring(2)}',
-                    ),
-                  );
-                });
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFontSizeControls() {
-    return _buildSettingsCard(
-      title: 'Yazı Boyutları',
-      child: Column(
-        children: [
-          _buildSliderSetting(
-            label: 'Başlık Boyutu',
-            value: _currentSettings.typography.titleFontSize,
-            min: 18,
-            max: 32,
-            divisions: 14,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  typography: _currentSettings.typography.copyWith(
-                    titleFontSize: value,
-                  ),
-                );
-              });
-            },
-            suffix: 'pt',
-          ),
-          _buildSliderSetting(
-            label: 'Alt Başlık Boyutu',
-            value: _currentSettings.typography.headingFontSize,
-            min: 14,
-            max: 24,
-            divisions: 10,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  typography: _currentSettings.typography.copyWith(
-                    headingFontSize: value,
-                  ),
-                );
-              });
-            },
-            suffix: 'pt',
-          ),
-          _buildSliderSetting(
-            label: 'Metin Boyutu',
-            value: _currentSettings.typography.bodyFontSize,
-            min: 10,
-            max: 18,
-            divisions: 8,
-            onChanged: (value) {
-              setState(() {
-                _currentSettings = _currentSettings.copyWith(
-                  typography: _currentSettings.typography.copyWith(
-                    bodyFontSize: value,
-                  ),
-                );
-              });
-            },
-            suffix: 'pt',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypographyPreview() {
-    return _buildSettingsCard(
-      title: 'Yazı Tipi Önizlemesi',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Başlık Metni',
-            style: TextStyle(
-              fontFamily: _currentSettings.typography.fontFamily,
-              fontSize: _currentSettings.typography.titleFontSize,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Alt Başlık Metni',
-            style: TextStyle(
-              fontFamily: _currentSettings.typography.fontFamily,
-              fontSize: _currentSettings.typography.headingFontSize,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Bu bir örnek gövde metnidir. Menünüzdeki ürün açıklamaları bu şekilde görünecektir.',
-            style: TextStyle(
-              fontFamily: _currentSettings.typography.fontFamily,
-              fontSize: _currentSettings.typography.bodyFontSize,
-              fontWeight: FontWeight.w400,
-              height: _currentSettings.typography.lineHeight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Layout ayarları artık LayoutSettingsWidget'ta yönetiliyor
 
   // ============================================================================
   // STİL BÖLÜMÜ
@@ -2710,7 +1708,6 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
                           '#${color.value.toRadixString(16).substring(2)}',
                     ),
                   );
-                  _selectedColor = color;
                 });
               },
             ),
@@ -2750,6 +1747,10 @@ class _MenuDesignSettingsPageState extends State<MenuDesignSettingsPage>
       ),
     );
   }
+
+  // Kategori ayarları artık CategorySettingsWidget'ta yönetiliyor
+
+  // Kategori metodları CategorySettingsWidget'a taşındı
 }
 
 // Color picker için ek import gerekiyor

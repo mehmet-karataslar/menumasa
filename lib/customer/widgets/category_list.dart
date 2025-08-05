@@ -3,6 +3,7 @@ import '../../business/models/category.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/widgets/web_safe_image.dart';
 
 class CategoryList extends StatelessWidget {
   final List<Category> categories;
@@ -30,7 +31,7 @@ class CategoryList extends StatelessWidget {
         : activeCategories;
 
     return Container(
-      height: 60,
+      height: 120, // Instagram story tarzı için yüksekliği artırdık
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -42,8 +43,8 @@ class CategoryList extends StatelessWidget {
               (selectedCategoryId == null && category.categoryId == 'all');
 
           return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CategoryChip(
+            padding: const EdgeInsets.only(right: 16),
+            child: InstagramStoryCategoryItem(
               category: category,
               isSelected: isSelected,
               onTap: () => onCategorySelected(category.categoryId),
@@ -69,6 +70,171 @@ class CategoryList extends StatelessWidget {
   }
 }
 
+// Instagram Story tarzı kategori widget'ı
+class InstagramStoryCategoryItem extends StatelessWidget {
+  final Category category;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const InstagramStoryCategoryItem({
+    Key? key,
+    required this.category,
+    required this.isSelected,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Fotoğraf alanı - Instagram story tarzı yuvarlak
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.greyLight,
+                  width: isSelected ? 3 : 2,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+              ),
+              child: ClipOval(
+                child: _buildCategoryImage(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Kategori adı - akıllı satır düzeni
+            SizedBox(
+              width: 76,
+              child: _buildCategoryNameText(category.name, isSelected),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryImage() {
+    // "Tümü" kategorisi için özel ikon
+    if (category.categoryId == 'all') {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.grid_view,
+          color: AppColors.primary,
+          size: 28,
+        ),
+      );
+    }
+
+    // Eğer kategori fotoğrafı varsa göster
+    if (category.imageUrl != null && category.imageUrl!.isNotEmpty) {
+      return WebSafeImage(
+        imageUrl: category.imageUrl!,
+        fit: BoxFit.cover,
+        width: 70,
+        height: 70,
+        placeholder: (context, url) => _buildImagePlaceholder(),
+        errorWidget: (context, url, error) => _buildImagePlaceholder(),
+      );
+    }
+
+    // Varsayılan placeholder
+    return _buildImagePlaceholder();
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.greyLight.withOpacity(0.3),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        _getCategoryIcon(category.name),
+        color: AppColors.textSecondary,
+        size: 28,
+      ),
+    );
+  }
+
+  Widget _buildCategoryNameText(String name, bool isSelected) {
+    final words = name.split(' ');
+
+    // Tek kelime ise tek satırda göster
+    if (words.length == 1) {
+      return Text(
+        name,
+        style: AppTypography.bodySmall.copyWith(
+          color: isSelected ? AppColors.primary : AppColors.textPrimary,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          fontSize: 12,
+        ),
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    // İki kelime veya daha fazla ise alt satıra geçebilsin
+    return Text(
+      name,
+      style: AppTypography.bodySmall.copyWith(
+        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+        fontSize: 12,
+        height: 1.1,
+      ),
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  IconData _getCategoryIcon(String categoryName) {
+    final name = categoryName.toLowerCase();
+    if (name.contains('çorba')) return Icons.soup_kitchen_outlined;
+    if (name.contains('ana') || name.contains('yemek'))
+      return Icons.restaurant_menu_outlined;
+    if (name.contains('tatlı') || name.contains('desert'))
+      return Icons.cake_outlined;
+    if (name.contains('içecek') || name.contains('drink'))
+      return Icons.local_bar_outlined;
+    if (name.contains('başlangıç') || name.contains('meze'))
+      return Icons.restaurant_outlined;
+    if (name.contains('salata')) return Icons.eco_outlined;
+    if (name.contains('pizza')) return Icons.local_pizza_outlined;
+    if (name.contains('burger')) return Icons.lunch_dining_outlined;
+    if (name.contains('kahve') || name.contains('coffee'))
+      return Icons.local_cafe_outlined;
+    return Icons.category_outlined;
+  }
+}
+
+// Eski CategoryChip widget'ını geriye uyumluluk için tutuyoruz
 class CategoryChip extends StatelessWidget {
   final Category category;
   final bool isSelected;

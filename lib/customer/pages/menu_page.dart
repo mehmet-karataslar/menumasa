@@ -1953,7 +1953,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
               SizedBox(
-                height: 45,
+                height: _getCategoryImageSize() +
+                    50, // Dinamik yükseklik: resim + text + padding
                 child: ListView.builder(
                   controller: _categoryScrollController,
                   scrollDirection: Axis.horizontal,
@@ -1961,21 +1962,23 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   itemCount: _categories.length + 1,
                   itemBuilder: (context, index) {
                     if (index == 0) {
-                      return _buildCategoryChip(
+                      return _buildInstagramStoryCategoryItem(
                         categoryId: 'all',
                         name: 'Tümü',
                         isSelected: _selectedCategoryId == 'all' ||
                             _selectedCategoryId == null,
                         icon: Icons.apps_rounded,
+                        imageUrl: null,
                       );
                     }
 
                     final category = _categories[index - 1];
-                    return _buildCategoryChip(
+                    return _buildInstagramStoryCategoryItem(
                       categoryId: category.categoryId,
                       name: category.name,
                       isSelected: _selectedCategoryId == category.categoryId,
                       icon: _getCategoryIcon(category.name),
+                      imageUrl: category.imageUrl,
                     );
                   },
                 ),
@@ -1987,6 +1990,199 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     );
   }
 
+  // Instagram Story tarzı kategori item'ı
+  Widget _buildInstagramStoryCategoryItem({
+    required String categoryId,
+    required String name,
+    required bool isSelected,
+    IconData? icon,
+    String? imageUrl,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(right: 16),
+      child: GestureDetector(
+        onTap: () => _onCategorySelected(categoryId),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Fotoğraf alanı - Instagram story tarzı yuvarlak
+              Container(
+                width: _getCategoryImageSize(),
+                height: _getCategoryImageSize(),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.greyLight,
+                    width: isSelected ? 3 : 2,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                ),
+                child: ClipOval(
+                  child: _buildCategoryImage(imageUrl, icon, name),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Kategori adı - akıllı satır düzeni
+              SizedBox(
+                width:
+                    _getCategoryImageSize() + 6, // Resim boyutu + biraz padding
+                child: _buildCategoryNameText(name, isSelected),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryImage(
+      String? imageUrl, IconData? icon, String categoryName) {
+    final imageSize = _getCategoryImageSize();
+
+    // Eğer kategori fotoğrafı varsa göster
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return WebSafeImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.cover,
+        width: imageSize,
+        height: imageSize,
+        placeholder: (context, url) =>
+            _buildCategoryImagePlaceholder(icon, categoryName),
+        errorWidget: (context, url, error) =>
+            _buildCategoryImagePlaceholder(icon, categoryName),
+      );
+    }
+
+    // Varsayılan placeholder
+    return _buildCategoryImagePlaceholder(icon, categoryName);
+  }
+
+  Widget _buildCategoryNameText(String name, bool isSelected) {
+    final words = name.split(' ');
+    final categoryTextColor = _getCategoryTextColor(isSelected);
+    final fontSize = _getCategoryFontSize();
+    final fontWeight = _getCategoryFontWeight(isSelected);
+
+    // Tek kelime ise tek satırda göster
+    if (words.length == 1) {
+      return Text(
+        name,
+        style: _buildGoogleFontTextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          height: 1.2,
+          color: categoryTextColor,
+          fontFamily:
+              _business?.menuSettings.typography.fontFamily ?? 'Poppins',
+        ),
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    // İki kelime veya daha fazla ise alt satıra geçebilsin
+    return Text(
+      name,
+      style: _buildGoogleFontTextStyle(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        height: 1.1,
+        color: categoryTextColor,
+        fontFamily: _business?.menuSettings.typography.fontFamily ?? 'Poppins',
+      ),
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  // Kategori stil ayarları için yardımcı metodlar
+  double _getCategoryImageSize() {
+    return _business?.menuSettings.typography.categoryImageSize ?? 70.0;
+  }
+
+  double _getCategoryFontSize() {
+    return _business?.menuSettings.typography.categoryFontSize ?? 12.0;
+  }
+
+  FontWeight _getCategoryFontWeight(bool isSelected) {
+    final weightString =
+        _business?.menuSettings.typography.categoryFontWeight ?? '500';
+    final baseWeight = _parseFontWeight(weightString);
+    return isSelected ? FontWeight.w600 : baseWeight;
+  }
+
+  Color _getCategoryTextColor(bool isSelected) {
+    if (isSelected) {
+      final selectedColorString =
+          _business?.menuSettings.typography.categorySelectedTextColor ??
+              '#FF6B35';
+      return _parseColor(selectedColorString);
+    } else {
+      final normalColorString =
+          _business?.menuSettings.typography.categoryTextColor ?? '#333333';
+      return _parseColor(normalColorString);
+    }
+  }
+
+  FontWeight _parseFontWeight(String weight) {
+    switch (weight) {
+      case '100':
+        return FontWeight.w100;
+      case '200':
+        return FontWeight.w200;
+      case '300':
+        return FontWeight.w300;
+      case '400':
+        return FontWeight.w400;
+      case '500':
+        return FontWeight.w500;
+      case '600':
+        return FontWeight.w600;
+      case '700':
+        return FontWeight.w700;
+      case '800':
+        return FontWeight.w800;
+      case '900':
+        return FontWeight.w900;
+      default:
+        return FontWeight.w500;
+    }
+  }
+
+  Widget _buildCategoryImagePlaceholder(IconData? icon, String categoryName) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.greyLight.withOpacity(0.3),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        icon ?? _getCategoryIcon(categoryName),
+        color: AppColors.textSecondary,
+        size: 28,
+      ),
+    );
+  }
+
+  // Geriye uyumluluk için eski kategori chip metodunu koruduk
   Widget _buildCategoryChip({
     required String categoryId,
     required String name,

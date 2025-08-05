@@ -991,6 +991,15 @@ class MenuTypography {
   final double lineHeight;
   final double letterSpacing;
 
+  // Kategori Stil Ayarları
+  final double categoryFontSize;
+  final String categoryFontWeight;
+  final String categoryTextColor;
+  final String categorySelectedTextColor;
+  final bool showCategoryImages;
+  final double categoryImageSize;
+  final String categoryLayout; // 'horizontal', 'vertical', 'story'
+
   const MenuTypography({
     this.fontFamily = 'Poppins',
     this.titleFontSize = 24.0,
@@ -1002,6 +1011,14 @@ class MenuTypography {
     this.bodyFontWeight = '400',
     this.lineHeight = 1.4,
     this.letterSpacing = 0.0,
+    // Kategori varsayılanları
+    this.categoryFontSize = 12.0,
+    this.categoryFontWeight = '500',
+    this.categoryTextColor = '#333333',
+    this.categorySelectedTextColor = '#FF6B35',
+    this.showCategoryImages = true,
+    this.categoryImageSize = 70.0,
+    this.categoryLayout = 'story',
   });
 
   factory MenuTypography.fromMap(Map<String, dynamic> map) {
@@ -1016,6 +1033,14 @@ class MenuTypography {
       bodyFontWeight: map['bodyFontWeight'] ?? '400',
       lineHeight: (map['lineHeight'] ?? 1.4).toDouble(),
       letterSpacing: (map['letterSpacing'] ?? 0.0).toDouble(),
+      // Kategori ayarları
+      categoryFontSize: (map['categoryFontSize'] ?? 12.0).toDouble(),
+      categoryFontWeight: map['categoryFontWeight'] ?? '500',
+      categoryTextColor: map['categoryTextColor'] ?? '#333333',
+      categorySelectedTextColor: map['categorySelectedTextColor'] ?? '#FF6B35',
+      showCategoryImages: map['showCategoryImages'] ?? true,
+      categoryImageSize: (map['categoryImageSize'] ?? 70.0).toDouble(),
+      categoryLayout: map['categoryLayout'] ?? 'story',
     );
   }
 
@@ -1031,6 +1056,14 @@ class MenuTypography {
       'bodyFontWeight': bodyFontWeight,
       'lineHeight': lineHeight,
       'letterSpacing': letterSpacing,
+      // Kategori ayarları
+      'categoryFontSize': categoryFontSize,
+      'categoryFontWeight': categoryFontWeight,
+      'categoryTextColor': categoryTextColor,
+      'categorySelectedTextColor': categorySelectedTextColor,
+      'showCategoryImages': showCategoryImages,
+      'categoryImageSize': categoryImageSize,
+      'categoryLayout': categoryLayout,
     };
   }
 
@@ -1045,6 +1078,14 @@ class MenuTypography {
     String? bodyFontWeight,
     double? lineHeight,
     double? letterSpacing,
+    // Kategori ayarları
+    double? categoryFontSize,
+    String? categoryFontWeight,
+    String? categoryTextColor,
+    String? categorySelectedTextColor,
+    bool? showCategoryImages,
+    double? categoryImageSize,
+    String? categoryLayout,
   }) {
     return MenuTypography(
       fontFamily: fontFamily ?? this.fontFamily,
@@ -1057,6 +1098,15 @@ class MenuTypography {
       bodyFontWeight: bodyFontWeight ?? this.bodyFontWeight,
       lineHeight: lineHeight ?? this.lineHeight,
       letterSpacing: letterSpacing ?? this.letterSpacing,
+      // Kategori ayarları
+      categoryFontSize: categoryFontSize ?? this.categoryFontSize,
+      categoryFontWeight: categoryFontWeight ?? this.categoryFontWeight,
+      categoryTextColor: categoryTextColor ?? this.categoryTextColor,
+      categorySelectedTextColor:
+          categorySelectedTextColor ?? this.categorySelectedTextColor,
+      showCategoryImages: showCategoryImages ?? this.showCategoryImages,
+      categoryImageSize: categoryImageSize ?? this.categoryImageSize,
+      categoryLayout: categoryLayout ?? this.categoryLayout,
     );
   }
 }

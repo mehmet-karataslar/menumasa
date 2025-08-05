@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -1272,47 +1273,173 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     required Function(XFile?, Uint8List?) onImagePicked,
     required Function(bool) onUploadStateChanged,
   }) {
-    return Center(
-      child: GestureDetector(
-        onTap: isUploadingImage
-            ? null
-            : () => _pickCategoryImage(onImagePicked, onUploadStateChanged),
-        child: Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: AppColors.backgroundLight,
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(
-                color: AppColors.greyLight, style: BorderStyle.solid, width: 2),
+    final hasImage = currentImageUrl != null ||
+        selectedImageFile != null ||
+        selectedImageBytes != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Kategori Fotoğrafı',
+          style: AppTypography.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
           ),
-          child: Stack(
-            fit: StackFit.expand,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Kategorinizi temsil eden kare (1:1) format fotoğraf yükleyin',
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Column(
             children: [
-              _buildImageContent(
-                  currentImageUrl, selectedImageFile, selectedImageBytes),
-              if (isUploadingImage)
-                Container(
+              // Image container
+              GestureDetector(
+                onTap: isUploadingImage
+                    ? null
+                    : () =>
+                        _pickCategoryImage(onImagePicked, onUploadStateChanged),
+                child: Container(
+                  width: 140,
+                  height: 140,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(12.0),
+                    color: AppColors.backgroundLight,
+                    borderRadius: BorderRadius.circular(20.0),
+                    border: Border.all(
+                      color: hasImage
+                          ? AppColors.primary.withOpacity(0.3)
+                          : AppColors.greyLight,
+                      style: BorderStyle.solid,
+                      width: hasImage ? 3 : 2,
+                    ),
+                    boxShadow: hasImage
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.1),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
                   ),
-                  child: const Center(
-                      child: LoadingIndicator(color: Colors.white)),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12.0),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _buildImageContent(currentImageUrl, selectedImageFile,
+                          selectedImageBytes),
+                      if (isUploadingImage)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                LoadingIndicator(color: Colors.white),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Yükleniyor...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (!hasImage)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate_outlined,
+                                color: AppColors.primary,
+                                size: 32,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Fotoğraf Ekle',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        // Overlay for existing image
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  child: const Icon(Icons.camera_alt,
-                      color: Colors.white70, size: 30),
                 ),
+              ),
+              const SizedBox(height: 12),
+              // Action buttons
+              if (hasImage && !isUploadingImage) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _pickCategoryImage(
+                          onImagePicked, onUploadStateChanged),
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Değiştir'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        textStyle: AppTypography.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () => onImagePicked(null, null),
+                      icon: const Icon(Icons.delete_outline, size: 16),
+                      label: const Text('Kaldır'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        textStyle: AppTypography.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else if (!hasImage && !isUploadingImage) ...[
+                Text(
+                  'Galeri veya kameradan fotoğraf seçin',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -1352,19 +1479,42 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   ) async {
     try {
       onUploadStateChanged(true);
+
+      // Resim kaynağını seç
+      final ImageSource? source = await _showImageSourceDialog();
+      if (source == null) {
+        onUploadStateChanged(false);
+        return;
+      }
+
+      // Resmi seç
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        source: source,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 90,
       );
 
       if (image != null) {
-        Uint8List? bytes;
-        if (kIsWeb) {
-          bytes = await image.readAsBytes();
+        // Web'de cropping desteklenmediği için sadece mobile'da crop yap
+        if (!kIsWeb) {
+          final croppedFile = await _cropImage(image);
+          if (croppedFile != null) {
+            // Crop edilmiş resmi kullan
+            onImagePicked(XFile(croppedFile.path), null);
+          } else {
+            // Crop iptal edildi, orijinal resmi kullan
+            Uint8List? bytes;
+            if (kIsWeb) {
+              bytes = await image.readAsBytes();
+            }
+            onImagePicked(image, bytes);
+          }
+        } else {
+          // Web için direkt resmi kullan
+          final bytes = await image.readAsBytes();
+          onImagePicked(image, bytes);
         }
-        onImagePicked(image, bytes);
       }
     } catch (e) {
       if (mounted) {
@@ -1377,6 +1527,84 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       }
     } finally {
       onUploadStateChanged(false);
+    }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() async {
+    return await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resim Kaynağı Seçin'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Galeriden Seç'),
+              subtitle: const Text('Mevcut fotoğraflarınızdan seçin'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Kamera'),
+              subtitle: const Text('Yeni fotoğraf çekin'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<CroppedFile?> _cropImage(XFile imageFile) async {
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imageFile.path,
+        aspectRatio:
+            const CropAspectRatio(ratioX: 1.0, ratioY: 1.0), // Kare format
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Resmi Düzenle',
+            toolbarColor: AppColors.primary,
+            toolbarWidgetColor: AppColors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            showCropGrid: true,
+            cropGridStrokeWidth: 2,
+            cropGridColor: AppColors.primary,
+            activeControlsWidgetColor: AppColors.primary,
+          ),
+          IOSUiSettings(
+            title: 'Resmi Düzenle',
+            doneButtonTitle: 'Tamam',
+            cancelButtonTitle: 'İptal',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+            minimumAspectRatio: 1.0,
+          ),
+          WebUiSettings(
+            context: context,
+            presentStyle: CropperPresentStyle.dialog,
+            boundary: const CroppieBoundary(
+              width: 520,
+              height: 520,
+            ),
+            viewPort: const CroppieViewPort(
+              width: 480,
+              height: 480,
+              type: 'square',
+            ),
+            enableExif: true,
+            enableZoom: true,
+            showZoomer: true,
+          ),
+        ],
+      );
+      return croppedFile;
+    } catch (e) {
+      print('Crop error: $e');
+      return null;
     }
   }
 }
