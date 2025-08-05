@@ -2422,6 +2422,17 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       case MenuLayoutType.carousel:
         // Carousel için farklı widget kullanılacak
         return _buildProductCarousel(menuSettings);
+      case MenuLayoutType.staggered:
+      case MenuLayoutType.waterfall:
+      case MenuLayoutType.magazine:
+        // Yeni layout'lar için grid layout kullan
+        gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columnsCount,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.85,
+        );
+        break;
     }
 
     return GridView.builder(
@@ -2469,6 +2480,10 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
       case MenuLayoutType.masonry:
         return _buildMasonryProductCard(product, index, menuSettings);
       case MenuLayoutType.grid:
+        return _buildCompactProductCard(product, index, menuSettings);
+      case MenuLayoutType.staggered:
+      case MenuLayoutType.waterfall:
+      case MenuLayoutType.magazine:
         return _buildCompactProductCard(product, index, menuSettings);
     }
   }

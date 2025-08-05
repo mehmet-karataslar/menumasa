@@ -22,6 +22,10 @@ class DynamicMenuWidgets {
         return _buildMasonryLayout(children, menuSettings);
       case MenuLayoutType.carousel:
         return _buildCarouselLayout(children, menuSettings);
+      case MenuLayoutType.staggered:
+      case MenuLayoutType.waterfall:
+      case MenuLayoutType.magazine:
+        return _buildGridLayout(children, menuSettings);
     }
   }
 

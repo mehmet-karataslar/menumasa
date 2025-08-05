@@ -148,19 +148,23 @@ class MenuProductWidget extends StatelessWidget {
     // Masonry layout - farklı yüksekliklerde kartlar
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Wrap(
-        spacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
-        runSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
-        children: products.asMap().entries.map((entry) {
-          final index = entry.key;
-          final product = entry.value;
-          // Rastgele yükseklik için index kullan
-          final isLarge = (index % 3) == 0;
-          return Container(
-            width: (MediaQuery.of(context).size.width - 48) / 2,
-            child: _buildMasonryProductCard(product, index, isLarge),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Wrap(
+            spacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
+            runSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
+            children: products.asMap().entries.map((entry) {
+              final index = entry.key;
+              final product = entry.value;
+              // Rastgele yükseklik için index kullan
+              final isLarge = (index % 3) == 0;
+              return Container(
+                width: (constraints.maxWidth - 48) / 2,
+                child: _buildMasonryProductCard(product, index, isLarge),
+              );
+            }).toList(),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -457,136 +461,138 @@ class MenuProductWidget extends StatelessWidget {
           onTap: () => onProductTap(product),
           borderRadius: BorderRadius.circular(borderRadius),
           child: Container(
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            boxShadow: menuSettings?.visualStyle.showShadows ?? true
-                ? [
-                    BoxShadow(
-                      color: shadowColor.withOpacity(0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Ürün görseli
-              Expanded(
-                flex: 3,
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(borderRadius),
-                          topRight: Radius.circular(borderRadius),
-                          bottomLeft: imageShape == 'rectangle'
-                              ? Radius.zero
-                              : Radius.circular(borderRadius / 2),
-                          bottomRight: imageShape == 'rectangle'
-                              ? Radius.zero
-                              : Radius.circular(borderRadius / 2),
-                        ),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(borderRadius),
+              boxShadow: menuSettings?.visualStyle.showShadows ?? true
+                  ? [
+                      BoxShadow(
+                        color: shadowColor.withOpacity(0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(borderRadius),
-                          topRight: Radius.circular(borderRadius),
-                          bottomLeft: imageShape == 'rectangle'
-                              ? Radius.zero
-                              : Radius.circular(borderRadius / 2),
-                          bottomRight: imageShape == 'rectangle'
-                              ? Radius.zero
-                              : Radius.circular(borderRadius / 2),
-                        ),
-                        child: product.images.isNotEmpty
-                            ? WebSafeImage(
-                                imageUrl: product.images.first.url,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                placeholder: (context, url) =>
-                                    _buildImagePlaceholder(),
-                                errorWidget: (context, url, error) =>
-                                    _buildImagePlaceholder(),
-                              )
-                            : _buildImagePlaceholder(),
-                      ),
-                    ),
-
-                    // Favorit butonu
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: _buildFavoriteButton(product),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Ürün bilgileri
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    ]
+                  : null,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Ürün görseli
+                Expanded(
+                  flex: 3,
+                  child: Stack(
                     children: [
-                      Text(
-                        product.name,
-                        style: GoogleFonts.getFont(
-                          menuSettings?.typography.fontFamily ?? 'Poppins',
-                          fontSize:
-                              menuSettings?.typography.titleFontSize ?? 14,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimaryColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (product.description.isNotEmpty &&
-                          (menuSettings?.showDescriptions ?? true)) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          product.description,
-                          style: GoogleFonts.getFont(
-                            menuSettings?.typography.fontFamily ?? 'Poppins',
-                            fontSize:
-                                menuSettings?.typography.captionFontSize ?? 11,
-                            color: AppColors.textSecondary,
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(borderRadius),
+                            topRight: Radius.circular(borderRadius),
+                            bottomLeft: imageShape == 'rectangle'
+                                ? Radius.zero
+                                : Radius.circular(borderRadius / 2),
+                            bottomRight: imageShape == 'rectangle'
+                                ? Radius.zero
+                                : Radius.circular(borderRadius / 2),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                      const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (menuSettings?.showPrices ?? true)
-                            Text(
-                              '₺${product.price.toStringAsFixed(2)}',
-                              style: GoogleFonts.getFont(
-                                menuSettings?.typography.fontFamily ??
-                                    'Poppins',
-                                fontSize:
-                                    menuSettings?.typography.headingFontSize ??
-                                        14,
-                                fontWeight: FontWeight.bold,
-                                color: accentColor,
-                              ),
-                            ),
-                          _buildAddToCartButton(product),
-                        ],
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(borderRadius),
+                            topRight: Radius.circular(borderRadius),
+                            bottomLeft: imageShape == 'rectangle'
+                                ? Radius.zero
+                                : Radius.circular(borderRadius / 2),
+                            bottomRight: imageShape == 'rectangle'
+                                ? Radius.zero
+                                : Radius.circular(borderRadius / 2),
+                          ),
+                          child: product.images.isNotEmpty
+                              ? WebSafeImage(
+                                  imageUrl: product.images.first.url,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  placeholder: (context, url) =>
+                                      _buildImagePlaceholder(),
+                                  errorWidget: (context, url, error) =>
+                                      _buildImagePlaceholder(),
+                                )
+                              : _buildImagePlaceholder(),
+                        ),
+                      ),
+
+                      // Favorit butonu
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: _buildFavoriteButton(product),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                // Ürün bilgileri
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          style: GoogleFonts.getFont(
+                            menuSettings?.typography.fontFamily ?? 'Poppins',
+                            fontSize:
+                                menuSettings?.typography.titleFontSize ?? 14,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimaryColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (product.description.isNotEmpty &&
+                            (menuSettings?.showDescriptions ?? true)) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            product.description,
+                            style: GoogleFonts.getFont(
+                              menuSettings?.typography.fontFamily ?? 'Poppins',
+                              fontSize:
+                                  menuSettings?.typography.captionFontSize ??
+                                      11,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        const Spacer(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (menuSettings?.showPrices ?? true)
+                              Text(
+                                '₺${product.price.toStringAsFixed(2)}',
+                                style: GoogleFonts.getFont(
+                                  menuSettings?.typography.fontFamily ??
+                                      'Poppins',
+                                  fontSize: menuSettings
+                                          ?.typography.headingFontSize ??
+                                      14,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
+                                ),
+                              ),
+                            _buildAddToCartButton(product),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
