@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
@@ -1496,12 +1497,9 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       );
 
       if (image != null) {
-        // Doğrudan resmi kullan (crop olmadan)
-        Uint8List? bytes;
-        if (kIsWeb) {
-          bytes = await image.readAsBytes();
-        }
-        onImagePicked(image, bytes);
+        // Resmi story boyutuna ayarla (9:16 aspect ratio)
+        final processedImageData = await _processImageForStory(image);
+        onImagePicked(processedImageData['file'], processedImageData['bytes']);
       }
     } catch (e) {
       if (mounted) {
@@ -1514,6 +1512,99 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       }
     } finally {
       onUploadStateChanged(false);
+    }
+  }
+
+  /// Instagram Story boyutuna (9:16 aspect ratio) resmi ayarla
+  Future<Map<String, dynamic>> _processImageForStory(XFile image) async {
+    try {
+      // Resmi bytes olarak oku
+      final Uint8List originalBytes = await image.readAsBytes();
+
+      // Image paketini kullanarak decode et
+      final img.Image? originalImage = img.decodeImage(originalBytes);
+
+      if (originalImage == null) {
+        throw Exception('Resim decode edilemedi');
+      }
+
+      // Story boyutları (9:16 aspect ratio)
+      const int storyWidth = 540; // Instagram story genişliği
+      const int storyHeight = 960; // Instagram story yüksekliği (540 * 16/9)
+
+      // Resmi story boyutuna resize et ve crop et
+      img.Image processedImage;
+
+      // Aspect ratio'yu koruyarak resize
+      final double originalAspectRatio =
+          originalImage.width / originalImage.height;
+      const double storyAspectRatio = storyWidth / storyHeight;
+
+      if (originalAspectRatio > storyAspectRatio) {
+        // Resim story'den daha geniş - yüksekliği sabitle, genişliği crop et
+        final int newWidth = (originalImage.height * storyAspectRatio).round();
+        final int cropX = ((originalImage.width - newWidth) ~/ 2);
+        processedImage = img.copyCrop(originalImage,
+            x: cropX, y: 0, width: newWidth, height: originalImage.height);
+      } else {
+        // Resim story'den daha uzun - genişliği sabitle, yüksekliği crop et
+        final int newHeight = (originalImage.width / storyAspectRatio).round();
+        final int cropY = ((originalImage.height - newHeight) ~/ 2);
+        processedImage = img.copyCrop(originalImage,
+            x: 0, y: cropY, width: originalImage.width, height: newHeight);
+      }
+
+      // Final resize to exact story dimensions
+      processedImage = img.copyResize(processedImage,
+          width: storyWidth,
+          height: storyHeight,
+          interpolation: img.Interpolation.cubic);
+
+      // JPEG olarak encode et (%85 kalite)
+      final List<int> processedBytes =
+          img.encodeJpg(processedImage, quality: 85);
+      final Uint8List processedUint8List = Uint8List.fromList(processedBytes);
+
+      // Temporary file oluştur
+      final String fileName =
+          'story_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      if (kIsWeb) {
+        // Web için XFile oluştur
+        final XFile processedXFile = XFile.fromData(
+          processedUint8List,
+          name: fileName,
+          mimeType: 'image/jpeg',
+        );
+
+        return {
+          'file': processedXFile,
+          'bytes': processedUint8List,
+        };
+      } else {
+        // Mobile için temp file yaz
+        final Directory tempDir = Directory.systemTemp;
+        final File tempFile = File('${tempDir.path}/$fileName');
+        await tempFile.writeAsBytes(processedBytes);
+
+        final XFile processedXFile = XFile(tempFile.path);
+
+        return {
+          'file': processedXFile,
+          'bytes': processedUint8List,
+        };
+      }
+    } catch (e) {
+      print('Story işleme hatası: $e');
+      // Hata durumunda orijinal resmi döndür
+      Uint8List? bytes;
+      if (kIsWeb) {
+        bytes = await image.readAsBytes();
+      }
+      return {
+        'file': image,
+        'bytes': bytes,
+      };
     }
   }
 
