@@ -353,21 +353,45 @@ class AppTypography {
 
   // TextTheme for Material Design
   static TextTheme get textTheme => const TextTheme(
-    displayLarge: h1,
-    displayMedium: h2,
-    displaySmall: h3,
-    headlineLarge: h2,
-    headlineMedium: h3,
-    headlineSmall: h4,
-    titleLarge: h3,
-    titleMedium: h4,
-    titleSmall: h5,
-    bodyLarge: bodyLarge,
-    bodyMedium: bodyMedium,
-    bodySmall: bodySmall,
-    labelLarge: buttonLarge,
-    labelMedium: buttonMedium,
-    labelSmall: buttonSmall,
+        displayLarge: h1,
+        displayMedium: h2,
+        displaySmall: h3,
+        headlineLarge: h2,
+        headlineMedium: h3,
+        headlineSmall: h4,
+        titleLarge: h3,
+        titleMedium: h4,
+        titleSmall: h5,
+        bodyLarge: bodyLarge,
+        bodyMedium: bodyMedium,
+        bodySmall: bodySmall,
+        labelLarge: buttonLarge,
+        labelMedium: buttonMedium,
+        labelSmall: buttonSmall,
+      );
+
+  // Additional heading styles for menu design settings
+  static const TextStyle headingLarge = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeXXLarge,
+    fontWeight: fontWeightBold,
+    color: AppColors.textPrimary,
+    height: 1.3,
+  );
+
+  static const TextStyle headingMedium = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeLarge,
+    fontWeight: fontWeightSemiBold,
+    color: AppColors.textPrimary,
+    height: 1.4,
+  );
+
+  static const TextStyle headingSmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSizeRegular,
+    fontWeight: fontWeightMedium,
+    color: AppColors.textPrimary,
+    height: 1.4,
   );
 }
- 

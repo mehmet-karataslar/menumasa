@@ -11,8 +11,9 @@ import '../../core/services/url_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
 import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
-import '../widgets/menu_preview_widget.dart';
-import '../widgets/menu_design_widget.dart';
+
+
+import 'menu_design_settings_page.dart';
 import '../widgets/menu_analytics_widget.dart';
 import 'category_management_page.dart';
 import 'product_management_page.dart';
@@ -51,7 +52,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     'kategoriler',
     'urunler',
     'tasarim',
-    'on-izleme',
     'analitik',
   ];
 
@@ -60,7 +60,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     'Kategoriler',
     'Ürünler',
     'Tasarım',
-    'Ön İzleme',
     'Analitik',
   ];
 
@@ -69,16 +68,16 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     Icons.category_rounded,
     Icons.restaurant_menu_rounded,
     Icons.palette_rounded,
-    Icons.preview_rounded,
     Icons.analytics_rounded,
   ];
 
-  bool get _isMobile => MediaQuery.of(context).size.width < 768;
+  bool get _isMobile =>
+      MediaQuery.of(context).size.width < 1024; // Web'de daha geniş eşik
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadMenuData();
   }
@@ -282,18 +281,10 @@ class _MenuManagementPageState extends State<MenuManagementPage>
         // Ürünler - Mevcut ürün yönetim sayfasını kullan
         ProductManagementPage(businessId: widget.businessId),
 
-        // Tasarım
-        MenuDesignWidget(
+        // Tasarım - Gelişmiş Tasarım Ayarları
+        MenuDesignSettingsPage(
           businessId: widget.businessId,
-          business: _business!,
-          onDesignChanged: _refreshData,
-        ),
-
-        // Ön İzleme
-        MenuPreviewWidget(
-          business: _business!,
-          categories: _categories,
-          products: _products,
+          business: _business,
         ),
 
         // Analitik
@@ -311,14 +302,15 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     final totalProducts = _products.length;
     final availableProducts = _products.where((p) => p.isAvailable).length;
     final avgPrice = _products.isNotEmpty
-        ? _products.map((p) => p.currentPrice).reduce((a, b) => a + b) /
-            _products.length
+        ? (_products.map((p) => p.price).reduce((a, b) => a + b) /
+            _products.length)
         : 0.0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(_isMobile ? 16 : 24), // Web'de daha büyük margin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Başlık
           Text(
@@ -331,21 +323,23 @@ class _MenuManagementPageState extends State<MenuManagementPage>
           const SizedBox(height: 8),
           Text(
             'Menünüzün genel durumu ve hızlı erişim araçları',
-            style: AppTypography.bodyLarge.copyWith(
+            style: AppTypography.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // İstatistik kartları
+          // İstatistik Kartları
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: _isMobile ? 2 : 4,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: _isMobile ? 1.2 : 1.4,
+            crossAxisCount:
+                _isMobile ? 2 : 4, // Web'de 4 sütun, mobil'de 2 sütun
+            crossAxisSpacing: _isMobile ? 12 : 16,
+            mainAxisSpacing: _isMobile ? 12 : 16,
+            childAspectRatio: _isMobile ? 1.1 : 1.3, // Web'de daha geniş oran
+            padding: EdgeInsets.zero,
             children: [
               _buildStatCard(
                 'Toplam Kategori',
@@ -378,15 +372,17 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             ],
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Hızlı Eylemler
           _buildQuickActions(),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Son Güncellenen Ürünler
           _buildRecentProducts(),
+
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -403,7 +399,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
@@ -416,34 +411,49 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: EdgeInsets.all(
+              _isMobile ? 16.0 : 12.0), // Web'de daha küçük padding
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(_isMobile ? 10 : 8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(_isMobile ? 10 : 8),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: _isMobile ? 20 : 18, // Web'de daha küçük ikon
+                ),
               ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: AppTypography.h3.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
+              SizedBox(height: _isMobile ? 8 : 6), // Web'de daha küçük boşluk
+              Text(
+                value,
+                style:
+                    (_isMobile ? AppTypography.h4 : AppTypography.h5).copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+              SizedBox(height: _isMobile ? 2 : 1),
+              Text(
+                title,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: _isMobile ? 11 : 10, // Web'de daha küçük font
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -451,36 +461,40 @@ class _MenuManagementPageState extends State<MenuManagementPage>
 
   Widget _buildQuickActions() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(
+          _isMobile ? 16 : 20), // Web'de biraz daha fazla padding
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Başlık
           Text(
             'Hızlı Eylemler',
-            style: AppTypography.h4.copyWith(
+            style: (_isMobile ? AppTypography.h5 : AppTypography.h4).copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: _isMobile ? 12 : 16),
+
+          // Web için 2 sütun, mobil için 1 sütun
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: _isMobile ? 1 : 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: _isMobile ? 5 : 4,
+            crossAxisCount: _isMobile ? 1 : 2, // Web'de 2 sütun
+            crossAxisSpacing: _isMobile ? 0 : 16,
+            mainAxisSpacing: _isMobile ? 12 : 16,
+            childAspectRatio: _isMobile ? 4.0 : 3.5, // Web'de biraz daha kare
             children: [
               _buildActionButton(
                 'Yeni Kategori',
@@ -498,7 +512,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
               ),
               _buildActionButton(
                 'Menüyü Paylaş',
-                'QR kod oluştur',
+                'QR kod ile paylaş',
                 Icons.qr_code_rounded,
                 AppColors.info,
                 () => _showQRCodeDialog(),
@@ -528,7 +542,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(_isMobile ? 16 : 14), // Web'de biraz daha küçük
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
@@ -542,7 +556,8 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                 color: color,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: AppColors.white, size: 20),
+              child:
+                  Icon(icon, color: AppColors.white, size: _isMobile ? 20 : 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -556,7 +571,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
@@ -564,7 +579,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -585,7 +600,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
     final recentProducts = _products.take(4).toList();
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(_isMobile ? 24 : 20), // Web'de biraz küçük
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
@@ -699,7 +714,7 @@ class _MenuManagementPageState extends State<MenuManagementPage>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${product.currentPrice.toStringAsFixed(0)} ₺',
+                '${product.price.toStringAsFixed(0)} ₺',
                 style: AppTypography.bodyLarge.copyWith(
                   color: AppColors.success,
                   fontWeight: FontWeight.bold,
@@ -732,13 +747,6 @@ class _MenuManagementPageState extends State<MenuManagementPage>
   }
 
   // Action metodları
-  void _showMenuSettings() {
-    Navigator.pushNamed(
-      context,
-      '/business/menu-settings',
-      arguments: {'businessId': widget.businessId},
-    );
-  }
 
   void _showAddCategoryDialog() {
     // Kategori ekleme dialog'u

@@ -111,7 +111,6 @@ class WebSafeImage extends StatelessWidget {
             queryParameters: {'alt': 'media'}, // Sadece alt=media, token kaldır
           );
 
-          print('🔄 Trying tokenless URL: $newUri');
           return newUri.toString();
         }
       } catch (e) {

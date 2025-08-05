@@ -1,8 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
-
 import '../models/customer_user.dart';
 import '../models/customer_session.dart';
 import '../models/customer_activity_log.dart';

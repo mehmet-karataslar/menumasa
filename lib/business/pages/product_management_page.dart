@@ -4,13 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import '../../presentation/widgets/shared/loading_indicator.dart';
-import '../../presentation/widgets/shared/error_message.dart';
 import '../../presentation/widgets/shared/empty_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
 import '../../core/widgets/web_safe_image.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
@@ -122,53 +119,36 @@ class _ProductManagementPageState extends State<ProductManagementPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
       body: _buildBody(),
       floatingActionButton: _buildFAB(),
     );
   }
 
-  AppBar _buildAppBar() {
-    return AppBar(
-      title: Text(
-        'Ürün Yönetimi',
-        style: AppTypography.h3.copyWith(color: AppColors.white),
-      ),
-      backgroundColor: AppColors.primary,
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: Icon(
-            _viewMode == 'grid' ? Icons.view_list : Icons.view_module,
-            color: AppColors.white,
-          ),
-          onPressed: _toggleViewMode,
-        ),
-      ],
-    );
-  }
-
   Widget _buildBody() {
     if (_isLoading) {
-      return const LoadingIndicator();
+      return const SafeArea(
+        child: LoadingIndicator(),
+      );
     }
 
-    return Column(
-      children: [
-        // Search and filter section
-        _buildSearchAndFilterSection(),
+    return SafeArea(
+      child: Column(
+        children: [
+          // Search and filter section
+          _buildSearchAndFilterSection(),
 
-        // Product stats
-        _buildProductStats(),
+          // Product stats
+          _buildProductStats(),
 
-        // Product list
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadData,
-            child: _buildProductList(),
+          // Product list
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadData,
+              child: _buildProductList(),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -177,7 +157,12 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       padding: const EdgeInsets.all(16),
       color: AppColors.white,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Page title
+
+          const SizedBox(height: 16),
+
           // Search bar
           TextField(
             onChanged: (value) {
@@ -197,6 +182,43 @@ class _ProductManagementPageState extends State<ProductManagementPage>
           ),
 
           const SizedBox(height: 16),
+
+          // View mode button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Kategoriler',
+                style: AppTypography.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildViewModeButton(
+                      icon: Icons.view_module,
+                      mode: 'grid',
+                      tooltip: 'Kart Görünümü',
+                    ),
+                    _buildViewModeButton(
+                      icon: Icons.view_list,
+                      mode: 'list',
+                      tooltip: 'Liste Görünümü',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
 
           // Category filter
           SizedBox(
@@ -358,7 +380,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: SizedBox(
-        height: 180, // Fixed height for consistency
+        height: 170, // Reduced height to prevent overflow
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -407,111 +429,122 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(6), // Reduced from 8
+                padding: const EdgeInsets.all(4), // Further reduced from 6
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Product name and category
-                    Flexible(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            product.name,
-                            style: AppTypography.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10, // Further reduced from 12
+                          Flexible(
+                            child: Text(
+                              product.name,
+                              style: AppTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10, // Further reduced from 12
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            _getCategoryName(product.categoryId),
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: 8, // Further reduced from 9
+                          Flexible(
+                            child: Text(
+                              _getCategoryName(product.categoryId),
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 8, // Further reduced from 9
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 2), // Reduced from 4
                     // Price and actions
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${product.price.toStringAsFixed(2)} ₺',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.priceColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11, // Reduced from 12
+                    SizedBox(
+                      height: 24, // Reduced height to prevent overflow
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${product.price.toStringAsFixed(2)} ₺',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.priceColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10, // Further reduced from 11
+                              ),
                             ),
                           ),
-                        ),
-                        PopupMenuButton<String>(
-                          padding: EdgeInsets.zero,
-                          iconSize: 20,
-                          onSelected: (value) =>
-                              _handleProductAction(value, product),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: ListTile(
-                                leading: Icon(Icons.edit, size: 18),
-                                title: Text('Düzenle'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'price',
-                              child: ListTile(
-                                leading: Icon(Icons.price_change, size: 18),
-                                title: Text('Fiyat Güncelle'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'toggle',
-                              child: ListTile(
-                                leading: Icon(
-                                  product.isAvailable
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  size: 18,
+                          SizedBox(
+                            width: 24, // Reduced width for menu button
+                            height: 24, // Reduced height for menu button
+                            child: PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              iconSize: 16, // Reduced from 18
+                              onSelected: (value) =>
+                                  _handleProductAction(value, product),
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: ListTile(
+                                    leading: Icon(Icons.edit, size: 16),
+                                    title: Text('Düzenle'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
-                                title: Text(
-                                  product.isAvailable
-                                      ? 'Pasif Yap'
-                                      : 'Aktif Yap',
+                                const PopupMenuItem(
+                                  value: 'price',
+                                  child: ListTile(
+                                    leading: Icon(Icons.price_change, size: 16),
+                                    title: Text('Fiyat Güncelle'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
-                                contentPadding: EdgeInsets.zero,
-                              ),
+                                PopupMenuItem(
+                                  value: 'toggle',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      product.isAvailable
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      size: 16,
+                                    ),
+                                    title: Text(
+                                      product.isAvailable
+                                          ? 'Pasif Yap'
+                                          : 'Aktif Yap',
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: ListTile(
+                                    leading: Icon(
+                                      Icons.delete,
+                                      color: AppColors.error,
+                                      size: 16,
+                                    ),
+                                    title: Text(
+                                      'Sil',
+                                      style: TextStyle(color: AppColors.error),
+                                    ),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: ListTile(
-                                leading: Icon(
-                                  Icons.delete,
-                                  color: AppColors.error,
-                                  size: 18,
-                                ),
-                                title: Text(
-                                  'Sil',
-                                  style: TextStyle(color: AppColors.error),
-                                ),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -569,44 +602,17 @@ class _ProductManagementPageState extends State<ProductManagementPage>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Current price
+                    // Product price
                     Text(
-                      '${product.currentPrice.toStringAsFixed(2)} ₺',
+                      '${product.price.toStringAsFixed(2)} ₺',
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.priceColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    // Original price if discounted
-                    if (product.hasDiscount)
-                      Text(
-                        '${product.price.toStringAsFixed(2)} ₺',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
                   ],
                 ),
-                // Discount badge
-                if (product.hasDiscount)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      product.formattedDiscountPercentage,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+
                 _buildStatusBadge(product),
               ],
             ),
@@ -773,10 +779,40 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     return category.name;
   }
 
-  void _toggleViewMode() {
-    setState(() {
-      _viewMode = _viewMode == 'grid' ? 'list' : 'grid';
-    });
+  Widget _buildViewModeButton({
+    required IconData icon,
+    required String mode,
+    required String tooltip,
+  }) {
+    final isSelected = _viewMode == mode;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (!isSelected) {
+              setState(() {
+                _viewMode = mode;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: isSelected ? AppColors.white : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _clearFilters() {
@@ -1280,9 +1316,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
     final priceController = TextEditingController(
       text: product.price.toString(),
     );
-    final discountController = TextEditingController(
-      text: product.discountPercentage.toString(),
-    );
+    // Tek fiyat sistemi - discount controller kaldırıldı
 
     showDialog(
       context: context,
@@ -1299,15 +1333,6 @@ class _ProductManagementPageState extends State<ProductManagementPage>
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: discountController,
-              decoration: const InputDecoration(
-                labelText: 'İndirim (%)',
-                hintText: '0',
-              ),
-              keyboardType: TextInputType.number,
-            ),
           ],
         ),
         actions: [
@@ -1319,10 +1344,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             onPressed: () async {
               final price =
                   double.tryParse(priceController.text.trim()) ?? product.price;
-              final discount =
-                  double.tryParse(discountController.text.trim()) ??
-                      product.discountPercentage;
-              await _updateProductPrice(product, price, discount);
+              await _updateProductPrice(product, price);
               if (mounted) Navigator.pop(context);
             },
             child: const Text('Güncelle'),
@@ -2026,9 +2048,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
           categoryId: categoryId,
           name: name,
           description: description,
-          detailedDescription: description,
           price: price,
-          currentPrice: price,
           currency: 'TL',
           images: imageUrls
               .map(
@@ -2069,9 +2089,7 @@ class _ProductManagementPageState extends State<ProductManagementPage>
         final updatedProduct = product.copyWith(
           name: name,
           description: description,
-          detailedDescription: description,
           price: price,
-          currentPrice: price,
           categoryId: categoryId,
           isAvailable: isAvailable,
           images: imageUrls
@@ -2116,7 +2134,6 @@ class _ProductManagementPageState extends State<ProductManagementPage>
   Future<void> _updateProductPrice(
     Product product,
     double price,
-    double discount,
   ) async {
     try {
       // Debug: Check if product ID is valid
@@ -2125,10 +2142,8 @@ class _ProductManagementPageState extends State<ProductManagementPage>
             'Ürün ID\'si boş veya geçersiz. Product ID: "${product.id}", ProductId: "${product.productId}"');
       }
 
-      final discountedPrice = price * (1 - discount / 100);
       final updatedProduct = product.copyWith(
         price: price,
-        currentPrice: discountedPrice,
         updatedAt: DateTime.now(),
       );
 

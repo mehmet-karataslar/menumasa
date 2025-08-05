@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/services/auth_service.dart';
 import '../models/customer_profile.dart';
 import '../services/customer_service.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';

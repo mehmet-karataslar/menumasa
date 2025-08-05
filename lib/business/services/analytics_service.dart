@@ -9,14 +9,14 @@ import '../../data/models/order.dart' as app_order;
 import '../../data/models/user.dart' as app_user;
 import 'business_firestore_service.dart';
 
-
 /// Business analytics service for comprehensive data analysis
 class AnalyticsService {
   static final AnalyticsService _instance = AnalyticsService._internal();
   factory AnalyticsService() => _instance;
   AnalyticsService._internal();
 
-  final BusinessFirestoreService _businessFirestoreService = BusinessFirestoreService();
+  final BusinessFirestoreService _businessFirestoreService =
+      BusinessFirestoreService();
 
   /// Get comprehensive business analytics for a given period
   Future<BusinessAnalytics> getBusinessAnalytics({
@@ -27,14 +27,17 @@ class AnalyticsService {
     try {
       // Fetch all necessary data
       final orders = await _getOrdersInPeriod(businessId, startDate, endDate);
-      final products = await _businessFirestoreService.getBusinessProducts(businessId);
+      final products =
+          await _businessFirestoreService.getBusinessProducts(businessId);
       final business = await _businessFirestoreService.getBusiness(businessId);
 
       // Calculate analytics
-      final orderAnalytics = _calculateOrderAnalytics(orders, startDate, endDate);
+      final orderAnalytics =
+          _calculateOrderAnalytics(orders, startDate, endDate);
       final productAnalytics = _calculateProductAnalytics(products, orders);
       final customerAnalytics = _calculateCustomerAnalytics(orders);
-      final revenueAnalytics = _calculateRevenueAnalytics(orders, startDate, endDate);
+      final revenueAnalytics =
+          _calculateRevenueAnalytics(orders, startDate, endDate);
       final performanceAnalytics = _calculatePerformanceAnalytics(orders);
       final peakHoursAnalytics = _calculatePeakHoursAnalytics(orders);
       final tableAnalytics = _calculateTableAnalytics(orders);
@@ -65,14 +68,20 @@ class AnalyticsService {
       final startOfDay = DateTime(today.year, today.month, today.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      final todayOrders = await _getOrdersInPeriod(businessId, startOfDay, endOfDay);
-      final activeOrders = todayOrders.where((o) => o.status != app_order.OrderStatus.completed && o.status != app_order.OrderStatus.cancelled).toList();
-      
+      final todayOrders =
+          await _getOrdersInPeriod(businessId, startOfDay, endOfDay);
+      final activeOrders = todayOrders
+          .where((o) =>
+              o.status != app_order.OrderStatus.completed &&
+              o.status != app_order.OrderStatus.cancelled)
+          .toList();
+
       final weekStart = today.subtract(Duration(days: today.weekday - 1));
       final weekOrders = await _getOrdersInPeriod(businessId, weekStart, today);
-      
+
       final monthStart = DateTime(today.year, today.month, 1);
-      final monthOrders = await _getOrdersInPeriod(businessId, monthStart, today);
+      final monthOrders =
+          await _getOrdersInPeriod(businessId, monthStart, today);
 
       final todayRevenue = todayOrders
           .where((o) => o.status == app_order.OrderStatus.completed)
@@ -92,9 +101,13 @@ class AnalyticsService {
         'todayRevenue': todayRevenue,
         'weekRevenue': weekRevenue,
         'monthRevenue': monthRevenue,
-        'averageOrderValue': todayOrders.isNotEmpty ? todayRevenue / todayOrders.length : 0.0,
-        'completionRate': todayOrders.isNotEmpty 
-            ? todayOrders.where((o) => o.status == app_order.OrderStatus.completed).length / todayOrders.length 
+        'averageOrderValue':
+            todayOrders.isNotEmpty ? todayRevenue / todayOrders.length : 0.0,
+        'completionRate': todayOrders.isNotEmpty
+            ? todayOrders
+                    .where((o) => o.status == app_order.OrderStatus.completed)
+                    .length /
+                todayOrders.length
             : 0.0,
         'peakHour': _findPeakHour(todayOrders),
         'topProducts': await _getTopProducts(businessId, startOfDay, endOfDay),
@@ -139,19 +152,21 @@ class AnalyticsService {
       }
 
       // Calculate intensity based on maximum order count
-      final maxOrderCount = heatMapData.values.isEmpty 
-          ? 1 
-          : heatMapData.values.map((data) => data.orderCount).reduce((a, b) => a > b ? a : b);
+      final maxOrderCount = heatMapData.values.isEmpty
+          ? 1
+          : heatMapData.values
+              .map((data) => data.orderCount)
+              .reduce((a, b) => a > b ? a : b);
 
       return heatMapData.map((key, data) => MapEntry(
-        key,
-        HeatMapData(
-          intensity: data.orderCount / maxOrderCount,
-          orderCount: data.orderCount,
-          revenue: data.revenue,
-          timeSlot: data.timeSlot,
-        ),
-      ));
+            key,
+            HeatMapData(
+              intensity: data.orderCount / maxOrderCount,
+              orderCount: data.orderCount,
+              revenue: data.revenue,
+              timeSlot: data.timeSlot,
+            ),
+          ));
     } catch (e) {
       throw Exception('Heat map data calculation failed: $e');
     }
@@ -166,15 +181,16 @@ class AnalyticsService {
   }) async {
     try {
       final orders = await _getOrdersInPeriod(businessId, startDate, endDate);
-      final products = await _businessFirestoreService.getBusinessProducts(businessId);
-      
+      final products =
+          await _businessFirestoreService.getBusinessProducts(businessId);
+
       final productStats = <String, Map<String, dynamic>>{};
 
       // Calculate stats for each product
       for (final order in orders) {
         for (final item in order.items) {
           final productId = item.productId;
-          
+
           if (productStats.containsKey(productId)) {
             productStats[productId]!['salesCount'] += item.quantity;
             productStats[productId]!['revenue'] += item.totalPrice;
@@ -187,9 +203,7 @@ class AnalyticsService {
                 categoryId: '',
                 name: item.productName,
                 description: '',
-                detailedDescription: '',
                 price: item.price,
-                currentPrice: item.price,
                 currency: 'TRY',
                 images: [],
                 allergens: [],
@@ -241,7 +255,7 @@ class AnalyticsService {
   }) async {
     try {
       final orders = await _getOrdersInPeriod(businessId, startDate, endDate);
-      
+
       // Group customers by their characteristics
       final customerGroups = <String, List<String>>{
         'Yeni Müşteriler': [],
@@ -254,7 +268,7 @@ class AnalyticsService {
 
       for (final order in orders) {
         final customerId = order.customerPhone ?? order.customerName;
-        
+
         if (customerStats.containsKey(customerId)) {
           customerStats[customerId]!['orderCount']++;
           customerStats[customerId]!['totalSpent'] += order.totalAmount;
@@ -288,15 +302,20 @@ class AnalyticsService {
 
       // Create customer segments
       final segments = <String, CustomerSegment>{};
-      
+
       for (final entry in customerGroups.entries) {
         final segmentName = entry.key;
         final customerIds = entry.value;
-        
+
         if (customerIds.isNotEmpty) {
-          final segmentStats = customerIds.map((id) => customerStats[id]!).toList();
-          final avgSpending = segmentStats.fold(0.0, (sum, stats) => sum + stats['totalSpent']) / customerIds.length;
-          final avgFrequency = segmentStats.fold(0.0, (sum, stats) => sum + stats['orderCount']) / customerIds.length;
+          final segmentStats =
+              customerIds.map((id) => customerStats[id]!).toList();
+          final avgSpending = segmentStats.fold(
+                  0.0, (sum, stats) => sum + stats['totalSpent']) /
+              customerIds.length;
+          final avgFrequency = segmentStats.fold(
+                  0.0, (sum, stats) => sum + stats['orderCount']) /
+              customerIds.length;
 
           segments[segmentName] = CustomerSegment(
             segmentName: segmentName,
@@ -316,35 +335,48 @@ class AnalyticsService {
 
   // Private helper methods
 
-  Future<List<app_order.Order>> _getOrdersInPeriod(String businessId, DateTime start, DateTime end) async {
+  Future<List<app_order.Order>> _getOrdersInPeriod(
+      String businessId, DateTime start, DateTime end) async {
     try {
       // TODO: Implement Firestore query with date range
-      final orders = await _businessFirestoreService.getOrdersByBusiness(businessId);
-      return orders.where((order) => 
-          order.createdAt.isAfter(start) && order.createdAt.isBefore(end)
-      ).toList();
+      final orders =
+          await _businessFirestoreService.getOrdersByBusiness(businessId);
+      return orders
+          .where((order) =>
+              order.createdAt.isAfter(start) && order.createdAt.isBefore(end))
+          .toList();
     } catch (e) {
       // Fallback to empty list if no orders found
       return [];
     }
   }
 
-  OrderAnalytics _calculateOrderAnalytics(List<app_order.Order> orders, DateTime start, DateTime end) {
+  OrderAnalytics _calculateOrderAnalytics(
+      List<app_order.Order> orders, DateTime start, DateTime end) {
     final totalOrders = orders.length;
-    final completedOrders = orders.where((o) => o.status == app_order.OrderStatus.completed).length;
-    final cancelledOrders = orders.where((o) => o.status == app_order.OrderStatus.cancelled).length;
-    final pendingOrders = orders.where((o) => o.status == app_order.OrderStatus.pending).length;
+    final completedOrders =
+        orders.where((o) => o.status == app_order.OrderStatus.completed).length;
+    final cancelledOrders =
+        orders.where((o) => o.status == app_order.OrderStatus.cancelled).length;
+    final pendingOrders =
+        orders.where((o) => o.status == app_order.OrderStatus.pending).length;
 
-    final completedOrdersList = orders.where((o) => o.status == app_order.OrderStatus.completed).toList();
+    final completedOrdersList = orders
+        .where((o) => o.status == app_order.OrderStatus.completed)
+        .toList();
     final averageOrderValue = completedOrdersList.isNotEmpty
-        ? completedOrdersList.fold(0.0, (sum, order) => sum + order.totalAmount) / completedOrdersList.length
+        ? completedOrdersList.fold(
+                0.0, (sum, order) => sum + order.totalAmount) /
+            completedOrdersList.length
         : 0.0;
 
     final averagePreparationTime = completedOrdersList.isNotEmpty
-        ? completedOrdersList
-            .where((order) => order.completedAt != null)
-            .fold(0.0, (sum, order) => sum + order.completedAt!.difference(order.createdAt).inMinutes) 
-            / completedOrdersList.length
+        ? completedOrdersList.where((order) => order.completedAt != null).fold(
+                0.0,
+                (sum, order) =>
+                    sum +
+                    order.completedAt!.difference(order.createdAt).inMinutes) /
+            completedOrdersList.length
         : 0.0;
 
     // Group orders by hour
@@ -357,7 +389,8 @@ class AnalyticsService {
     // Group orders by day
     final ordersByDay = <String, int>{};
     for (final order in orders) {
-      final day = '${order.createdAt.year}-${order.createdAt.month.toString().padLeft(2, '0')}-${order.createdAt.day.toString().padLeft(2, '0')}';
+      final day =
+          '${order.createdAt.year}-${order.createdAt.month.toString().padLeft(2, '0')}-${order.createdAt.day.toString().padLeft(2, '0')}';
       ordersByDay[day] = (ordersByDay[day] ?? 0) + 1;
     }
 
@@ -365,7 +398,9 @@ class AnalyticsService {
       'pending': pendingOrders,
       'completed': completedOrders,
       'cancelled': cancelledOrders,
-      'in_progress': orders.where((o) => o.status == app_order.OrderStatus.inProgress).length,
+      'in_progress': orders
+          .where((o) => o.status == app_order.OrderStatus.inProgress)
+          .length,
     };
 
     return OrderAnalytics(
@@ -382,9 +417,11 @@ class AnalyticsService {
     );
   }
 
-  ProductAnalytics _calculateProductAnalytics(List<Product> products, List<app_order.Order> orders) {
+  ProductAnalytics _calculateProductAnalytics(
+      List<Product> products, List<app_order.Order> orders) {
     final totalProducts = products.length;
-    final activeProducts = products.where((p) => p.isActive && p.isAvailable).length;
+    final activeProducts =
+        products.where((p) => p.isActive && p.isAvailable).length;
     final outOfStockProducts = products.where((p) => !p.isAvailable).length;
 
     // Calculate product sales from orders
@@ -394,15 +431,18 @@ class AnalyticsService {
 
     for (final order in orders) {
       for (final item in order.items) {
-        productSales[item.productId] = (productSales[item.productId] ?? 0) + item.quantity;
-        productRevenue[item.productId] = (productRevenue[item.productId] ?? 0.0) + item.totalPrice;
-        
+        productSales[item.productId] =
+            (productSales[item.productId] ?? 0) + item.quantity;
+        productRevenue[item.productId] =
+            (productRevenue[item.productId] ?? 0.0) + item.totalPrice;
+
         // Find category for this product
         final product = products.firstWhere(
           (p) => p.productId == item.productId,
           orElse: () => products.first,
         );
-        categorySales[product.categoryId] = (categorySales[product.categoryId] ?? 0) + item.quantity;
+        categorySales[product.categoryId] =
+            (categorySales[product.categoryId] ?? 0) + item.quantity;
       }
     }
 
@@ -416,7 +456,7 @@ class AnalyticsService {
         (p) => p.productId == entry.key,
         orElse: () => products.first,
       );
-      
+
       topSellingProducts[entry.key] = ProductPerformance(
         productId: entry.key,
         productName: product.name,
@@ -429,7 +469,11 @@ class AnalyticsService {
 
     // Get low performing products (bottom 20% by sales)
     final lowPerformingProducts = productSales.entries
-        .where((entry) => entry.value < (productSales.values.isEmpty ? 0 : productSales.values.reduce((a, b) => a + b) * 0.1))
+        .where((entry) =>
+            entry.value <
+            (productSales.values.isEmpty
+                ? 0
+                : productSales.values.reduce((a, b) => a + b) * 0.1))
         .map((entry) => entry.key)
         .toList();
 
@@ -447,27 +491,38 @@ class AnalyticsService {
 
   CustomerAnalytics _calculateCustomerAnalytics(List<app_order.Order> orders) {
     final customerOrders = <String, List<app_order.Order>>{};
-    
+
     for (final order in orders) {
       final customerId = order.customerPhone ?? order.customerName;
-      customerOrders[customerId] = (customerOrders[customerId] ?? [])..add(order);
+      customerOrders[customerId] = (customerOrders[customerId] ?? [])
+        ..add(order);
     }
 
     final totalCustomers = customerOrders.length;
-    final newCustomers = customerOrders.values.where((orders) => orders.length == 1).length;
-    final returningCustomers = customerOrders.values.where((orders) => orders.length > 1).length;
-    final vipCustomers = customerOrders.values.where((orders) => 
-        orders.length >= 10 && orders.fold(0.0, (sum, order) => sum + order.totalAmount) >= 1000
-    ).length;
+    final newCustomers =
+        customerOrders.values.where((orders) => orders.length == 1).length;
+    final returningCustomers =
+        customerOrders.values.where((orders) => orders.length > 1).length;
+    final vipCustomers = customerOrders.values
+        .where((orders) =>
+            orders.length >= 10 &&
+            orders.fold(0.0, (sum, order) => sum + order.totalAmount) >= 1000)
+        .length;
 
-    final totalSpending = orders.fold(0.0, (sum, order) => sum + order.totalAmount);
-    final averageCustomerSpending = totalCustomers > 0 ? totalSpending / totalCustomers : 0.0;
+    final totalSpending =
+        orders.fold(0.0, (sum, order) => sum + order.totalAmount);
+    final averageCustomerSpending =
+        totalCustomers > 0 ? totalSpending / totalCustomers : 0.0;
 
     // Customer frequency analysis
     final customersByFrequency = <String, int>{
       '1': customerOrders.values.where((orders) => orders.length == 1).length,
-      '2-5': customerOrders.values.where((orders) => orders.length >= 2 && orders.length <= 5).length,
-      '6-10': customerOrders.values.where((orders) => orders.length >= 6 && orders.length <= 10).length,
+      '2-5': customerOrders.values
+          .where((orders) => orders.length >= 2 && orders.length <= 5)
+          .length,
+      '6-10': customerOrders.values
+          .where((orders) => orders.length >= 6 && orders.length <= 10)
+          .length,
       '10+': customerOrders.values.where((orders) => orders.length > 10).length,
     };
 
@@ -483,30 +538,41 @@ class AnalyticsService {
     );
   }
 
-  RevenueAnalytics _calculateRevenueAnalytics(List<app_order.Order> orders, DateTime start, DateTime end) {
-    final completedOrders = orders.where((o) => o.status == app_order.OrderStatus.completed).toList();
-    final totalRevenue = completedOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
+  RevenueAnalytics _calculateRevenueAnalytics(
+      List<app_order.Order> orders, DateTime start, DateTime end) {
+    final completedOrders = orders
+        .where((o) => o.status == app_order.OrderStatus.completed)
+        .toList();
+    final totalRevenue =
+        completedOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
 
     final today = DateTime.now();
-    final todayOrders = completedOrders.where((o) => 
-        o.createdAt.year == today.year && 
-        o.createdAt.month == today.month && 
-        o.createdAt.day == today.day
-    ).toList();
-    final todayRevenue = todayOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
+    final todayOrders = completedOrders
+        .where((o) =>
+            o.createdAt.year == today.year &&
+            o.createdAt.month == today.month &&
+            o.createdAt.day == today.day)
+        .toList();
+    final todayRevenue =
+        todayOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
 
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
-    final weekOrders = completedOrders.where((o) => o.createdAt.isAfter(weekStart)).toList();
-    final weekRevenue = weekOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
+    final weekOrders =
+        completedOrders.where((o) => o.createdAt.isAfter(weekStart)).toList();
+    final weekRevenue =
+        weekOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
 
     final monthStart = DateTime(today.year, today.month, 1);
-    final monthOrders = completedOrders.where((o) => o.createdAt.isAfter(monthStart)).toList();
-    final monthRevenue = monthOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
+    final monthOrders =
+        completedOrders.where((o) => o.createdAt.isAfter(monthStart)).toList();
+    final monthRevenue =
+        monthOrders.fold(0.0, (sum, order) => sum + order.totalAmount);
 
     // Revenue by day
     final revenueByDay = <String, double>{};
     for (final order in completedOrders) {
-      final day = '${order.createdAt.year}-${order.createdAt.month.toString().padLeft(2, '0')}-${order.createdAt.day.toString().padLeft(2, '0')}';
+      final day =
+          '${order.createdAt.year}-${order.createdAt.month.toString().padLeft(2, '0')}-${order.createdAt.day.toString().padLeft(2, '0')}';
       revenueByDay[day] = (revenueByDay[day] ?? 0.0) + order.totalAmount;
     }
 
@@ -517,12 +583,14 @@ class AnalyticsService {
       revenueByHour[hour] = (revenueByHour[hour] ?? 0.0) + order.totalAmount;
     }
 
-    final averageDailyRevenue = revenueByDay.isNotEmpty 
-        ? revenueByDay.values.fold(0.0, (sum, value) => sum + value) / revenueByDay.length 
+    final averageDailyRevenue = revenueByDay.isNotEmpty
+        ? revenueByDay.values.fold(0.0, (sum, value) => sum + value) /
+            revenueByDay.length
         : 0.0;
 
     // Simple growth rate calculation (month over month)
-    final revenueGrowthRate = 0.0; // TODO: Implement proper growth rate calculation
+    final revenueGrowthRate =
+        0.0; // TODO: Implement proper growth rate calculation
 
     return RevenueAnalytics(
       totalRevenue: totalRevenue,
@@ -537,11 +605,21 @@ class AnalyticsService {
     );
   }
 
-  PerformanceAnalytics _calculatePerformanceAnalytics(List<app_order.Order> orders) {
-    final completedOrders = orders.where((o) => o.status == app_order.OrderStatus.completed && o.completedAt != null).toList();
-    
+  PerformanceAnalytics _calculatePerformanceAnalytics(
+      List<app_order.Order> orders) {
+    final completedOrders = orders
+        .where((o) =>
+            o.status == app_order.OrderStatus.completed &&
+            o.completedAt != null)
+        .toList();
+
     final averageServiceTime = completedOrders.isNotEmpty
-        ? completedOrders.fold(0.0, (sum, order) => sum + order.completedAt!.difference(order.createdAt).inMinutes) / completedOrders.length
+        ? completedOrders.fold(
+                0.0,
+                (sum, order) =>
+                    sum +
+                    order.completedAt!.difference(order.createdAt).inMinutes) /
+            completedOrders.length
         : 0.0;
 
     // TODO: Calculate wait time (would need order acceptance time)
@@ -551,11 +629,20 @@ class AnalyticsService {
     final customerSatisfactionScore = 4.2;
     final totalReviews = 0;
     final ratingDistribution = <String, int>{
-      '1': 0, '2': 0, '3': 0, '4': 0, '5': 0,
+      '1': 0,
+      '2': 0,
+      '3': 0,
+      '4': 0,
+      '5': 0,
     };
 
-    final orderAccuracy = orders.isNotEmpty 
-        ? (orders.length - orders.where((o) => o.status == app_order.OrderStatus.cancelled).length) / orders.length * 100
+    final orderAccuracy = orders.isNotEmpty
+        ? (orders.length -
+                orders
+                    .where((o) => o.status == app_order.OrderStatus.cancelled)
+                    .length) /
+            orders.length *
+            100
         : 100.0;
 
     return PerformanceAnalytics(
@@ -569,22 +656,29 @@ class AnalyticsService {
     );
   }
 
-  PeakHoursAnalytics _calculatePeakHoursAnalytics(List<app_order.Order> orders) {
+  PeakHoursAnalytics _calculatePeakHoursAnalytics(
+      List<app_order.Order> orders) {
     final hourlyActivity = <String, double>{};
-    
+
     // Calculate activity score for each hour
     for (int hour = 0; hour < 24; hour++) {
       final hourOrders = orders.where((o) => o.createdAt.hour == hour).length;
       hourlyActivity[hour.toString().padLeft(2, '0')] = hourOrders.toDouble();
     }
 
-    final maxActivity = hourlyActivity.values.isEmpty ? 1.0 : hourlyActivity.values.reduce((a, b) => a > b ? a : b);
-    
-    // Normalize activity scores
-    final normalizedActivity = hourlyActivity.map((key, value) => MapEntry(key, value / maxActivity));
+    final maxActivity = hourlyActivity.values.isEmpty
+        ? 1.0
+        : hourlyActivity.values.reduce((a, b) => a > b ? a : b);
 
-    final peakHour = normalizedActivity.entries.isEmpty ? '12' : 
-        normalizedActivity.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+    // Normalize activity scores
+    final normalizedActivity =
+        hourlyActivity.map((key, value) => MapEntry(key, value / maxActivity));
+
+    final peakHour = normalizedActivity.entries.isEmpty
+        ? '12'
+        : normalizedActivity.entries
+            .reduce((a, b) => a.value > b.value ? a : b)
+            .key;
 
     // Find peak day
     final dayOrders = <String, int>{};
@@ -592,12 +686,16 @@ class AnalyticsService {
       final dayName = _getDayName(order.createdAt.weekday);
       dayOrders[dayName] = (dayOrders[dayName] ?? 0) + 1;
     }
-    
-    final peakDay = dayOrders.entries.isEmpty ? 'Monday' :
-        dayOrders.entries.reduce((a, b) => a.value > b.value ? a : b).key;
 
-    final slowestHour = normalizedActivity.entries.isEmpty ? '03' :
-        normalizedActivity.entries.reduce((a, b) => a.value < b.value ? a : b).key;
+    final peakDay = dayOrders.entries.isEmpty
+        ? 'Monday'
+        : dayOrders.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+
+    final slowestHour = normalizedActivity.entries.isEmpty
+        ? '03'
+        : normalizedActivity.entries
+            .reduce((a, b) => a.value < b.value ? a : b)
+            .key;
 
     return PeakHoursAnalytics(
       hourlyActivity: normalizedActivity,
@@ -617,12 +715,16 @@ class AnalyticsService {
     for (final order in orders) {
       final tableId = order.tableNumber.toString();
       tableUsage[tableId] = (tableUsage[tableId] ?? 0) + 1;
-      
-      tableOrderValues[tableId] = (tableOrderValues[tableId] ?? [])..add(order.totalAmount);
-      
-      if (order.status == app_order.OrderStatus.completed && order.completedAt != null) {
-        final serviceTime = order.completedAt!.difference(order.createdAt).inMinutes.toDouble();
-        tableServiceTimes[tableId] = (tableServiceTimes[tableId] ?? [])..add(serviceTime);
+
+      tableOrderValues[tableId] = (tableOrderValues[tableId] ?? [])
+        ..add(order.totalAmount);
+
+      if (order.status == app_order.OrderStatus.completed &&
+          order.completedAt != null) {
+        final serviceTime =
+            order.completedAt!.difference(order.createdAt).inMinutes.toDouble();
+        tableServiceTimes[tableId] = (tableServiceTimes[tableId] ?? [])
+          ..add(serviceTime);
       }
     }
 
@@ -631,9 +733,13 @@ class AnalyticsService {
       final usage = tableUsage[tableId]!;
       final orderValues = tableOrderValues[tableId] ?? [];
       final serviceTimes = tableServiceTimes[tableId] ?? [];
-      
-      final avgOrderValue = orderValues.isNotEmpty ? orderValues.reduce((a, b) => a + b) / orderValues.length : 0.0;
-      final avgServiceTime = serviceTimes.isNotEmpty ? serviceTimes.reduce((a, b) => a + b) / serviceTimes.length : 0.0;
+
+      final avgOrderValue = orderValues.isNotEmpty
+          ? orderValues.reduce((a, b) => a + b) / orderValues.length
+          : 0.0;
+      final avgServiceTime = serviceTimes.isNotEmpty
+          ? serviceTimes.reduce((a, b) => a + b) / serviceTimes.length
+          : 0.0;
 
       tablePerformance[tableId] = TablePerformance(
         tableId: tableId,
@@ -644,14 +750,17 @@ class AnalyticsService {
       );
     }
 
-    final mostPopularTable = tableUsage.entries.isEmpty ? '' :
-        tableUsage.entries.reduce((a, b) => a.value > b.value ? a : b).key;
-    
-    final leastUsedTable = tableUsage.entries.isEmpty ? '' :
-        tableUsage.entries.reduce((a, b) => a.value < b.value ? a : b).key;
+    final mostPopularTable = tableUsage.entries.isEmpty
+        ? ''
+        : tableUsage.entries.reduce((a, b) => a.value > b.value ? a : b).key;
 
-    final averageTableTurnover = tableUsage.values.isEmpty ? 0.0 :
-        tableUsage.values.reduce((a, b) => a + b) / tableUsage.length;
+    final leastUsedTable = tableUsage.entries.isEmpty
+        ? ''
+        : tableUsage.entries.reduce((a, b) => a.value < b.value ? a : b).key;
+
+    final averageTableTurnover = tableUsage.values.isEmpty
+        ? 0.0
+        : tableUsage.values.reduce((a, b) => a + b) / tableUsage.length;
 
     return TableAnalytics(
       tablePerformance: tablePerformance,
@@ -676,16 +785,19 @@ class AnalyticsService {
   String _findPeakHour(List<app_order.Order> orders) {
     final hourCounts = <int, int>{};
     for (final order in orders) {
-      hourCounts[order.createdAt.hour] = (hourCounts[order.createdAt.hour] ?? 0) + 1;
+      hourCounts[order.createdAt.hour] =
+          (hourCounts[order.createdAt.hour] ?? 0) + 1;
     }
-    
+
     if (hourCounts.isEmpty) return '12';
-    
-    final peakHour = hourCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+
+    final peakHour =
+        hourCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
     return peakHour.toString().padLeft(2, '0');
   }
 
-  Future<List<Map<String, dynamic>>> _getTopProducts(String businessId, DateTime start, DateTime end) async {
+  Future<List<Map<String, dynamic>>> _getTopProducts(
+      String businessId, DateTime start, DateTime end) async {
     try {
       final orders = await _getOrdersInPeriod(businessId, start, end);
       final productSales = <String, int>{};
@@ -693,7 +805,8 @@ class AnalyticsService {
 
       for (final order in orders) {
         for (final item in order.items) {
-          productSales[item.productId] = (productSales[item.productId] ?? 0) + item.quantity;
+          productSales[item.productId] =
+              (productSales[item.productId] ?? 0) + item.quantity;
           productNames[item.productId] = item.productName;
         }
       }
@@ -701,18 +814,29 @@ class AnalyticsService {
       final sortedProducts = productSales.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
 
-      return sortedProducts.take(5).map((entry) => {
-        'productId': entry.key,
-        'productName': productNames[entry.key] ?? 'Unknown',
-        'salesCount': entry.value,
-      }).toList();
+      return sortedProducts
+          .take(5)
+          .map((entry) => {
+                'productId': entry.key,
+                'productName': productNames[entry.key] ?? 'Unknown',
+                'salesCount': entry.value,
+              })
+          .toList();
     } catch (e) {
       return [];
     }
   }
 
   String _getDayName(int weekday) {
-    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayNames = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
     return dayNames[weekday - 1];
   }
 
@@ -730,4 +854,4 @@ class AnalyticsService {
         return 'Genel müşteri segmenti';
     }
   }
-} 
+}

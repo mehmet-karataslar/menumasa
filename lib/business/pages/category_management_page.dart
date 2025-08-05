@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import '../../presentation/widgets/shared/loading_indicator.dart';
-import '../../presentation/widgets/shared/error_message.dart';
-import '../../presentation/widgets/shared/empty_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
 import '../../core/widgets/web_safe_image.dart';
 import '../../core/services/url_service.dart';
 import '../../core/mixins/url_mixin.dart';
@@ -92,7 +91,8 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       ]);
 
       setState(() {
-        _categories = futures[0] as List<category_model.Category>;
+        _categories = (futures[0] as List<category_model.Category>)
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
         _discounts = futures[1] as List<Discount>;
         _isLoading = false;
       });
@@ -438,10 +438,10 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
                         _buildStatusBadge(category),
                       ],
                     ),
-                    if (category.description?.isNotEmpty == true) ...[
+                    if (category.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        category.description!,
+                        category.description,
                         style: AppTypography.bodySmall
                             .copyWith(color: AppColors.textSecondary),
                         maxLines: 2,
@@ -711,12 +711,12 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
               ),
               const Divider(height: 32),
               // Description
-              if (category.description?.isNotEmpty == true) ...[
+              if (category.description.isNotEmpty) ...[
                 Text('Açıklama',
                     style: AppTypography.bodyLarge
                         .copyWith(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
-                Text(category.description!,
+                Text(category.description,
                     style: AppTypography.bodyMedium
                         .copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: 24),
@@ -916,15 +916,17 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   List<category_model.Category> _getFilteredCategories() {
     List<category_model.Category> filtered = List.from(_categories);
 
+    // Önce sortOrder'a göre sırala
+    filtered.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((category) {
         return category.name
                 .toLowerCase()
                 .contains(_searchQuery.toLowerCase()) ||
-            (category.description
-                    ?.toLowerCase()
-                    .contains(_searchQuery.toLowerCase()) ??
-                false);
+            category.description
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
@@ -998,13 +1000,21 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       }
 
       if (category == null) {
+        // En büyük sortOrder'ı bul ve 1 ekle
+        final maxSortOrder = _categories.isEmpty
+            ? 0
+            : _categories
+                    .map((c) => c.sortOrder)
+                    .reduce((a, b) => a > b ? a : b) +
+                1;
+
         final newCategory = category_model.Category(
           categoryId: '',
           businessId: widget.businessId,
           name: name,
           description: description,
           imageUrl: imageUrl,
-          sortOrder: _categories.length,
+          sortOrder: maxSortOrder,
           isActive: isActive,
           timeRules: [],
           createdAt: DateTime.now(),
@@ -1199,16 +1209,35 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
       if (oldIndex < newIndex) {
         newIndex -= 1;
       }
-      final category = _categories.removeAt(oldIndex);
-      _categories.insert(newIndex, category);
 
-      for (int i = 0; i < _categories.length; i++) {
-        _categories[i] = _categories[i].copyWith(sortOrder: i);
+      // Filtrelenmiş kategorileri kullan
+      final filteredCategories = _getFilteredCategories();
+      final category = filteredCategories.removeAt(oldIndex);
+      filteredCategories.insert(newIndex, category);
+
+      // Tüm kategoriler listesini güncelle ve sortOrder'ları yeniden ata
+      for (int i = 0; i < filteredCategories.length; i++) {
+        final categoryToUpdate = filteredCategories[i];
+        final originalIndex = _categories
+            .indexWhere((c) => c.categoryId == categoryToUpdate.categoryId);
+        if (originalIndex != -1) {
+          _categories[originalIndex] =
+              _categories[originalIndex].copyWith(sortOrder: i);
+        }
       }
+
+      // Kategorileri sortOrder'a göre sırala
+      _categories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     });
 
     try {
-      final futures = _categories
+      // Sadece güncellenmiş kategorileri kaydet
+      final updatedCategories = _categories
+          .where((cat) => _getFilteredCategories()
+              .any((filtered) => filtered.categoryId == cat.categoryId))
+          .toList();
+
+      final futures = updatedCategories
           .map((category) => _businessFirestoreService.saveCategory(category))
           .toList();
 
@@ -1245,47 +1274,173 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     required Function(XFile?, Uint8List?) onImagePicked,
     required Function(bool) onUploadStateChanged,
   }) {
-    return Center(
-      child: GestureDetector(
-        onTap: isUploadingImage
-            ? null
-            : () => _pickCategoryImage(onImagePicked, onUploadStateChanged),
-        child: Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: AppColors.backgroundLight,
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(
-                color: AppColors.greyLight, style: BorderStyle.solid, width: 2),
+    final hasImage = currentImageUrl != null ||
+        selectedImageFile != null ||
+        selectedImageBytes != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Kategori Fotoğrafı',
+          style: AppTypography.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
           ),
-          child: Stack(
-            fit: StackFit.expand,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Kategorinizi temsil eden kare (1:1) format fotoğraf yükleyin',
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Column(
             children: [
-              _buildImageContent(
-                  currentImageUrl, selectedImageFile, selectedImageBytes),
-              if (isUploadingImage)
-                Container(
+              // Image container
+              GestureDetector(
+                onTap: isUploadingImage
+                    ? null
+                    : () =>
+                        _pickCategoryImage(onImagePicked, onUploadStateChanged),
+                child: Container(
+                  width: 140,
+                  height: 140,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(12.0),
+                    color: AppColors.backgroundLight,
+                    borderRadius: BorderRadius.circular(20.0),
+                    border: Border.all(
+                      color: hasImage
+                          ? AppColors.primary.withOpacity(0.3)
+                          : AppColors.greyLight,
+                      style: BorderStyle.solid,
+                      width: hasImage ? 3 : 2,
+                    ),
+                    boxShadow: hasImage
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.1),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
                   ),
-                  child: const Center(
-                      child: LoadingIndicator(color: Colors.white)),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12.0),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _buildImageContent(currentImageUrl, selectedImageFile,
+                          selectedImageBytes),
+                      if (isUploadingImage)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                LoadingIndicator(color: Colors.white),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Yükleniyor...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (!hasImage)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate_outlined,
+                                color: AppColors.primary,
+                                size: 32,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Fotoğraf Ekle',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        // Overlay for existing image
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  child: const Icon(Icons.camera_alt,
-                      color: Colors.white70, size: 30),
                 ),
+              ),
+              const SizedBox(height: 12),
+              // Action buttons
+              if (hasImage && !isUploadingImage) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _pickCategoryImage(
+                          onImagePicked, onUploadStateChanged),
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Değiştir'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        textStyle: AppTypography.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () => onImagePicked(null, null),
+                      icon: const Icon(Icons.delete_outline, size: 16),
+                      label: const Text('Kaldır'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        textStyle: AppTypography.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else if (!hasImage && !isUploadingImage) ...[
+                Text(
+                  'Galeri veya kameradan fotoğraf seçin',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -1325,19 +1480,26 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
   ) async {
     try {
       onUploadStateChanged(true);
+
+      // Resim kaynağını seç
+      final ImageSource? source = await _showImageSourceDialog();
+      if (source == null) {
+        onUploadStateChanged(false);
+        return;
+      }
+
+      // Resmi seç
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        source: source,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 90,
       );
 
       if (image != null) {
-        Uint8List? bytes;
-        if (kIsWeb) {
-          bytes = await image.readAsBytes();
-        }
-        onImagePicked(image, bytes);
+        // Resmi story boyutuna ayarla (9:16 aspect ratio)
+        final processedImageData = await _processImageForStory(image);
+        onImagePicked(processedImageData['file'], processedImageData['bytes']);
       }
     } catch (e) {
       if (mounted) {
@@ -1351,5 +1513,125 @@ class _CategoryManagementPageState extends State<CategoryManagementPage>
     } finally {
       onUploadStateChanged(false);
     }
+  }
+
+  /// Instagram Story boyutuna (9:16 aspect ratio) resmi ayarla
+  Future<Map<String, dynamic>> _processImageForStory(XFile image) async {
+    try {
+      // Resmi bytes olarak oku
+      final Uint8List originalBytes = await image.readAsBytes();
+
+      // Image paketini kullanarak decode et
+      final img.Image? originalImage = img.decodeImage(originalBytes);
+
+      if (originalImage == null) {
+        throw Exception('Resim decode edilemedi');
+      }
+
+      // Story boyutları (9:16 aspect ratio)
+      const int storyWidth = 540; // Instagram story genişliği
+      const int storyHeight = 960; // Instagram story yüksekliği (540 * 16/9)
+
+      // Resmi story boyutuna resize et ve crop et
+      img.Image processedImage;
+
+      // Aspect ratio'yu koruyarak resize
+      final double originalAspectRatio =
+          originalImage.width / originalImage.height;
+      const double storyAspectRatio = storyWidth / storyHeight;
+
+      if (originalAspectRatio > storyAspectRatio) {
+        // Resim story'den daha geniş - yüksekliği sabitle, genişliği crop et
+        final int newWidth = (originalImage.height * storyAspectRatio).round();
+        final int cropX = ((originalImage.width - newWidth) ~/ 2);
+        processedImage = img.copyCrop(originalImage,
+            x: cropX, y: 0, width: newWidth, height: originalImage.height);
+      } else {
+        // Resim story'den daha uzun - genişliği sabitle, yüksekliği crop et
+        final int newHeight = (originalImage.width / storyAspectRatio).round();
+        final int cropY = ((originalImage.height - newHeight) ~/ 2);
+        processedImage = img.copyCrop(originalImage,
+            x: 0, y: cropY, width: originalImage.width, height: newHeight);
+      }
+
+      // Final resize to exact story dimensions
+      processedImage = img.copyResize(processedImage,
+          width: storyWidth,
+          height: storyHeight,
+          interpolation: img.Interpolation.cubic);
+
+      // JPEG olarak encode et (%85 kalite)
+      final List<int> processedBytes =
+          img.encodeJpg(processedImage, quality: 85);
+      final Uint8List processedUint8List = Uint8List.fromList(processedBytes);
+
+      // Temporary file oluştur
+      final String fileName =
+          'story_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      if (kIsWeb) {
+        // Web için XFile oluştur
+        final XFile processedXFile = XFile.fromData(
+          processedUint8List,
+          name: fileName,
+          mimeType: 'image/jpeg',
+        );
+
+        return {
+          'file': processedXFile,
+          'bytes': processedUint8List,
+        };
+      } else {
+        // Mobile için temp file yaz
+        final Directory tempDir = Directory.systemTemp;
+        final File tempFile = File('${tempDir.path}/$fileName');
+        await tempFile.writeAsBytes(processedBytes);
+
+        final XFile processedXFile = XFile(tempFile.path);
+
+        return {
+          'file': processedXFile,
+          'bytes': processedUint8List,
+        };
+      }
+    } catch (e) {
+      print('Story işleme hatası: $e');
+      // Hata durumunda orijinal resmi döndür
+      Uint8List? bytes;
+      if (kIsWeb) {
+        bytes = await image.readAsBytes();
+      }
+      return {
+        'file': image,
+        'bytes': bytes,
+      };
+    }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() async {
+    return await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resim Kaynağı Seçin'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Galeriden Seç'),
+              subtitle: const Text('Mevcut fotoğraflarınızdan seçin'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Kamera'),
+              subtitle: const Text('Yeni fotoğraf çekin'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

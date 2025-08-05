@@ -199,17 +199,24 @@ class Business {
       status: BusinessStatus.fromString(data['status'] ?? 'pending'),
       createdAt: _parseDateTime(data['createdAt']),
       updatedAt: _parseDateTime(data['updatedAt']),
-      approvedAt: data['approvedAt'] != null ? _parseDateTime(data['approvedAt']) : null,
+      approvedAt: data['approvedAt'] != null
+          ? _parseDateTime(data['approvedAt'])
+          : null,
       approvedBy: data['approvedBy'],
       staffIds: List<String>.from(data['staffIds'] ?? []),
       categoryIds: List<String>.from(data['categoryIds'] ?? []),
-      metadata: data['metadata'] != null ? Map<String, dynamic>.from(data['metadata']) : null,
+      metadata: _parseMetadata(data['metadata']),
     );
   }
 
   factory Business.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Business.fromJson({...data, 'id': doc.id});
+  }
+
+  /// Map'ten Business objesi oluştur (fromJson'un alias'ı)
+  factory Business.fromMap(Map<String, dynamic> data, {String? id}) {
+    return Business.fromJson(data, id: id);
   }
 
   factory Business.empty() {
@@ -236,7 +243,7 @@ class Business {
 
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
-    
+
     if (value is Timestamp) {
       return value.toDate();
     } else if (value is String) {
@@ -244,8 +251,25 @@ class Business {
     } else if (value is DateTime) {
       return value;
     }
-    
+
     return DateTime.now();
+  }
+
+  /// Metadata'yı parse eder (String, Map veya null olabilir)
+  static Map<String, dynamic>? _parseMetadata(dynamic metadata) {
+    if (metadata == null) return null;
+
+    if (metadata is Map<String, dynamic>) {
+      return metadata;
+    } else if (metadata is Map) {
+      // Map ama String, dynamic değil - dönüştür
+      return Map<String, dynamic>.from(metadata);
+    } else if (metadata is String) {
+      // String ise null döndür (geçersiz format)
+      return null;
+    } else {
+      return null; // Fallback
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -291,12 +315,14 @@ class Business {
   }
 
   // Helper methods
-  bool get isFullyOperational => isActive && isOpen && isApproved && status == BusinessStatus.active;
+  bool get isFullyOperational =>
+      isActive && isOpen && isApproved && status == BusinessStatus.active;
   bool get needsApproval => !isApproved && status == BusinessStatus.pending;
   bool get isSuspended => status == BusinessStatus.suspended;
   bool get isClosed => status == BusinessStatus.closed;
   String get statusDisplayName => status.displayName;
-  String get businessTypeDisplayName => _getBusinessTypeDisplayName(businessType);
+  String get businessTypeDisplayName =>
+      _getBusinessTypeDisplayName(businessType);
 
   String _getBusinessTypeDisplayName(String type) {
     switch (type.toLowerCase()) {
@@ -522,11 +548,11 @@ class ContactInfo {
 
   // Getter for social media links
   Map<String, String?> get socialMedia => {
-    'facebook': facebook,
-    'instagram': instagram,
-    'twitter': twitter,
-    'whatsapp': whatsapp,
-  };
+        'facebook': facebook,
+        'instagram': instagram,
+        'twitter': twitter,
+        'whatsapp': whatsapp,
+      };
 
   factory ContactInfo.fromMap(Map<String, dynamic> map) {
     return ContactInfo(
@@ -574,6 +600,801 @@ class ContactInfo {
 }
 
 // =============================================================================
+// MENU DESIGN MODELS
+// =============================================================================
+
+enum MenuThemeType {
+  modern('modern', 'Modern', 'Temiz ve minimalist görünüm'),
+  classic('classic', 'Klasik', 'Geleneksel ve zarif tasarım'),
+  minimal('minimal', 'Minimal', 'Sade ve odaklanmış tasarım'),
+  elegant('elegant', 'Elegant', 'Lüks ve gösterişli stil'),
+  grid('grid', 'Izgara', 'Kart tabanlı ızgara düzeni'),
+  magazine('magazine', 'Dergi', 'Dergi tarzı görsel yoğun tasarım'),
+  dark('dark', 'Koyu', 'Karanlık tema ve koyu renkler');
+
+  const MenuThemeType(this.value, this.displayName, this.description);
+  final String value;
+  final String displayName;
+  final String description;
+
+  static MenuThemeType fromString(String value) {
+    return MenuThemeType.values.firstWhere(
+      (theme) => theme.value == value,
+      orElse: () => MenuThemeType.modern,
+    );
+  }
+}
+
+enum MenuLayoutType {
+  list('list', 'Liste', 'Dikey liste düzeni'),
+  grid('grid', 'Izgara', '2-3 sütunlu ızgara'),
+  masonry('masonry', 'Karma', 'Değişken yükseklik düzeni'),
+  carousel('carousel', 'Kaydırmalı', 'Yatay kaydırma düzeni'),
+  staggered('staggered', 'Zigzag', 'Zigzag layout düzeni'),
+  waterfall('waterfall', 'Şelale', 'Pinterest tarzı şelale'),
+  magazine('magazine', 'Dergi', 'Dergi sayfa düzeni');
+
+  const MenuLayoutType(this.value, this.displayName, this.description);
+  final String value;
+  final String displayName;
+  final String description;
+
+  static MenuLayoutType fromString(String value) {
+    return MenuLayoutType.values.firstWhere(
+      (layout) => layout.value == value,
+      orElse: () => MenuLayoutType.grid,
+    );
+  }
+}
+
+enum MenuCardSize {
+  small('small', 'Küçük', 0.6),
+  medium('medium', 'Orta', 0.8),
+  large('large', 'Büyük', 1.0),
+  extraLarge('extraLarge', 'Çok Büyük', 1.2);
+
+  const MenuCardSize(this.value, this.displayName, this.scale);
+  final String value;
+  final String displayName;
+  final double scale;
+
+  static MenuCardSize fromString(String value) {
+    return MenuCardSize.values.firstWhere(
+      (size) => size.value == value,
+      orElse: () => MenuCardSize.medium,
+    );
+  }
+}
+
+class MenuDesignTheme {
+  final MenuThemeType themeType;
+  final String name;
+  final String description;
+  final bool isCustom;
+  final Map<String, dynamic>? customProperties;
+
+  const MenuDesignTheme({
+    required this.themeType,
+    required this.name,
+    required this.description,
+    this.isCustom = false,
+    this.customProperties,
+  });
+
+  factory MenuDesignTheme.modern() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.modern,
+      name: 'Modern',
+      description: 'Temiz, minimalist ve çağdaş görünüm',
+    );
+  }
+
+  factory MenuDesignTheme.classic() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.classic,
+      name: 'Klasik',
+      description: 'Geleneksel ve zarif tasarım',
+    );
+  }
+
+  factory MenuDesignTheme.minimal() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.minimal,
+      name: 'Minimal',
+      description: 'Sade ve odaklanmış tasarım',
+    );
+  }
+
+  factory MenuDesignTheme.elegant() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.elegant,
+      name: 'Elegant',
+      description: 'Lüks ve gösterişli stil',
+    );
+  }
+
+  factory MenuDesignTheme.grid() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.grid,
+      name: 'Izgara',
+      description: 'Kart tabanlı ızgara düzeni',
+    );
+  }
+
+  factory MenuDesignTheme.magazine() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.magazine,
+      name: 'Dergi',
+      description: 'Görsel yoğun dergi tarzı tasarım',
+    );
+  }
+
+  factory MenuDesignTheme.dark() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.dark,
+      name: 'Koyu',
+      description: 'Karanlık tema ve koyu renkler',
+    );
+  }
+
+  factory MenuDesignTheme.fromMap(Map<String, dynamic> map) {
+    return MenuDesignTheme(
+      themeType: MenuThemeType.fromString(map['themeType'] ?? 'modern'),
+      name: map['name'] ?? 'Modern',
+      description: map['description'] ?? '',
+      isCustom: map['isCustom'] ?? false,
+      customProperties: _parseCustomProperties(map['customProperties']),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'themeType': themeType.value,
+      'name': name,
+      'description': description,
+      'isCustom': isCustom,
+      'customProperties': customProperties,
+    };
+  }
+
+  MenuDesignTheme copyWith({
+    MenuThemeType? themeType,
+    String? name,
+    String? description,
+    bool? isCustom,
+    Map<String, dynamic>? customProperties,
+  }) {
+    return MenuDesignTheme(
+      themeType: themeType ?? this.themeType,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      isCustom: isCustom ?? this.isCustom,
+      customProperties: customProperties ?? this.customProperties,
+    );
+  }
+
+  /// Custom properties'i parse eder (String, Map veya null olabilir)
+  static Map<String, dynamic>? _parseCustomProperties(dynamic properties) {
+    if (properties == null) return null;
+
+    if (properties is Map<String, dynamic>) {
+      return properties;
+    } else if (properties is Map) {
+      // Map ama String, dynamic değil - dönüştür
+      return Map<String, dynamic>.from(properties);
+    } else if (properties is String) {
+      // String ise null döndür (geçersiz format)
+      return null;
+    } else {
+      return null; // Fallback
+    }
+  }
+}
+
+class MenuLayoutStyle {
+  final MenuLayoutType layoutType;
+  final int columnsCount;
+  final double itemSpacing;
+  final double categorySpacing;
+  final bool showCategoryHeaders;
+  final bool stickyHeaders;
+  final double itemHeight;
+  final bool autoHeight;
+  final double padding;
+  final double sectionSpacing;
+  final MenuCardSize cardSize;
+  final double cardAspectRatio;
+
+  const MenuLayoutStyle({
+    this.layoutType = MenuLayoutType.grid,
+    this.columnsCount = 2,
+    this.itemSpacing = 16.0,
+    this.categorySpacing = 24.0,
+    this.showCategoryHeaders = true,
+    this.stickyHeaders = false,
+    this.itemHeight = 200.0,
+    this.autoHeight = true,
+    this.padding = 16.0,
+    this.sectionSpacing = 32.0,
+    this.cardSize = MenuCardSize.medium,
+    this.cardAspectRatio = 0.75,
+  });
+
+  factory MenuLayoutStyle.fromMap(Map<String, dynamic> map) {
+    return MenuLayoutStyle(
+      layoutType: MenuLayoutType.fromString(map['layoutType'] ?? 'grid'),
+      columnsCount: map['columnsCount'] ?? 2,
+      itemSpacing: (map['itemSpacing'] ?? 16.0).toDouble(),
+      categorySpacing: (map['categorySpacing'] ?? 24.0).toDouble(),
+      showCategoryHeaders: map['showCategoryHeaders'] ?? true,
+      stickyHeaders: map['stickyHeaders'] ?? false,
+      itemHeight: (map['itemHeight'] ?? 200.0).toDouble(),
+      autoHeight: map['autoHeight'] ?? true,
+      padding: (map['padding'] ?? 16.0).toDouble(),
+      sectionSpacing: (map['sectionSpacing'] ?? 32.0).toDouble(),
+      cardSize: MenuCardSize.fromString(map['cardSize'] ?? 'medium'),
+      cardAspectRatio: (map['cardAspectRatio'] ?? 0.75).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'layoutType': layoutType.value,
+      'columnsCount': columnsCount,
+      'itemSpacing': itemSpacing,
+      'categorySpacing': categorySpacing,
+      'showCategoryHeaders': showCategoryHeaders,
+      'stickyHeaders': stickyHeaders,
+      'itemHeight': itemHeight,
+      'autoHeight': autoHeight,
+      'padding': padding,
+      'sectionSpacing': sectionSpacing,
+      'cardSize': cardSize.value,
+      'cardAspectRatio': cardAspectRatio,
+    };
+  }
+
+  MenuLayoutStyle copyWith({
+    MenuLayoutType? layoutType,
+    int? columnsCount,
+    double? itemSpacing,
+    double? categorySpacing,
+    bool? showCategoryHeaders,
+    bool? stickyHeaders,
+    double? itemHeight,
+    bool? autoHeight,
+    double? padding,
+    double? sectionSpacing,
+    MenuCardSize? cardSize,
+    double? cardAspectRatio,
+  }) {
+    return MenuLayoutStyle(
+      layoutType: layoutType ?? this.layoutType,
+      columnsCount: columnsCount ?? this.columnsCount,
+      itemSpacing: itemSpacing ?? this.itemSpacing,
+      categorySpacing: categorySpacing ?? this.categorySpacing,
+      showCategoryHeaders: showCategoryHeaders ?? this.showCategoryHeaders,
+      stickyHeaders: stickyHeaders ?? this.stickyHeaders,
+      itemHeight: itemHeight ?? this.itemHeight,
+      autoHeight: autoHeight ?? this.autoHeight,
+      padding: padding ?? this.padding,
+      sectionSpacing: sectionSpacing ?? this.sectionSpacing,
+      cardSize: cardSize ?? this.cardSize,
+      cardAspectRatio: cardAspectRatio ?? this.cardAspectRatio,
+    );
+  }
+}
+
+class MenuColorScheme {
+  final String primaryColor;
+  final String secondaryColor;
+  final String backgroundColor;
+  final String surfaceColor;
+  final String textPrimaryColor;
+  final String textSecondaryColor;
+  final String accentColor;
+  final String cardColor;
+  final String borderColor;
+  final String shadowColor;
+  final double opacity;
+  final bool isDark;
+
+  const MenuColorScheme({
+    this.primaryColor = '#FF6B35',
+    this.secondaryColor = '#FFB86C',
+    this.backgroundColor = '#FFFFFF',
+    this.surfaceColor = '#F8F9FA',
+    this.textPrimaryColor = '#2C3E50',
+    this.textSecondaryColor = '#7F8C8D',
+    this.accentColor = '#E74C3C',
+    this.cardColor = '#FFFFFF',
+    this.borderColor = '#E9ECEF',
+    this.shadowColor = '#00000010',
+    this.opacity = 1.0,
+    this.isDark = false,
+  });
+
+  /// Dark theme color scheme factory
+  factory MenuColorScheme.dark() {
+    return const MenuColorScheme(
+      primaryColor: '#64748B', // Slate 500
+      secondaryColor: '#94A3B8', // Slate 400
+      backgroundColor: '#0F172A', // Slate 900
+      surfaceColor: '#1E293B', // Slate 800
+      textPrimaryColor: '#F1F5F9', // Slate 100
+      textSecondaryColor: '#CBD5E1', // Slate 300
+      accentColor: '#F59E0B', // Amber 500
+      cardColor: '#1E293B', // Slate 800
+      borderColor: '#334155', // Slate 700
+      shadowColor: '#00000050', // Darker shadow
+      opacity: 1.0,
+      isDark: true,
+    );
+  }
+
+  factory MenuColorScheme.fromMap(Map<String, dynamic> map) {
+    return MenuColorScheme(
+      primaryColor: map['primaryColor'] ?? '#FF6B35',
+      secondaryColor: map['secondaryColor'] ?? '#FFB86C',
+      backgroundColor: map['backgroundColor'] ?? '#FFFFFF',
+      surfaceColor: map['surfaceColor'] ?? '#F8F9FA',
+      textPrimaryColor: map['textPrimaryColor'] ?? '#2C3E50',
+      textSecondaryColor: map['textSecondaryColor'] ?? '#7F8C8D',
+      accentColor: map['accentColor'] ?? '#E74C3C',
+      cardColor: map['cardColor'] ?? '#FFFFFF',
+      borderColor: map['borderColor'] ?? '#E9ECEF',
+      shadowColor: map['shadowColor'] ?? '#00000010',
+      opacity: (map['opacity'] ?? 1.0).toDouble(),
+      isDark: map['isDark'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'primaryColor': primaryColor,
+      'secondaryColor': secondaryColor,
+      'backgroundColor': backgroundColor,
+      'surfaceColor': surfaceColor,
+      'textPrimaryColor': textPrimaryColor,
+      'textSecondaryColor': textSecondaryColor,
+      'accentColor': accentColor,
+      'cardColor': cardColor,
+      'borderColor': borderColor,
+      'shadowColor': shadowColor,
+      'opacity': opacity,
+      'isDark': isDark,
+    };
+  }
+
+  MenuColorScheme copyWith({
+    String? primaryColor,
+    String? secondaryColor,
+    String? backgroundColor,
+    String? surfaceColor,
+    String? textPrimaryColor,
+    String? textSecondaryColor,
+    String? accentColor,
+    String? cardColor,
+    String? borderColor,
+    String? shadowColor,
+    double? opacity,
+    bool? isDark,
+  }) {
+    return MenuColorScheme(
+      primaryColor: primaryColor ?? this.primaryColor,
+      secondaryColor: secondaryColor ?? this.secondaryColor,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      surfaceColor: surfaceColor ?? this.surfaceColor,
+      textPrimaryColor: textPrimaryColor ?? this.textPrimaryColor,
+      textSecondaryColor: textSecondaryColor ?? this.textSecondaryColor,
+      accentColor: accentColor ?? this.accentColor,
+      cardColor: cardColor ?? this.cardColor,
+      borderColor: borderColor ?? this.borderColor,
+      shadowColor: shadowColor ?? this.shadowColor,
+      opacity: opacity ?? this.opacity,
+      isDark: isDark ?? this.isDark,
+    );
+  }
+}
+
+class MenuBackgroundSettings {
+  final String type; // 'color', 'pattern', 'gradient', 'image'
+  final String backgroundImage; // URL or pattern name
+  final String primaryColor;
+  final String secondaryColor;
+  final double opacity;
+  final String blendMode; // 'normal', 'multiply', 'overlay', etc.
+  final bool isRepeating;
+
+  const MenuBackgroundSettings({
+    this.type = 'color',
+    this.backgroundImage = '',
+    this.primaryColor = '#FFFFFF',
+    this.secondaryColor = '#F8F9FA',
+    this.opacity = 1.0,
+    this.blendMode = 'normal',
+    this.isRepeating = true,
+  });
+
+  factory MenuBackgroundSettings.fromMap(Map<String, dynamic> map) {
+    return MenuBackgroundSettings(
+      type: map['type'] ?? 'color',
+      backgroundImage: map['backgroundImage'] ?? '',
+      primaryColor: map['primaryColor'] ?? '#FFFFFF',
+      secondaryColor: map['secondaryColor'] ?? '#F8F9FA',
+      opacity: (map['opacity'] ?? 1.0).toDouble(),
+      blendMode: map['blendMode'] ?? 'normal',
+      isRepeating: map['isRepeating'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type,
+      'backgroundImage': backgroundImage,
+      'primaryColor': primaryColor,
+      'secondaryColor': secondaryColor,
+      'opacity': opacity,
+      'blendMode': blendMode,
+      'isRepeating': isRepeating,
+    };
+  }
+
+  MenuBackgroundSettings copyWith({
+    String? type,
+    String? backgroundImage,
+    String? primaryColor,
+    String? secondaryColor,
+    double? opacity,
+    String? blendMode,
+    bool? isRepeating,
+  }) {
+    return MenuBackgroundSettings(
+      type: type ?? this.type,
+      backgroundImage: backgroundImage ?? this.backgroundImage,
+      primaryColor: primaryColor ?? this.primaryColor,
+      secondaryColor: secondaryColor ?? this.secondaryColor,
+      opacity: opacity ?? this.opacity,
+      blendMode: blendMode ?? this.blendMode,
+      isRepeating: isRepeating ?? this.isRepeating,
+    );
+  }
+}
+
+class MenuTypography {
+  final String fontFamily;
+  final double titleFontSize;
+  final double headingFontSize;
+  final double bodyFontSize;
+  final double captionFontSize;
+  final String titleFontWeight;
+  final String headingFontWeight;
+  final String bodyFontWeight;
+  final double lineHeight;
+  final double letterSpacing;
+
+  // Kategori Stil Ayarları
+  final double categoryFontSize;
+  final String categoryFontWeight;
+  final String categoryTextColor;
+  final String categorySelectedTextColor;
+  final bool showCategoryImages;
+  final double categoryImageSize;
+  final String categoryLayout; // 'horizontal', 'vertical', 'story'
+
+  const MenuTypography({
+    this.fontFamily = 'Poppins',
+    this.titleFontSize = 24.0,
+    this.headingFontSize = 18.0,
+    this.bodyFontSize = 14.0,
+    this.captionFontSize = 12.0,
+    this.titleFontWeight = '600',
+    this.headingFontWeight = '500',
+    this.bodyFontWeight = '400',
+    this.lineHeight = 1.4,
+    this.letterSpacing = 0.0,
+    // Kategori varsayılanları
+    this.categoryFontSize = 12.0,
+    this.categoryFontWeight = '500',
+    this.categoryTextColor = '#333333',
+    this.categorySelectedTextColor = '#FF6B35',
+    this.showCategoryImages = true,
+    this.categoryImageSize = 70.0,
+    this.categoryLayout = 'story',
+  });
+
+  factory MenuTypography.fromMap(Map<String, dynamic> map) {
+    return MenuTypography(
+      fontFamily: map['fontFamily'] ?? 'Poppins',
+      titleFontSize: (map['titleFontSize'] ?? 24.0).toDouble(),
+      headingFontSize: (map['headingFontSize'] ?? 18.0).toDouble(),
+      bodyFontSize: (map['bodyFontSize'] ?? 14.0).toDouble(),
+      captionFontSize: (map['captionFontSize'] ?? 12.0).toDouble(),
+      titleFontWeight: map['titleFontWeight'] ?? '600',
+      headingFontWeight: map['headingFontWeight'] ?? '500',
+      bodyFontWeight: map['bodyFontWeight'] ?? '400',
+      lineHeight: (map['lineHeight'] ?? 1.4).toDouble(),
+      letterSpacing: (map['letterSpacing'] ?? 0.0).toDouble(),
+      // Kategori ayarları
+      categoryFontSize: (map['categoryFontSize'] ?? 12.0).toDouble(),
+      categoryFontWeight: map['categoryFontWeight'] ?? '500',
+      categoryTextColor: map['categoryTextColor'] ?? '#333333',
+      categorySelectedTextColor: map['categorySelectedTextColor'] ?? '#FF6B35',
+      showCategoryImages: map['showCategoryImages'] ?? true,
+      categoryImageSize: (map['categoryImageSize'] ?? 70.0).toDouble(),
+      categoryLayout: map['categoryLayout'] ?? 'story',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'fontFamily': fontFamily,
+      'titleFontSize': titleFontSize,
+      'headingFontSize': headingFontSize,
+      'bodyFontSize': bodyFontSize,
+      'captionFontSize': captionFontSize,
+      'titleFontWeight': titleFontWeight,
+      'headingFontWeight': headingFontWeight,
+      'bodyFontWeight': bodyFontWeight,
+      'lineHeight': lineHeight,
+      'letterSpacing': letterSpacing,
+      // Kategori ayarları
+      'categoryFontSize': categoryFontSize,
+      'categoryFontWeight': categoryFontWeight,
+      'categoryTextColor': categoryTextColor,
+      'categorySelectedTextColor': categorySelectedTextColor,
+      'showCategoryImages': showCategoryImages,
+      'categoryImageSize': categoryImageSize,
+      'categoryLayout': categoryLayout,
+    };
+  }
+
+  MenuTypography copyWith({
+    String? fontFamily,
+    double? titleFontSize,
+    double? headingFontSize,
+    double? bodyFontSize,
+    double? captionFontSize,
+    String? titleFontWeight,
+    String? headingFontWeight,
+    String? bodyFontWeight,
+    double? lineHeight,
+    double? letterSpacing,
+    // Kategori ayarları
+    double? categoryFontSize,
+    String? categoryFontWeight,
+    String? categoryTextColor,
+    String? categorySelectedTextColor,
+    bool? showCategoryImages,
+    double? categoryImageSize,
+    String? categoryLayout,
+  }) {
+    return MenuTypography(
+      fontFamily: fontFamily ?? this.fontFamily,
+      titleFontSize: titleFontSize ?? this.titleFontSize,
+      headingFontSize: headingFontSize ?? this.headingFontSize,
+      bodyFontSize: bodyFontSize ?? this.bodyFontSize,
+      captionFontSize: captionFontSize ?? this.captionFontSize,
+      titleFontWeight: titleFontWeight ?? this.titleFontWeight,
+      headingFontWeight: headingFontWeight ?? this.headingFontWeight,
+      bodyFontWeight: bodyFontWeight ?? this.bodyFontWeight,
+      lineHeight: lineHeight ?? this.lineHeight,
+      letterSpacing: letterSpacing ?? this.letterSpacing,
+      // Kategori ayarları
+      categoryFontSize: categoryFontSize ?? this.categoryFontSize,
+      categoryFontWeight: categoryFontWeight ?? this.categoryFontWeight,
+      categoryTextColor: categoryTextColor ?? this.categoryTextColor,
+      categorySelectedTextColor:
+          categorySelectedTextColor ?? this.categorySelectedTextColor,
+      showCategoryImages: showCategoryImages ?? this.showCategoryImages,
+      categoryImageSize: categoryImageSize ?? this.categoryImageSize,
+      categoryLayout: categoryLayout ?? this.categoryLayout,
+    );
+  }
+}
+
+class MenuVisualStyle {
+  final double borderRadius;
+  final double cardElevation;
+  final bool showShadows;
+  final bool showBorders;
+  final double imageAspectRatio;
+  final String imageShape; // 'rectangle', 'rounded', 'circle'
+  final bool showImageOverlay;
+  final double imageOpacity;
+  final bool enableAnimations;
+  final bool showDividers;
+  final double buttonRadius;
+  final String buttonStyle; // 'filled', 'outlined', 'text'
+
+  const MenuVisualStyle({
+    this.borderRadius = 12.0,
+    this.cardElevation = 2.0,
+    this.showShadows = true,
+    this.showBorders = false,
+    this.imageAspectRatio = 1.5,
+    this.imageShape = 'rounded',
+    this.showImageOverlay = false,
+    this.imageOpacity = 1.0,
+    this.enableAnimations = true,
+    this.showDividers = true,
+    this.buttonRadius = 8.0,
+    this.buttonStyle = 'filled',
+  });
+
+  factory MenuVisualStyle.fromMap(Map<String, dynamic> map) {
+    return MenuVisualStyle(
+      borderRadius: (map['borderRadius'] ?? 12.0).toDouble(),
+      cardElevation: (map['cardElevation'] ?? 2.0).toDouble(),
+      showShadows: map['showShadows'] ?? true,
+      showBorders: map['showBorders'] ?? false,
+      imageAspectRatio: (map['imageAspectRatio'] ?? 1.5).toDouble(),
+      imageShape: map['imageShape'] ?? 'rounded',
+      showImageOverlay: map['showImageOverlay'] ?? false,
+      imageOpacity: (map['imageOpacity'] ?? 1.0).toDouble(),
+      enableAnimations: map['enableAnimations'] ?? true,
+      showDividers: map['showDividers'] ?? true,
+      buttonRadius: (map['buttonRadius'] ?? 8.0).toDouble(),
+      buttonStyle: map['buttonStyle'] ?? 'filled',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'borderRadius': borderRadius,
+      'cardElevation': cardElevation,
+      'showShadows': showShadows,
+      'showBorders': showBorders,
+      'imageAspectRatio': imageAspectRatio,
+      'imageShape': imageShape,
+      'showImageOverlay': showImageOverlay,
+      'imageOpacity': imageOpacity,
+      'enableAnimations': enableAnimations,
+      'showDividers': showDividers,
+      'buttonRadius': buttonRadius,
+      'buttonStyle': buttonStyle,
+    };
+  }
+
+  MenuVisualStyle copyWith({
+    double? borderRadius,
+    double? cardElevation,
+    bool? showShadows,
+    bool? showBorders,
+    double? imageAspectRatio,
+    String? imageShape,
+    bool? showImageOverlay,
+    double? imageOpacity,
+    bool? enableAnimations,
+    bool? showDividers,
+    double? buttonRadius,
+    String? buttonStyle,
+  }) {
+    return MenuVisualStyle(
+      borderRadius: borderRadius ?? this.borderRadius,
+      cardElevation: cardElevation ?? this.cardElevation,
+      showShadows: showShadows ?? this.showShadows,
+      showBorders: showBorders ?? this.showBorders,
+      imageAspectRatio: imageAspectRatio ?? this.imageAspectRatio,
+      imageShape: imageShape ?? this.imageShape,
+      showImageOverlay: showImageOverlay ?? this.showImageOverlay,
+      imageOpacity: imageOpacity ?? this.imageOpacity,
+      enableAnimations: enableAnimations ?? this.enableAnimations,
+      showDividers: showDividers ?? this.showDividers,
+      buttonRadius: buttonRadius ?? this.buttonRadius,
+      buttonStyle: buttonStyle ?? this.buttonStyle,
+    );
+  }
+}
+
+class MenuInteractionSettings {
+  final bool enableHoverEffects;
+  final bool enableClickAnimations;
+  final bool enableSwipeGestures;
+  final bool enableQuickView;
+  final bool enableFavorites;
+  final bool enableShare;
+  final bool enableZoom;
+  final double animationDuration;
+  final bool hapticFeedback;
+  final bool enableDoubleTap;
+  final bool enableLongPress;
+  final bool enableLazyLoading;
+  final bool autoRefresh;
+  final double refreshInterval;
+
+  const MenuInteractionSettings({
+    this.enableHoverEffects = true,
+    this.enableClickAnimations = true,
+    this.enableSwipeGestures = true,
+    this.enableQuickView = false,
+    this.enableFavorites = true,
+    this.enableShare = false,
+    this.enableZoom = false,
+    this.animationDuration = 300.0,
+    this.hapticFeedback = true,
+    this.enableDoubleTap = false,
+    this.enableLongPress = true,
+    this.enableLazyLoading = true,
+    this.autoRefresh = false,
+    this.refreshInterval = 30.0,
+  });
+
+  factory MenuInteractionSettings.fromMap(Map<String, dynamic> map) {
+    return MenuInteractionSettings(
+      enableHoverEffects: map['enableHoverEffects'] ?? true,
+      enableClickAnimations: map['enableClickAnimations'] ?? true,
+      enableSwipeGestures: map['enableSwipeGestures'] ?? true,
+      enableQuickView: map['enableQuickView'] ?? false,
+      enableFavorites: map['enableFavorites'] ?? true,
+      enableShare: map['enableShare'] ?? false,
+      enableZoom: map['enableZoom'] ?? false,
+      animationDuration: (map['animationDuration'] ?? 300.0).toDouble(),
+      hapticFeedback: map['hapticFeedback'] ?? true,
+      enableDoubleTap: map['enableDoubleTap'] ?? false,
+      enableLongPress: map['enableLongPress'] ?? true,
+      enableLazyLoading: map['enableLazyLoading'] ?? true,
+      autoRefresh: map['autoRefresh'] ?? false,
+      refreshInterval: (map['refreshInterval'] ?? 30.0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'enableHoverEffects': enableHoverEffects,
+      'enableClickAnimations': enableClickAnimations,
+      'enableSwipeGestures': enableSwipeGestures,
+      'enableQuickView': enableQuickView,
+      'enableFavorites': enableFavorites,
+      'enableShare': enableShare,
+      'enableZoom': enableZoom,
+      'animationDuration': animationDuration,
+      'hapticFeedback': hapticFeedback,
+      'enableDoubleTap': enableDoubleTap,
+      'enableLongPress': enableLongPress,
+      'enableLazyLoading': enableLazyLoading,
+      'autoRefresh': autoRefresh,
+      'refreshInterval': refreshInterval,
+    };
+  }
+
+  MenuInteractionSettings copyWith({
+    bool? enableHoverEffects,
+    bool? enableClickAnimations,
+    bool? enableSwipeGestures,
+    bool? enableQuickView,
+    bool? enableFavorites,
+    bool? enableShare,
+    bool? enableZoom,
+    double? animationDuration,
+    bool? hapticFeedback,
+    bool? enableDoubleTap,
+    bool? enableLongPress,
+    bool? enableLazyLoading,
+    bool? autoRefresh,
+    double? refreshInterval,
+  }) {
+    return MenuInteractionSettings(
+      enableHoverEffects: enableHoverEffects ?? this.enableHoverEffects,
+      enableClickAnimations:
+          enableClickAnimations ?? this.enableClickAnimations,
+      enableSwipeGestures: enableSwipeGestures ?? this.enableSwipeGestures,
+      enableQuickView: enableQuickView ?? this.enableQuickView,
+      enableFavorites: enableFavorites ?? this.enableFavorites,
+      enableShare: enableShare ?? this.enableShare,
+      enableZoom: enableZoom ?? this.enableZoom,
+      animationDuration: animationDuration ?? this.animationDuration,
+      hapticFeedback: hapticFeedback ?? this.hapticFeedback,
+      enableDoubleTap: enableDoubleTap ?? this.enableDoubleTap,
+      enableLongPress: enableLongPress ?? this.enableLongPress,
+      enableLazyLoading: enableLazyLoading ?? this.enableLazyLoading,
+      autoRefresh: autoRefresh ?? this.autoRefresh,
+      refreshInterval: refreshInterval ?? this.refreshInterval,
+    );
+  }
+}
+
+// =============================================================================
 // MENU SETTINGS MODEL
 // =============================================================================
 
@@ -592,19 +1413,15 @@ class MenuSettings {
   final bool enableTableService;
   final bool enableDelivery;
   final bool enableTakeaway;
-  
-  // UI/Theme properties
-  final String theme;
-  final String primaryColor;
-  final String fontFamily;
-  final double fontSize;
-  final double imageSize;
-  final bool showCategories;
-  final bool showRatings;
-  final String layoutStyle;
-  final bool showNutritionInfo;
-  final bool showBadges;
-  final bool showAvailability;
+
+  // Gelişmiş Tasarım Ayarları
+  final MenuDesignTheme designTheme;
+  final MenuLayoutStyle layoutStyle;
+  final MenuColorScheme colorScheme;
+  final MenuBackgroundSettings backgroundSettings;
+  final MenuTypography typography;
+  final MenuVisualStyle visualStyle;
+  final MenuInteractionSettings interactionSettings;
   final Map<String, String>? workingHours;
 
   MenuSettings({
@@ -622,19 +1439,23 @@ class MenuSettings {
     this.enableTableService = true,
     this.enableDelivery = false,
     this.enableTakeaway = true,
-    this.theme = 'light',
-    this.primaryColor = '#FF6B35',
-    this.fontFamily = 'Roboto',
-    this.fontSize = 14.0,
-    this.imageSize = 120.0,
-    this.showCategories = true,
-    this.showRatings = true,
-    this.layoutStyle = 'grid',
-    this.showNutritionInfo = false,
-    this.showBadges = true,
-    this.showAvailability = true,
+    MenuDesignTheme? designTheme,
+    MenuLayoutStyle? layoutStyle,
+    MenuColorScheme? colorScheme,
+    MenuBackgroundSettings? backgroundSettings,
+    MenuTypography? typography,
+    MenuVisualStyle? visualStyle,
+    MenuInteractionSettings? interactionSettings,
     this.workingHours,
-  });
+  })  : designTheme = designTheme ?? MenuDesignTheme.modern(),
+        layoutStyle = layoutStyle ?? const MenuLayoutStyle(),
+        colorScheme = colorScheme ?? const MenuColorScheme(),
+        backgroundSettings =
+            backgroundSettings ?? const MenuBackgroundSettings(),
+        typography = typography ?? const MenuTypography(),
+        visualStyle = visualStyle ?? const MenuVisualStyle(),
+        interactionSettings =
+            interactionSettings ?? const MenuInteractionSettings();
 
   factory MenuSettings.defaultRestaurant() {
     return MenuSettings(
@@ -645,7 +1466,15 @@ class MenuSettings {
       showNutritionalInfo: false,
       currency: 'TRY',
       language: 'tr',
-      allergens: ['gluten', 'lactose', 'nuts', 'eggs', 'fish', 'shellfish', 'soy'],
+      allergens: [
+        'gluten',
+        'lactose',
+        'nuts',
+        'eggs',
+        'fish',
+        'shellfish',
+        'soy'
+      ],
       allergenTranslations: {
         'gluten': 'Gluten',
         'lactose': 'Laktoz',
@@ -660,17 +1489,12 @@ class MenuSettings {
       enableTableService: true,
       enableDelivery: false,
       enableTakeaway: true,
-      theme: 'light',
-      primaryColor: '#FF6B35',
-      fontFamily: 'Roboto',
-      fontSize: 14.0,
-      imageSize: 120.0,
-      showCategories: true,
-      showRatings: true,
-      layoutStyle: 'grid',
-      showNutritionInfo: false,
-      showBadges: true,
-      showAvailability: true,
+      designTheme: MenuDesignTheme.modern(),
+      layoutStyle: const MenuLayoutStyle(layoutType: MenuLayoutType.grid),
+      colorScheme: const MenuColorScheme(primaryColor: '#FF6B35'),
+      typography: const MenuTypography(fontFamily: 'Poppins'),
+      visualStyle: const MenuVisualStyle(),
+      interactionSettings: const MenuInteractionSettings(),
     );
   }
 
@@ -692,17 +1516,12 @@ class MenuSettings {
       enableTableService: true,
       enableDelivery: false,
       enableTakeaway: true,
-      theme: 'light',
-      primaryColor: '#8B4513',
-      fontFamily: 'Roboto',
-      fontSize: 14.0,
-      imageSize: 100.0,
-      showCategories: true,
-      showRatings: true,
-      layoutStyle: 'list',
-      showNutritionInfo: false,
-      showBadges: true,
-      showAvailability: true,
+      designTheme: MenuDesignTheme.classic(),
+      layoutStyle: const MenuLayoutStyle(layoutType: MenuLayoutType.list),
+      colorScheme: const MenuColorScheme(primaryColor: '#8B4513'),
+      typography: const MenuTypography(fontFamily: 'Poppins'),
+      visualStyle: const MenuVisualStyle(),
+      interactionSettings: const MenuInteractionSettings(),
     );
   }
 
@@ -711,6 +1530,18 @@ class MenuSettings {
   }
 
   factory MenuSettings.fromMap(Map<String, dynamic> map) {
+    // Legacy data detection - eski format'ı detect et
+    bool isLegacyFormat = map.containsKey('theme') ||
+        map.containsKey('primaryColor') ||
+        map.containsKey('fontSize') ||
+        !map.containsKey('designTheme');
+
+    if (isLegacyFormat) {
+      // Eski format'ı yeni format'a dönüştür
+      return _fromLegacyMap(map);
+    }
+
+    // Yeni format - normal parsing
     return MenuSettings(
       showPrices: map['showPrices'] ?? true,
       showDescriptions: map['showDescriptions'] ?? true,
@@ -720,24 +1551,34 @@ class MenuSettings {
       currency: map['currency'] ?? 'TRY',
       language: map['language'] ?? 'tr',
       allergens: List<String>.from(map['allergens'] ?? []),
-      allergenTranslations: Map<String, String>.from(map['allergenTranslations'] ?? {}),
+      allergenTranslations: _parseStringMap(map['allergenTranslations']),
       enableQRCode: map['enableQRCode'] ?? true,
       enableOnlineOrdering: map['enableOnlineOrdering'] ?? true,
       enableTableService: map['enableTableService'] ?? true,
       enableDelivery: map['enableDelivery'] ?? false,
       enableTakeaway: map['enableTakeaway'] ?? true,
-      theme: map['theme'] ?? 'light',
-      primaryColor: map['primaryColor'] ?? '#FF6B35',
-      fontFamily: map['fontFamily'] ?? 'Roboto',
-      fontSize: (map['fontSize'] ?? 14.0).toDouble(),
-      imageSize: (map['imageSize'] ?? 120.0).toDouble(),
-      showCategories: map['showCategories'] ?? true,
-      showRatings: map['showRatings'] ?? true,
-      layoutStyle: map['layoutStyle'] ?? 'grid',
-      showNutritionInfo: map['showNutritionInfo'] ?? false,
-      showBadges: map['showBadges'] ?? true,
-      showAvailability: map['showAvailability'] ?? true,
-      workingHours: map['workingHours'] != null ? Map<String, String>.from(map['workingHours']) : null,
+      designTheme: map['designTheme'] != null
+          ? MenuDesignTheme.fromMap(map['designTheme'])
+          : MenuDesignTheme.modern(),
+      layoutStyle: map['layoutStyle'] != null
+          ? MenuLayoutStyle.fromMap(map['layoutStyle'])
+          : const MenuLayoutStyle(),
+      colorScheme: map['colorScheme'] != null
+          ? MenuColorScheme.fromMap(map['colorScheme'])
+          : const MenuColorScheme(),
+      backgroundSettings: map['backgroundSettings'] != null
+          ? MenuBackgroundSettings.fromMap(map['backgroundSettings'])
+          : const MenuBackgroundSettings(),
+      typography: map['typography'] != null
+          ? MenuTypography.fromMap(map['typography'])
+          : const MenuTypography(),
+      visualStyle: map['visualStyle'] != null
+          ? MenuVisualStyle.fromMap(map['visualStyle'])
+          : const MenuVisualStyle(),
+      interactionSettings: map['interactionSettings'] != null
+          ? MenuInteractionSettings.fromMap(map['interactionSettings'])
+          : const MenuInteractionSettings(),
+      workingHours: _parseStringMap(map['workingHours']),
     );
   }
 
@@ -757,17 +1598,13 @@ class MenuSettings {
       'enableTableService': enableTableService,
       'enableDelivery': enableDelivery,
       'enableTakeaway': enableTakeaway,
-      'theme': theme,
-      'primaryColor': primaryColor,
-      'fontFamily': fontFamily,
-      'fontSize': fontSize,
-      'imageSize': imageSize,
-      'showCategories': showCategories,
-      'showRatings': showRatings,
-      'layoutStyle': layoutStyle,
-      'showNutritionInfo': showNutritionInfo,
-      'showBadges': showBadges,
-      'showAvailability': showAvailability,
+      'designTheme': designTheme.toMap(),
+      'layoutStyle': layoutStyle.toMap(),
+      'colorScheme': colorScheme.toMap(),
+      'backgroundSettings': backgroundSettings.toMap(),
+      'typography': typography.toMap(),
+      'visualStyle': visualStyle.toMap(),
+      'interactionSettings': interactionSettings.toMap(),
       'workingHours': workingHours,
     };
   }
@@ -787,17 +1624,13 @@ class MenuSettings {
     bool? enableTableService,
     bool? enableDelivery,
     bool? enableTakeaway,
-    String? theme,
-    String? primaryColor,
-    String? fontFamily,
-    double? fontSize,
-    double? imageSize,
-    bool? showCategories,
-    bool? showRatings,
-    String? layoutStyle,
-    bool? showNutritionInfo,
-    bool? showBadges,
-    bool? showAvailability,
+    MenuDesignTheme? designTheme,
+    MenuLayoutStyle? layoutStyle,
+    MenuColorScheme? colorScheme,
+    MenuBackgroundSettings? backgroundSettings,
+    MenuTypography? typography,
+    MenuVisualStyle? visualStyle,
+    MenuInteractionSettings? interactionSettings,
     Map<String, String>? workingHours,
   }) {
     return MenuSettings(
@@ -815,19 +1648,119 @@ class MenuSettings {
       enableTableService: enableTableService ?? this.enableTableService,
       enableDelivery: enableDelivery ?? this.enableDelivery,
       enableTakeaway: enableTakeaway ?? this.enableTakeaway,
-      theme: theme ?? this.theme,
-      primaryColor: primaryColor ?? this.primaryColor,
-      fontFamily: fontFamily ?? this.fontFamily,
-      fontSize: fontSize ?? this.fontSize,
-      imageSize: imageSize ?? this.imageSize,
-      showCategories: showCategories ?? this.showCategories,
-      showRatings: showRatings ?? this.showRatings,
+      designTheme: designTheme ?? this.designTheme,
       layoutStyle: layoutStyle ?? this.layoutStyle,
-      showNutritionInfo: showNutritionInfo ?? this.showNutritionInfo,
-      showBadges: showBadges ?? this.showBadges,
-      showAvailability: showAvailability ?? this.showAvailability,
+      colorScheme: colorScheme ?? this.colorScheme,
+      backgroundSettings: backgroundSettings ?? this.backgroundSettings,
+      typography: typography ?? this.typography,
+      visualStyle: visualStyle ?? this.visualStyle,
+      interactionSettings: interactionSettings ?? this.interactionSettings,
       workingHours: workingHours ?? this.workingHours,
     );
+  }
+
+  /// Eski format'tan yeni format'a dönüştürme
+  static MenuSettings _fromLegacyMap(Map<String, dynamic> map) {
+    // Eski format'taki alanları yeni format'a map et
+    String primaryColor = map['primaryColor'] ?? '#FF6B35';
+    String theme = map['theme'] ?? 'modern';
+    String fontFamily = map['fontFamily'] ?? 'Poppins';
+    String layoutStyle = map['layoutStyle'] ?? 'grid';
+
+    // Legacy theme'i yeni MenuThemeType'a map et
+    MenuThemeType themeType = MenuThemeType.modern;
+    switch (theme.toLowerCase()) {
+      case 'classic':
+        themeType = MenuThemeType.classic;
+        break;
+      case 'grid':
+        themeType = MenuThemeType.grid;
+        break;
+      case 'magazine':
+        themeType = MenuThemeType.magazine;
+        break;
+      default:
+        themeType = MenuThemeType.modern;
+        break;
+    }
+
+    // Legacy layout'u yeni MenuLayoutType'a map et
+    MenuLayoutType layout = MenuLayoutType.grid;
+    switch (layoutStyle.toLowerCase()) {
+      case 'list':
+        layout = MenuLayoutType.list;
+        break;
+      case 'card':
+      case 'grid':
+        layout = MenuLayoutType.grid;
+        break;
+      case 'masonry':
+        layout = MenuLayoutType.masonry;
+        break;
+      case 'carousel':
+        layout = MenuLayoutType.carousel;
+        break;
+      default:
+        layout = MenuLayoutType.grid;
+        break;
+    }
+
+    return MenuSettings(
+      showPrices: map['showPrices'] ?? true,
+      showDescriptions: map['showDescriptions'] ?? true,
+      showImages: map['showImages'] ?? true,
+      showAllergens: map['showAllergens'] ?? true,
+      showNutritionalInfo:
+          map['showNutritionalInfo'] ?? map['showNutritionInfo'] ?? false,
+      currency: map['currency'] ?? 'TRY',
+      language: map['language'] ?? 'tr',
+      allergens: List<String>.from(map['allergens'] ?? []),
+      allergenTranslations: _parseStringMap(map['allergenTranslations']),
+      enableQRCode: map['enableQRCode'] ?? true,
+      enableOnlineOrdering: map['enableOnlineOrdering'] ?? true,
+      enableTableService: map['enableTableService'] ?? true,
+      enableDelivery: map['enableDelivery'] ?? false,
+      enableTakeaway: map['enableTakeaway'] ?? true,
+      // Eski alanlardan yeni nested objects oluştur
+      designTheme: MenuDesignTheme(
+        themeType: themeType,
+        name: themeType.displayName,
+        description: themeType.description,
+      ),
+      layoutStyle: MenuLayoutStyle(
+        layoutType: layout,
+        columnsCount: layout == MenuLayoutType.grid ? 2 : 1,
+      ),
+      colorScheme: MenuColorScheme(
+        primaryColor: primaryColor,
+      ),
+      typography: MenuTypography(
+        fontFamily: fontFamily,
+        titleFontSize: (map['fontSize'] ?? 16).toDouble() + 8,
+        headingFontSize: (map['fontSize'] ?? 16).toDouble() + 2,
+        bodyFontSize: (map['fontSize'] ?? 16).toDouble(),
+      ),
+      visualStyle: const MenuVisualStyle(),
+      interactionSettings: const MenuInteractionSettings(),
+      workingHours: _parseStringMap(map['workingHours']),
+    );
+  }
+
+  /// String Map'i parse eder (String, Map veya null olabilir)
+  static Map<String, String> _parseStringMap(dynamic stringMap) {
+    if (stringMap == null) return {};
+
+    if (stringMap is Map<String, String>) {
+      return stringMap;
+    } else if (stringMap is Map) {
+      // Map ama String, String değil - dönüştür
+      return Map<String, String>.from(stringMap);
+    } else if (stringMap is String) {
+      // String ise boş Map döndür (geçersiz format)
+      return {};
+    } else {
+      return {}; // Fallback
+    }
   }
 }
 
@@ -921,19 +1854,52 @@ class BusinessSettings {
       deliveryFee: (map['deliveryFee'] ?? 0.0).toDouble(),
       maxDeliveryDistance: (map['maxDeliveryDistance'] ?? 10.0).toDouble(),
       estimatedPreparationTime: map['estimatedPreparationTime'] ?? 30,
-      acceptedPaymentMethods: List<String>.from(map['acceptedPaymentMethods'] ?? ['cash', 'card']),
+      acceptedPaymentMethods:
+          _parsePaymentMethods(map['acceptedPaymentMethods']),
       currency: map['currency'] ?? 'TRY',
       language: map['language'] ?? 'tr',
       enableNotifications: map['enableNotifications'] ?? true,
       enableAnalytics: map['enableAnalytics'] ?? true,
       enableReviews: map['enableReviews'] ?? true,
       enableLoyaltyProgram: map['enableLoyaltyProgram'] ?? false,
-      customSettings: map['customSettings'] != null ? Map<String, dynamic>.from(map['customSettings']) : null,
+      customSettings: _parseCustomSettings(map['customSettings']),
     );
   }
 
   // Alias for fromMap to match the expected method name
-  factory BusinessSettings.fromJson(Map<String, dynamic> json) => BusinessSettings.fromMap(json);
+  factory BusinessSettings.fromJson(Map<String, dynamic> json) =>
+      BusinessSettings.fromMap(json);
+
+  /// Ödeme methodlarını parse eder (String veya List<String> olabilir)
+  static List<String> _parsePaymentMethods(dynamic methods) {
+    if (methods == null) return ['cash', 'card'];
+
+    if (methods is List) {
+      return methods.map((e) => e.toString()).toList();
+    } else if (methods is String) {
+      // Tek string ise liste haline getir
+      return [methods];
+    } else {
+      return ['cash', 'card']; // Fallback
+    }
+  }
+
+  /// Custom settings'i parse eder (String, Map veya null olabilir)
+  static Map<String, dynamic>? _parseCustomSettings(dynamic settings) {
+    if (settings == null) return null;
+
+    if (settings is Map<String, dynamic>) {
+      return settings;
+    } else if (settings is Map) {
+      // Map ama String, dynamic değil - dönüştür
+      return Map<String, dynamic>.from(settings);
+    } else if (settings is String) {
+      // String ise null döndür (geçersiz format)
+      return null;
+    } else {
+      return null; // Fallback
+    }
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -978,12 +1944,15 @@ class BusinessSettings {
     return BusinessSettings(
       isOpen: isOpen ?? this.isOpen,
       autoAcceptOrders: autoAcceptOrders ?? this.autoAcceptOrders,
-      requirePaymentConfirmation: requirePaymentConfirmation ?? this.requirePaymentConfirmation,
+      requirePaymentConfirmation:
+          requirePaymentConfirmation ?? this.requirePaymentConfirmation,
       minimumOrderAmount: minimumOrderAmount ?? this.minimumOrderAmount,
       deliveryFee: deliveryFee ?? this.deliveryFee,
       maxDeliveryDistance: maxDeliveryDistance ?? this.maxDeliveryDistance,
-      estimatedPreparationTime: estimatedPreparationTime ?? this.estimatedPreparationTime,
-      acceptedPaymentMethods: acceptedPaymentMethods ?? this.acceptedPaymentMethods,
+      estimatedPreparationTime:
+          estimatedPreparationTime ?? this.estimatedPreparationTime,
+      acceptedPaymentMethods:
+          acceptedPaymentMethods ?? this.acceptedPaymentMethods,
       currency: currency ?? this.currency,
       language: language ?? this.language,
       enableNotifications: enableNotifications ?? this.enableNotifications,
@@ -1043,8 +2012,12 @@ class BusinessStats {
       totalCustomers: map['totalCustomers'] ?? 0,
       averageRating: (map['averageRating'] ?? 0.0).toDouble(),
       totalReviews: map['totalReviews'] ?? 0,
-      lastOrderAt: map['lastOrderAt'] != null ? DateTime.parse(map['lastOrderAt']) : null,
-      firstOrderAt: map['firstOrderAt'] != null ? DateTime.parse(map['firstOrderAt']) : null,
+      lastOrderAt: map['lastOrderAt'] != null
+          ? DateTime.parse(map['lastOrderAt'])
+          : null,
+      firstOrderAt: map['firstOrderAt'] != null
+          ? DateTime.parse(map['firstOrderAt'])
+          : null,
       ordersByDay: Map<String, int>.from(map['ordersByDay'] ?? {}),
       revenueByDay: Map<String, double>.from(map['revenueByDay'] ?? {}),
       popularProducts: Map<String, int>.from(map['popularProducts'] ?? {}),
@@ -1053,7 +2026,8 @@ class BusinessStats {
   }
 
   // Alias for fromMap to match the expected method name
-  factory BusinessStats.fromJson(Map<String, dynamic> json) => BusinessStats.fromMap(json);
+  factory BusinessStats.fromJson(Map<String, dynamic> json) =>
+      BusinessStats.fromMap(json);
 
   Map<String, dynamic> toMap() {
     return {

@@ -560,6 +560,7 @@ class CustomerFirestoreService {
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
           .where('businessId', isEqualTo: businessId)
+          .orderBy('sortOrder') // Firestore'dan sortOrder'a göre sıralı al
           .get();
 
       return snapshot.docs
@@ -581,6 +582,167 @@ class CustomerFirestoreService {
       {};
   final Map<String, List<Function(List<app_order.Order>)>>
       _customerOrderListeners = {};
+
+  // =============================================================================
+  // REAL-TIME BUSINESS DATA LISTENERS
+  // =============================================================================
+
+  final Map<String, StreamSubscription<DocumentSnapshot>?> _businessStreams =
+      {};
+  final Map<String, List<Function(Business?)>> _businessListeners = {};
+
+  final Map<String, StreamSubscription<QuerySnapshot>?> _categoriesStreams = {};
+  final Map<String, List<Function(List<Category>)>> _categoriesListeners = {};
+
+  final Map<String, StreamSubscription<QuerySnapshot>?> _productsStreams = {};
+  final Map<String, List<Function(List<Product>)>> _productsListeners = {};
+
+  /// Starts listening to real-time business data updates
+  void startBusinessDataListener(
+    String businessId, {
+    Function(Business?)? onBusinessUpdated,
+    Function(List<Category>)? onCategoriesUpdated,
+    Function(List<Product>)? onProductsUpdated,
+  }) {
+    // Start business data stream
+    if (onBusinessUpdated != null) {
+      _startBusinessStream(businessId, onBusinessUpdated);
+    }
+
+    // Start categories stream
+    if (onCategoriesUpdated != null) {
+      _startCategoriesStream(businessId, onCategoriesUpdated);
+    }
+
+    // Start products stream
+    if (onProductsUpdated != null) {
+      _startProductsStream(businessId, onProductsUpdated);
+    }
+  }
+
+  /// Stops all business data listeners
+  void stopBusinessDataListener(String businessId) {
+    _stopBusinessStream(businessId);
+    _stopCategoriesStream(businessId);
+    _stopProductsStream(businessId);
+  }
+
+  void _startBusinessStream(
+      String businessId, Function(Business?) onBusinessUpdated) {
+    _businessStreams[businessId]?.cancel();
+
+    final stream = _businessesRef.doc(businessId).snapshots();
+
+    _businessStreams[businessId] = stream.listen((snapshot) {
+      Business? business;
+      if (snapshot.exists) {
+        business = Business.fromJson({
+          ...snapshot.data() as Map<String, dynamic>,
+          'id': snapshot.id,
+        });
+      }
+
+      onBusinessUpdated(business);
+
+      // Notify other listeners
+      final listeners = _businessListeners[businessId] ?? [];
+      for (final listener in listeners) {
+        listener(business);
+      }
+    });
+
+    // Add to listeners list
+    _businessListeners[businessId] = _businessListeners[businessId] ?? [];
+    _businessListeners[businessId]!.add(onBusinessUpdated);
+  }
+
+  void _startCategoriesStream(
+      String businessId, Function(List<Category>) onCategoriesUpdated) {
+    _categoriesStreams[businessId]?.cancel();
+
+    final stream = _categoriesRef
+        .where('businessId', isEqualTo: businessId)
+        .where('isActive', isEqualTo: true)
+        .orderBy('sortOrder')
+        .snapshots();
+
+    _categoriesStreams[businessId] = stream.listen((snapshot) {
+      final categories = snapshot.docs
+          .map((doc) => Category.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }))
+          .toList();
+
+      onCategoriesUpdated(categories);
+
+      // Notify other listeners
+      final listeners = _categoriesListeners[businessId] ?? [];
+      for (final listener in listeners) {
+        listener(categories);
+      }
+    });
+
+    // Add to listeners list
+    _categoriesListeners[businessId] = _categoriesListeners[businessId] ?? [];
+    _categoriesListeners[businessId]!.add(onCategoriesUpdated);
+  }
+
+  void _startProductsStream(
+      String businessId, Function(List<Product>) onProductsUpdated) {
+    _productsStreams[businessId]?.cancel();
+
+    final stream =
+        _productsRef.where('businessId', isEqualTo: businessId).snapshots();
+
+    _productsStreams[businessId] = stream.listen((snapshot) {
+      // Client-side filtering ve sorting
+      final allProducts = snapshot.docs
+          .map((doc) => Product.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }))
+          .toList();
+
+      // Filter for active and available products
+      final activeProducts = allProducts
+          .where((product) => product.isActive && product.isAvailable)
+          .toList();
+
+      // Sort by sortOrder
+      activeProducts.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+      onProductsUpdated(activeProducts);
+
+      // Notify other listeners
+      final listeners = _productsListeners[businessId] ?? [];
+      for (final listener in listeners) {
+        listener(activeProducts);
+      }
+    });
+
+    // Add to listeners list
+    _productsListeners[businessId] = _productsListeners[businessId] ?? [];
+    _productsListeners[businessId]!.add(onProductsUpdated);
+  }
+
+  void _stopBusinessStream(String businessId) {
+    _businessStreams[businessId]?.cancel();
+    _businessStreams.remove(businessId);
+    _businessListeners.remove(businessId);
+  }
+
+  void _stopCategoriesStream(String businessId) {
+    _categoriesStreams[businessId]?.cancel();
+    _categoriesStreams.remove(businessId);
+    _categoriesListeners.remove(businessId);
+  }
+
+  void _stopProductsStream(String businessId) {
+    _productsStreams[businessId]?.cancel();
+    _productsStreams.remove(businessId);
+    _productsListeners.remove(businessId);
+  }
 
   /// Starts listening to real-time order updates for a customer
   void startCustomerOrderListener(

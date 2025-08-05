@@ -3,13 +3,10 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/url_service.dart';
-import '../../../data/models/user.dart' hide UserType;
-import '../../../core/enums/user_type.dart';
 import 'login_page.dart';
 import 'business_register_page.dart';
 import 'register_page.dart';
 import '../../../business/pages/business_login_page.dart';
-import '../../../customer/pages/qr_menu_page.dart';
 import '../../../shared/pages/universal_qr_menu_page.dart';
 
 class RouterPage extends StatefulWidget {

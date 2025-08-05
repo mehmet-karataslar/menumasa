@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/mixins/url_mixin.dart';
-import '../../../data/models/user.dart';
+
 import '../../widgets/shared/loading_indicator.dart';
-import '../../widgets/shared/error_message.dart';
+
 
 class LoginPage extends StatefulWidget {
   final String userType; // 'customer' or 'business'

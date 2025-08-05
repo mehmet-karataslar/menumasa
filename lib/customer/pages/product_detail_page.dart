@@ -34,10 +34,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   DetailedNutritionInfo? _nutritionInfo;
   AllergenProfile? _allergenProfile;
   ProductSafetyResult? _safetyResult;
-  
+
   final CartService _cartService = CartService();
   final AuthService _authService = AuthService();
-  final CustomerFirestoreService _customerFirestoreService = CustomerFirestoreService();
+  final CustomerFirestoreService _customerFirestoreService =
+      CustomerFirestoreService();
 
   // Animation controllers
   late AnimationController _fadeAnimationController;
@@ -50,7 +51,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   @override
   void initState() {
     super.initState();
-    
+
     _fadeAnimationController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
@@ -65,21 +66,24 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _fadeAnimationController, curve: Curves.easeInOut),
     );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(
+        parent: _slideAnimationController, curve: Curves.easeOutCubic));
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleAnimationController, curve: Curves.elasticOut),
+      CurvedAnimation(
+          parent: _scaleAnimationController, curve: Curves.elasticOut),
     );
 
     // Start animations
     _fadeAnimationController.forward();
     _slideAnimationController.forward();
     _scaleAnimationController.forward();
-    
+
     // Load nutrition and allergen data
     _loadNutritionData();
   }
@@ -161,7 +165,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           ),
           child: IconButton(
             icon: Icon(
-              _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              _isFavorite
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
               color: _isFavorite ? AppColors.accent : AppColors.white,
             ),
             onPressed: _onFavoritePressed,
@@ -241,7 +247,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         if (loadingProgress == null) return child;
                         return Center(
                           child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary),
                           ),
                         );
                       },
@@ -281,7 +288,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   width: isActive ? 24 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: isActive ? AppColors.white : AppColors.white.withOpacity(0.5),
+                    color: isActive
+                        ? AppColors.white
+                        : AppColors.white.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -453,13 +462,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           _buildModernBadge('YENİ', AppColors.success, Icons.fiber_new_rounded),
         const SizedBox(height: 8),
         if (widget.product.tags.contains('popular'))
-          _buildModernBadge('POPÜLER', AppColors.warning, Icons.trending_up_rounded),
+          _buildModernBadge(
+              'POPÜLER', AppColors.warning, Icons.trending_up_rounded),
         const SizedBox(height: 8),
         if (widget.product.tags.contains('vegetarian'))
           _buildModernBadge('VEJETARYeN', AppColors.info, Icons.eco_rounded),
         const SizedBox(height: 8),
         if (widget.product.tags.contains('spicy'))
-          _buildModernBadge('ACILI', AppColors.accent, Icons.local_fire_department_rounded),
+          _buildModernBadge(
+              'ACILI', AppColors.accent, Icons.local_fire_department_rounded),
       ],
     );
   }
@@ -490,16 +501,17 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   }
 
   Widget _buildModernPriceSection() {
-    final hasDiscount = widget.product.discountPercentage > 0;
-    final discountedPrice = hasDiscount
-        ? widget.product.price * (1 - widget.product.discountPercentage / 100)
-        : widget.product.price;
+    final hasDiscount = false; // Tek fiyat sistemi - discount kaldırıldı
+    final discountedPrice = widget.product.price;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary.withOpacity(0.1), AppColors.primaryLight.withOpacity(0.05)],
+          colors: [
+            AppColors.primary.withOpacity(0.1),
+            AppColors.primaryLight.withOpacity(0.05)
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -527,47 +539,16 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    
+
                     // Original price (if discounted)
-                    if (hasDiscount) ...[
-                      const SizedBox(width: 12),
-                      Text(
-                        '${widget.product.price.toStringAsFixed(2)} ₺',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                    ],
+                    // Tek fiyat sistemi - orijinal fiyat kaldırıldı
                   ],
                 ),
               ],
             ),
           ),
-          
-          // Discount badge
-          if (hasDiscount)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accent.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Text(
-                '%${widget.product.discountPercentage.toInt()} İNDİRİM',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+
+          // Tek fiyat sistemi - discount badge kaldırıldı
         ],
       ),
     );
@@ -624,7 +605,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   Widget _buildModernNutritionAndAllergens() {
     final hasNutrition = widget.product.nutritionInfo != null;
     final hasAllergens = widget.product.allergens.isNotEmpty;
-    
+
     if (!hasNutrition && !hasAllergens) return const SizedBox.shrink();
 
     return Container(
@@ -646,7 +627,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
   Widget _buildModernNutritionCard() {
     final nutrition = widget.product.nutritionInfo!;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -726,7 +707,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     );
   }
 
-  Widget _buildModernNutritionRow(String label, String value, IconData icon, Color color) {
+  Widget _buildModernNutritionRow(
+      String label, String value, IconData icon, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -818,11 +800,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   runSpacing: 12,
                   children: widget.product.allergens.map((allergen) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: AppColors.error.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                        border:
+                            Border.all(color: AppColors.error.withOpacity(0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -857,19 +841,39 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     final features = <Map<String, dynamic>>[];
 
     if (widget.product.tags.contains('vegetarian')) {
-      features.add({'name': 'Vejetaryen', 'icon': Icons.eco_rounded, 'color': AppColors.success});
+      features.add({
+        'name': 'Vejetaryen',
+        'icon': Icons.eco_rounded,
+        'color': AppColors.success
+      });
     }
     if (widget.product.tags.contains('vegan')) {
-      features.add({'name': 'Vegan', 'icon': Icons.nature_rounded, 'color': AppColors.success});
+      features.add({
+        'name': 'Vegan',
+        'icon': Icons.nature_rounded,
+        'color': AppColors.success
+      });
     }
     if (widget.product.tags.contains('spicy')) {
-      features.add({'name': 'Acılı', 'icon': Icons.local_fire_department_rounded, 'color': AppColors.accent});
+      features.add({
+        'name': 'Acılı',
+        'icon': Icons.local_fire_department_rounded,
+        'color': AppColors.accent
+      });
     }
     if (widget.product.tags.contains('gluten-free')) {
-      features.add({'name': 'Glütensiz', 'icon': Icons.no_meals_rounded, 'color': AppColors.info});
+      features.add({
+        'name': 'Glütensiz',
+        'icon': Icons.no_meals_rounded,
+        'color': AppColors.info
+      });
     }
     if (widget.product.tags.contains('organic')) {
-      features.add({'name': 'Organik', 'icon': Icons.spa_rounded, 'color': AppColors.primary});
+      features.add({
+        'name': 'Organik',
+        'icon': Icons.spa_rounded,
+        'color': AppColors.primary
+      });
     }
 
     if (features.isEmpty) return const SizedBox.shrink();
@@ -914,11 +918,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             runSpacing: 12,
             children: features.map((feature) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: (feature['color'] as Color).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: (feature['color'] as Color).withOpacity(0.3)),
+                  border: Border.all(
+                      color: (feature['color'] as Color).withOpacity(0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -953,13 +959,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
-                 boxShadow: [
-           BoxShadow(
-             color: AppColors.shadow.withOpacity(0.08),
-             blurRadius: 12,
-             offset: const Offset(0, 4),
-           ),
-         ],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1023,9 +1029,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.greyLight,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 gradient: LinearGradient(
-                  colors: [AppColors.primary.withOpacity(0.1), AppColors.primaryLight.withOpacity(0.05)],
+                  colors: [
+                    AppColors.primary.withOpacity(0.1),
+                    AppColors.primaryLight.withOpacity(0.05)
+                  ],
                 ),
               ),
               child: Center(
@@ -1167,12 +1177,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: onPressed != null ? AppColors.primary.withOpacity(0.1) : AppColors.greyLight,
+            color: onPressed != null
+                ? AppColors.primary.withOpacity(0.1)
+                : AppColors.greyLight,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: onPressed != null ? AppColors.primary : AppColors.textSecondary,
+            color:
+                onPressed != null ? AppColors.primary : AppColors.textSecondary,
             size: 20,
           ),
         ),
@@ -1182,13 +1195,14 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
   Widget _buildModernAddToCartButton() {
     final isAvailable = widget.product.isAvailable;
-    
+
     return ScaleTransition(
       scale: _scaleAnimation,
       child: ElevatedButton(
         onPressed: isAvailable && !_isLoading ? _addToCart : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isAvailable ? AppColors.primary : AppColors.greyLight,
+          backgroundColor:
+              isAvailable ? AppColors.primary : AppColors.greyLight,
           foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
@@ -1242,10 +1256,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   }
 
   double _getTotalPrice() {
-    final hasDiscount = widget.product.discountPercentage > 0;
-    final unitPrice = hasDiscount
-        ? widget.product.price * (1 - widget.product.discountPercentage / 100)
-        : widget.product.price;
+    final hasDiscount = false; // Tek fiyat sistemi - discount kaldırıldı
+    final unitPrice = widget.product.price;
     return unitPrice * _quantity;
   }
 
@@ -1297,7 +1309,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
             action: SnackBarAction(
               label: 'Sepete Git',
@@ -1335,7 +1348,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -1366,20 +1380,24 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     setState(() {
       _isFavorite = !_isFavorite;
     });
-    
+
     HapticFeedback.mediumImpact();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(
-              _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              _isFavorite
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
               color: AppColors.white,
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(_isFavorite ? 'Favorilere eklendi!' : 'Favorilerden çıkarıldı!'),
+              child: Text(_isFavorite
+                  ? 'Favorilere eklendi!'
+                  : 'Favorilerden çıkarıldı!'),
             ),
           ],
         ),
@@ -1398,16 +1416,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   Future<void> _loadNutritionData() async {
     try {
       // Detaylı beslenme bilgilerini yükle
-      final nutritionInfo = await _customerFirestoreService.getDetailedNutritionInfo(widget.product.productId);
-      
+      final nutritionInfo = await _customerFirestoreService
+          .getDetailedNutritionInfo(widget.product.productId);
+
       // Kullanıcının alerjen profilini yükle
       final userId = _authService.currentUser?.uid;
       AllergenProfile? allergenProfile;
       ProductSafetyResult? safetyResult;
-      
+
       if (userId != null) {
-        allergenProfile = await _customerFirestoreService.getAllergenProfile(userId);
-        
+        allergenProfile =
+            await _customerFirestoreService.getAllergenProfile(userId);
+
         // Güvenlik kontrolü yap
         if (allergenProfile != null) {
           safetyResult = allergenProfile.checkProductSafety(
@@ -1418,7 +1438,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           );
         }
       }
-      
+
       setState(() {
         _nutritionInfo = nutritionInfo;
         _allergenProfile = allergenProfile;
@@ -1429,4 +1449,3 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     }
   }
 }
-

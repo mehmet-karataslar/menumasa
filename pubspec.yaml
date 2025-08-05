@@ -38,6 +38,8 @@ dependencies:
   path_provider: ^2.1.2
   path: ^1.8.3
   uuid: ^4.3.2
+  flutter_colorpicker: ^1.0.3
+  google_fonts: ^6.1.0
 
   # File & Image Picking
   image_picker: ^1.0.7
@@ -100,10 +102,7 @@ flutter:
 
   assets:
     - assets/
-    - assets/icons/
-    - assets/images/
-    - assets/animations/
-    - assets/fonts/
+
 
   fonts:
     - family: Poppins

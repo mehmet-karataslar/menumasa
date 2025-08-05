@@ -56,6 +56,12 @@ service firebase.storage {
       allow write: if request.auth != null && isBusinessMember(businessId) && isValidMedia();
     }
     
+    // Background images - only business members can upload
+    match /background_images/{businessId}/{allPaths=**} {
+      allow read: if true; // Public read for background images
+      allow write: if request.auth != null && isBusinessMember(businessId) && isValidImage();
+    }
+    
     // Helper functions
     function isBusinessOwner() {
       return request.auth != null && request.auth.uid != null;

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/routing/base_route_handler.dart';
 import '../../core/routing/route_constants.dart';
-import '../../core/routing/route_utils.dart' as route_utils;
 import '../../presentation/pages/auth/router_page.dart';
 import '../pages/customer_dashboard_page.dart';
 import '../pages/customer_orders_page.dart';

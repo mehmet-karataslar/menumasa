@@ -9,6 +9,9 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/web_safe_image.dart';
 import '../../../customer/widgets/filter_bottom_sheet.dart';
 import '../../../business/models/product.dart';
+import '../../../business/models/business.dart';
+import '../../../core/services/dynamic_theme_service.dart';
+import '../widgets/dynamic_menu_widgets.dart';
 
 /// Refactored Universal QR Menu Page using modular architecture
 class UniversalQRMenuPage extends StatefulWidget {
@@ -68,31 +71,61 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
     final state = _controller.state;
 
-    if (state.isLoading) {
-      return const QRMenuLoading();
-    }
-
-    if (state.hasError) {
-      return QRMenuError(
-        errorMessage: state.errorMessage,
-        onRetry: () => _controller.parseUrlAndLoadData(context),
+    // Eğer business yüklenmişse dinamik tema kullan
+    if (state.business != null) {
+      return DynamicThemeWrapper(
+        businessId: state.business!.id,
+        fallbackSettings: state.business!.menuSettings,
+        builder: (menuSettings, themeData) {
+          return Theme(
+            data: themeData,
+            child: Scaffold(
+              backgroundColor:
+                  _parseColor(menuSettings.colorScheme.backgroundColor),
+              extendBodyBehindAppBar: true,
+              body: _buildBody(menuSettings),
+            ),
+          );
+        },
       );
     }
 
-    return _buildMenuContent();
+    // Fallback tema
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      extendBodyBehindAppBar: true,
+      body: _buildBody(null),
+    );
   }
 
-  Widget _buildMenuContent() {
+  Widget _buildBody(MenuSettings? menuSettings) {
+    final state = _controller.state;
+
+    if (state.isLoading) {
+      return menuSettings != null
+          ? DynamicMenuWidgets().buildLoadingIndicator(menuSettings)
+          : const QRMenuLoading();
+    }
+
+    if (state.hasError) {
+      return menuSettings != null
+          ? DynamicMenuWidgets().buildErrorWidget(
+              message: state.errorMessage ?? 'Bilinmeyen hata',
+              menuSettings: menuSettings,
+              onRetry: () => _controller.parseUrlAndLoadData(context),
+            )
+          : QRMenuError(
+              errorMessage: state.errorMessage,
+              onRetry: () => _controller.parseUrlAndLoadData(context),
+            );
+    }
+
+    return _buildMenuContent(menuSettings);
+  }
+
+  Widget _buildMenuContent(MenuSettings? menuSettings) {
     return AnimatedBuilder(
       animation: _controller.fadeAnimation ?? const AlwaysStoppedAnimation(1.0),
       builder: (context, child) {
@@ -102,10 +135,11 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
             controller: _scrollController,
             physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildModernHeader(),
-              if (_controller.state.showSearchBar) _buildSearchSection(),
-              _buildCategorySection(),
-              _buildProductSection(),
+              _buildModernHeader(menuSettings),
+              if (_controller.state.showSearchBar)
+                _buildSearchSection(menuSettings),
+              _buildCategorySection(menuSettings),
+              _buildProductSection(menuSettings),
             ],
           ),
         );
@@ -113,15 +147,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     );
   }
 
-  Widget _buildModernHeader() {
+  Widget _buildModernHeader(MenuSettings? menuSettings) {
     final state = _controller.state;
+    final primaryColor = menuSettings != null
+        ? _parseColor(menuSettings.colorScheme.primaryColor)
+        : AppColors.primary;
 
     return SliverAppBar(
       expandedHeight: 200,
       floating: false,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppColors.primary,
+      backgroundColor: primaryColor,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           children: [
@@ -130,11 +167,19 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primaryLight,
-                    AppColors.secondary.withOpacity(0.9),
-                  ],
+                  colors: menuSettings != null
+                      ? [
+                          _parseColor(menuSettings.colorScheme.primaryColor),
+                          _parseColor(menuSettings.colorScheme.primaryColor)
+                              .withOpacity(0.8),
+                          _parseColor(menuSettings.colorScheme.secondaryColor)
+                              .withOpacity(0.9),
+                        ]
+                      : [
+                          AppColors.primary,
+                          AppColors.primaryLight,
+                          AppColors.secondary.withOpacity(0.9),
+                        ],
                 ),
               ),
             ),
@@ -386,7 +431,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     );
   }
 
-  Widget _buildSearchSection() {
+  Widget _buildSearchSection(MenuSettings? menuSettings) {
     return SliverToBoxAdapter(
       child: SlideTransition(
         position: _controller.slideAnimation ??
@@ -446,7 +491,7 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     );
   }
 
-  Widget _buildCategorySection() {
+  Widget _buildCategorySection(MenuSettings? menuSettings) {
     final state = _controller.state;
 
     if (state.categories.isEmpty) {
@@ -527,15 +572,18 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
     );
   }
 
-  Widget _buildProductSection() {
+  Widget _buildProductSection(MenuSettings? menuSettings) {
     final state = _controller.state;
+    final dynamicWidgets = DynamicMenuWidgets();
 
     return SliverToBoxAdapter(
       child: SlideTransition(
         position: _controller.slideAnimation ??
             const AlwaysStoppedAnimation(Offset.zero),
         child: Container(
-          color: AppColors.background,
+          color: menuSettings != null
+              ? _parseColor(menuSettings.colorScheme.backgroundColor)
+              : AppColors.background,
           child: state.filteredProducts.isEmpty
               ? Center(
                   child: Padding(
@@ -543,34 +591,62 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
                     child: Text(
                       'Henüz ürün bulunmuyor',
                       style: AppTypography.bodyLarge.copyWith(
-                        color: AppColors.textSecondary,
+                        color: menuSettings != null
+                            ? _parseColor(
+                                menuSettings.colorScheme.textSecondaryColor)
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ),
                 )
               : RefreshIndicator(
                   onRefresh: () => _controller.parseUrlAndLoadData(context),
-                  color: AppColors.primary,
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 0.85,
-                    ),
-                    itemCount: state.filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = state.filteredProducts[index];
-                      return _buildProductCard(product);
-                    },
-                  ),
+                  color: menuSettings != null
+                      ? _parseColor(menuSettings.colorScheme.primaryColor)
+                      : AppColors.primary,
+                  child: menuSettings != null
+                      ? _buildDynamicProductGrid(
+                          menuSettings, state.filteredProducts)
+                      : _buildDefaultProductGrid(state.filteredProducts),
                 ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDynamicProductGrid(
+      MenuSettings menuSettings, List<Product> products) {
+    final dynamicWidgets = DynamicMenuWidgets();
+
+    return dynamicWidgets.buildDynamicLayout(
+      children: products
+          .map((product) => dynamicWidgets.buildProductCard(
+                product: product,
+                menuSettings: menuSettings,
+                onTap: () => _addToCart(product),
+                context: context,
+              ))
+          .toList(),
+      menuSettings: menuSettings,
+    );
+  }
+
+  Widget _buildDefaultProductGrid(List<Product> products) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        final product = products[index];
+        return _buildProductCard(product);
+      },
     );
   }
 
@@ -750,6 +826,16 @@ class _UniversalQRMenuPageState extends State<UniversalQRMenuPage>
           ),
         );
       }
+    }
+  }
+
+  /// Hex string'i Color'a çevir
+  Color _parseColor(String hex) {
+    try {
+      final hexCode = hex.replaceAll('#', '');
+      return Color(int.parse('FF$hexCode', radix: 16));
+    } catch (e) {
+      return AppColors.primary; // Fallback color
     }
   }
 }

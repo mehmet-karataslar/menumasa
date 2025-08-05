@@ -4,13 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'qr_menu_state.dart';
-import '../services/qr_menu_service.dart';
 import '../utils/qr_error_utils.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/cart_service.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/services/qr_service.dart';
-import '../../../core/services/multilingual_service.dart';
 import '../../../core/utils/time_rule_utils.dart';
 import '../../../business/services/business_firestore_service.dart';
 import '../../../business/models/product.dart';
@@ -26,9 +24,7 @@ class QRMenuController extends ChangeNotifier {
   final UrlService _urlService = UrlService();
   final QRService _qrService = QRService();
   final BusinessFirestoreService _businessService = BusinessFirestoreService();
-  final MultilingualService _multilingualService = MultilingualService();
   final CustomerService _customerService = CustomerService();
-  final QRMenuService _qrMenuService = QRMenuService();
 
   // Animation Controllers
   AnimationController? _fadeAnimationController;
@@ -170,15 +166,12 @@ class QRMenuController extends ChangeNotifier {
       _fadeAnimationController?.forward();
     } catch (e) {
       String userFriendlyMessage;
-      String? errorCode;
 
       if (e is QRValidationException) {
         userFriendlyMessage = e.message;
-        errorCode = e.errorCode;
       } else {
         userFriendlyMessage =
             QRErrorUtils.getUserFriendlyErrorMessage(e.toString());
-        errorCode = 'GENERAL_ERROR';
       }
 
       _state.setError(true, userFriendlyMessage);
@@ -265,7 +258,12 @@ class QRMenuController extends ChangeNotifier {
 
       if (businessData != null) {
         _state.setBusiness(businessData);
-        _state.setCategories(categoriesData.where((c) => c.isActive).toList());
+        // Kategorileri sortOrder'a göre sırala
+        final sortedCategories = categoriesData
+            .where((c) => c.isActive)
+            .toList()
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        _state.setCategories(sortedCategories);
         _state.setProducts(activeProducts);
         _state.setDiscounts(discountsData);
         _state.setFavoriteProductIds(favoriteProductIds);
@@ -316,8 +314,7 @@ class QRMenuController extends ChangeNotifier {
   void filterProducts() {
     final filtered = _state.products.where((product) {
       // Category filter
-      if (_state.selectedCategoryId != null &&
-          _state.selectedCategoryId != 'all' &&
+      if (_state.selectedCategoryId != 'all' &&
           product.categoryId != _state.selectedCategoryId) {
         return false;
       }
@@ -346,13 +343,8 @@ class QRMenuController extends ChangeNotifier {
       );
     }).toList();
 
-    // Apply discounts
-    final discountedProducts = filtered.map((product) {
-      final finalPrice = product.calculateFinalPrice(_state.discounts);
-      return product.copyWith(currentPrice: finalPrice);
-    }).toList();
-
-    _state.setFilteredProducts(discountedProducts);
+    // Tek fiyat sistemi - discount uygulaması kaldırıldı
+    _state.setFilteredProducts(filtered);
   }
 
   /// Event handlers

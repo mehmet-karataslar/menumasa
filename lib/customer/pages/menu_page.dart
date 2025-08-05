@@ -4,38 +4,39 @@ import '../../business/models/business.dart';
 import '../../business/models/category.dart';
 import '../../business/models/product.dart';
 import '../../business/models/discount.dart';
+import '../../business/models/staff.dart';
+import '../../business/models/waiter_call.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
-import '../../core/utils/time_rule_utils.dart';
 import '../../core/services/multilingual_service.dart';
-
-import '../services/customer_firestore_service.dart';
-import '../models/language_settings.dart';
-import '../../business/services/business_firestore_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/widgets/web_safe_image.dart';
-import '../widgets/business_header.dart';
-import '../widgets/category_list.dart';
-import '../widgets/product_grid.dart';
-import '../widgets/search_bar.dart';
-import '../widgets/filter_bottom_sheet.dart';
-import '../../presentation/widgets/shared/loading_indicator.dart';
-import '../../presentation/widgets/shared/error_message.dart';
-import '../../presentation/widgets/shared/empty_state.dart';
-import 'cart_page.dart';
-import 'package:shimmer/shimmer.dart';
-import 'product_detail_page.dart';
+import '../services/customer_firestore_service.dart';
 import '../services/customer_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../business/models/staff.dart';
-import '../../business/models/waiter_call.dart';
+import '../../business/services/business_firestore_service.dart';
 import '../../business/services/staff_service.dart';
 import '../../business/services/waiter_call_service.dart';
+import '../widgets/menu_header_widget.dart';
+import '../widgets/menu_search_widget.dart';
+import '../widgets/menu_category_widget.dart';
+import '../widgets/menu_product_widget.dart';
+import '../widgets/menu_state_widgets.dart';
+import '../widgets/menu_waiter_widget.dart';
+import '../widgets/filter_bottom_sheet.dart';
+// import '../../shared/qr_menu/widgets/dynamic_menu_widgets.dart';
 
+import 'cart_page.dart';
+import 'product_detail_page.dart';
+
+/// 🍽️ Yeniden Yapılandırılmış Menü Sayfası
+///
+/// Bu sayfa modüler widget yapısı ile yeniden tasarlandı:
+/// - MenuHeaderWidget - Header ve butonlar
+/// - MenuSearchWidget - Arama ve filtre
+/// - MenuCategoryWidget - Kategori listesi
+/// - MenuProductWidget - Ürün grid/list
+/// - MenuStateWidgets - Loading, error, empty states
+/// - MenuWaiterWidget - Garson çağırma
 class MenuPage extends StatefulWidget {
   final String businessId;
 
@@ -61,6 +62,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
   List<Discount> _discounts = [];
+  List<Staff> _waiters = [];
 
   // Services
   final _customerFirestoreService = CustomerFirestoreService();
@@ -70,6 +72,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   final _authService = AuthService();
   final _multilingualService = MultilingualService();
   final _customerService = CustomerService();
+  final _staffService = StaffService();
+  final _waiterCallService = WaiterCallService();
 
   // Table information from QR code
   int? _tableNumber;
@@ -84,6 +88,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   double _headerOpacity = 1.0;
   String _currentLanguage = 'tr';
   List<String> _favoriteProductIds = [];
+  bool _isWaiterCallLoading = false;
 
   // Animation controllers
   late AnimationController _fadeAnimationController;
@@ -95,2397 +100,485 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _initControllers();
-    _initAnimations();
-    _extractTableInformation();
-    _determineUserLanguage();
-    _initializeServices();
-  }
-
-  void _extractTableInformation() {
-    try {
-      // Extract table number from current URL
-      final params = _urlService.getCurrentParams();
-      final tableParam = params['table'] ?? params['tableNumber'];
-
-      if (tableParam != null) {
-        _tableNumber = int.tryParse(tableParam.toString());
-        if (_tableNumber != null) {
-          _tableInfo = 'Masa $_tableNumber';
-          print('📍 MenuPage: Table information extracted: $_tableInfo');
-        }
-      }
-
-      // Alternative: Extract from current URL path
-      if (_tableNumber == null) {
-        final currentUrl = Uri.base.toString();
-        final tableMatch = RegExp(r'[?&]table=(\d+)').firstMatch(currentUrl);
-        if (tableMatch != null) {
-          _tableNumber = int.tryParse(tableMatch.group(1) ?? '');
-          if (_tableNumber != null) {
-            _tableInfo = 'Masa $_tableNumber';
-            print(
-                '📍 MenuPage: Table information extracted from URL: $_tableInfo');
-          }
-        }
-      }
-
-      // Log result
-      if (_tableNumber != null) {
-        print('✅ MenuPage: Table $_tableNumber detected');
-      } else {
-        print('⚠️ MenuPage: No table number found in URL');
-      }
-    } catch (e) {
-      print('❌ MenuPage: Error extracting table information: $e');
-    }
-  }
-
-  Future<void> _initializeServices() async {
-    await _initializeCustomerService();
-    await _initializeCart();
-    await _loadMenuData();
+    _initData();
   }
 
   void _initControllers() {
     _scrollController = ScrollController();
     _categoryScrollController = ScrollController();
 
-    _scrollController.addListener(() {
-      final opacity = (100 - _scrollController.offset) / 100;
-      setState(() {
-        _headerOpacity = opacity.clamp(0.0, 1.0);
-      });
-    });
-  }
-
-  void _initAnimations() {
     _fadeAnimationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
 
     _slideAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeAnimationController,
+      curve: Curves.easeInOut,
+    ));
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
+      begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(
-        parent: _slideAnimationController, curve: Curves.easeOutBack));
+      parent: _slideAnimationController,
+      curve: Curves.easeOutBack,
+    ));
+
+    _scrollController.addListener(_onScroll);
+    _cartService.addCartListener((_) => _updateCartItemCount());
   }
 
-  @override
-  void dispose() {
-    _tabController?.dispose();
-    _scrollController.dispose();
-    _categoryScrollController.dispose();
-    _fadeAnimationController.dispose();
-    _slideAnimationController.dispose();
-    _cartService.removeCartListener(_onCartChanged);
-    super.dispose();
+  void _initData() {
+    _extractTableInfoFromUrl();
+    _setupRealTimeListeners();
+    _loadWaiters();
   }
 
-  Future<void> _initializeCustomerService() async {
-    try {
-      final currentUser = _authService.currentUser;
-      if (currentUser != null) {
-        print(
-            '🔐 MenuPage: Initializing CustomerService with user: ${currentUser.uid}');
-        await _customerService.createOrGetCustomer(
-          email: currentUser.email,
-          name: currentUser.displayName,
-          phone: currentUser.phoneNumber,
-          isAnonymous: false,
-        );
-        print('✅ MenuPage: CustomerService initialized successfully');
-      } else {
-        print('⚠️ MenuPage: No authenticated user found');
-        // Anonim kullanıcı olarak devam et
-        await _customerService.createOrGetCustomer(
-          isAnonymous: true,
-        );
-      }
-    } catch (e) {
-      print('❌ MenuPage: CustomerService initialization failed: $e');
-    }
-  }
-
-  Future<void> _waitForCustomerServiceInitialization() async {
-    // CustomerService'in initialize olmasını bekle
-    int attempts = 0;
-    const maxAttempts = 10;
-    const delay = Duration(milliseconds: 500);
-
-    while (_customerService.currentCustomer == null && attempts < maxAttempts) {
-      print(
-          '⏳ MenuPage: Waiting for CustomerService initialization... Attempt ${attempts + 1}');
-      await Future.delayed(delay);
-      attempts++;
-    }
-
-    if (_customerService.currentCustomer == null) {
-      print(
-          '⚠️ MenuPage: CustomerService not initialized after $maxAttempts attempts');
-    } else {
-      print('✅ MenuPage: CustomerService is ready');
-    }
-  }
-
-  Future<List<dynamic>> _loadFavoritesFromFirebase() async {
-    try {
-      // Firebase Auth'dan current user'ı al
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('🔒 MenuPage: No authenticated user, returning empty favorites');
-        return [];
-      }
-
-      print('💖 MenuPage: Loading favorite products from Firebase...');
-
-      // Firebase'den direkt olarak favorileri yükle - Firebase Auth UID ile
-      final favoritesSnapshot = await FirebaseFirestore.instance
-          .collection('product_favorites')
-          .where('customerId', isEqualTo: user.uid) // Firebase Auth UID kullan
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      final favorites = favoritesSnapshot.docs.map((doc) {
-        return doc.data();
-      }).toList();
-
-      print(
-          '💖 MenuPage: Favorite products loaded from Firebase: ${favorites.length} items - ${favorites.map((f) => f['productId']).toList()}');
-
-      return favorites;
-    } catch (e) {
-      print('❌ MenuPage: Error loading favorites from Firebase: $e');
-      return [];
-    }
-  }
-
-  Future<void> _initializeCart() async {
-    await _cartService.initialize();
-    _cartService.addCartListener(_onCartChanged);
-    _updateCartCount();
-  }
-
-  void _onCartChanged(cart) {
-    _updateCartCount();
-  }
-
-  Future<void> _updateCartCount() async {
-    final count = await _cartService.getCartItemCount(widget.businessId);
-    if (mounted) {
-      setState(() {
-        _cartItemCount = count;
-      });
-    }
-  }
-
-  Future<void> _loadMenuData() async {
-    try {
-      print(
-          '🔄 MenuPage: Loading menu data for business: ${widget.businessId}');
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-        _errorMessage = null;
-      });
-
-      // Load business, categories, products, and discounts
-      print('📊 MenuPage: Loading business data...');
-      final businessData =
-          await _businessFirestoreService.getBusiness(widget.businessId);
-      print(
-          '📊 MenuPage: Business data loaded: ${businessData?.businessName ?? 'null'}');
-
-      print('📂 MenuPage: Loading categories...');
-      final categoriesData = await _businessFirestoreService
-          .getBusinessCategories(widget.businessId);
-      print('📂 MenuPage: Categories loaded: ${categoriesData.length} items');
-
-      print('🍽️ MenuPage: Loading products...');
-      final productsData = await _businessFirestoreService
-          .getBusinessProducts(widget.businessId);
-      print('🍽️ MenuPage: Raw products loaded: ${productsData.length} items');
-
-      // Sadece aktif ve müsait ürünleri filtrele
-      final activeProducts =
-          productsData.where((p) => p.isActive && p.isAvailable).toList();
-      print(
-          '🍽️ MenuPage: Active products after filtering: ${activeProducts.length} items');
-
-      // Debug için kullanıcıya da göster
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'MenuPage: ${productsData.length} ürün bulundu, ${activeProducts.length} tanesi aktif'),
-            duration: Duration(seconds: 2),
-            backgroundColor:
-                activeProducts.isEmpty ? AppColors.error : AppColors.success,
-          ),
-        );
-      }
-
-      print('🎯 MenuPage: Loading discounts...');
-      final discountsData = await _businessFirestoreService
-          .getDiscountsByBusinessId(widget.businessId);
-      print('🎯 MenuPage: Discounts loaded: ${discountsData.length} items');
-
-      // CustomerService is already initialized in initState
-
-      // Load favorite products from Firebase
-      List<String> favoriteProductIds = [];
+  void _extractTableInfoFromUrl() {
+    final uri = Uri.base;
+    final tableParam = uri.queryParameters['table'];
+    if (tableParam != null) {
       try {
-        print('💖 MenuPage: Loading favorite products from Firebase...');
-        final favoriteProducts = await _loadFavoritesFromFirebase();
-        favoriteProductIds =
-            favoriteProducts.map((f) => f['productId'] as String).toList();
-        print(
-            '💖 MenuPage: Favorite products loaded from Firebase: ${favoriteProductIds.length} items - $favoriteProductIds');
+        _tableNumber = int.parse(tableParam);
+        _tableInfo = 'Masa $_tableNumber';
       } catch (e) {
-        print('❌ MenuPage: Error loading favorite products from Firebase: $e');
-        favoriteProductIds = [];
+        _tableInfo = tableParam;
       }
+    }
+  }
 
-      if (businessData != null) {
-        print('✅ MenuPage: Business data is valid, processing...');
-        // Apply multilingual translations
-        final translatedCategories = categoriesData; // .map((category) =>
-        // _multilingualService.translateCategory(category, _currentLanguage)).toList();
-        final translatedProducts = activeProducts; // .map((product) =>
-        // _multilingualService.translateProduct(product, _currentLanguage)).toList();
+  void _setupRealTimeListeners() {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = null;
+    });
 
-        print('🔄 MenuPage: Setting state with loaded data...');
+    // Setup real-time listeners for business data
+    _customerFirestoreService.startBusinessDataListener(
+      widget.businessId,
+      onBusinessUpdated: (business) {
         setState(() {
-          _business = businessData;
-          _categories = translatedCategories;
-          _products = translatedProducts;
-          _discounts = discountsData;
-          _favoriteProductIds = favoriteProductIds;
-          _filterProducts();
-          _isLoading = false;
+          _business = business;
+          if (business == null) {
+            _hasError = true;
+            _errorMessage = 'İşletme bulunamadı';
+          }
         });
-        print('✅ MenuPage: State updated successfully');
-
-        // Initialize tab controller after categories are loaded
-        if (_categories.isNotEmpty && _tabController == null) {
-          _tabController =
-              TabController(length: _categories.length, vsync: this);
-          _tabController?.addListener(_onTabChanged);
-        }
-
-        // Start animations after data is loaded
-        print('🎬 MenuPage: Starting animations...');
-        _fadeAnimationController.forward();
-        _slideAnimationController.forward();
-
-        // Log business visit
-        // _logBusinessVisit();
-      } else {
-        print('❌ MenuPage: Business data is null');
+      },
+      onCategoriesUpdated: (categories) {
         setState(() {
-          _hasError = true;
-          _errorMessage = 'İşletme bilgileri yüklenirken bir hata oluştu.';
-          _isLoading = false;
+          _categories = categories;
         });
+      },
+      onProductsUpdated: (products) {
+        setState(() {
+          _products = products;
+          _applyFilters(); // Reapply current filters
+          if (_isLoading) {
+            _isLoading = false;
+            _fadeAnimationController.forward();
+            _slideAnimationController.forward();
+          }
+        });
+      },
+    );
+  }
+
+  void _applyFilters() {
+    List<Product> filtered = List.from(_products);
+
+    // Apply category filter
+    if (_selectedCategoryId != null && _selectedCategoryId!.isNotEmpty) {
+      filtered = filtered
+          .where((product) => product.categoryId == _selectedCategoryId)
+          .toList();
+    }
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where((product) =>
+              product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              product.description
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    // Apply other filters
+    for (final entry in _filters.entries) {
+      switch (entry.key) {
+        case 'isVegan':
+          if (entry.value == true) {
+            filtered = filtered.where((product) => product.isVegan).toList();
+          }
+          break;
+        case 'isVegetarian':
+          if (entry.value == true) {
+            filtered =
+                filtered.where((product) => product.isVegetarian).toList();
+          }
+          break;
+        // case 'isGlutenFree':
+        //   if (entry.value == true) {
+        //     filtered =
+        //         filtered.where((product) => product.isGlutenFree).toList();
+        //   }
+        //   break;
+        case 'priceRange':
+          if (entry.value is Map) {
+            final range = entry.value as Map<String, double>;
+            final min = range['min'] ?? 0.0;
+            final max = range['max'] ?? double.infinity;
+            filtered = filtered
+                .where(
+                    (product) => product.price >= min && product.price <= max)
+                .toList();
+          }
+          break;
       }
-    } catch (e) {
-      print('❌ MenuPage: Exception occurred: $e');
+    }
+
+    setState(() {
+      _filteredProducts = filtered;
+    });
+  }
+
+  Future<void> _loadBusinessData() async {
+    // This method is now replaced by _setupRealTimeListeners
+    // Keep it for backwards compatibility or remove if not needed
+    _setupRealTimeListeners();
+  }
+
+  Future<void> _loadWaiters() async {
+    try {
+      final waiters = await _staffService.getStaffByBusiness(widget.businessId);
       setState(() {
-        _hasError = true;
-        _errorMessage = 'Veriler yüklenirken bir hata oluştu: $e';
-        _isLoading = false;
+        _waiters = waiters;
+      });
+    } catch (e) {
+      print('Garson listesi yüklenirken hata: $e');
+    }
+  }
+
+  void _onScroll() {
+    final offset = _scrollController.offset;
+    final opacity = (1.0 - (offset / 200)).clamp(0.0, 1.0);
+    if (opacity != _headerOpacity) {
+      setState(() {
+        _headerOpacity = opacity;
       });
     }
   }
 
-  void _initializeTabs() {
-    if (_categories.isNotEmpty) {
-      _tabController?.dispose();
-      _tabController =
-          TabController(length: _categories.length + 1, vsync: this);
-      _tabController!.addListener(_onTabChanged);
-
-      if (_selectedCategoryId == null) {
-        _selectedCategoryId = 'all';
-      }
+  void _updateCartItemCount() async {
+    final newCount = await _cartService.getCartItemCount(widget.businessId);
+    if (newCount != _cartItemCount) {
+      setState(() {
+        _cartItemCount = newCount;
+      });
     }
-  }
-
-  void _onTabChanged() {
-    if (_tabController != null && !_tabController!.indexIsChanging) return;
-
-    final categoryId = _tabController!.index == 0
-        ? 'all'
-        : _categories[_tabController!.index - 1].categoryId;
-
-    _onCategorySelected(categoryId);
-  }
-
-  void _onCategorySelected(String categoryId) {
-    setState(() {
-      _selectedCategoryId = categoryId;
-      _filterProducts();
-    });
-    HapticFeedback.selectionClick();
   }
 
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
-      _filterProducts();
+      _applyFilters();
     });
   }
 
-  void _onFiltersChanged(Map<String, dynamic> filters) {
+  void _onCategorySelected(String categoryId) {
     setState(() {
-      _filters = filters;
-      _filterProducts();
+      _selectedCategoryId = categoryId == 'all' ? null : categoryId;
+      _applyFilters();
     });
   }
 
-  void _filterProducts() {
-    _filteredProducts = _products.where((product) {
-      // Kategori filtresi
-      if (_selectedCategoryId != null &&
-          _selectedCategoryId != 'all' &&
-          product.categoryId != _selectedCategoryId) {
-        return false;
-      }
+  Future<void> _onWaiterCallPressed() async {
+    if (_waiters.isEmpty) {
+      await _loadWaiters();
+    }
 
-      // Arama filtresi
-      if (_searchQuery.isNotEmpty &&
-          !product.matchesSearchQuery(_searchQuery)) {
-        return false;
-      }
+    if (!mounted) return;
 
-      // Zaman kuralları
-      if (!TimeRuleUtils.isProductVisible(product)) {
-        return false;
-      }
-
-      // Diğer filtreler
-      return product.matchesFilters(
-        tagFilters: _filters['tags'],
-        allergenFilters: _filters['allergens'],
-        minPrice: _filters['minPrice'],
-        maxPrice: _filters['maxPrice'],
-        isVegetarian: _filters['isVegetarian'],
-        isVegan: _filters['isVegan'],
-        isHalal: _filters['isHalal'],
-        isSpicy: _filters['isSpicy'],
-      );
-    }).toList();
-
-    // İndirim hesapla
-    _filteredProducts = _filteredProducts.map((product) {
-      final finalPrice = product.calculateFinalPrice(_discounts);
-      return product.copyWith(currentPrice: finalPrice);
-    }).toList();
-
-    // Kategorileri filtrele
-    _categories = _categories.where((category) {
-      return TimeRuleUtils.isCategoryVisible(category);
-    }).toList();
+    showDialog(
+      context: context,
+      builder: (context) => MenuWaiterWidget(
+        menuSettings: _business?.menuSettings,
+        waiters: _waiters,
+        onWaiterSelected: _callWaiter,
+        isLoading: _isWaiterCallLoading,
+      ),
+    );
   }
 
-  void _showFilterBottomSheet() {
-    HapticFeedback.mediumImpact();
+  Future<void> _callWaiter(Staff waiter) async {
+    setState(() {
+      _isWaiterCallLoading = true;
+    });
+
+    try {
+      await _waiterCallService.createWaiterCall(WaiterCall(
+        callId: DateTime.now().millisecondsSinceEpoch.toString(),
+        businessId: widget.businessId,
+        customerId: 'guest',
+        customerName: 'Misafir',
+        waiterId: waiter.staffId,
+        waiterName: '${waiter.firstName} ${waiter.lastName}',
+        tableNumber: _tableNumber ?? 0,
+        message: _tableInfo ?? 'Masa $_tableNumber',
+        status: WaiterCallStatus.pending,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '${waiter.firstName} ${waiter.lastName} garsonumuz çağrıldı!'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Garson çağrısı gönderilemedi: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isWaiterCallLoading = false;
+        });
+      }
+    }
+  }
+
+  void _onProductTap(Product product) {
+    if (_business != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDetailPage(
+            product: product,
+            business: _business!,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _onAddToCart(Product product) {
+    _cartService.addToCart(product, widget.businessId, quantity: 1);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.name} sepete eklendi'),
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'Sepeti Gör',
+          textColor: Colors.white,
+          onPressed: _onCartPressed,
+        ),
+      ),
+    );
+  }
+
+  void _onFavoriteToggle(Product product) {
+    setState(() {
+      if (_favoriteProductIds.contains(product.productId)) {
+        _favoriteProductIds.remove(product.productId);
+      } else {
+        _favoriteProductIds.add(product.productId);
+      }
+    });
+
+    // Favorileri kaydet
+    // ... save favorites logic ...
+  }
+
+  void _onCartPressed() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartPage(
+          businessId: widget.businessId,
+        ),
+      ),
+    );
+  }
+
+  void _onFilterPressed() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => FilterBottomSheet(
         currentFilters: _filters,
-        onFiltersChanged: _onFiltersChanged,
-      ),
-    );
-  }
-
-  void _toggleSearchBar() {
-    setState(() {
-      _showSearchBar = !_showSearchBar;
-      if (!_showSearchBar) {
-        _searchQuery = '';
-        _filterProducts();
-      }
-    });
-    HapticFeedback.lightImpact();
-  }
-
-  void _onCartPressed() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final dynamicRoute = '/menu/${widget.businessId}/cart?t=$timestamp';
-    _urlService.updateUrl(dynamicRoute, customTitle: 'Sepetim | MasaMenu');
-
-    HapticFeedback.mediumImpact();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CartPage(
-          businessId: widget.businessId,
-          userId: _authService.currentUser?.uid,
-        ),
-        settings: RouteSettings(name: dynamicRoute),
-      ),
-    );
-  }
-
-  void _onWaiterCallPressed() {
-    // Tüm kullanıcılar için garson seçimi göster
-    _showWaiterSelectionDialog();
-  }
-
-  void _showGuestWaiterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.room_service_rounded, color: AppColors.warning),
-            const SizedBox(width: 12),
-            const Text('Garson Çağır'),
-          ],
-        ),
-        content: const Text(
-          'Garson çağırmak için sisteme giriş yapmanız gerekmektedir. Kayıtlı kullanıcılar garson seçebilir ve öncelikli hizmet alır.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showWaiterSelectionDialog(); // Misafir kullanıcı da garson seçebilsin
-            },
-            child: const Text('Misafir Olarak Devam Et'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/login');
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Giriş Yap',
-                style: TextStyle(color: AppColors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showWaiterSelectionDialog() async {
-    try {
-      // Load available waiters for this business
-      final staffService = StaffService();
-      final availableWaiters =
-          await staffService.getAvailableWaiters(widget.businessId);
-
-      if (!mounted) return;
-
-      if (availableWaiters.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.info_outline, color: AppColors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                    child:
-                        Text('Garsonlar yükleniyor, lütfen biraz bekleyin...')),
-              ],
-            ),
-            backgroundColor: AppColors.warning,
-          ),
-        );
-        return;
-      }
-
-      final user = _authService.currentUser;
-      final isGuest = user == null;
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child:
-                    Icon(Icons.room_service_rounded, color: AppColors.success),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Garson Seç'),
-                    if (isGuest)
-                      Text(
-                        'Misafir Çağrı',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.warning,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: Container(
-            width: double.maxFinite,
-            constraints: const BoxConstraints(maxHeight: 500),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_tableNumber != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border:
-                          Border.all(color: AppColors.accent.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.table_restaurant_rounded,
-                            color: AppColors.accent, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'MASA $_tableNumber',
-                          style: AppTypography.bodyLarge.copyWith(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (isGuest) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border:
-                          Border.all(color: AppColors.warning.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline,
-                            color: AppColors.warning, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Misafir olarak çağrı yapıyorsunuz. Kayıtlı kullanıcılar öncelikli hizmet alır.',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.warning,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                Text(
-                  _tableNumber != null
-                      ? 'Masa $_tableNumber için ${isGuest ? "misafir" : ""} garson seçin'
-                      : 'Müsait garsonları seçebilir ve çağırabilirsiniz',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${availableWaiters.length} Müsait Garson',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: availableWaiters.length,
-                    itemBuilder: (context, index) {
-                      final waiter = availableWaiters[index];
-                      return _buildWaiterCard(waiter);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('İptal'),
-            ),
-            if (isGuest)
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/login');
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary),
-                child: const Text('Giriş Yap',
-                    style: TextStyle(color: AppColors.white)),
-              ),
-          ],
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Garson listesi yüklenirken hata: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
-
-  Widget _buildWaiterCard(Staff waiter) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: () => _callWaiter(waiter),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.greyLight.withOpacity(0.5)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadow.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Waiter Avatar
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(25),
-                    border:
-                        Border.all(color: AppColors.primary.withOpacity(0.2)),
-                  ),
-                  child: waiter.profileImageUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(25),
-                          child: WebSafeImage(
-                            imageUrl: waiter.profileImageUrl!,
-                            fit: BoxFit.cover,
-                            errorWidget: (context, url, error) =>
-                                _buildWaiterInitials(waiter),
-                          ),
-                        )
-                      : _buildWaiterInitials(waiter),
-                ),
-                const SizedBox(width: 16),
-
-                // Waiter Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        waiter.fullName,
-                        style: AppTypography.bodyLarge.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              waiter.role.displayName,
-                              style: AppTypography.caption.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(waiter.status),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            waiter.status.displayName,
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.star_rounded,
-                              size: 14, color: AppColors.accent),
-                          const SizedBox(width: 4),
-                          Text(
-                            waiter.statistics.averageRating > 0
-                                ? '${waiter.statistics.averageRating.toStringAsFixed(1)}'
-                                : 'Yeni',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Icon(Icons.timer_outlined,
-                              size: 14, color: AppColors.textSecondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            waiter.statistics.responseTime > 0
-                                ? '~${waiter.statistics.responseTime.toInt()} dk'
-                                : 'Hızlı',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Call Button
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.success,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.phone_rounded,
-                    color: AppColors.white,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWaiterInitials(Staff waiter) {
-    return Center(
-      child: Text(
-        waiter.initials,
-        style: AppTypography.bodyLarge.copyWith(
-          color: AppColors.primary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Color _getStatusColor(StaffStatus status) {
-    switch (status) {
-      case StaffStatus.available:
-        return AppColors.success;
-      case StaffStatus.busy:
-        return AppColors.warning;
-      case StaffStatus.break_:
-        return AppColors.info;
-      case StaffStatus.offline:
-        return AppColors.error;
-    }
-  }
-
-  Future<void> _callWaiter(Staff waiter) async {
-    try {
-      Navigator.pop(context); // Close dialog
-
-      final user = _authService.currentUser;
-
-      // Use extracted table number or fallback to URL parsing
-      int tableNumber = _tableNumber ?? 0;
-      if (_tableNumber == null) {
-        try {
-          final params = _urlService.getCurrentParams();
-          final tableParam = params['table'] ?? params['tableNumber'];
-          if (tableParam != null) {
-            _tableNumber = int.tryParse(tableParam.toString());
-            tableNumber = _tableNumber ?? 0;
-          }
-        } catch (e) {
-          print('Fallback table number extraction failed: $e');
-        }
-      }
-
-      final waiterCallService = WaiterCallService();
-      final call = WaiterCall.create(
-        businessId: widget.businessId,
-        customerId:
-            user?.uid ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
-        customerName: user?.displayName ?? 'Misafir Müşteri',
-        waiterId: waiter.staffId,
-        waiterName: waiter.fullName,
-        tableNumber: tableNumber,
-        message: _tableNumber != null
-            ? 'Masa $_tableNumber\'dan yardım talep edildi ${user == null ? "(Misafir)" : ""}'
-            : 'Masa yardımı talep edildi ${user == null ? "(Misafir)" : ""}',
-      );
-
-      await waiterCallService.createWaiterCall(call);
-
-      HapticFeedback.mediumImpact();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: AppColors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _tableNumber != null
-                        ? '${waiter.fullName} başarıyla çağrıldı! (Masa $_tableNumber)${user == null ? " - Misafir çağrı" : ""}'
-                        : '${waiter.fullName} başarıyla çağrıldı!${user == null ? " - Misafir çağrı" : ""}',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error_outline, color: AppColors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Garson çağırırken hata: $e',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    }
-  }
-
-  void _navigateToProductDetail(Product product) {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final dynamicRoute =
-        '/menu/${widget.businessId}/product/${product.productId}?t=$timestamp';
-    _urlService.updateUrl(dynamicRoute,
-        customTitle: '${product.name} | MasaMenu');
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProductDetailPage(
-          product: product,
-          business: _business!,
-        ),
-        settings: RouteSettings(name: dynamicRoute),
-      ),
-    );
-  }
-
-  Future<void> _toggleProductFavorite(Product product) async {
-    try {
-      print(
-          '🔄 MenuPage: Toggling favorite for product: ${product.productName} (ID: ${product.productId})');
-
-      // Firebase Auth'dan current user'ı al
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Giriş yapılması gerekli')),
-        );
-        return;
-      }
-
-      // Mevcut favori durumunu kontrol et
-      final isFavorite = _favoriteProductIds.contains(product.productId);
-
-      if (isFavorite) {
-        // Favorilerden çıkar
-        final query = await FirebaseFirestore.instance
-            .collection('product_favorites')
-            .where('customerId', isEqualTo: user.uid)
-            .where('productId', isEqualTo: product.productId)
-            .get();
-
-        for (final doc in query.docs) {
-          await doc.reference.delete();
-        }
-
-        if (mounted) {
+        onFiltersChanged: (filters) {
           setState(() {
-            _favoriteProductIds.remove(product.productId);
+            _filters = filters;
+            _applyFilters();
           });
-        }
-      } else {
-        // Favorilere ekle
-        final favoriteId =
-            FirebaseFirestore.instance.collection('product_favorites').doc().id;
-
-        await FirebaseFirestore.instance
-            .collection('product_favorites')
-            .doc(favoriteId)
-            .set({
-          'id': favoriteId,
-          'productId': product.productId,
-          'businessId': widget.businessId,
-          'customerId': user.uid, // Firebase Auth UID kullan
-          'createdAt': FieldValue.serverTimestamp(),
-          'productName': product.productName,
-          'productDescription': product.description,
-          'productPrice': product.price,
-          'productImage': product.imageUrl,
-          'businessName': _business?.businessName,
-          'categoryName': null,
-          'addedDate': FieldValue.serverTimestamp(),
-        });
-
-        if (mounted) {
-          setState(() {
-            _favoriteProductIds.add(product.productId);
-          });
-        }
-      }
-
-      print('✅ MenuPage: Backend favorite toggle completed');
-
-      // Favorileri yeniden yükle
-      print('🔄 MenuPage: Refreshing favorites from Firebase...');
-      final favoriteProducts = await _loadFavoritesFromFirebase();
-      final favoriteProductIds =
-          favoriteProducts.map((f) => f['productId'] as String).toList();
-
-      if (mounted) {
-        setState(() {
-          _favoriteProductIds = favoriteProductIds;
-        });
-      }
-      print(
-          '✅ MenuPage: Fresh favorites loaded: ${_favoriteProductIds.length} items');
-    } catch (e) {
-      print('❌ MenuPage: Favorite toggle error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Favori işlemi hatası: $e')),
-        );
-      }
-    }
+        },
+      ),
+    );
   }
 
-  Future<void> _addToCart(Product product, {int quantity = 1}) async {
-    try {
-      // Debug logging
-      print('🛒 Adding to cart: ${product.name}');
-      print('   Product ID: ${product.productId}');
-      print('   Price: ${product.price}');
-      print('   Current Price: ${product.currentPrice}');
+  @override
+  void dispose() {
+    // Stop real-time listeners
+    _customerFirestoreService.stopBusinessDataListener(widget.businessId);
 
-      await _cartService.addToCart(product, widget.businessId,
-          quantity: quantity);
+    // Dispose controllers
+    _scrollController.dispose();
+    _categoryScrollController.dispose();
+    _fadeAnimationController.dispose();
+    _slideAnimationController.dispose();
 
-      // Debug: Check cart contents
-      final cart = await _cartService.getCurrentCart(widget.businessId);
-      print('🛒 Cart now has ${cart.items.length} unique items:');
-      for (var item in cart.items) {
-        print(
-            '   - ${item.productName} (ID: ${item.productId}) x${item.quantity}');
-      }
-
-      HapticFeedback.heavyImpact();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(Icons.check_rounded,
-                      color: AppColors.white, size: 16),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '${product.name} sepete eklendi',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-            duration: const Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'Sepete Git',
-              textColor: AppColors.white,
-              onPressed: _onCartPressed,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error_outline_rounded,
-                    color: AppColors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Hata: $e')),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-          ),
-        );
-      }
-    }
+    // TODO: Remove cart listener
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final menuSettings = _business?.menuSettings ?? MenuSettings();
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
-      body: _isLoading
-          ? _buildLoadingState()
-          : _hasError
-              ? _buildErrorState()
-              : _buildMenuContent(),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.primary.withOpacity(0.1), AppColors.background],
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Header skeleton
-            Container(
-              height: 180,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: AppColors.primaryGradient),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  LoadingIndicator(color: AppColors.white),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Menü hazırlanıyor...',
-                    style: AppTypography.h6.copyWith(color: AppColors.white),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content skeleton
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    // Category skeleton
-                    SizedBox(
-                      height: 40,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: 5,
-                        itemBuilder: (context, index) => Container(
-                          width: 80,
-                          height: 40,
-                          margin: const EdgeInsets.only(right: 12),
-                          child: Shimmer.fromColors(
-                            baseColor: AppColors.greyLight.withOpacity(0.3),
-                            highlightColor: AppColors.white.withOpacity(0.5),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Product grid skeleton
-                    Expanded(
-                      child: GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 0.8,
-                        ),
-                        itemCount: 6,
-                        itemBuilder: (context, index) => Shimmer.fromColors(
-                          baseColor: AppColors.greyLight.withOpacity(0.3),
-                          highlightColor: AppColors.white.withOpacity(0.5),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      backgroundColor: _parseColor(menuSettings.colorScheme.backgroundColor),
+      body: Container(
+        decoration: _buildBackgroundDecoration(menuSettings),
+        child: _isLoading
+            ? MenuStateWidgets.buildLoadingState(menuSettings)
+            : _hasError
+                ? MenuStateWidgets.buildErrorState(menuSettings,
+                    _errorMessage ?? 'Bilinmeyen hata', _loadBusinessData)
+                : _buildMenuContent(menuSettings),
       ),
     );
   }
 
-  Widget _buildErrorState() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.error.withOpacity(0.1), AppColors.background],
+  /// Arka plan dekorasyonunu oluştur (renk veya fotoğraf)
+  BoxDecoration _buildBackgroundDecoration(MenuSettings menuSettings) {
+    final backgroundSettings = menuSettings.backgroundSettings;
+
+    // Arka plan fotoğrafı varsa onu kullan
+    if (backgroundSettings.backgroundImage.isNotEmpty &&
+        backgroundSettings.type == 'image') {
+      return BoxDecoration(
+        image: DecorationImage(
+          image: NetworkImage(backgroundSettings.backgroundImage),
+          fit: BoxFit.cover,
+          colorFilter: backgroundSettings.opacity < 1.0
+              ? ColorFilter.mode(
+                  Colors.black.withOpacity(1.0 - backgroundSettings.opacity),
+                  BlendMode.overlay,
+                )
+              : null,
         ),
-      ),
-      child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.restaurant_menu_rounded,
-                    size: 60,
-                    color: AppColors.error,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Menü Yüklenemedi',
-                  style: AppTypography.h5.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _errorMessage ?? 'Bir hata oluştu, lütfen tekrar deneyin',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton.icon(
-                  onPressed: _loadMenuData,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Tekrar Dene'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 4,
-                  ),
-                ),
-              ],
+      );
+    }
+
+    // Arka plan fotoğrafı yoksa sadece renk
+    return BoxDecoration(
+      color: _parseColor(menuSettings.colorScheme.backgroundColor),
+    );
+  }
+
+  Widget _buildMenuContent(MenuSettings menuSettings) {
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        // Header
+        SliverToBoxAdapter(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: MenuHeaderWidget(
+              business: _business,
+              menuSettings: menuSettings,
+              cartItemCount: _cartItemCount,
+              onCartPressed: _onCartPressed,
+              onWaiterCallPressed: _onWaiterCallPressed,
+              onLanguagePressed: () {}, // TODO: Language switching
+              waiters: _waiters,
+              isWaiterCallLoading: _isWaiterCallLoading,
             ),
           ),
         ),
-      ),
-    );
-  }
 
-  Widget _buildMenuContent() {
-    return AnimatedBuilder(
-      animation: _fadeAnimation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _fadeAnimation.value,
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildModernHeader(),
-              if (_showSearchBar) _buildSearchSection(),
-              _buildCategorySection(),
-              _buildProductSection(),
-            ],
+        // Search section
+        if (_showSearchBar)
+          SliverToBoxAdapter(
+            child: MenuSearchWidget(
+              menuSettings: menuSettings,
+              searchQuery: _searchQuery,
+              onSearchChanged: _onSearchChanged,
+              onFilterPressed: _onFilterPressed,
+              hasActiveFilters: _filters.isNotEmpty,
+              resultCount: _filteredProducts.length,
+            ),
           ),
-        );
-      },
-    );
-  }
 
-  Widget _buildModernHeader() {
-    return SliverAppBar(
-      expandedHeight: 200,
-      floating: false,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: AppColors.primary,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primaryLight,
-                    AppColors.secondary.withOpacity(0.9),
-                  ],
-                ),
-              ),
+        // Category section
+        SliverToBoxAdapter(
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: MenuCategoryWidget(
+              menuSettings: menuSettings,
+              categories: _categories,
+              selectedCategoryId: _selectedCategoryId,
+              onCategorySelected: _onCategorySelected,
+              scrollController: _categoryScrollController,
             ),
+          ),
+        ),
 
-            // Decorative pattern
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _HeaderPatternPainter(),
-              ),
+        // Product section
+        SliverToBoxAdapter(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: MenuProductWidget(
+              menuSettings: menuSettings,
+              products: _filteredProducts,
+              onProductTap: _onProductTap,
+              onAddToCart: _onAddToCart,
+              onFavoriteToggle: _onFavoriteToggle,
+              favoriteProductIds: _favoriteProductIds,
             ),
-
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Row(
-                      children: [
-                        // Business Avatar
-                        Hero(
-                          tag: 'business_avatar_${widget.businessId}',
-                          child: Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              gradient: RadialGradient(
-                                colors: [
-                                  AppColors.white,
-                                  AppColors.white.withOpacity(0.95),
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(17),
-                              child: _business?.logoUrl != null
-                                  ? WebSafeImage(
-                                      imageUrl: _business!.logoUrl!,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (context, url, error) =>
-                                          _buildBusinessIcon(),
-                                    )
-                                  : _buildBusinessIcon(),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 16),
-
-                        // Business Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _business?.businessName ?? 'Restoran',
-                                style: AppTypography.h4.copyWith(
-                                  color: AppColors.white,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.1,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _business?.businessType ?? 'Restoran',
-                                  style: AppTypography.caption.copyWith(
-                                    color: AppColors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: (_business?.isOpen == true
-                                              ? AppColors.success
-                                              : AppColors.error)
-                                          .withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Icon(
-                                      Icons.circle,
-                                      size: 8,
-                                      color: _business?.isOpen == true
-                                          ? AppColors.success
-                                          : AppColors.error,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _business?.isOpen == true
-                                        ? 'Açık'
-                                        : 'Kapalı',
-                                    style: AppTypography.caption.copyWith(
-                                      color: AppColors.white.withOpacity(0.9),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  if (_tableNumber != null) ...[
-                                    const SizedBox(width: 12),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            AppColors.accent.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.table_restaurant_rounded,
-                                            size: 12,
-                                            color: AppColors.white
-                                                .withOpacity(0.9),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Masa $_tableNumber',
-                                            style:
-                                                AppTypography.caption.copyWith(
-                                              color: AppColors.white
-                                                  .withOpacity(0.9),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
-      actions: [
-        _buildHeaderButton(
-          icon:
-              _showSearchBar ? Icons.search_off_rounded : Icons.search_rounded,
-          onPressed: _toggleSearchBar,
+
+        // Bottom padding
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 100),
         ),
-        _buildHeaderButton(
-          icon: Icons.tune_rounded,
-          onPressed: _showFilterBottomSheet,
-        ),
-        _buildWaiterCallButton(),
-        _buildCartHeaderButton(),
-        const SizedBox(width: 8),
       ],
     );
   }
 
-  Widget _buildBusinessIcon() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryLight],
-        ),
-        borderRadius: BorderRadius.circular(17),
-      ),
-      child: Icon(
-        Icons.restaurant_rounded,
-        size: 35,
-        color: AppColors.white,
-      ),
-    );
-  }
-
-  Widget _buildHeaderButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.white.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Icon(icon, color: AppColors.white, size: 22),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWaiterCallButton() {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: _onWaiterCallPressed,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.success.withOpacity(0.4),
-                width: 1,
-              ),
-            ),
-            child: Icon(
-              Icons.room_service_rounded,
-              color: AppColors.white,
-              size: 22,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCartHeaderButton() {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: _onCartPressed,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.white.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Icon(
-                    Icons.shopping_cart_rounded,
-                    color: AppColors.white,
-                    size: 22,
-                  ),
-                ),
-                if (_cartItemCount > 0)
-                  Positioned(
-                    right: 6,
-                    top: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.white, width: 1.5),
-                      ),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text(
-                        _cartItemCount > 9 ? '9+' : _cartItemCount.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchSection() {
-    return SliverToBoxAdapter(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Container(
-          color: AppColors.white,
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.greyLighter.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.greyLight.withOpacity(0.5),
-                width: 1,
-              ),
-            ),
-            child: TextField(
-              onChanged: _onSearchChanged,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Ürün, kategori ara...',
-                prefixIcon: Container(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(
-                    Icons.search_rounded,
-                    color: AppColors.primary,
-                    size: 22,
-                  ),
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear_rounded,
-                          color: AppColors.textSecondary,
-                          size: 20,
-                        ),
-                        onPressed: () => _onSearchChanged(''),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                hintStyle: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary.withOpacity(0.7),
-                ),
-              ),
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategorySection() {
-    if (_categories.isEmpty)
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-
-    return SliverToBoxAdapter(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Container(
-          color: AppColors.white,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kategoriler',
-                style: AppTypography.h6.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 45,
-                child: ListView.builder(
-                  controller: _categoryScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: _categories.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return _buildCategoryChip(
-                        categoryId: 'all',
-                        name: 'Tümü',
-                        isSelected: _selectedCategoryId == 'all' ||
-                            _selectedCategoryId == null,
-                        icon: Icons.apps_rounded,
-                      );
-                    }
-
-                    final category = _categories[index - 1];
-                    return _buildCategoryChip(
-                      categoryId: category.categoryId,
-                      name: category.name,
-                      isSelected: _selectedCategoryId == category.categoryId,
-                      icon: _getCategoryIcon(category.name),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip({
-    required String categoryId,
-    required String name,
-    required bool isSelected,
-    IconData? icon,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(right: 12),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          onTap: () => _onCategorySelected(categoryId),
-          borderRadius: BorderRadius.circular(22),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryLight],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    )
-                  : null,
-              color: isSelected ? null : AppColors.white,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: isSelected
-                    ? Colors.transparent
-                    : AppColors.greyLight.withOpacity(0.6),
-                width: 1.5,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                        spreadRadius: 0,
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: AppColors.shadow.withOpacity(0.06),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(
-                    icon,
-                    size: 18,
-                    color:
-                        isSelected ? AppColors.white : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Text(
-                  name,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: isSelected ? AppColors.white : AppColors.textPrimary,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  IconData _getCategoryIcon(String categoryName) {
-    final name = categoryName.toLowerCase();
-    if (name.contains('pizza')) return Icons.local_pizza_rounded;
-    if (name.contains('burger') || name.contains('hamburger'))
-      return Icons.lunch_dining_rounded;
-    if (name.contains('içecek') || name.contains('drink'))
-      return Icons.local_drink_rounded;
-    if (name.contains('tatlı') || name.contains('dessert'))
-      return Icons.cake_rounded;
-    if (name.contains('kahve') || name.contains('coffee'))
-      return Icons.local_cafe_rounded;
-    if (name.contains('salata') || name.contains('salad'))
-      return Icons.eco_rounded;
-    if (name.contains('et') || name.contains('meat'))
-      return Icons.restaurant_rounded;
-    if (name.contains('balık') || name.contains('fish'))
-      return Icons.set_meal_rounded;
-    return Icons.restaurant_menu_rounded;
-  }
-
-  Widget _buildProductSection() {
-    return SliverToBoxAdapter(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Container(
-          color: AppColors.background,
-          child: _filteredProducts.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: _loadMenuData,
-                  color: AppColors.primary,
-                  child: _buildProductGrid(),
-                ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    String title;
-    String subtitle;
-    IconData icon;
-
-    if (_searchQuery.isNotEmpty) {
-      title = 'Ürün Bulunamadı';
-      subtitle =
-          'Aradığınız "${_searchQuery}" için sonuç bulunamadı.\nFarklı bir arama deneyin.';
-      icon = Icons.search_off_rounded;
-    } else if (_selectedCategoryId != null && _selectedCategoryId != 'all') {
-      title = 'Bu kategoride ürün yok';
-      subtitle = 'Seçilen kategoride henüz ürün bulunmuyor.';
-      icon = Icons.category_outlined;
-    } else {
-      title = 'Henüz ürün eklenmemiş';
-      subtitle = 'Bu işletmede henüz ürün bulunmuyor.';
-      icon = Icons.restaurant_menu_outlined;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: AppColors.greyLighter.withOpacity(0.7),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 50,
-              color: AppColors.textSecondary.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            title,
-            style: AppTypography.h5.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            subtitle,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () {
-                _onSearchChanged('');
-                if (_showSearchBar) _toggleSearchBar();
-              },
-              icon: const Icon(Icons.clear_rounded),
-              label: const Text('Aramayı Temizle'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 4,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85, // More square ratio for compact design
-      ),
-      itemCount: _filteredProducts.length,
-      itemBuilder: (context, index) {
-        final product = _filteredProducts[index];
-        return _buildCompactProductCard(product, index);
-      },
-    );
-  }
-
-  Widget _buildCompactProductCard(Product product, int index) {
-    final hasDiscount =
-        product.currentPrice != null && product.currentPrice! < product.price;
-    final discountPercentage = hasDiscount
-        ? ((1 - (product.currentPrice! / product.price)) * 100).round()
-        : 0;
-
-    return GestureDetector(
-      onTap: () => _navigateToProductDetail(product),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image Section (65% of height)
-            Expanded(
-              flex: 65,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      color: AppColors.greyLighter.withOpacity(0.3),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      child: product.imageUrl != null
-                          ? WebSafeImage(
-                              imageUrl: product.imageUrl!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorWidget: (context, url, error) =>
-                                  _buildCompactIcon(),
-                              placeholder: (context, url) =>
-                                  _buildCompactIcon(),
-                            )
-                          : _buildCompactIcon(),
-                    ),
-                  ),
-
-                  // Top buttons row
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    right: 6,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Favorite button
-                        Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          child: InkWell(
-                            onTap: () => _toggleProductFavorite(product),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: AppColors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.shadow.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                _favoriteProductIds.contains(product.id)
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                color: _favoriteProductIds.contains(product.id)
-                                    ? AppColors.accent
-                                    : AppColors.textSecondary,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Discount Badge
-                        if (hasDiscount)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '-%$discountPercentage',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  // Unavailable Overlay
-                  if (!product.isAvailable)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.black.withOpacity(0.7),
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                        ),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.error,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Tükendi',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Info Section (35% of height)
-            Expanded(
-              flex: 35,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Product Name (single line)
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        height: 1.1,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    // Price and Button Row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Price Section
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Current Price
-                              Text(
-                                '${(product.currentPrice ?? product.price).toStringAsFixed(0)} ₺',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: hasDiscount
-                                      ? AppColors.accent
-                                      : AppColors.primary,
-                                ),
-                              ),
-
-                              // Original Price (if discounted)
-                              if (hasDiscount)
-                                Text(
-                                  '${product.price.toStringAsFixed(0)} ₺',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: AppColors.textSecondary,
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-
-                        // Add Button
-                        if (product.isAvailable)
-                          GestureDetector(
-                            onTap: () => _addToCart(product),
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.add_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompactIcon() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: AppColors.greyLighter,
-      child: Center(
-        child: Icon(
-          Icons.restaurant_rounded,
-          size: 24,
-          color: AppColors.textSecondary.withOpacity(0.5),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductIcon() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.greyLighter,
-            AppColors.greyLight.withOpacity(0.7),
-          ],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.restaurant_rounded,
-          size: 40,
-          color: AppColors.textSecondary.withOpacity(0.5),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImagePlaceholder() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.greyLighter,
-            AppColors.greyLight.withOpacity(0.3),
-          ],
-        ),
-      ),
-      child: Shimmer.fromColors(
-        baseColor: AppColors.greyLight.withOpacity(0.3),
-        highlightColor: AppColors.white.withOpacity(0.7),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // MULTILINGUAL METHODS
-  // ============================================================================
-
-  Future<void> _determineUserLanguage() async {
+  Color _parseColor(String hex) {
     try {
-      final userId = _authService.currentUser?.uid;
-      if (userId != null) {
-        final language =
-            await _multilingualService.determineUserLanguage(userId);
-        setState(() {
-          _currentLanguage = language;
-        });
-      }
+      final hexCode = hex.replaceAll('#', '');
+      return Color(int.parse('FF$hexCode', radix: 16));
     } catch (e) {
-      print('Dil belirleme hatası: $e');
+      return AppColors.backgroundLight;
     }
   }
-
-  Future<String> _getTranslatedText({
-    required String entityId,
-    required String entityType,
-    required String fieldName,
-    required String fallbackText,
-  }) async {
-    try {
-      return await _multilingualService.getTranslation(
-        entityId: entityId,
-        entityType: entityType,
-        fieldName: fieldName,
-        languageCode: _currentLanguage,
-        fallbackContent: fallbackText,
-      );
-    } catch (e) {
-      print('Çeviri alma hatası: $e');
-      return fallbackText;
-    }
-  }
-}
-
-// Header pattern painter
-class _HeaderPatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.white.withOpacity(0.05)
-      ..style = PaintingStyle.fill;
-
-    // Diagonal pattern
-    const spacing = 40.0;
-    for (double i = -size.height; i < size.width; i += spacing) {
-      final path = Path();
-      path.moveTo(i, 0);
-      path.lineTo(i + size.height, size.height);
-      path.lineTo(i + size.height + 2, size.height);
-      path.lineTo(i + 2, 0);
-      path.close();
-      canvas.drawPath(path, paint);
-    }
-
-    // Dots pattern
-    final dotPaint = Paint()
-      ..color = AppColors.white.withOpacity(0.03)
-      ..style = PaintingStyle.fill;
-
-    for (double x = 0; x < size.width; x += 30) {
-      for (double y = 0; y < size.height; y += 30) {
-        canvas.drawCircle(Offset(x, y), 1, dotPaint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

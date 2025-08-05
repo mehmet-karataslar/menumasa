@@ -8,11 +8,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../business/services/business_service.dart';
 import '../../../business/services/business_firestore_service.dart';
 import '../../../business/models/business_user.dart';
-
 import '../../../business/models/business.dart';
 import '../../../business/models/category.dart';
-import '../../../core/enums/user_type.dart';
-
 import '../../../presentation/widgets/shared/error_message.dart';
 
 class BusinessRegisterPage extends StatefulWidget {
