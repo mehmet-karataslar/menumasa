@@ -36,53 +36,53 @@ class MenuCategoryWidget extends StatelessWidget {
 
   Widget _buildCategorySection() {
     return Container(
-          color: AppColors.white,
-          padding: EdgeInsets.fromLTRB(menuSettings?.layoutStyle.padding ?? 20,
-              8, menuSettings?.layoutStyle.padding ?? 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kategoriler',
-                style: AppTypography.h6.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              SizedBox(height: menuSettings?.layoutStyle.sectionSpacing ?? 16),
-              SizedBox(
-                height: _getCategoryImageSize() +
-                    50, // Dinamik yükseklik: resim + text + padding
-                child: ListView.builder(
-                  controller: scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: categories.length + 1, // +1 "Tümü" için
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      // "Tümü" kategorisi
-                      return _buildInstagramStoryCategoryItem(
-                        categoryId: 'all',
-                        name: 'Tümü',
-                        isSelected: selectedCategoryId == null ||
-                            selectedCategoryId == 'all',
-                        icon: Icons.grid_view,
-                        imageUrl: null,
-                      );
-                    }
-
-                    final category = categories[index - 1];
-                    return _buildInstagramStoryCategoryItem(
-                      categoryId: category.categoryId,
-                      name: category.name,
-                      isSelected: selectedCategoryId == category.categoryId,
-                      imageUrl: category.imageUrl,
-                    );
-                  },
-                ),
-              ),
-            ],
+      color: AppColors.white,
+      padding: EdgeInsets.fromLTRB(menuSettings?.layoutStyle.padding ?? 20, 8,
+          menuSettings?.layoutStyle.padding ?? 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Kategoriler',
+            style: AppTypography.h6.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
+          SizedBox(height: menuSettings?.layoutStyle.sectionSpacing ?? 16),
+          SizedBox(
+            height: _getCategoryImageSize() +
+                50, // Dinamik yükseklik: resim + text + padding
+            child: ListView.builder(
+              controller: scrollController,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: categories.length + 1, // +1 "Tümü" için
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  // "Tümü" kategorisi
+                  return _buildInstagramStoryCategoryItem(
+                    categoryId: 'all',
+                    name: 'Tümü',
+                    isSelected: selectedCategoryId == null ||
+                        selectedCategoryId == 'all',
+                    icon: Icons.grid_view,
+                    imageUrl: null,
+                  );
+                }
+
+                final category = categories[index - 1];
+                return _buildInstagramStoryCategoryItem(
+                  categoryId: category.categoryId,
+                  name: category.name,
+                  isSelected: selectedCategoryId == category.categoryId,
+                  imageUrl: category.imageUrl,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 

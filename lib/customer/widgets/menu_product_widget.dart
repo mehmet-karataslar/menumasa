@@ -43,21 +43,21 @@ class MenuProductWidget extends StatelessWidget {
     }
 
     return Container(
-        color: menuSettings != null
-            ? _parseColor(menuSettings!.colorScheme.backgroundColor)
-            : AppColors.backgroundLight,
-        child: Container(
-          decoration: BoxDecoration(
-            color: menuSettings != null
-                ? _parseColor(menuSettings!.colorScheme.primaryColor)
-                : AppColors.primary,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(32),
-              topRight: Radius.circular(32),
-            ),
+      color: menuSettings != null
+          ? _parseColor(menuSettings!.colorScheme.backgroundColor)
+          : AppColors.backgroundLight,
+      child: Container(
+        decoration: BoxDecoration(
+          color: menuSettings != null
+              ? _parseColor(menuSettings!.colorScheme.primaryColor)
+              : AppColors.primary,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
           ),
-          child: _buildProductGrid(),
         ),
+        child: _buildProductGrid(),
+      ),
     );
   }
 

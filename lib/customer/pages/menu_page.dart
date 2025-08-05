@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import '../../business/models/business.dart';
 import '../../business/models/category.dart';
 import '../../business/models/product.dart';
@@ -9,21 +7,15 @@ import '../../business/models/discount.dart';
 import '../../business/models/staff.dart';
 import '../../business/models/waiter_call.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_typography.dart';
-import '../../core/utils/time_rule_utils.dart';
 import '../../core/services/multilingual_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/services/dynamic_theme_service.dart';
-
 import '../services/customer_firestore_service.dart';
 import '../services/customer_service.dart';
-import '../models/language_settings.dart';
 import '../../business/services/business_firestore_service.dart';
 import '../../business/services/staff_service.dart';
 import '../../business/services/waiter_call_service.dart';
-
 import '../widgets/menu_header_widget.dart';
 import '../widgets/menu_search_widget.dart';
 import '../widgets/menu_category_widget.dart';
@@ -147,7 +139,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   void _initData() {
     _extractTableInfoFromUrl();
-    _loadBusinessData();
+    _setupRealTimeListeners();
     _loadWaiters();
   }
 
@@ -164,45 +156,108 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _loadBusinessData() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-        _errorMessage = null;
-      });
+  void _setupRealTimeListeners() {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = null;
+    });
 
-      final business =
-          await _businessFirestoreService.getBusinessById(widget.businessId);
-      if (business == null) {
-        throw Exception('İşletme bulunamadı');
-      }
+    // Setup real-time listeners for business data
+    _customerFirestoreService.startBusinessDataListener(
+      widget.businessId,
+      onBusinessUpdated: (business) {
+        setState(() {
+          _business = business;
+          if (business == null) {
+            _hasError = true;
+            _errorMessage = 'İşletme bulunamadı';
+          }
+        });
+      },
+      onCategoriesUpdated: (categories) {
+        setState(() {
+          _categories = categories;
+        });
+      },
+      onProductsUpdated: (products) {
+        setState(() {
+          _products = products;
+          _applyFilters(); // Reapply current filters
+          if (_isLoading) {
+            _isLoading = false;
+            _fadeAnimationController.forward();
+            _slideAnimationController.forward();
+          }
+        });
+      },
+    );
+  }
 
-      final categories = await _customerFirestoreService
-          .getCategoriesByBusiness(widget.businessId);
-      final products = await _customerFirestoreService
-          .getProductsByBusiness(widget.businessId);
-      // TODO: Add discount service method
-      final discounts = <Discount>[];
+  void _applyFilters() {
+    List<Product> filtered = List.from(_products);
 
-      setState(() {
-        _business = business;
-        _categories = categories;
-        _products = products;
-        _filteredProducts = products;
-        _discounts = discounts;
-        _isLoading = false;
-      });
-
-      _fadeAnimationController.forward();
-      _slideAnimationController.forward();
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _hasError = true;
-        _errorMessage = e.toString();
-      });
+    // Apply category filter
+    if (_selectedCategoryId != null && _selectedCategoryId!.isNotEmpty) {
+      filtered = filtered
+          .where((product) => product.categoryId == _selectedCategoryId)
+          .toList();
     }
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where((product) =>
+              product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              product.description
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    // Apply other filters
+    for (final entry in _filters.entries) {
+      switch (entry.key) {
+        case 'isVegan':
+          if (entry.value == true) {
+            filtered = filtered.where((product) => product.isVegan).toList();
+          }
+          break;
+        case 'isVegetarian':
+          if (entry.value == true) {
+            filtered =
+                filtered.where((product) => product.isVegetarian).toList();
+          }
+          break;
+        // case 'isGlutenFree':
+        //   if (entry.value == true) {
+        //     filtered =
+        //         filtered.where((product) => product.isGlutenFree).toList();
+        //   }
+        //   break;
+        case 'priceRange':
+          if (entry.value is Map) {
+            final range = entry.value as Map<String, double>;
+            final min = range['min'] ?? 0.0;
+            final max = range['max'] ?? double.infinity;
+            filtered = filtered
+                .where(
+                    (product) => product.price >= min && product.price <= max)
+                .toList();
+          }
+          break;
+      }
+    }
+
+    setState(() {
+      _filteredProducts = filtered;
+    });
+  }
+
+  Future<void> _loadBusinessData() async {
+    // This method is now replaced by _setupRealTimeListeners
+    // Keep it for backwards compatibility or remove if not needed
+    _setupRealTimeListeners();
   }
 
   Future<void> _loadWaiters() async {
@@ -238,45 +293,18 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
-      _filterProducts();
+      _applyFilters();
     });
   }
 
   void _onCategorySelected(String categoryId) {
     setState(() {
       _selectedCategoryId = categoryId == 'all' ? null : categoryId;
-      _filterProducts();
+      _applyFilters();
     });
   }
 
-  void _filterProducts() {
-    List<Product> filtered = _products;
 
-    // Kategori filtresi
-    if (_selectedCategoryId != null && _selectedCategoryId!.isNotEmpty) {
-      filtered = filtered
-          .where((product) => product.categoryId == _selectedCategoryId)
-          .toList();
-    }
-
-    // Arama filtresi
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where((product) =>
-              product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              product.description
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase()))
-          .toList();
-    }
-
-    // Diğer filtreler
-    // ... filter logic ...
-
-    setState(() {
-      _filteredProducts = filtered;
-    });
-  }
 
   Future<void> _onWaiterCallPressed() async {
     if (_waiters.isEmpty) {
@@ -409,7 +437,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         onFiltersChanged: (filters) {
           setState(() {
             _filters = filters;
-            _filterProducts();
+            _applyFilters();
           });
         },
       ),
@@ -418,10 +446,15 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    // Stop real-time listeners
+    _customerFirestoreService.stopBusinessDataListener(widget.businessId);
+
+    // Dispose controllers
     _scrollController.dispose();
     _categoryScrollController.dispose();
     _fadeAnimationController.dispose();
     _slideAnimationController.dispose();
+
     // TODO: Remove cart listener
     super.dispose();
   }

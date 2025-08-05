@@ -7,25 +7,16 @@ import '../../business/models/product.dart';
 import '../../business/models/discount.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
 import '../../core/utils/time_rule_utils.dart';
 import '../../core/services/multilingual_service.dart';
-
 import '../services/customer_firestore_service.dart';
-import '../models/language_settings.dart';
 import '../../business/services/business_firestore_service.dart';
 import '../../core/services/cart_service.dart';
 import '../../core/services/url_service.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/widgets/web_safe_image.dart';
-import '../widgets/business_header.dart';
-import '../widgets/category_list.dart';
-import '../widgets/product_grid.dart';
-import '../widgets/search_bar.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../../presentation/widgets/shared/loading_indicator.dart';
-import '../../presentation/widgets/shared/error_message.dart';
-import '../../presentation/widgets/shared/empty_state.dart';
 import 'cart_page.dart';
 import 'package:shimmer/shimmer.dart';
 import 'product_detail_page.dart';
@@ -37,7 +28,6 @@ import '../../business/models/waiter_call.dart';
 import '../../business/services/staff_service.dart';
 import '../../business/services/waiter_call_service.dart';
 import '../../core/services/dynamic_theme_service.dart';
-import '../../shared/qr_menu/widgets/dynamic_menu_widgets.dart';
 
 class MenuPage extends StatefulWidget {
   final String businessId;
