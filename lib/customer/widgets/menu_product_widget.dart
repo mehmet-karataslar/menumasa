@@ -39,11 +39,10 @@ class MenuProductWidget extends StatelessWidget {
 
   Widget _buildProductSection() {
     if (products.isEmpty) {
-      return SliverToBoxAdapter(child: _buildEmptyState());
+      return _buildEmptyState();
     }
 
-    return SliverToBoxAdapter(
-      child: Container(
+    return Container(
         color: menuSettings != null
             ? _parseColor(menuSettings!.colorScheme.backgroundColor)
             : AppColors.backgroundLight,
@@ -59,7 +58,6 @@ class MenuProductWidget extends StatelessWidget {
           ),
           child: _buildProductGrid(),
         ),
-      ),
     );
   }
 

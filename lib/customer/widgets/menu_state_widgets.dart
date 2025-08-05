@@ -24,25 +24,25 @@ class MenuStateWidgets {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-          LoadingIndicator(
-            color: menuSettings != null
-                ? _parseColor(menuSettings.colorScheme.primaryColor)
-                : AppColors.primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Menü yükleniyor...',
-            style: GoogleFonts.getFont(
-              menuSettings?.typography.fontFamily ?? 'Poppins',
-              fontSize: menuSettings?.typography.bodyFontSize ?? 14,
-              color: AppColors.textSecondary,
+            LoadingIndicator(
+              color: menuSettings != null
+                  ? _parseColor(menuSettings.colorScheme.primaryColor)
+                  : AppColors.primary,
             ),
-          ),
-          const SizedBox(height: 32),
-          _buildShimmerContent(menuSettings),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'Menü yükleniyor...',
+              style: GoogleFonts.getFont(
+                menuSettings?.typography.fontFamily ?? 'Poppins',
+                fontSize: menuSettings?.typography.bodyFontSize ?? 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 32),
+            _buildShimmerContent(menuSettings),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -59,60 +59,60 @@ class MenuStateWidgets {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              Icons.error_outline_rounded,
-              size: 64,
-              color: AppColors.error,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Bir hata oluştu',
-            style: GoogleFonts.getFont(
-              menuSettings?.typography.fontFamily ?? 'Poppins',
-              fontSize: menuSettings?.typography.headingFontSize ?? 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            errorMessage,
-            style: GoogleFonts.getFont(
-              menuSettings?.typography.fontFamily ?? 'Poppins',
-              fontSize: menuSettings?.typography.bodyFontSize ?? 14,
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          if (onRetry != null)
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Tekrar Dene'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: menuSettings != null
-                    ? _parseColor(menuSettings.colorScheme.primaryColor)
-                    : AppColors.primary,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 4,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                Icons.error_outline_rounded,
+                size: 64,
+                color: AppColors.error,
               ),
             ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              'Bir hata oluştu',
+              style: GoogleFonts.getFont(
+                menuSettings?.typography.fontFamily ?? 'Poppins',
+                fontSize: menuSettings?.typography.headingFontSize ?? 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage,
+              style: GoogleFonts.getFont(
+                menuSettings?.typography.fontFamily ?? 'Poppins',
+                fontSize: menuSettings?.typography.bodyFontSize ?? 14,
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            if (onRetry != null)
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Tekrar Dene'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: menuSettings != null
+                      ? _parseColor(menuSettings.colorScheme.primaryColor)
+                      : AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 4,
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -131,46 +131,46 @@ class MenuStateWidgets {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.backgroundLight,
-              borderRadius: BorderRadius.circular(16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundLight,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                icon ?? Icons.inbox_outlined,
+                size: 64,
+                color: AppColors.textSecondary,
+              ),
             ),
-            child: Icon(
-              icon ?? Icons.inbox_outlined,
-              size: 64,
-              color: AppColors.textSecondary,
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: GoogleFonts.getFont(
+                menuSettings?.typography.fontFamily ?? 'Poppins',
+                fontSize: menuSettings?.typography.headingFontSize ?? 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            title,
-            style: GoogleFonts.getFont(
-              menuSettings?.typography.fontFamily ?? 'Poppins',
-              fontSize: menuSettings?.typography.headingFontSize ?? 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: GoogleFonts.getFont(
+                menuSettings?.typography.fontFamily ?? 'Poppins',
+                fontSize: menuSettings?.typography.bodyFontSize ?? 14,
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: GoogleFonts.getFont(
-              menuSettings?.typography.fontFamily ?? 'Poppins',
-              fontSize: menuSettings?.typography.bodyFontSize ?? 14,
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (action != null) ...[
-            const SizedBox(height: 32),
-            action,
+            if (action != null) ...[
+              const SizedBox(height: 32),
+              action,
+            ],
           ],
-        ],
+        ),
       ),
-    ),
     );
   }
 

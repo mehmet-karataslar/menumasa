@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../business/models/product.dart';
-import '../../business/models/category.dart';
-import '../../business/models/business.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_typography.dart';
-import '../../core/constants/app_dimensions.dart';
-import '../../core/services/cart_service.dart';
-import '../../customer/services/customer_service.dart';
 import '../../core/widgets/web_safe_image.dart';
 
 class ProductGrid extends StatelessWidget {

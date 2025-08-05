@@ -4,7 +4,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/url_service.dart';
-import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_message.dart';
 
 class RegisterPage extends StatefulWidget {

@@ -35,10 +35,7 @@ class MenuCategoryWidget extends StatelessWidget {
   }
 
   Widget _buildCategorySection() {
-    return SliverToBoxAdapter(
-      child: SlideTransition(
-        position: const AlwaysStoppedAnimation(Offset.zero),
-        child: Container(
+    return Container(
           color: AppColors.white,
           padding: EdgeInsets.fromLTRB(menuSettings?.layoutStyle.padding ?? 20,
               8, menuSettings?.layoutStyle.padding ?? 20, 20),
@@ -86,8 +83,6 @@ class MenuCategoryWidget extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 

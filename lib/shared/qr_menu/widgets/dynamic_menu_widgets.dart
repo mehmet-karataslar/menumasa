@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../business/models/business.dart';
 import '../../../business/models/product.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/web_safe_image.dart';
 
 /// Dinamik menü widget'ları

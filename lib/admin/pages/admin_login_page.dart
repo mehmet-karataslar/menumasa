@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/admin_service.dart';
-import '../models/admin_user.dart';
 import '../admin.dart';
 
 class AdminLoginPage extends StatefulWidget {

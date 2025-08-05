@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/user.dart' as app_user;
 import '../../business/models/business.dart';
-import '../../business/models/product.dart';
-import '../../business/models/category.dart';
-import '../../business/models/discount.dart';
 import '../../data/models/order.dart' as app_order;
 import '../models/admin_user.dart';
 

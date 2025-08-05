@@ -6,7 +6,6 @@ import '../../../business/services/business_firestore_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../services/customer_firestore_service.dart';
-import '../../../presentation/widgets/shared/empty_state.dart';
 import '../../../core/services/url_service.dart';
 import '../../../core/utils/date_utils.dart' as date_utils;
 
