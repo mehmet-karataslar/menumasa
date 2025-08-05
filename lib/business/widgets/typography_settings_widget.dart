@@ -164,11 +164,13 @@ class _TypographySettingsWidgetState extends State<TypographySettingsWidget> {
 
   Widget _buildFontFamilySelection() {
     // Güvenli font listesini kullan
-    final fontFamilies = FontUtils.safeFontFamilies.map((fontName) => {
-      'name': fontName,
-      'display': fontName,
-      'isGoogle': true,
-    }).toList();
+    final fontFamilies = FontUtils.safeFontFamilies
+        .map((fontName) => {
+              'name': fontName,
+              'display': fontName,
+              'isGoogle': true,
+            })
+        .toList();
 
     return _buildSettingsCard(
       title: 'Yazı Tipi Ailesi',

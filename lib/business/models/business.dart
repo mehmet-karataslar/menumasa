@@ -627,7 +627,10 @@ enum MenuLayoutType {
   list('list', 'Liste', 'Dikey liste düzeni'),
   grid('grid', 'Izgara', '2-3 sütunlu ızgara'),
   masonry('masonry', 'Karma', 'Değişken yükseklik düzeni'),
-  carousel('carousel', 'Kaydırmalı', 'Yatay kaydırma düzeni');
+  carousel('carousel', 'Kaydırmalı', 'Yatay kaydırma düzeni'),
+  staggered('staggered', 'Zigzag', 'Zigzag layout düzeni'),
+  waterfall('waterfall', 'Şelale', 'Pinterest tarzı şelale'),
+  magazine('magazine', 'Dergi', 'Dergi sayfa düzeni');
 
   const MenuLayoutType(this.value, this.displayName, this.description);
   final String value;
@@ -638,6 +641,25 @@ enum MenuLayoutType {
     return MenuLayoutType.values.firstWhere(
       (layout) => layout.value == value,
       orElse: () => MenuLayoutType.grid,
+    );
+  }
+}
+
+enum MenuCardSize {
+  small('small', 'Küçük', 0.6),
+  medium('medium', 'Orta', 0.8),
+  large('large', 'Büyük', 1.0),
+  extraLarge('extraLarge', 'Çok Büyük', 1.2);
+
+  const MenuCardSize(this.value, this.displayName, this.scale);
+  final String value;
+  final String displayName;
+  final double scale;
+
+  static MenuCardSize fromString(String value) {
+    return MenuCardSize.values.firstWhere(
+      (size) => size.value == value,
+      orElse: () => MenuCardSize.medium,
     );
   }
 }
@@ -762,6 +784,8 @@ class MenuLayoutStyle {
   final bool autoHeight;
   final double padding;
   final double sectionSpacing;
+  final MenuCardSize cardSize;
+  final double cardAspectRatio;
 
   const MenuLayoutStyle({
     this.layoutType = MenuLayoutType.grid,
@@ -774,6 +798,8 @@ class MenuLayoutStyle {
     this.autoHeight = true,
     this.padding = 16.0,
     this.sectionSpacing = 32.0,
+    this.cardSize = MenuCardSize.medium,
+    this.cardAspectRatio = 0.75,
   });
 
   factory MenuLayoutStyle.fromMap(Map<String, dynamic> map) {
@@ -788,6 +814,8 @@ class MenuLayoutStyle {
       autoHeight: map['autoHeight'] ?? true,
       padding: (map['padding'] ?? 16.0).toDouble(),
       sectionSpacing: (map['sectionSpacing'] ?? 32.0).toDouble(),
+      cardSize: MenuCardSize.fromString(map['cardSize'] ?? 'medium'),
+      cardAspectRatio: (map['cardAspectRatio'] ?? 0.75).toDouble(),
     );
   }
 
@@ -803,6 +831,8 @@ class MenuLayoutStyle {
       'autoHeight': autoHeight,
       'padding': padding,
       'sectionSpacing': sectionSpacing,
+      'cardSize': cardSize.value,
+      'cardAspectRatio': cardAspectRatio,
     };
   }
 
@@ -817,6 +847,8 @@ class MenuLayoutStyle {
     bool? autoHeight,
     double? padding,
     double? sectionSpacing,
+    MenuCardSize? cardSize,
+    double? cardAspectRatio,
   }) {
     return MenuLayoutStyle(
       layoutType: layoutType ?? this.layoutType,
@@ -829,6 +861,8 @@ class MenuLayoutStyle {
       autoHeight: autoHeight ?? this.autoHeight,
       padding: padding ?? this.padding,
       sectionSpacing: sectionSpacing ?? this.sectionSpacing,
+      cardSize: cardSize ?? this.cardSize,
+      cardAspectRatio: cardAspectRatio ?? this.cardAspectRatio,
     );
   }
 }

@@ -99,6 +99,12 @@ class MenuProductWidget extends StatelessWidget {
         return _buildProductCarousel();
       case MenuLayoutType.masonry:
         return _buildProductMasonry();
+      case MenuLayoutType.staggered:
+        return _buildStaggeredLayout();
+      case MenuLayoutType.waterfall:
+        return _buildWaterfallLayout();
+      case MenuLayoutType.magazine:
+        return _buildMagazineLayout();
       case MenuLayoutType.grid:
       default:
         return _buildProductGridLayout(columnsCount);
@@ -139,9 +145,139 @@ class MenuProductWidget extends StatelessWidget {
   }
 
   Widget _buildProductMasonry() {
-    // Basit masonry layout için StaggeredGrid kullanabiliriz
-    // Şimdilik grid layout kullanalım
-    return _buildProductGridLayout(2);
+    // Masonry layout - farklı yüksekliklerde kartlar
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Wrap(
+        spacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
+        runSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
+        children: products.asMap().entries.map((entry) {
+          final index = entry.key;
+          final product = entry.value;
+          // Rastgele yükseklik için index kullan
+          final isLarge = (index % 3) == 0;
+          return Container(
+            width: (MediaQuery.of(context).size.width - 48) / 2,
+            child: _buildMasonryProductCard(product, index, isLarge),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildStaggeredLayout() {
+    // Zigzag layout - dönüşümlü yerleşim
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          for (int i = 0; i < products.length; i += 2) ...[
+            Row(
+              children: [
+                if (i % 4 == 0) ...[
+                  // Sol büyük, sağ küçük
+                  Expanded(
+                    flex: 2,
+                    child: _buildCompactProductCard(products[i], i),
+                  ),
+                  const SizedBox(width: 16),
+                  if (i + 1 < products.length)
+                    Expanded(
+                      flex: 1,
+                      child: _buildCompactProductCard(products[i + 1], i + 1),
+                    ),
+                ] else ...[
+                  // Sol küçük, sağ büyük
+                  if (i + 1 < products.length)
+                    Expanded(
+                      flex: 1,
+                      child: _buildCompactProductCard(products[i], i),
+                    ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: _buildCompactProductCard(products[i + 1], i + 1),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaterfallLayout() {
+    // Pinterest tarzı şelale layout
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = menuSettings?.layoutStyle.columnsCount ?? 2;
+          final itemWidth =
+              (constraints.maxWidth - (16 * (crossAxisCount - 1))) /
+                  crossAxisCount;
+
+          return GridView.custom(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.8, // Farklı oranlar için
+            ),
+            childrenDelegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final product = products[index];
+                return _buildWaterfallProductCard(product, index);
+              },
+              childCount: products.length,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMagazineLayout() {
+    // Dergi sayfa düzeni
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          for (int i = 0; i < products.length; i += 3) ...[
+            if (i == 0 && products.isNotEmpty) ...[
+              // İlk ürün büyük featured
+              Container(
+                width: double.infinity,
+                height: 200,
+                margin: const EdgeInsets.only(bottom: 16),
+                child: _buildFeaturedProductCard(products[i], i),
+              ),
+            ],
+            // Diğer ürünler 2x1 grid
+            if (i + 1 < products.length || i + 2 < products.length) ...[
+              Row(
+                children: [
+                  if (i + 1 < products.length)
+                    Expanded(
+                      child: _buildCompactProductCard(products[i + 1], i + 1),
+                    ),
+                  const SizedBox(width: 16),
+                  if (i + 2 < products.length)
+                    Expanded(
+                      child: _buildCompactProductCard(products[i + 2], i + 2),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _buildProductGridLayout(int columnsCount) {
@@ -152,7 +288,7 @@ class MenuProductWidget extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columnsCount,
-          childAspectRatio: 0.75,
+          childAspectRatio: menuSettings?.layoutStyle.cardAspectRatio ?? 0.75,
           crossAxisSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
           mainAxisSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
         ),
@@ -293,6 +429,7 @@ class MenuProductWidget extends StatelessWidget {
   }
 
   Widget _buildCompactProductCard(Product product, int index) {
+    final cardSize = menuSettings?.layoutStyle.cardSize ?? MenuCardSize.medium;
     final cardColor = menuSettings != null
         ? _parseColor(menuSettings!.colorScheme.cardColor)
         : AppColors.white;
@@ -312,12 +449,14 @@ class MenuProductWidget extends StatelessWidget {
 
     final imageShape = menuSettings?.visualStyle.imageShape ?? 'rounded';
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => onProductTap(product),
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: Container(
+    return Transform.scale(
+      scale: cardSize.scale,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onProductTap(product),
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: Container(
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(borderRadius),
@@ -538,6 +677,166 @@ class MenuProductWidget extends StatelessWidget {
           Icons.image_outlined,
           color: AppColors.textSecondary,
           size: 32,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMasonryProductCard(Product product, int index, bool isLarge) {
+    final cardSize = menuSettings?.layoutStyle.cardSize ?? MenuCardSize.medium;
+    final aspectRatio =
+        isLarge ? 0.6 : (menuSettings?.layoutStyle.cardAspectRatio ?? 0.75);
+
+    return Container(
+      height: isLarge ? 250 * cardSize.scale : 200 * cardSize.scale,
+      child: _buildCompactProductCard(product, index),
+    );
+  }
+
+  Widget _buildWaterfallProductCard(Product product, int index) {
+    final cardSize = menuSettings?.layoutStyle.cardSize ?? MenuCardSize.medium;
+    // Farklı yükseklikler için rastgele aspect ratio
+    final aspectRatios = [0.6, 0.75, 0.9, 1.1];
+    final aspectRatio = aspectRatios[index % aspectRatios.length];
+
+    return AspectRatio(
+      aspectRatio: aspectRatio,
+      child: Transform.scale(
+        scale: cardSize.scale,
+        child: _buildCompactProductCard(product, index),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedProductCard(Product product, int index) {
+    final cardSize = menuSettings?.layoutStyle.cardSize ?? MenuCardSize.medium;
+    final cardColor = menuSettings != null
+        ? _parseColor(menuSettings!.colorScheme.cardColor)
+        : AppColors.white;
+    final borderRadius = menuSettings?.visualStyle.borderRadius ?? 16.0;
+    final textPrimaryColor = menuSettings != null
+        ? _parseColor(menuSettings!.colorScheme.textPrimaryColor)
+        : AppColors.textPrimary;
+    final accentColor = menuSettings != null
+        ? _parseColor(menuSettings!.colorScheme.accentColor)
+        : AppColors.primary;
+
+    return Transform.scale(
+      scale: cardSize.scale,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onProductTap(product),
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: Container(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(borderRadius),
+              boxShadow: menuSettings?.visualStyle.showShadows ?? true
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              children: [
+                // Ürün görseli
+                Expanded(
+                  flex: 2,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(borderRadius),
+                      bottomLeft: Radius.circular(borderRadius),
+                    ),
+                    child: Container(
+                      height: double.infinity,
+                      child: product.images.isNotEmpty
+                          ? WebSafeImage(
+                              imageUrl: product.images.first.url,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              placeholder: (context, url) =>
+                                  _buildImagePlaceholder(),
+                              errorWidget: (context, url, error) =>
+                                  _buildImagePlaceholder(),
+                            )
+                          : _buildImagePlaceholder(),
+                    ),
+                  ),
+                ),
+
+                // Ürün bilgileri
+                Expanded(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          product.name,
+                          style: GoogleFonts.getFont(
+                            menuSettings?.typography.fontFamily ?? 'Poppins',
+                            fontSize:
+                                (menuSettings?.typography.titleFontSize ?? 18) *
+                                    cardSize.scale,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimaryColor,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (product.description.isNotEmpty &&
+                            (menuSettings?.showDescriptions ?? true)) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            product.description,
+                            style: GoogleFonts.getFont(
+                              menuSettings?.typography.fontFamily ?? 'Poppins',
+                              fontSize:
+                                  (menuSettings?.typography.bodyFontSize ??
+                                          14) *
+                                      cardSize.scale,
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        const Spacer(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (menuSettings?.showPrices ?? true)
+                              Text(
+                                '₺${product.price.toStringAsFixed(2)}',
+                                style: GoogleFonts.getFont(
+                                  menuSettings?.typography.fontFamily ??
+                                      'Poppins',
+                                  fontSize: (menuSettings
+                                              ?.typography.headingFontSize ??
+                                          16) *
+                                      cardSize.scale,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
+                                ),
+                              ),
+                            _buildAddToCartButton(product),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

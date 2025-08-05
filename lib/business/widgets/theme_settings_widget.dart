@@ -490,8 +490,7 @@ class ThemeSettingsWidget extends StatelessWidget {
 
   bool _isThemeSelected(Map<String, dynamic> theme) {
     // Şu anki ayarlarla tema eşleşmesini kontrol et
-    // Bu basit bir örnek, gerçek implementasyon daha karmaşık olabilir
-    return theme['name'] == 'Modern'; // Varsayılan olarak Modern seçili
+    return currentSettings.designTheme.name == theme['name'];
   }
 
   void _applyTheme(Map<String, dynamic> theme) {
