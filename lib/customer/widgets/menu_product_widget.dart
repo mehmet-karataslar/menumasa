@@ -143,100 +143,169 @@ class MenuProductWidget extends StatelessWidget {
   }
 
   Widget _buildProductMasonry() {
-    // Masonry layout - farklı yüksekliklerde kartlar
+    // Fixed Masonry layout - proper spacing and no overlaps
+    final cardSize = menuSettings?.layoutStyle.cardSize ?? MenuCardSize.medium;
+    final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(spacing),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          return Wrap(
-            spacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
-            runSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
-            children: products.asMap().entries.map((entry) {
-              final index = entry.key;
-              final product = entry.value;
-              // Rastgele yükseklik için index kullan
-              final isLarge = (index % 3) == 0;
-              return Container(
-                width: (constraints.maxWidth - 48) / 2,
-                child: _buildMasonryProductCard(product, index, isLarge),
-              );
-            }).toList(),
+          final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+          final availableWidth =
+              constraints.maxWidth - (spacing * (crossAxisCount + 1));
+          final itemWidth = availableWidth / crossAxisCount;
+
+          return Column(
+            children: _buildMasonryColumns(crossAxisCount, itemWidth, spacing),
           );
         },
       ),
     );
   }
 
-  Widget _buildStaggeredLayout() {
-    // Zigzag layout - dönüşümlü yerleşim
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          for (int i = 0; i < products.length; i += 2) ...[
-            Row(
-              children: [
-                if (i % 4 == 0) ...[
-                  // Sol büyük, sağ küçük
-                  Expanded(
-                    flex: 2,
-                    child: _buildCompactProductCard(products[i], i),
-                  ),
-                  const SizedBox(width: 16),
-                  if (i + 1 < products.length)
-                    Expanded(
-                      flex: 1,
-                      child: _buildCompactProductCard(products[i + 1], i + 1),
-                    ),
-                ] else ...[
-                  // Sol küçük, sağ büyük
-                  if (i + 1 < products.length)
-                    Expanded(
-                      flex: 1,
-                      child: _buildCompactProductCard(products[i], i),
-                    ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: _buildCompactProductCard(products[i + 1], i + 1),
-                  ),
-                ],
-              ],
+  List<Widget> _buildMasonryColumns(
+      int crossAxisCount, double itemWidth, double spacing) {
+    // Split products into columns
+    final columns = <List<Product>>[];
+    for (int i = 0; i < crossAxisCount; i++) {
+      columns.add([]);
+    }
+
+    // Distribute products to columns
+    for (int i = 0; i < products.length; i++) {
+      final columnIndex = i % crossAxisCount;
+      columns[columnIndex].add(products[i]);
+    }
+
+    return [
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: columns.asMap().entries.map((entry) {
+          final columnProducts = entry.value;
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+              child: Column(
+                children: columnProducts.asMap().entries.map((productEntry) {
+                  final product = productEntry.value;
+                  final isLarge = (productEntry.key % 3) == 0;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: spacing),
+                    child: _buildMasonryProductCard(
+                        product, productEntry.key, isLarge),
+                  );
+                }).toList(),
+              ),
             ),
-            const SizedBox(height: 16),
-          ],
-        ],
+          );
+        }).toList(),
+      ),
+    ];
+  }
+
+  Widget _buildStaggeredLayout() {
+    // Fixed Staggered layout - proper responsive zigzag
+    final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
+    
+    return Padding(
+      padding: EdgeInsets.all(spacing),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            children: _buildStaggeredRows(constraints.maxWidth, spacing),
+          );
+        },
       ),
     );
   }
 
+  List<Widget> _buildStaggeredRows(double maxWidth, double spacing) {
+    final rows = <Widget>[];
+    
+    for (int i = 0; i < products.length; i += 2) {
+      final isEvenRow = (i ~/ 2) % 2 == 0;
+      final product1 = products[i];
+      final product2 = i + 1 < products.length ? products[i + 1] : null;
+      
+      // Calculate proper widths to prevent overflow
+      final totalSpacing = spacing * 3; // left, center, right
+      final availableWidth = maxWidth - totalSpacing;
+      final largeWidth = availableWidth * 0.6;  // 60%
+      final smallWidth = availableWidth * 0.4;  // 40%
+      
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(bottom: spacing),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: isEvenRow
+                ? [
+                    // Even row: Large left, small right
+                    Container(
+                      width: largeWidth,
+                      child: _buildCompactProductCard(product1, i),
+                    ),
+                    SizedBox(width: spacing),
+                    if (product2 != null)
+                      Container(
+                        width: smallWidth,
+                        child: _buildCompactProductCard(product2, i + 1),
+                      ),
+                  ]
+                : [
+                    // Odd row: Small left, large right
+                    Container(
+                      width: smallWidth,
+                      child: _buildCompactProductCard(product1, i),
+                    ),
+                    SizedBox(width: spacing),
+                    if (product2 != null)
+                      Container(
+                        width: largeWidth,
+                        child: _buildCompactProductCard(product2, i + 1),
+                      ),
+                  ],
+          ),
+        ),
+      );
+    }
+    
+    return rows;
+  }
+
   Widget _buildWaterfallLayout() {
-    // Pinterest tarzı şelale layout
+    // Fixed Waterfall layout - proper responsive grid without overlap
+    final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
+    final crossAxisCount = menuSettings?.layoutStyle.columnsCount ?? 2;
+    final aspectRatio = menuSettings?.layoutStyle.cardAspectRatio ?? 0.8;
+    
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(spacing),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final crossAxisCount = menuSettings?.layoutStyle.columnsCount ?? 2;
-          final itemWidth =
-              (constraints.maxWidth - (16 * (crossAxisCount - 1))) /
-                  crossAxisCount;
-
-          return GridView.custom(
+          // Calculate proper dimensions
+          final totalSpacing = spacing * (crossAxisCount + 1);
+          final availableWidth = constraints.maxWidth - totalSpacing;
+          final itemWidth = availableWidth / crossAxisCount;
+          
+          return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.8, // Farklı oranlar için
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+              childAspectRatio: aspectRatio,
             ),
-            childrenDelegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final product = products[index];
-                return _buildWaterfallProductCard(product, index);
-              },
-              childCount: products.length,
-            ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return Container(
+                constraints: BoxConstraints(maxWidth: itemWidth),
+                child: _buildWaterfallProductCard(product, index),
+              );
+            },
           );
         },
       ),
@@ -244,60 +313,106 @@ class MenuProductWidget extends StatelessWidget {
   }
 
   Widget _buildMagazineLayout() {
-    // Dergi sayfa düzeni
+    // Fixed Magazine layout - proper responsive magazine style
+    final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
+    
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          for (int i = 0; i < products.length; i += 3) ...[
-            if (i == 0 && products.isNotEmpty) ...[
-              // İlk ürün büyük featured
-              Container(
-                width: double.infinity,
-                height: 200,
-                margin: const EdgeInsets.only(bottom: 16),
-                child: _buildFeaturedProductCard(products[i], i),
-              ),
-            ],
-            // Diğer ürünler 2x1 grid
-            if (i + 1 < products.length || i + 2 < products.length) ...[
-              Row(
-                children: [
-                  if (i + 1 < products.length)
-                    Expanded(
-                      child: _buildCompactProductCard(products[i + 1], i + 1),
-                    ),
-                  const SizedBox(width: 16),
-                  if (i + 2 < products.length)
-                    Expanded(
-                      child: _buildCompactProductCard(products[i + 2], i + 2),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ],
-        ],
+      padding: EdgeInsets.all(spacing),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            children: _buildMagazineRows(constraints.maxWidth, spacing),
+          );
+        },
       ),
     );
   }
 
+  List<Widget> _buildMagazineRows(double maxWidth, double spacing) {
+    final rows = <Widget>[];
+    
+    for (int i = 0; i < products.length; i += 3) {
+      // First product as featured (if it's the very first one)
+      if (i == 0 && products.isNotEmpty) {
+        rows.add(
+          Padding(
+            padding: EdgeInsets.only(bottom: spacing),
+            child: Container(
+              width: maxWidth,
+              height: 200,
+              child: _buildFeaturedProductCard(products[i], i),
+            ),
+          ),
+        );
+      }
+      
+      // Next two products in a row (if available)
+      final product2 = i + 1 < products.length ? products[i + 1] : null;
+      final product3 = i + 2 < products.length ? products[i + 2] : null;
+      
+      if (product2 != null || product3 != null) {
+        final availableWidth = maxWidth - spacing;
+        final cardWidth = availableWidth / 2;
+        
+        rows.add(
+          Padding(
+            padding: EdgeInsets.only(bottom: spacing),
+            child: Row(
+              children: [
+                if (product2 != null)
+                  Container(
+                    width: cardWidth,
+                    child: _buildCompactProductCard(product2, i + 1),
+                  ),
+                if (product2 != null && product3 != null)
+                  SizedBox(width: spacing),
+                if (product3 != null)
+                  Container(
+                    width: cardWidth,
+                    child: _buildCompactProductCard(product3, i + 2),
+                  ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+    
+    return rows;
+  }
+
   Widget _buildProductGridLayout(int columnsCount) {
+    // Fixed Grid layout - proper responsive grid without overflow
+    final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
+    final aspectRatio = menuSettings?.layoutStyle.cardAspectRatio ?? 0.75;
+    
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: columnsCount,
-          childAspectRatio: menuSettings?.layoutStyle.cardAspectRatio ?? 0.75,
-          crossAxisSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
-          mainAxisSpacing: menuSettings?.layoutStyle.itemSpacing ?? 16,
-        ),
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          final product = products[index];
-          return _buildCompactProductCard(product, index);
+      padding: EdgeInsets.all(spacing),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Ensure proper spacing calculation
+          final totalSpacing = spacing * (columnsCount + 1);
+          final availableWidth = constraints.maxWidth - totalSpacing;
+          final itemWidth = availableWidth / columnsCount;
+          
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columnsCount,
+              childAspectRatio: aspectRatio,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+            ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return Container(
+                constraints: BoxConstraints(maxWidth: itemWidth),
+                child: _buildCompactProductCard(product, index),
+              );
+            },
+          );
         },
       ),
     );

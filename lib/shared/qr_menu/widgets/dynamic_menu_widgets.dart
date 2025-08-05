@@ -96,6 +96,10 @@ class DynamicMenuWidgets {
         return _buildModernProductCard(product, menuSettings, onTap, context);
       case MenuThemeType.classic:
         return _buildClassicProductCard(product, menuSettings, onTap, context);
+      case MenuThemeType.minimal:
+        return _buildMinimalProductCard(product, menuSettings, onTap, context);
+      case MenuThemeType.elegant:
+        return _buildElegantProductCard(product, menuSettings, onTap, context);
       case MenuThemeType.grid:
         return _buildGridProductCard(product, menuSettings, onTap, context);
       case MenuThemeType.magazine:
@@ -493,6 +497,184 @@ class DynamicMenuWidgets {
             child: const Text('Tekrar Dene'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Minimal tema ürün kartı
+  Widget _buildMinimalProductCard(
+    Product product,
+    MenuSettings menuSettings,
+    VoidCallback onTap,
+    BuildContext context,
+  ) {
+    final primaryColor = _parseColor(menuSettings.colorScheme.primaryColor);
+    final textColor = _parseColor(menuSettings.colorScheme.textPrimaryColor);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Minimal ürün resmi
+              if (product.images.isNotEmpty)
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    image: DecorationImage(
+                      image: NetworkImage(product.images.first.url),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 12),
+
+              // Ürün bilgileri
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${product.price.toStringAsFixed(2)} ₺',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Elegant tema ürün kartı
+  Widget _buildElegantProductCard(
+    Product product,
+    MenuSettings menuSettings,
+    VoidCallback onTap,
+    BuildContext context,
+  ) {
+    final primaryColor = _parseColor(menuSettings.colorScheme.primaryColor);
+    final accentColor = _parseColor(menuSettings.colorScheme.accentColor);
+    final textColor = _parseColor(menuSettings.colorScheme.textPrimaryColor);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              primaryColor.withOpacity(0.05),
+              Colors.white,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Elegant ürün resmi
+              if (product.images.isNotEmpty)
+                Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
+                    image: DecorationImage(
+                      image: NetworkImage(product.images.first.url),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+              // Ürün bilgileri
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${product.price.toStringAsFixed(2)} ₺',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (product.description.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        product.description,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: textColor.withOpacity(0.7),
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
