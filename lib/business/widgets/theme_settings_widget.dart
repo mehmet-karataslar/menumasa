@@ -478,6 +478,23 @@ class ThemeSettingsWidget extends StatelessWidget {
           'Prestijli'
         ],
       },
+      {
+        'name': 'Koyu',
+        'description': 'Karanlık tema ve koyu renkler',
+        'longDescription':
+            'Koyu tema, gözleri yormuyan karanlık renk paleti ile modern bir deneyim sunar. Gece kullanımı ve şık görünüm için idealdir.',
+        'type': 'Modern',
+        'icon': Icons.dark_mode,
+        'primaryColor': const Color(0xFF64748B),
+        'secondaryColor': const Color(0xFF94A3B8),
+        'accentColor': const Color(0xFFF59E0B),
+        'features': [
+          'Koyu renkler',
+          'Göz dostu',
+          'Modern tasarım',
+          'Şık görünüm'
+        ],
+      },
     ];
   }
 
@@ -494,17 +511,32 @@ class ThemeSettingsWidget extends StatelessWidget {
   }
 
   void _applyTheme(Map<String, dynamic> theme) {
-    // Seçilen temayı uygula
+    final themeName = theme['name'] as String;
+    final isThemeDark =
+        themeName.toLowerCase() == 'koyu' || themeName.toLowerCase() == 'dark';
+
+    // Dark theme için özel renk şeması
+    final colorScheme = isThemeDark
+        ? MenuColorScheme.dark().copyWith(
+            primaryColor:
+                '#${(theme['primaryColor'] as Color).value.toRadixString(16).substring(2)}',
+            secondaryColor:
+                '#${(theme['secondaryColor'] as Color).value.toRadixString(16).substring(2)}',
+            accentColor:
+                '#${(theme['accentColor'] as Color).value.toRadixString(16).substring(2)}',
+          )
+        : currentSettings.colorScheme.copyWith(
+            primaryColor:
+                '#${(theme['primaryColor'] as Color).value.toRadixString(16).substring(2)}',
+            secondaryColor:
+                '#${(theme['secondaryColor'] as Color).value.toRadixString(16).substring(2)}',
+            accentColor:
+                '#${(theme['accentColor'] as Color).value.toRadixString(16).substring(2)}',
+          );
+
     final newSettings = currentSettings.copyWith(
-      colorScheme: currentSettings.colorScheme.copyWith(
-        primaryColor:
-            '#${(theme['primaryColor'] as Color).value.toRadixString(16).substring(2)}',
-        secondaryColor:
-            '#${(theme['secondaryColor'] as Color).value.toRadixString(16).substring(2)}',
-        accentColor:
-            '#${(theme['accentColor'] as Color).value.toRadixString(16).substring(2)}',
-      ),
-      designTheme: _getThemeForName(theme['name'] as String),
+      colorScheme: colorScheme,
+      designTheme: _getThemeForName(themeName),
     );
 
     onSettingsChanged(newSettings);
@@ -517,6 +549,10 @@ class ThemeSettingsWidget extends StatelessWidget {
       case 'klasik':
       case 'classic':
         return MenuDesignTheme.classic();
+      case 'minimal':
+        return MenuDesignTheme.minimal();
+      case 'elegant':
+        return MenuDesignTheme.elegant();
       case 'izgara':
       case 'grid':
         return MenuDesignTheme.grid();

@@ -304,8 +304,6 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
     });
   }
 
-
-
   Future<void> _onWaiterCallPressed() async {
     if (_waiters.isEmpty) {
       await _loadWaiters();

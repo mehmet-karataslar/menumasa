@@ -606,6 +606,8 @@ class ContactInfo {
 enum MenuThemeType {
   modern('modern', 'Modern', 'Temiz ve minimalist görünüm'),
   classic('classic', 'Klasik', 'Geleneksel ve zarif tasarım'),
+  minimal('minimal', 'Minimal', 'Sade ve odaklanmış tasarım'),
+  elegant('elegant', 'Elegant', 'Lüks ve gösterişli stil'),
   grid('grid', 'Izgara', 'Kart tabanlı ızgara düzeni'),
   magazine('magazine', 'Dergi', 'Dergi tarzı görsel yoğun tasarım'),
   dark('dark', 'Koyu', 'Karanlık tema ve koyu renkler');
@@ -692,6 +694,22 @@ class MenuDesignTheme {
       themeType: MenuThemeType.classic,
       name: 'Klasik',
       description: 'Geleneksel ve zarif tasarım',
+    );
+  }
+
+  factory MenuDesignTheme.minimal() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.minimal,
+      name: 'Minimal',
+      description: 'Sade ve odaklanmış tasarım',
+    );
+  }
+
+  factory MenuDesignTheme.elegant() {
+    return const MenuDesignTheme(
+      themeType: MenuThemeType.elegant,
+      name: 'Elegant',
+      description: 'Lüks ve gösterişli stil',
     );
   }
 
@@ -895,6 +913,24 @@ class MenuColorScheme {
     this.opacity = 1.0,
     this.isDark = false,
   });
+
+  /// Dark theme color scheme factory
+  factory MenuColorScheme.dark() {
+    return const MenuColorScheme(
+      primaryColor: '#64748B', // Slate 500
+      secondaryColor: '#94A3B8', // Slate 400
+      backgroundColor: '#0F172A', // Slate 900
+      surfaceColor: '#1E293B', // Slate 800
+      textPrimaryColor: '#F1F5F9', // Slate 100
+      textSecondaryColor: '#CBD5E1', // Slate 300
+      accentColor: '#F59E0B', // Amber 500
+      cardColor: '#1E293B', // Slate 800
+      borderColor: '#334155', // Slate 700
+      shadowColor: '#00000050', // Darker shadow
+      opacity: 1.0,
+      isDark: true,
+    );
+  }
 
   factory MenuColorScheme.fromMap(Map<String, dynamic> map) {
     return MenuColorScheme(
