@@ -207,7 +207,7 @@ class MenuProductWidget extends StatelessWidget {
   Widget _buildStaggeredLayout() {
     // Fixed Staggered layout - proper responsive zigzag
     final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
-    
+
     return Padding(
       padding: EdgeInsets.all(spacing),
       child: LayoutBuilder(
@@ -222,18 +222,18 @@ class MenuProductWidget extends StatelessWidget {
 
   List<Widget> _buildStaggeredRows(double maxWidth, double spacing) {
     final rows = <Widget>[];
-    
+
     for (int i = 0; i < products.length; i += 2) {
       final isEvenRow = (i ~/ 2) % 2 == 0;
       final product1 = products[i];
       final product2 = i + 1 < products.length ? products[i + 1] : null;
-      
+
       // Calculate proper widths to prevent overflow
       final totalSpacing = spacing * 3; // left, center, right
       final availableWidth = maxWidth - totalSpacing;
-      final largeWidth = availableWidth * 0.6;  // 60%
-      final smallWidth = availableWidth * 0.4;  // 40%
-      
+      final largeWidth = availableWidth * 0.6; // 60%
+      final smallWidth = availableWidth * 0.4; // 40%
+
       rows.add(
         Padding(
           padding: EdgeInsets.only(bottom: spacing),
@@ -270,7 +270,7 @@ class MenuProductWidget extends StatelessWidget {
         ),
       );
     }
-    
+
     return rows;
   }
 
@@ -279,7 +279,7 @@ class MenuProductWidget extends StatelessWidget {
     final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
     final crossAxisCount = menuSettings?.layoutStyle.columnsCount ?? 2;
     final aspectRatio = menuSettings?.layoutStyle.cardAspectRatio ?? 0.8;
-    
+
     return Padding(
       padding: EdgeInsets.all(spacing),
       child: LayoutBuilder(
@@ -288,7 +288,7 @@ class MenuProductWidget extends StatelessWidget {
           final totalSpacing = spacing * (crossAxisCount + 1);
           final availableWidth = constraints.maxWidth - totalSpacing;
           final itemWidth = availableWidth / crossAxisCount;
-          
+
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -315,7 +315,7 @@ class MenuProductWidget extends StatelessWidget {
   Widget _buildMagazineLayout() {
     // Fixed Magazine layout - proper responsive magazine style
     final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
-    
+
     return Padding(
       padding: EdgeInsets.all(spacing),
       child: LayoutBuilder(
@@ -330,7 +330,7 @@ class MenuProductWidget extends StatelessWidget {
 
   List<Widget> _buildMagazineRows(double maxWidth, double spacing) {
     final rows = <Widget>[];
-    
+
     for (int i = 0; i < products.length; i += 3) {
       // First product as featured (if it's the very first one)
       if (i == 0 && products.isNotEmpty) {
@@ -345,15 +345,15 @@ class MenuProductWidget extends StatelessWidget {
           ),
         );
       }
-      
+
       // Next two products in a row (if available)
       final product2 = i + 1 < products.length ? products[i + 1] : null;
       final product3 = i + 2 < products.length ? products[i + 2] : null;
-      
+
       if (product2 != null || product3 != null) {
         final availableWidth = maxWidth - spacing;
         final cardWidth = availableWidth / 2;
-        
+
         rows.add(
           Padding(
             padding: EdgeInsets.only(bottom: spacing),
@@ -377,7 +377,7 @@ class MenuProductWidget extends StatelessWidget {
         );
       }
     }
-    
+
     return rows;
   }
 
@@ -385,7 +385,7 @@ class MenuProductWidget extends StatelessWidget {
     // Fixed Grid layout - proper responsive grid without overflow
     final spacing = menuSettings?.layoutStyle.itemSpacing ?? 12.0;
     final aspectRatio = menuSettings?.layoutStyle.cardAspectRatio ?? 0.75;
-    
+
     return Padding(
       padding: EdgeInsets.all(spacing),
       child: LayoutBuilder(
@@ -394,7 +394,7 @@ class MenuProductWidget extends StatelessWidget {
           final totalSpacing = spacing * (columnsCount + 1);
           final availableWidth = constraints.maxWidth - totalSpacing;
           final itemWidth = availableWidth / columnsCount;
-          
+
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

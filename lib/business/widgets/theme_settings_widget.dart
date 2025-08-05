@@ -9,7 +9,7 @@ import '../models/business.dart';
 /// - Tema seçimi (Modern, Klasik, Minimal, Elegant)
 /// - Tema önizleme
 /// - Hızlı tema değiştirme
-class ThemeSettingsWidget extends StatelessWidget {
+class ThemeSettingsWidget extends StatefulWidget {
   final MenuSettings currentSettings;
   final Function(MenuSettings) onSettingsChanged;
 
@@ -20,30 +20,65 @@ class ThemeSettingsWidget extends StatelessWidget {
   });
 
   @override
+  State<ThemeSettingsWidget> createState() => _ThemeSettingsWidgetState();
+}
+
+class _ThemeSettingsWidgetState extends State<ThemeSettingsWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'Tema Seçimi',
-            'Menünüzün genel görünümünü belirleyin',
-            Icons.palette_rounded,
-          ),
-          const SizedBox(height: 24),
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(
+              'Tema Seçimi',
+              'Menünüzün genel görünümünü belirleyin',
+              Icons.palette_rounded,
+            ),
+            const SizedBox(height: 24),
 
-          // Tema Grid'i
-          _buildThemeGrid(),
-          const SizedBox(height: 32),
+            // Tema Grid'i
+            _buildThemeGrid(),
+            const SizedBox(height: 32),
 
-          // Seçilen Tema Detayları
-          _buildSelectedThemeDetails(),
-          const SizedBox(height: 24),
+            // Seçilen Tema Detayları
+            _buildSelectedThemeDetails(),
+            const SizedBox(height: 24),
 
-          // Hızlı Özelleştirme
-          _buildQuickCustomization(),
-        ],
+            // Hızlı Özelleştirme
+            _buildQuickCustomization(),
+          ],
+        ),
       ),
     );
   }
@@ -331,14 +366,15 @@ class ThemeSettingsWidget extends StatelessWidget {
                 'Koyu Tema',
                 'Gece görünümü için',
                 Icons.dark_mode,
-                currentSettings.designTheme.themeType == MenuThemeType.dark,
+                widget.currentSettings.designTheme.themeType ==
+                    MenuThemeType.dark,
                 (value) {
-                  final newSettings = currentSettings.copyWith(
+                  final newSettings = widget.currentSettings.copyWith(
                     designTheme: value
                         ? MenuDesignTheme.dark()
                         : MenuDesignTheme.modern(),
                   );
-                  onSettingsChanged(newSettings);
+                  widget.onSettingsChanged(newSettings);
                 },
               ),
             ),
@@ -348,14 +384,14 @@ class ThemeSettingsWidget extends StatelessWidget {
                 'Animasyonlar',
                 'Geçiş efektleri',
                 Icons.animation,
-                currentSettings.visualStyle.enableAnimations,
+                widget.currentSettings.visualStyle.enableAnimations,
                 (value) {
-                  final newSettings = currentSettings.copyWith(
-                    visualStyle: currentSettings.visualStyle.copyWith(
+                  final newSettings = widget.currentSettings.copyWith(
+                    visualStyle: widget.currentSettings.visualStyle.copyWith(
                       enableAnimations: value,
                     ),
                   );
-                  onSettingsChanged(newSettings);
+                  widget.onSettingsChanged(newSettings);
                 },
               ),
             ),
@@ -507,10 +543,13 @@ class ThemeSettingsWidget extends StatelessWidget {
 
   bool _isThemeSelected(Map<String, dynamic> theme) {
     // Şu anki ayarlarla tema eşleşmesini kontrol et
-    return currentSettings.designTheme.name == theme['name'];
+    return widget.currentSettings.designTheme.name == theme['name'];
   }
 
-  void _applyTheme(Map<String, dynamic> theme) {
+  void _applyTheme(Map<String, dynamic> theme) async {
+    // Animasyonlu geçiş başlat
+    await _animationController.reverse();
+
     final themeName = theme['name'] as String;
     final isThemeDark =
         themeName.toLowerCase() == 'koyu' || themeName.toLowerCase() == 'dark';
@@ -525,7 +564,7 @@ class ThemeSettingsWidget extends StatelessWidget {
             accentColor:
                 '#${(theme['accentColor'] as Color).value.toRadixString(16).substring(2)}',
           )
-        : currentSettings.colorScheme.copyWith(
+        : widget.currentSettings.colorScheme.copyWith(
             primaryColor:
                 '#${(theme['primaryColor'] as Color).value.toRadixString(16).substring(2)}',
             secondaryColor:
@@ -534,12 +573,15 @@ class ThemeSettingsWidget extends StatelessWidget {
                 '#${(theme['accentColor'] as Color).value.toRadixString(16).substring(2)}',
           );
 
-    final newSettings = currentSettings.copyWith(
+    final newSettings = widget.currentSettings.copyWith(
       colorScheme: colorScheme,
       designTheme: _getThemeForName(themeName),
     );
 
-    onSettingsChanged(newSettings);
+    widget.onSettingsChanged(newSettings);
+
+    // Animasyonu tekrar başlat
+    await _animationController.forward();
   }
 
   MenuDesignTheme _getThemeForName(String name) {

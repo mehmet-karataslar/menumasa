@@ -463,12 +463,42 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: _parseColor(menuSettings.colorScheme.backgroundColor),
-      body: _isLoading
-          ? MenuStateWidgets.buildLoadingState(menuSettings)
-          : _hasError
-              ? MenuStateWidgets.buildErrorState(menuSettings,
-                  _errorMessage ?? 'Bilinmeyen hata', _loadBusinessData)
-              : _buildMenuContent(menuSettings),
+      body: Container(
+        decoration: _buildBackgroundDecoration(menuSettings),
+        child: _isLoading
+            ? MenuStateWidgets.buildLoadingState(menuSettings)
+            : _hasError
+                ? MenuStateWidgets.buildErrorState(menuSettings,
+                    _errorMessage ?? 'Bilinmeyen hata', _loadBusinessData)
+                : _buildMenuContent(menuSettings),
+      ),
+    );
+  }
+
+  /// Arka plan dekorasyonunu oluştur (renk veya fotoğraf)
+  BoxDecoration _buildBackgroundDecoration(MenuSettings menuSettings) {
+    final backgroundSettings = menuSettings.backgroundSettings;
+
+    // Arka plan fotoğrafı varsa onu kullan
+    if (backgroundSettings.backgroundImage.isNotEmpty &&
+        backgroundSettings.type == 'image') {
+      return BoxDecoration(
+        image: DecorationImage(
+          image: NetworkImage(backgroundSettings.backgroundImage),
+          fit: BoxFit.cover,
+          colorFilter: backgroundSettings.opacity < 1.0
+              ? ColorFilter.mode(
+                  Colors.black.withOpacity(1.0 - backgroundSettings.opacity),
+                  BlendMode.overlay,
+                )
+              : null,
+        ),
+      );
+    }
+
+    // Arka plan fotoğrafı yoksa sadece renk
+    return BoxDecoration(
+      color: _parseColor(menuSettings.colorScheme.backgroundColor),
     );
   }
 
