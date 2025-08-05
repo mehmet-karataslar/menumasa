@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/utils/font_utils.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../models/business.dart';
@@ -161,26 +163,12 @@ class _TypographySettingsWidgetState extends State<TypographySettingsWidget> {
   }
 
   Widget _buildFontFamilySelection() {
-    final fontFamilies = [
-      {'name': 'Poppins', 'display': 'Poppins', 'isGoogle': true},
-      {'name': 'Roboto', 'display': 'Roboto', 'isGoogle': true},
-      {'name': 'Open Sans', 'display': 'Open Sans', 'isGoogle': true},
-      {'name': 'Lato', 'display': 'Lato', 'isGoogle': true},
-      {'name': 'Montserrat', 'display': 'Montserrat', 'isGoogle': true},
-      {'name': 'Inter', 'display': 'Inter', 'isGoogle': true},
-      {
-        'name': 'Playfair Display',
-        'display': 'Playfair Display',
-        'isGoogle': true
-      },
-      {
-        'name': 'Source Sans Pro',
-        'display': 'Source Sans Pro',
-        'isGoogle': true
-      },
-      {'name': 'Nunito', 'display': 'Nunito', 'isGoogle': true},
-      {'name': 'PT Sans', 'display': 'PT Sans', 'isGoogle': true},
-    ];
+    // Güvenli font listesini kullan
+    final fontFamilies = FontUtils.safeFontFamilies.map((fontName) => {
+      'name': fontName,
+      'display': fontName,
+      'isGoogle': true,
+    }).toList();
 
     return _buildSettingsCard(
       title: 'Yazı Tipi Ailesi',
@@ -192,7 +180,7 @@ class _TypographySettingsWidgetState extends State<TypographySettingsWidget> {
               child: RadioListTile<String>(
                 title: Text(
                   font['display'] as String,
-                  style: GoogleFonts.getFont(
+                  style: _safeGetFont(
                     font['name'] as String,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -200,7 +188,7 @@ class _TypographySettingsWidgetState extends State<TypographySettingsWidget> {
                 ),
                 subtitle: Text(
                   'Örnek metin - 123 TL',
-                  style: GoogleFonts.getFont(
+                  style: _safeGetFont(
                     font['name'] as String,
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -756,5 +744,20 @@ class _TypographySettingsWidgetState extends State<TypographySettingsWidget> {
       default:
         return FontWeight.w400;
     }
+  }
+
+  /// Güvenli font yükleme - hata durumunda varsayılan font döner
+  TextStyle _safeGetFont(
+    String fontFamily, {
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+  }) {
+    return FontUtils.safeGoogleFont(
+      fontFamily,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+    );
   }
 }
