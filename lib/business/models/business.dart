@@ -760,6 +760,8 @@ class MenuLayoutStyle {
   final bool stickyHeaders;
   final double itemHeight;
   final bool autoHeight;
+  final double padding;
+  final double sectionSpacing;
 
   const MenuLayoutStyle({
     this.layoutType = MenuLayoutType.grid,
@@ -770,6 +772,8 @@ class MenuLayoutStyle {
     this.stickyHeaders = false,
     this.itemHeight = 200.0,
     this.autoHeight = true,
+    this.padding = 16.0,
+    this.sectionSpacing = 32.0,
   });
 
   factory MenuLayoutStyle.fromMap(Map<String, dynamic> map) {
@@ -782,6 +786,8 @@ class MenuLayoutStyle {
       stickyHeaders: map['stickyHeaders'] ?? false,
       itemHeight: (map['itemHeight'] ?? 200.0).toDouble(),
       autoHeight: map['autoHeight'] ?? true,
+      padding: (map['padding'] ?? 16.0).toDouble(),
+      sectionSpacing: (map['sectionSpacing'] ?? 32.0).toDouble(),
     );
   }
 
@@ -795,6 +801,8 @@ class MenuLayoutStyle {
       'stickyHeaders': stickyHeaders,
       'itemHeight': itemHeight,
       'autoHeight': autoHeight,
+      'padding': padding,
+      'sectionSpacing': sectionSpacing,
     };
   }
 
@@ -807,6 +815,8 @@ class MenuLayoutStyle {
     bool? stickyHeaders,
     double? itemHeight,
     bool? autoHeight,
+    double? padding,
+    double? sectionSpacing,
   }) {
     return MenuLayoutStyle(
       layoutType: layoutType ?? this.layoutType,
@@ -817,6 +827,8 @@ class MenuLayoutStyle {
       stickyHeaders: stickyHeaders ?? this.stickyHeaders,
       itemHeight: itemHeight ?? this.itemHeight,
       autoHeight: autoHeight ?? this.autoHeight,
+      padding: padding ?? this.padding,
+      sectionSpacing: sectionSpacing ?? this.sectionSpacing,
     );
   }
 }
@@ -1215,6 +1227,11 @@ class MenuInteractionSettings {
   final bool enableZoom;
   final double animationDuration;
   final bool hapticFeedback;
+  final bool enableDoubleTap;
+  final bool enableLongPress;
+  final bool enableLazyLoading;
+  final bool autoRefresh;
+  final double refreshInterval;
 
   const MenuInteractionSettings({
     this.enableHoverEffects = true,
@@ -1226,6 +1243,11 @@ class MenuInteractionSettings {
     this.enableZoom = false,
     this.animationDuration = 300.0,
     this.hapticFeedback = true,
+    this.enableDoubleTap = false,
+    this.enableLongPress = true,
+    this.enableLazyLoading = true,
+    this.autoRefresh = false,
+    this.refreshInterval = 30.0,
   });
 
   factory MenuInteractionSettings.fromMap(Map<String, dynamic> map) {
@@ -1239,6 +1261,11 @@ class MenuInteractionSettings {
       enableZoom: map['enableZoom'] ?? false,
       animationDuration: (map['animationDuration'] ?? 300.0).toDouble(),
       hapticFeedback: map['hapticFeedback'] ?? true,
+      enableDoubleTap: map['enableDoubleTap'] ?? false,
+      enableLongPress: map['enableLongPress'] ?? true,
+      enableLazyLoading: map['enableLazyLoading'] ?? true,
+      autoRefresh: map['autoRefresh'] ?? false,
+      refreshInterval: (map['refreshInterval'] ?? 30.0).toDouble(),
     );
   }
 
@@ -1253,6 +1280,11 @@ class MenuInteractionSettings {
       'enableZoom': enableZoom,
       'animationDuration': animationDuration,
       'hapticFeedback': hapticFeedback,
+      'enableDoubleTap': enableDoubleTap,
+      'enableLongPress': enableLongPress,
+      'enableLazyLoading': enableLazyLoading,
+      'autoRefresh': autoRefresh,
+      'refreshInterval': refreshInterval,
     };
   }
 
@@ -1266,6 +1298,11 @@ class MenuInteractionSettings {
     bool? enableZoom,
     double? animationDuration,
     bool? hapticFeedback,
+    bool? enableDoubleTap,
+    bool? enableLongPress,
+    bool? enableLazyLoading,
+    bool? autoRefresh,
+    double? refreshInterval,
   }) {
     return MenuInteractionSettings(
       enableHoverEffects: enableHoverEffects ?? this.enableHoverEffects,
@@ -1278,6 +1315,11 @@ class MenuInteractionSettings {
       enableZoom: enableZoom ?? this.enableZoom,
       animationDuration: animationDuration ?? this.animationDuration,
       hapticFeedback: hapticFeedback ?? this.hapticFeedback,
+      enableDoubleTap: enableDoubleTap ?? this.enableDoubleTap,
+      enableLongPress: enableLongPress ?? this.enableLongPress,
+      enableLazyLoading: enableLazyLoading ?? this.enableLazyLoading,
+      autoRefresh: autoRefresh ?? this.autoRefresh,
+      refreshInterval: refreshInterval ?? this.refreshInterval,
     );
   }
 }

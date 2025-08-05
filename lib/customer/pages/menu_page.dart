@@ -1940,7 +1940,8 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
         position: _slideAnimation,
         child: Container(
           color: AppColors.white,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+          padding: EdgeInsets.fromLTRB(menuSettings?.layoutStyle.padding ?? 20,
+              8, menuSettings?.layoutStyle.padding ?? 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1951,7 +1952,7 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: menuSettings?.layoutStyle.sectionSpacing ?? 16),
               SizedBox(
                 height: _getCategoryImageSize() +
                     50, // Dinamik yükseklik: resim + text + padding
